@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>InboxGuard - Pre-Send Risk Check</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/static/css/styles.css" />
+  </head>
+  <body class="bg-ink text-slate-100 min-h-screen antialiased">
+    <main class="relative overflow-hidden">
+      <div class="page-glow"></div>
+      <section class="mx-auto max-w-5xl px-5 py-12 md:py-20">
+        <p class="inline-flex rounded-full border border-blue-400/40 bg-blue-500/10 px-4 py-1 text-xs font-semibold tracking-[0.16em] text-blue-200">
+          INBOXGUARD
+        </p>
+
+        <h1 class="mt-6 max-w-3xl text-4xl font-bold leading-tight md:text-6xl">
+          Don&apos;t send that email yet.
+        </h1>
+        <p class="mt-4 max-w-2xl text-base text-slate-300 md:text-xl">
+          Check if it will land in spam before you lose your domain.
+        </p>
+
+        <div class="mt-10 grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
+          <section class="rounded-3xl border border-slate-700/80 bg-slate-900/75 p-6 shadow-2xl backdrop-blur">
+            <h2 class="text-lg font-semibold">Run a pre-send risk scan</h2>
+            <form id="risk-form" class="mt-4 space-y-4">
+              <div>
+                <label for="email" class="mb-2 block text-sm text-slate-300">Paste email copy</label>
+                <textarea id="email" name="email" rows="8" required class="w-full rounded-2xl border border-slate-700 bg-slate-950/70 p-4 text-sm text-slate-100 outline-none ring-0 transition focus:border-blue-500" placeholder="Subject: Limited time offer...&#10;&#10;Body: ..."></textarea>
+              </div>
+              <div>
+                <label for="domain" class="mb-2 block text-sm text-slate-300">Enter domain</label>
+                <input id="domain" name="domain" type="text" required class="w-full rounded-2xl border border-slate-700 bg-slate-950/70 p-3 text-sm text-slate-100 outline-none transition focus:border-blue-500" placeholder="example.com" />
+              </div>
+              <button type="submit" id="run-check" class="w-full rounded-xl bg-blue-600 px-5 py-3 font-semibold text-white shadow-lg shadow-blue-900/40 transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60">
+                Run Risk Check
+              </button>
+            </form>
+          </section>
+
+          <aside class="rounded-3xl border border-slate-700/80 bg-slate-900/75 p-6 shadow-2xl backdrop-blur">
+            <h2 class="text-lg font-semibold">What this protects</h2>
+            <ul class="mt-4 space-y-3 text-sm text-slate-300">
+              <li class="risk-item">Domain reputation decay from repeated spam-folder delivery</li>
+              <li class="risk-item">Revenue loss from unseen campaigns and broken trust</li>
+              <li class="risk-item">Account-level sending restrictions after poor hygiene</li>
+            </ul>
+            <div class="mt-6 rounded-2xl border border-emerald-500/40 bg-emerald-500/10 p-4 text-sm text-emerald-100">
+              Reliable senders fix risks before hitting send.
+            </div>
+          </aside>
+        </div>
+
+        <section id="result" class="mt-8 hidden rounded-3xl border border-slate-700 bg-slate-900/85 p-6 shadow-2xl">
+          <div class="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <p class="text-sm uppercase tracking-[0.16em] text-slate-400">Partial risk result</p>
+              <h3 class="mt-2 text-2xl font-bold">
+                Risk Score: <span id="score" class="text-red-500">--</span>
+              </h3>
+              <p id="risk-band" class="mt-1 text-sm text-slate-300"></p>
+            </div>
+            <div id="risk-pill" class="rounded-full border border-red-500/60 bg-red-500/15 px-4 py-1 text-sm font-semibold text-red-100">High Risk</div>
+          </div>
+
+          <ul id="findings" class="mt-5 space-y-3"></ul>
+
+          <div class="mt-5 rounded-2xl border border-emerald-500/35 bg-emerald-500/10 p-4">
+            <ul class="space-y-2 text-sm text-emerald-100">
+              <li class="trust-item">Used by cold email senders</li>
+              <li class="trust-item">Prevents domain damage</li>
+              <li class="trust-item">Based on real deliverability checks</li>
+            </ul>
+          </div>
+
+          <div class="mt-6 rounded-2xl border border-blue-500/40 bg-blue-500/10 p-5">
+            <p class="text-base font-semibold">See exactly how to fix this before you send</p>
+            <p class="mt-1 text-sm text-slate-300">Get full issue-level remediation steps tailored to your domain and copy.</p>
+            <a id="unlock-link" href="https://wa.me/?text=I%20want%20to%20unlock%20the%20full%20report%20for%20yourdomain.com" target="_blank" rel="noopener noreferrer" class="mt-4 inline-flex rounded-xl bg-blue-600 px-5 py-2.5 font-semibold text-white shadow-lg shadow-blue-900/40 transition hover:bg-blue-700">
+              Get Full Fix Report - &#8377;499
+            </a>
+            <div class="mt-4 border-t border-slate-700/70 pt-4">
+              <p class="text-sm text-slate-200">Prefer email delivery? Enter email and your report request.</p>
+              <div class="mt-2 flex flex-col gap-2 sm:flex-row">
+                <input id="lead-email" type="email" placeholder="you@company.com" class="w-full rounded-xl border border-slate-700 bg-slate-950/70 px-3 py-2 text-sm text-slate-100 outline-none transition focus:border-blue-500" />
+                <a id="email-request-link" href="mailto:inboxguard.beta@gmail.com?subject=InboxGuard%20Full%20Fix%20Report%20Request&body=Domain:%20yourdomain.com%0AEmail:%20you@company.com" class="inline-flex items-center justify-center rounded-xl border border-blue-400/45 bg-slate-900 px-4 py-2 text-sm font-semibold text-blue-200 transition hover:border-blue-300 hover:text-blue-100">
+                  Send Report Request
+                </a>
+              </div>
+            </div>
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <script src="/static/js/app.js"></script>
+  </body>
+</html>

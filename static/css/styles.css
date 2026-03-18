@@ -1,0 +1,126 @@
+:root {
+    --ink: #0b1f33;
+    --action: #2563eb;
+    --danger: #dc2626;
+    --safe: #16a34a;
+    --paper: #f8fafc;
+    --muted: #64748b;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    font-family: "IBM Plex Sans", sans-serif;
+    background: radial-gradient(circle at 15% 20%, rgba(37, 99, 235, 0.22), transparent 35%),
+        radial-gradient(circle at 90% 0%, rgba(220, 38, 38, 0.2), transparent 28%),
+        var(--ink);
+}
+
+h1,
+h2,
+h3 {
+    font-family: "Space Grotesk", sans-serif;
+}
+
+.bg-ink {
+    background-color: var(--ink);
+}
+
+.page-glow {
+    position: absolute;
+    inset: -40% auto auto 45%;
+    width: 680px;
+    height: 680px;
+    background: radial-gradient(circle, rgba(37, 99, 235, 0.22) 0%, rgba(11, 31, 51, 0) 68%);
+    pointer-events: none;
+}
+
+.risk-item {
+    position: relative;
+    padding-left: 1.3rem;
+}
+
+.risk-item::before {
+    content: "!";
+    position: absolute;
+    left: 0;
+    top: 0.08rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #fecaca;
+    background: rgba(220, 38, 38, 0.2);
+    border: 1px solid rgba(220, 38, 38, 0.45);
+    border-radius: 999px;
+    width: 0.9rem;
+    height: 0.9rem;
+    display: grid;
+    place-items: center;
+}
+
+.finding-row {
+    border: 1px solid rgba(100, 116, 139, 0.4);
+    background: rgba(15, 23, 42, 0.6);
+    border-radius: 14px;
+    padding: 0.85rem 0.95rem;
+    font-size: 0.92rem;
+    color: #e2e8f0;
+    display: grid;
+    gap: 0.35rem;
+}
+
+.finding-title {
+    font-family: "Space Grotesk", sans-serif;
+    font-size: 0.98rem;
+    font-weight: 700;
+    color: #f8fafc;
+}
+
+.finding-label {
+    color: #93c5fd;
+    font-weight: 600;
+}
+
+.finding-row.high {
+    border-color: rgba(220, 38, 38, 0.65);
+}
+
+.finding-row.medium {
+    border-color: rgba(59, 130, 246, 0.6);
+}
+
+.finding-row.low {
+    border-color: rgba(22, 163, 74, 0.6);
+}
+
+.trust-item {
+    position: relative;
+    padding-left: 1.4rem;
+}
+
+.trust-item::before {
+    content: "\2714";
+    position: absolute;
+    left: 0;
+    top: 0;
+    color: #4ade80;
+    font-weight: 700;
+}
+
+@keyframes riseIn {
+    from {
+        opacity: 0;
+        transform: translateY(12px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+#result.visible {
+    display: block;
+    animation: riseIn 420ms ease;
+}
