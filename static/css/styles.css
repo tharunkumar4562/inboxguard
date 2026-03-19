@@ -31,13 +31,15 @@ h3 {
 .logo-wrap {
     display: inline-flex;
     align-items: center;
+    flex-wrap: nowrap;
     gap: 0.6rem;
 }
 
 .logo-svg {
-    width: 1.65rem;
-    height: 1.65rem;
+    width: 1.85rem;
+    height: 1.85rem;
     display: block;
+    flex: 0 0 auto;
 }
 
 .logo-mark {
@@ -82,10 +84,11 @@ h3 {
 }
 
 .logo-text {
-    font-size: 0.82rem;
+    font-size: 0.9rem;
     font-weight: 700;
-    letter-spacing: 0.18em;
-    color: #bfdbfe;
+    letter-spacing: 0.08em;
+    color: #dbeafe;
+    white-space: nowrap;
 }
 
 .login-link {
