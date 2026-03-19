@@ -50,6 +50,19 @@ def home(request: Request):
     )
 
 
+@app.get("/login", response_class=HTMLResponse)
+def login_page(request: Request):
+    return templates.TemplateResponse(
+        "login.html",
+        {
+            "request": request,
+            "page_title": "Login | InboxGuard",
+            "meta_description": "Login to unlock full InboxGuard remediation reports.",
+            "canonical_url": f"{SITE_URL}/login",
+        },
+    )
+
+
 @app.get("/p/{slug}", response_class=HTMLResponse)
 def programmatic_page(request: Request, slug: str):
     item = LONG_TAIL_BY_SLUG.get(slug)

@@ -167,7 +167,7 @@ form.addEventListener("submit", async (event) => {
         resultSection.classList.add("visible");
     } finally {
         submitButton.disabled = false;
-        submitButton.textContent = "Check My Email Risk";
+        submitButton.textContent = "Scan Before You Send";
     }
 });
 
