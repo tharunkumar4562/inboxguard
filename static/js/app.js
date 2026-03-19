@@ -16,6 +16,7 @@ const emailQuickInput = document.getElementById("email-quick");
 const rawEmailInput = document.getElementById("raw-email");
 const scoreBreakdownWrap = document.getElementById("score-breakdown-wrap");
 const scoreBreakdownNode = document.getElementById("score-breakdown");
+const problemSummary = document.getElementById("problem-summary");
 
 const loadingMessages = ["Analyzing SPF...", "Checking DKIM and DMARC...", "Scanning content and sending pattern..."];
 let loadingTimer = null;
@@ -88,8 +89,11 @@ function setLoadingState(isLoading) {
             lockedFixes.classList.add("hidden");
         }
         findingsNode.innerHTML = "";
-        bandNode.textContent = "We will show what is hurting your deliverability. Fixes are hidden.";
-        scoreNode.textContent = "--";
+        bandNode.textContent = "Running pre-send diagnostics...";
+        scoreNode.textContent = "Calculating...";
+        if (problemSummary) {
+            problemSummary.classList.add("hidden");
+        }
         startLoadingSteps();
         return;
     }
@@ -113,13 +117,17 @@ function renderRisk(summary) {
     const variant = pillStyle[label] || pillStyle["High Risk"];
 
     scoreNode.textContent = `${summary.score}/100`;
-    bandNode.textContent = `${label} - based on this pre-send sample.`;
+    bandNode.textContent = "Your email has issues that can push it to spam. Fixes are locked.";
 
     scoreNode.classList.remove("text-red-500", "text-blue-400", "text-emerald-400");
     scoreNode.classList.add(variant.scoreCls);
 
     riskPill.className = `rounded-full border px-4 py-1 text-sm font-semibold ${variant.cls}`;
     riskPill.textContent = label;
+
+    if (problemSummary) {
+        problemSummary.classList.remove("hidden");
+    }
 }
 
 function renderBreakdown(summary) {
@@ -148,6 +156,8 @@ form.addEventListener("submit", async (event) => {
 
     submitButton.disabled = true;
     submitButton.textContent = "Analyzing...";
+    resultSection.classList.remove("hidden");
+    resultSection.classList.add("visible");
     setLoadingState(true);
 
     try {
@@ -182,6 +192,7 @@ form.addEventListener("submit", async (event) => {
         resultCta.classList.remove("hidden");
         setLoadingState(false);
 
+        resultSection.classList.remove("hidden");
         resultSection.classList.add("visible");
         resultSection.scrollIntoView({ behavior: "smooth", block: "start" });
     } catch (error) {
@@ -189,10 +200,14 @@ form.addEventListener("submit", async (event) => {
         if (scoreBreakdownWrap) {
             scoreBreakdownWrap.classList.add("hidden");
         }
+        if (problemSummary) {
+            problemSummary.classList.add("hidden");
+        }
         findingsNode.innerHTML = `<li class="finding-row high">${error.message}</li>`;
-        scoreNode.textContent = "--";
+        scoreNode.textContent = "Not available";
         bandNode.textContent = "Scan failed.";
         updateLeadLinks(document.getElementById("domain").value);
+        resultSection.classList.remove("hidden");
         resultSection.classList.add("visible");
     } finally {
         submitButton.disabled = false;
