@@ -166,6 +166,31 @@ function renderBreakdown(summary) {
     scoreBreakdownWrap.classList.remove("hidden");
 }
 
+function isLikelyEmailAddress(text) {
+    return /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i.test((text || "").trim());
+}
+
+function isLikelyHeaderLine(text) {
+    return /^(from|to|cc|bcc|date|reply-to|subject):/i.test((text || "").trim());
+}
+
+function isLikelySubjectCandidate(text) {
+    const value = (text || "").trim();
+    if (!value) {
+        return false;
+    }
+    if (isLikelyHeaderLine(value) || isLikelyEmailAddress(value)) {
+        return false;
+    }
+    if (/^https?:\/\//i.test(value)) {
+        return false;
+    }
+    if (/^(hi|hello|dear)\b/i.test(value)) {
+        return false;
+    }
+    return value.length >= 6 && value.length <= 140;
+}
+
 function extractSubjectFromRawClient(rawText) {
     const subjectMatch = rawText.match(/^\s*Subject:\s*(.+)$/im);
     if (subjectMatch && subjectMatch[1]) {
@@ -177,9 +202,13 @@ function extractSubjectFromRawClient(rawText) {
         return "";
     }
 
-    const likelyHeader = /^(from|to|cc|bcc|date):/i;
-    const firstContentLine = lines.find((line) => !likelyHeader.test(line));
-    return firstContentLine ? firstContentLine.slice(0, 120) : "";
+    // Common copy format: first line is sender email, second is actual subject.
+    if (lines.length > 1 && isLikelyEmailAddress(lines[0]) && isLikelySubjectCandidate(lines[1])) {
+        return lines[1].slice(0, 120);
+    }
+
+    const firstSubjectLikeLine = lines.find((line) => isLikelySubjectCandidate(line));
+    return firstSubjectLikeLine ? firstSubjectLikeLine.slice(0, 120) : "";
 }
 
 function extractDomainFromRawClient(rawText) {
