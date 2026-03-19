@@ -18,6 +18,10 @@ const domainInput = document.getElementById("domain");
 const scoreBreakdownWrap = document.getElementById("score-breakdown-wrap");
 const scoreBreakdownNode = document.getElementById("score-breakdown");
 const problemSummary = document.getElementById("problem-summary");
+const errorBanner = document.createElement("div");
+errorBanner.id = "error-banner";
+errorBanner.className = "hidden fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-red-500/90 text-white px-6 py-3 rounded-lg shadow-lg font-semibold";
+document.body.appendChild(errorBanner);
 
 const loadingMessages = ["Analyzing SPF...", "Checking DKIM and DMARC...", "Scanning content and sending pattern..."];
 let loadingTimer = null;
@@ -61,6 +65,14 @@ function renderFindings(findings) {
 
 function sleep(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function showError(message) {
+    errorBanner.textContent = message;
+    errorBanner.classList.remove("hidden");
+    setTimeout(() => {
+        errorBanner.classList.add("hidden");
+    }, 4000);
 }
 
 function startLoadingSteps() {
@@ -185,9 +197,29 @@ form.addEventListener("submit", async (event) => {
     const rawText = rawEmailInput ? rawEmailInput.value.trim() : "";
     const domainText = domainInput ? domainInput.value.trim() : "";
 
-    if (!rawText && !quickText && !domainText) {
-        alert("Paste full email OR fill subject/domain");
+    // Single Source of Truth: determine what gets sent
+    let useRawEmail = rawText.length > 20; // min sanity check
+    let useManualFields = !useRawEmail && (quickText || domainText);
+
+    // Validation: must have at least one valid source
+    if (!useRawEmail && !useManualFields) {
+        showError("Add an email to scan (paste full email or enter subject/domain)");
         return;
+    }
+
+    // Ensure fallback extraction for raw email
+    let finalRawEmail = rawText;
+    let finalEmail = quickText;
+    let finalDomain = domainText;
+
+    if (useRawEmail) {
+        // If using raw email, guarantee subject and domain extraction before sending
+        if (!finalEmail) {
+            finalEmail = extractSubjectFromRawClient(finalRawEmail) || "No subject detected";
+        }
+        if (!finalDomain) {
+            finalDomain = extractDomainFromRawClient(finalRawEmail) || "";
+        }
     }
 
     submitButton.disabled = true;
@@ -197,17 +229,22 @@ form.addEventListener("submit", async (event) => {
     setLoadingState(true);
 
     try {
-        const formData = new FormData(form);
-        formData.set("email", quickText);
-        formData.set("domain", domainText);
-        if (rawText) {
-            formData.set("raw_email", rawText);
+        // Construct payload based on source of truth
+        const payload = new FormData();
+
+        if (useRawEmail) {
+            // ONLY send raw_email, ignore manual fields
+            payload.set("raw_email", finalRawEmail);
+        } else {
+            // ONLY send manual fields, no raw_email
+            payload.set("email", finalEmail);
+            payload.set("domain", finalDomain);
         }
 
         const [response] = await Promise.all([
             fetch("/analyze", {
                 method: "POST",
-                body: formData,
+                body: payload,
             }),
             sleep(2000),
         ]);
@@ -261,19 +298,18 @@ if (rawEmailInput) {
             return;
         }
 
-        if (emailQuickInput && !emailQuickInput.value.trim()) {
-            const subject = extractSubjectFromRawClient(rawText);
-            if (subject) {
-                emailQuickInput.value = subject;
-            }
+        // Always overwrite IF source = paste (never leave stale data)
+        const subject = extractSubjectFromRawClient(rawText);
+        if (subject && emailQuickInput) {
+            emailQuickInput.value = subject;
+            emailQuickInput.title = "Auto-filled from pasted email";
         }
 
-        if (domainInput && !domainInput.value.trim()) {
-            const detectedDomain = extractDomainFromRawClient(rawText);
-            if (detectedDomain) {
-                domainInput.value = detectedDomain;
-                updateLeadLinks(detectedDomain);
-            }
+        const detectedDomain = extractDomainFromRawClient(rawText);
+        if (detectedDomain && domainInput) {
+            domainInput.value = detectedDomain;
+            domainInput.title = "Auto-filled from pasted email";
+            updateLeadLinks(detectedDomain);
         }
     });
 }

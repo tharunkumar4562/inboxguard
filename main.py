@@ -136,8 +136,32 @@ def sitemap_xml():
 
 @app.post("/analyze")
 def analyze(email: str = Form(""), domain: str = Form(""), raw_email: str = Form("")):
-    parsed_email = build_email_from_raw(raw_email, fallback_email=email)
-    parsed_domain = domain.strip() or extract_domain_from_text(raw_email) or extract_domain_from_text(parsed_email)
+    """
+    Single Source of Truth enforcement:
+    - If raw_email is provided and substantial (>20 chars), use ONLY raw_email
+    - Otherwise, use manual fields (email + domain)
+    - Never mix sources
+    """
+    raw_text = raw_email.strip()
+    email_text = email.strip()
+    domain_text = domain.strip()
+
+    # Determine which source to use
+    use_raw = len(raw_text) > 20
+
+    if use_raw:
+        # ONLY use raw_email, ignore manual fields
+        parsed_email = build_email_from_raw(raw_text, fallback_email="")
+        parsed_domain = extract_domain_from_text(raw_text) or ""
+    else:
+        # ONLY use manual fields
+        parsed_email = email_text or ""
+        parsed_domain = domain_text or ""
+
+    # Guarantee fallback: ensure we have something to analyze
+    if not parsed_email:
+        parsed_email = f"To: {parsed_domain}\n\nNo content provided"
+
     result = analyze_email(parsed_email, parsed_domain)
     return result
 
