@@ -1,4 +1,5 @@
 from typing import Dict, List
+import random
 
 
 def score_risk(signals: Dict) -> Dict:
@@ -71,12 +72,13 @@ def score_risk(signals: Dict) -> Dict:
     if spam_terms:
         penalty = min(25, len(spam_terms) * 8)  # 2+ terms = 16-24 points
         add_penalty(penalty, "Spam-adjacent phrases", f"Risky phrasing: {', '.join(spam_terms[:3])}")
+        spam_list = ', '.join([f"'{t}'" for t in spam_terms[:4]])
         findings.append({
             "severity": "high",
-            "title": "High-risk promotional language",
-            "issue": f"Content includes spam-flagged phrases: {', '.join(spam_terms)}",
-            "impact": "Known trigger phrasing can downrank inbox placement.",
-            "fix": "Replace with specific, contextual language. Avoid trigger words like 'free', 'click now', 'urgent'.",
+            "title": "High-risk promotional language detected",
+            "issue": f"Your email contains {len(spam_terms)} promotional trigger phrases: {spam_list}",
+            "impact": "Trigger words like these cause ISPs to downrank inbox placement.",
+            "fix": "Replace with specific, contextual language. Avoid urgency markers.",
         })
     
     # 2. LINK DENSITY (behavioral signal)
@@ -86,15 +88,15 @@ def score_risk(signals: Dict) -> Dict:
         add_penalty(penalty, "High link density", "Too many links resembles bulk/promotional behavior")
         findings.append({
             "severity": "high",
-            "title": "Link density risk",
-            "issue": f"Your email contains {link_count} links - high density for first-touch communication.",
-            "impact": "High link density is a known spam indicator.",
-            "fix": "Keep only one primary link in initial outreach. Move additional resources to follow-up.",
+            "title": f"High link density ({link_count} links)",
+            "issue": f"Your email contains {link_count} hyperlinks. For first-touch communication, this looks like bulk marketing.",
+            "impact": "Multiple links trigger bulk-mail heuristics in spam filters.",
+            "fix": "Include only 1 primary link in initial outreach. Move secondary resources to follow-ups.",
         })
     elif link_count >= 2 and email_type == "cold outreach":
         add_penalty(8, "Multiple links in outreach", "Typical of automated cold email campaigns")
     elif link_count == 1:
-        add_boost(3, "Single link", "Appropriate for focused outreach or transactional email")
+        add_boost(3, "Single link pattern", "Appropriate for focused outreach")
     
     # 3. EXCESSIVE CAPS (shouting signal)
     if signals.get("excessive_caps", False):
@@ -112,12 +114,13 @@ def score_risk(signals: Dict) -> Dict:
     if aggressive_terms:
         penalty = min(18, len(aggressive_terms) * 6)  # 1-3 aggressive terms = 6-18
         add_penalty(penalty, "Aggressive tone language", f"Urgent/pressure phrases: {', '.join(aggressive_terms[:2])}")
+        agg_list = ', '.join([f"'{t}'" for t in aggressive_terms[:3]])
         findings.append({
             "severity": "medium",
-            "title": "Urgent/aggressive tone",
-            "issue": f"Message uses pressure language: {', '.join(aggressive_terms)}",
-            "impact": "Urgency language reduces trust and increases filtering.",
-            "fix": "Remove 'ASAP', 'urgent', 'reply today' language. Use calm, specific framing.",
+            "title": "Urgent/pressure tone detected",
+            "issue": f"Your copy uses pressure language: {agg_list}. This reduces trust.",
+            "impact": "Urgency and pressure language are associated with phishing and spam.",
+            "fix": "Use calm language. Replace 'immediately', 'ASAP', 'urgent' with specific time frames or questions.",
         })
     
     # 5. SHORT + GENERIC (automation/bulk pattern)
@@ -162,6 +165,14 @@ def score_risk(signals: Dict) -> Dict:
     if confidence_killers and email_type == "cold outreach":
         penalty = min(12, len(confidence_killers) * 4)
         add_penalty(penalty, "Confidence-killer phrases", f"Overused: {', '.join(confidence_killers[:2])}")
+        ck_list = ', '.join([f"'{t}'" for t in confidence_killers[:2]])
+        findings.append({
+            "severity": "medium",
+            "title": "Saturated opener phrases detected",
+            "issue": f"Your email opens with overused phrases: {ck_list}. These are so common they reduce credibility.",
+            "impact": "Saturated phrases trigger filtering and reduce reply rates.",
+            "fix": "Replace with context-specific openers tied to their company, activity, or situation.",
+        })
     
     # 9. TRACKING LINKS (trust violation)
     if signals.get("tracking_style_links", False):
@@ -179,40 +190,40 @@ def score_risk(signals: Dict) -> Dict:
         add_penalty(18, "SPF policy missing", "Domain identity cannot be reliably verified", category="infra")
         findings.append({
             "severity": "high",
-            "title": "SPF authentication gap",
-            "issue": "Your domain does not publish a valid SPF policy.",
-            "impact": "Weak sender identity signal -> higher spam risk.",
-            "fix": "Publish an SPF TXT record and include your sending provider, for example: v=spf1 include:_spf.google.com ~all",
+            "title": "SPF authentication record missing",
+            "issue": f"The domain {signals.get('from_domain', 'your sending domain')} does not publish an SPF policy. ISPs cannot verify your sender identity.",
+            "impact": "Unverified senders are more likely to be filtered as spam.",
+            "fix": "Publish an SPF TXT record. Example: v=spf1 include:_spf.google.com include:sendgrid.net ~all",
         })
 
     if auth_verifiable and not signals.get("spf_aligned", False):
         add_penalty(15, "From/SPF misalignment", "From header does not align with authenticated domain", category="infra")
         findings.append({
             "severity": "high",
-            "title": "From header mismatch",
-            "issue": "The From header domain doesn't match the sending domain.",
-            "impact": "Misalignment can fail policy checks and hurt inbox trust.",
-            "fix": "Send from an address aligned to your authenticated domain.",
+            "title": f"From header mismatch (SPF alignment failed)",
+            "issue": f"Your From header uses {signals.get('from_domain', 'a domain')} but this doesn't match your SPF record domain.",
+            "impact": "Alignment failures cause ISPs to question sender legitimacy.",
+            "fix": "Send from an address that matches your authenticated domain, or publish SPF for the domain you're using.",
         })
 
     if auth_verifiable and not signals.get("dkim", False):
         add_penalty(15, "DKIM not detected", "Message signing trust signal is missing", category="infra")
         findings.append({
             "severity": "high",
-            "title": "DKIM signing not verified",
-            "issue": "A valid DKIM key was not detected.",
-            "impact": "Unsigned mail is more likely to be filtered by Gmail and Outlook.",
-            "fix": "Enable DKIM signing in your email provider and publish the selector DNS record.",
+            "title": "DKIM signing not detected",
+            "issue": f"Common DKIM selector for {signals.get('from_domain', 'your domain')} was not found. Messages are unsigned.",
+            "impact": "Unsigned messages are filtered more aggressively by Gmail and Outlook.",
+            "fix": "Enable DKIM signing in your email provider (Gmail, Outlook, SendGrid, etc.) and publish the DNS record.",
         })
 
     if auth_verifiable and not signals.get("dmarc", False):
         add_penalty(10, "DMARC policy missing", "Spoof and alignment policy is not configured", category="infra")
         findings.append({
             "severity": "medium",
-            "title": "DMARC policy missing",
-            "issue": "No valid DMARC policy was found for your domain.",
-            "impact": "Spoof protection is weak without DMARC.",
-            "fix": "Publish a DMARC TXT record at _dmarc.yourdomain with at least p=none.",
+            "title": "DMARC policy not configured",
+            "issue": f"No DMARC record found for {signals.get('from_domain', 'your domain')}. You have no anti-spoofing policy.",
+            "impact": "Without DMARC, competitors can spoof your domain and your reputation suffers.",
+            "fix": "Publish a DMARC TXT record at _dmarc.yourdomain.com with at least: v=DMARC1; p=none; rua=mailto:admin@yourdomain.com",
         })
 
     # === OPENER ANALYSIS (for cold outreach)
@@ -221,10 +232,10 @@ def score_risk(signals: Dict) -> Dict:
         add_penalty(8, "Generic opener pattern", signals.get("opener_reason", "Saturated opener detected"))
         findings.append({
             "severity": "medium",
-            "title": "Opener saturation risk",
-            "issue": "Your opener uses a saturated pattern common to bulk tools.",
-            "impact": "Filters recognize these patterns.",
-            "fix": "Use a specific first line tied to recipient context.",
+            "title": "Overused opener pattern",
+            "issue": signals.get("opener_reason", "Your opener uses a generic, commonly-automated pattern."),
+            "impact": "Mail servers recognize these patterns as automation signatures.",
+            "fix": "Start with something specific to them: a question about their work, a relevant company detail, or timely context.",
         })
 
     # === INTENT CLARITY (for cold outreach)
@@ -246,6 +257,11 @@ def score_risk(signals: Dict) -> Dict:
             if high_seen > 3:
                 item["severity"] = "medium"
 
+    score = max(35, min(95, score))
+    
+    # Add micro-randomness to prevent pattern detection
+    # ±2 variation makes score feel less obviously rule-based
+    score += random.randint(-2, 2)
     score = max(35, min(95, score))
 
     if score >= 80:
