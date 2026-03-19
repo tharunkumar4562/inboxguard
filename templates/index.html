@@ -50,7 +50,13 @@
               <p class="text-sm font-medium text-red-100/90">Most emails fail silently. Check before you send.</p>
               <div id="paste-mode-wrap" class="space-y-3">
                 <div>
-                  <textarea id="raw-email" name="raw_email" rows="7" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" class="w-full rounded-2xl border border-slate-700 bg-slate-950/70 p-4 text-base text-slate-100 outline-none ring-0 transition focus:border-blue-500" placeholder="Paste your full email (Ctrl + V)"></textarea>
+                  <textarea id="raw-email" name="raw_email" rows="7" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" class="w-full rounded-2xl border border-slate-700 bg-slate-950/70 p-4 text-base text-slate-100 outline-none ring-0 transition focus:border-blue-500" placeholder="From: sender@example.com
+To: recipient@example.com
+Subject: Your email subject
+
+Hi [Name],
+
+Your message starts here..."></textarea>
                 </div>
                 <p class="text-sm text-slate-300">Paste mode analyzes your raw email only.</p>
                 <div class="form-divider" aria-hidden="true">OR</div>

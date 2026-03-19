@@ -23,6 +23,12 @@ AGGRESSIVE_TONE_TERMS = {
     "following up again",
     "just bumping this",
     "urgent reply",
+    "click here",
+    "click now",
+    "act now",
+    "verify now",
+    "immediately",
+    "right now",
 }
 
 CONFIDENCE_KILLERS = {
