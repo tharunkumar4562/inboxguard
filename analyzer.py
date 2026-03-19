@@ -6,11 +6,16 @@ import dns.resolver
 
 from scorer import score_risk
 from utils import (
+    automation_signal_score,
     count_links,
+    detect_confidence_killers,
+    detect_tracking_style_links,
     email_body_without_headers,
     find_aggressive_tone_terms,
     find_spam_terms,
     has_excessive_caps,
+    classify_intent_clarity,
+    classify_opener,
     normalize_domain,
     word_count,
 )
@@ -81,7 +86,13 @@ def analyze_email(email: str, domain: str) -> Dict:
     aggressive_tone_terms = find_aggressive_tone_terms(email)
 
     too_many_links = count_links(email) > 3
+    tracking_style_links = detect_tracking_style_links(email)
     short_generic_email = _is_short_generic_email(email)
+    opener_profile = classify_opener(email)
+    intent_profile = classify_intent_clarity(email)
+    confidence_killers = detect_confidence_killers(email)
+    automation_profile = automation_signal_score(email)
+
     sending_pattern_risk = too_many_links or bool(aggressive_tone_terms) or short_generic_email
 
     signals = {
@@ -94,10 +105,19 @@ def analyze_email(email: str, domain: str) -> Dict:
         "header_note": header_alignment["header_note"],
         "spam_terms": find_spam_terms(email),
         "too_many_links": too_many_links,
+        "tracking_style_links": tracking_style_links,
         "excessive_caps": has_excessive_caps(email),
         "aggressive_tone_terms": aggressive_tone_terms,
         "short_generic_email": short_generic_email,
         "sending_pattern_risk": sending_pattern_risk,
+        "opener_type": opener_profile["type"],
+        "opener_reason": opener_profile["reason"],
+        "intent_type": intent_profile["type"],
+        "intent_reason": intent_profile["reason"],
+        "confidence_killers": confidence_killers,
+        "automation_level": automation_profile["level"],
+        "automation_score": automation_profile["score"],
+        "template_markers": automation_profile["template_markers"],
     }
 
     scored = score_risk(signals)
@@ -109,6 +129,7 @@ def analyze_email(email: str, domain: str) -> Dict:
             "score": scored["score"],
             "risk_band": scored["risk_band"],
             "risk_points": scored["risk_points"],
+            "breakdown": scored["breakdown"],
         },
         "partial_findings": scored["findings"][:3],
         "full_findings": scored["findings"],

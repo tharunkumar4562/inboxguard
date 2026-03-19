@@ -14,6 +14,8 @@ const loadingStep = document.getElementById("loading-step");
 const lockedFixes = document.getElementById("locked-fixes");
 const emailQuickInput = document.getElementById("email-quick");
 const emailFullInput = document.getElementById("email-full");
+const scoreBreakdownWrap = document.getElementById("score-breakdown-wrap");
+const scoreBreakdownNode = document.getElementById("score-breakdown");
 
 const loadingMessages = ["Analyzing SPF...", "Checking DKIM and DMARC...", "Scanning content and sending pattern..."];
 let loadingTimer = null;
@@ -120,6 +122,27 @@ function renderRisk(summary) {
     riskPill.textContent = label;
 }
 
+function renderBreakdown(summary) {
+    if (!scoreBreakdownWrap || !scoreBreakdownNode) {
+        return;
+    }
+
+    const breakdown = summary.breakdown || [];
+    if (!breakdown.length) {
+        scoreBreakdownWrap.classList.add("hidden");
+        scoreBreakdownNode.innerHTML = "";
+        return;
+    }
+
+    scoreBreakdownNode.innerHTML = "";
+    breakdown.slice(0, 5).forEach((item) => {
+        const li = document.createElement("li");
+        li.textContent = `- ${item.label} (-${item.points}): ${item.reason}`;
+        scoreBreakdownNode.appendChild(li);
+    });
+    scoreBreakdownWrap.classList.remove("hidden");
+}
+
 form.addEventListener("submit", async (event) => {
     event.preventDefault();
 
@@ -148,6 +171,7 @@ form.addEventListener("submit", async (event) => {
 
         const data = await response.json();
         renderRisk(data.summary);
+        renderBreakdown(data.summary);
         renderFindings(data.partial_findings);
         updateLeadLinks(data.domain);
         if (lockedFixes) {
@@ -160,6 +184,9 @@ form.addEventListener("submit", async (event) => {
         resultSection.scrollIntoView({ behavior: "smooth", block: "start" });
     } catch (error) {
         setLoadingState(false);
+        if (scoreBreakdownWrap) {
+            scoreBreakdownWrap.classList.add("hidden");
+        }
         findingsNode.innerHTML = `<li class="finding-row high">${error.message}</li>`;
         scoreNode.textContent = "--";
         bandNode.textContent = "Scan failed.";

@@ -1,5 +1,5 @@
 import re
-from typing import List
+from typing import Dict, List
 
 SPAM_TERMS = {
     "guaranteed",
@@ -22,6 +22,23 @@ AGGRESSIVE_TONE_TERMS = {
     "following up again",
     "just bumping this",
     "urgent reply",
+}
+
+CONFIDENCE_KILLERS = {
+    "just following up",
+    "quick question",
+    "hope you're doing well",
+    "hope you are doing well",
+    "checking in",
+    "bumping this",
+}
+
+PERSONALIZATION_MARKERS = {
+    "{{first_name}}",
+    "{{company}}",
+    "noticed your",
+    "saw your",
+    "about your",
 }
 
 
@@ -60,3 +77,83 @@ def email_body_without_headers(text: str) -> str:
 
 def word_count(text: str) -> int:
     return len(re.findall(r"\b\w+\b", text))
+
+
+def first_non_empty_line(text: str) -> str:
+    for line in text.splitlines():
+        clean = line.strip()
+        if clean:
+            return clean
+    return ""
+
+
+def classify_opener(text: str) -> Dict[str, str]:
+    opener = first_non_empty_line(email_body_without_headers(text)).lower()
+    if not opener:
+        return {"type": "missing", "reason": "No opener detected"}
+
+    if any(token in opener for token in ("quick question", "following up", "hope you're doing well", "meeting request")):
+        return {"type": "pattern-based", "reason": "Saturated opener pattern used across outreach tools"}
+
+    if any(marker in opener for marker in PERSONALIZATION_MARKERS):
+        return {"type": "personalized", "reason": "Opener references recipient context"}
+
+    if word_count(opener) <= 8:
+        return {"type": "generic", "reason": "Short generic opener with low specificity"}
+
+    return {"type": "neutral", "reason": "Opener is present but not strongly personalized"}
+
+
+def classify_intent_clarity(text: str) -> Dict[str, str]:
+    body = email_body_without_headers(text).lower()
+    cta_markers = ("are you open", "would you be open", "can we", "let me know", "reply", "book", "schedule")
+    has_cta = any(marker in body for marker in cta_markers) or "?" in body
+
+    if not has_cta:
+        return {"type": "no-cta", "reason": "Message has no clear next-step ask"}
+
+    vague_markers = ("thought i would reach out", "wanted to connect", "just checking", "touching base")
+    if any(marker in body for marker in vague_markers):
+        return {"type": "vague", "reason": "Intent is present but phrased vaguely"}
+
+    return {"type": "clear", "reason": "Message includes a direct and actionable ask"}
+
+
+def detect_tracking_style_links(text: str) -> bool:
+    tracking_patterns = (
+        r"utm_",
+        r"[?&](trk|tracking|ref|source)=",
+        r"click\.",
+        r"redirect",
+    )
+    return any(re.search(pattern, text, flags=re.IGNORECASE) for pattern in tracking_patterns)
+
+
+def detect_confidence_killers(text: str) -> List[str]:
+    content = text.lower()
+    return sorted([term for term in CONFIDENCE_KILLERS if term in content])
+
+
+def automation_signal_score(text: str) -> Dict[str, object]:
+    body = email_body_without_headers(text).lower()
+    repeated_phrase_hits = 0
+    for phrase in ("quick question", "just following up", "checking in", "can i share"):
+        if body.count(phrase) >= 1:
+            repeated_phrase_hits += 1
+
+    template_markers = re.findall(r"\{\{[^}]+\}\}", text)
+    score = repeated_phrase_hits + (1 if len(template_markers) >= 1 else 0)
+
+    if score >= 3:
+        level = "high"
+    elif score >= 1:
+        level = "medium"
+    else:
+        level = "low"
+
+    return {
+        "level": level,
+        "score": score,
+        "template_markers": template_markers,
+        "repeated_phrase_hits": repeated_phrase_hits,
+    }
