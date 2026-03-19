@@ -25,9 +25,6 @@ document.body.appendChild(errorBanner);
 
 const loadingMessages = ["Analyzing SPF...", "Checking DKIM and DMARC...", "Scanning content and sending pattern..."];
 let loadingTimer = null;
-let hasAutoFilledFromPaste = false;
-let manualOverride = false;
-let autoFillSourceHash = "";
 
 const pillStyle = {
     "High Risk": {
@@ -169,71 +166,6 @@ function renderBreakdown(summary) {
     scoreBreakdownWrap.classList.remove("hidden");
 }
 
-function isLikelyEmailAddress(text) {
-    return /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i.test((text || "").trim());
-}
-
-function isLikelyHeaderLine(text) {
-    return /^(from|to|cc|bcc|date|reply-to|subject):/i.test((text || "").trim());
-}
-
-function isLikelySubjectCandidate(text) {
-    const value = (text || "").trim();
-    if (!value) {
-        return false;
-    }
-    if (isLikelyHeaderLine(value) || isLikelyEmailAddress(value)) {
-        return false;
-    }
-    if (/^https?:\/\//i.test(value)) {
-        return false;
-    }
-    if (/^(hi|hello|dear)\b/i.test(value)) {
-        return false;
-    }
-    return value.length >= 6 && value.length <= 140;
-}
-
-function extractSubjectFromRawClient(rawText) {
-    const subjectMatch = rawText.match(/^\s*Subject:\s*(.+)$/im);
-    if (subjectMatch && subjectMatch[1]) {
-        return subjectMatch[1].trim();
-    }
-
-    const lines = rawText.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
-    if (!lines.length) {
-        return "";
-    }
-
-    // Common copy format: first line is sender email, second is actual subject.
-    if (lines.length > 1 && isLikelyEmailAddress(lines[0]) && isLikelySubjectCandidate(lines[1])) {
-        return lines[1].slice(0, 120);
-    }
-
-    const firstSubjectLikeLine = lines.find((line) => isLikelySubjectCandidate(line));
-    return firstSubjectLikeLine ? firstSubjectLikeLine.slice(0, 120) : "";
-}
-
-function extractDomainFromRawClient(rawText) {
-    const fromMatch = rawText.match(/^\s*From:\s*(?:.*<)?[A-Z0-9._%+-]+@([A-Z0-9.-]+\.[A-Z]{2,})>?/im);
-    if (fromMatch && fromMatch[1]) {
-        return fromMatch[1].toLowerCase();
-    }
-
-    const emailMatch = rawText.match(/[A-Z0-9._%+-]+@([A-Z0-9.-]+\.[A-Z]{2,})/i);
-    return emailMatch && emailMatch[1] ? emailMatch[1].toLowerCase() : "";
-}
-
-function isFullEmailLikeContent(rawText) {
-    if (!rawText) {
-        return false;
-    }
-    const text = rawText.trim();
-    const hasEnoughLength = text.length >= 40;
-    const hasMultipleLines = text.split(/\r?\n/).filter(Boolean).length >= 3;
-    const hasEmailAddress = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i.test(text);
-    return hasEnoughLength && hasMultipleLines && hasEmailAddress;
-}
 
 form.addEventListener("submit", async (event) => {
     event.preventDefault();
@@ -252,20 +184,10 @@ form.addEventListener("submit", async (event) => {
         return;
     }
 
-    // Ensure fallback extraction for raw email
+    // Keep manual fields untouched when raw email is used.
     let finalRawEmail = rawText;
     let finalEmail = quickText;
     let finalDomain = domainText;
-
-    if (useRawEmail) {
-        // If using raw email, guarantee subject and domain extraction before sending
-        if (!finalEmail) {
-            finalEmail = extractSubjectFromRawClient(finalRawEmail) || "No subject detected";
-        }
-        if (!finalDomain) {
-            finalDomain = extractDomainFromRawClient(finalRawEmail) || "";
-        }
-    }
 
     submitButton.disabled = true;
     submitButton.textContent = "Analyzing...";
@@ -335,61 +257,6 @@ form.addEventListener("submit", async (event) => {
 leadEmailInput.addEventListener("input", () => {
     updateLeadLinks(domainInput ? domainInput.value : "");
 });
-
-if (rawEmailInput) {
-    rawEmailInput.addEventListener("paste", (event) => {
-        if (event.type !== "paste") {
-            return;
-        }
-
-        // Delay to ensure pasted content is available.
-        setTimeout(() => {
-            const rawText = rawEmailInput.value.trim();
-            if (!rawText) {
-                return;
-            }
-
-            // Autofill only for real full-email content, not subject-only snippets.
-            if (!isFullEmailLikeContent(rawText)) {
-                return;
-            }
-
-            const sourceHash = rawText.slice(0, 400);
-            const isSamePaste = sourceHash === autoFillSourceHash;
-
-            // Never fight manual edits for the same pasted content.
-            if (manualOverride && isSamePaste) {
-                return;
-            }
-
-            const subject = extractSubjectFromRawClient(rawText);
-            const detectedDomain = extractDomainFromRawClient(rawText);
-
-            if (emailQuickInput) {
-                emailQuickInput.value = subject || "";
-                emailQuickInput.title = "Auto-filled from pasted email";
-            }
-            if (domainInput) {
-                domainInput.value = detectedDomain || "";
-                domainInput.title = "Auto-filled from pasted email";
-                updateLeadLinks(domainInput.value);
-            }
-
-            hasAutoFilledFromPaste = true;
-            manualOverride = false;
-            autoFillSourceHash = sourceHash;
-        }, 0);
-    });
-}
-
-if (emailQuickInput) {
-    emailQuickInput.addEventListener("input", () => {
-        if (hasAutoFilledFromPaste) {
-            manualOverride = true;
-            emailQuickInput.title = "Manual override";
-        }
-    });
-}
 
 if (domainInput) {
     domainInput.addEventListener("input", () => {
