@@ -25,8 +25,6 @@ document.body.appendChild(errorBanner);
 
 const loadingMessages = ["Analyzing SPF...", "Checking DKIM and DMARC...", "Scanning content and sending pattern..."];
 let loadingTimer = null;
-let manualFieldOverride = false;
-let lastAutoFillRaw = "";
 
 const pillStyle = {
     "High Risk": {
@@ -322,50 +320,8 @@ leadEmailInput.addEventListener("input", () => {
     updateLeadLinks(domainInput ? domainInput.value : "");
 });
 
-if (rawEmailInput) {
-    rawEmailInput.addEventListener("paste", () => {
-        // Read after paste is applied to textarea.
-        setTimeout(() => {
-            const rawText = rawEmailInput.value.trim();
-            if (!rawText) {
-                return;
-            }
-
-            // Respect user edits when the same raw content remains.
-            if (manualFieldOverride && rawText === lastAutoFillRaw) {
-                return;
-            }
-
-            const subject = extractSubjectFromRawClient(rawText);
-            if (emailQuickInput) {
-                emailQuickInput.value = subject || "";
-                emailQuickInput.title = "Auto-filled from pasted email";
-            }
-
-            const detectedDomain = extractDomainFromRawClient(rawText);
-            if (domainInput) {
-                domainInput.value = detectedDomain || "";
-                domainInput.title = "Auto-filled from pasted email";
-                updateLeadLinks(domainInput.value);
-            }
-
-            manualFieldOverride = false;
-            lastAutoFillRaw = rawText;
-        }, 0);
-    });
-}
-
-if (emailQuickInput) {
-    emailQuickInput.addEventListener("input", () => {
-        manualFieldOverride = true;
-        emailQuickInput.title = "Manual override";
-    });
-}
-
 if (domainInput) {
     domainInput.addEventListener("input", () => {
-        manualFieldOverride = true;
-        domainInput.title = "Manual override";
         updateLeadLinks(domainInput.value);
     });
 }
