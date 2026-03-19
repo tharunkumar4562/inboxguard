@@ -1,6 +1,7 @@
 const form = document.getElementById("risk-form");
 const resultSection = document.getElementById("result");
 const scoreNode = document.getElementById("score");
+const scoreBarFill = document.getElementById("score-bar-fill");
 const bandNode = document.getElementById("risk-band");
 const findingsNode = document.getElementById("findings");
 const riskPill = document.getElementById("risk-pill");
@@ -51,19 +52,19 @@ function renderFindings(findings) {
     findingsNode.innerHTML = "";
 
     if (!findings || findings.length === 0) {
-        findingsNode.innerHTML = '<li class="finding-row low">No major red flags detected in this partial scan.</li>';
+        findingsNode.innerHTML = '<li class="finding-row low">No major red flags detected from the provided content.</li>';
         return;
     }
 
     findings.forEach((item) => {
         const li = document.createElement("li");
         li.className = `finding-row ${item.severity || "medium"}`;
-        const title = item.title || "Risk signal";
+        const title = item.title || "Signal";
         const consequence = item.impact || item.issue || item.message || "Deliverability may be affected.";
 
         li.innerHTML = `
-      <p class="finding-title">${title}</p>
-      <p><span class="finding-label">Consequence:</span> ${consequence}</p>
+            <p class="finding-title">- ${title}</p>
+            <p>${consequence}</p>
     `;
         findingsNode.appendChild(li);
     });
@@ -108,7 +109,7 @@ function setLoadingState(isLoading) {
             lockedFixes.classList.add("hidden");
         }
         findingsNode.innerHTML = "";
-        bandNode.textContent = "Running pre-send diagnostics...";
+        bandNode.textContent = "Analyzing your email...";
         scoreNode.textContent = "Calculating...";
         if (problemSummary) {
             problemSummary.classList.add("hidden");
@@ -136,10 +137,21 @@ function renderRisk(summary) {
     const variant = pillStyle[label] || pillStyle["High Risk"];
 
     scoreNode.textContent = `${summary.score}/100`;
-    bandNode.textContent = "Your email has issues that can push it to spam. Fixes are locked.";
+    if (label === "Low Risk") {
+        bandNode.textContent = "You're likely safe, but some patterns may reduce inbox placement.";
+    } else if (label === "Moderate Risk") {
+        bandNode.textContent = "You're likely safe, but some patterns may reduce inbox placement.";
+    } else {
+        bandNode.textContent = "High deliverability risk detected. Revise this email before sending.";
+    }
 
     scoreNode.classList.remove("text-red-500", "text-blue-400", "text-emerald-400");
     scoreNode.classList.add(variant.scoreCls);
+
+    if (scoreBarFill) {
+        const clamped = Math.max(0, Math.min(100, Number(summary.score) || 0));
+        scoreBarFill.style.width = `${clamped}%`;
+    }
 
     riskPill.className = `rounded-full border px-4 py-1 text-sm font-semibold ${variant.cls}`;
     riskPill.textContent = label;
