@@ -10,6 +10,11 @@ const leadEmailInput = document.getElementById("lead-email");
 const emailRequestLink = document.getElementById("email-request-link");
 const resultLoading = document.getElementById("result-loading");
 const resultCta = document.getElementById("result-cta");
+const loadingStep = document.getElementById("loading-step");
+const lockedFixes = document.getElementById("locked-fixes");
+
+const loadingMessages = ["Analyzing SPF...", "Checking DKIM and DMARC...", "Scanning content and sending pattern..."];
+let loadingTimer = null;
 
 const pillStyle = {
     "High Risk": {
@@ -38,15 +43,11 @@ function renderFindings(findings) {
         const li = document.createElement("li");
         li.className = `finding-row ${item.severity || "medium"}`;
         const title = item.title || "Risk signal";
-        const issue = item.issue || item.message || "Issue details unavailable.";
-        const impact = item.impact || "Impact details unavailable.";
-        const fix = item.fix || "Fix details unavailable.";
+        const consequence = item.impact || item.issue || item.message || "Deliverability may be affected.";
 
         li.innerHTML = `
       <p class="finding-title">${title}</p>
-      <p><span class="finding-label">Issue:</span> ${issue}</p>
-      <p><span class="finding-label">Impact:</span> ${impact}</p>
-      <p><span class="finding-label">Fix:</span> ${fix}</p>
+      <p><span class="finding-label">Consequence:</span> ${consequence}</p>
     `;
         findingsNode.appendChild(li);
     });
@@ -56,16 +57,40 @@ function sleep(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function startLoadingSteps() {
+    if (!loadingStep) {
+        return;
+    }
+    let idx = 0;
+    loadingStep.textContent = loadingMessages[idx];
+    loadingTimer = setInterval(() => {
+        idx = (idx + 1) % loadingMessages.length;
+        loadingStep.textContent = loadingMessages[idx];
+    }, 580);
+}
+
+function stopLoadingSteps() {
+    if (loadingTimer) {
+        clearInterval(loadingTimer);
+        loadingTimer = null;
+    }
+}
+
 function setLoadingState(isLoading) {
     if (isLoading) {
         resultLoading.classList.remove("hidden");
         resultCta.classList.add("hidden");
+        if (lockedFixes) {
+            lockedFixes.classList.add("hidden");
+        }
         findingsNode.innerHTML = "";
         bandNode.textContent = "We will show what is hurting your deliverability. Fixes are hidden.";
         scoreNode.textContent = "--";
+        startLoadingSteps();
         return;
     }
     resultLoading.classList.add("hidden");
+    stopLoadingSteps();
 }
 
 function updateLeadLinks(domain) {
@@ -118,6 +143,9 @@ form.addEventListener("submit", async (event) => {
         renderRisk(data.summary);
         renderFindings(data.partial_findings);
         updateLeadLinks(data.domain);
+        if (lockedFixes) {
+            lockedFixes.classList.remove("hidden");
+        }
         resultCta.classList.remove("hidden");
         setLoadingState(false);
 

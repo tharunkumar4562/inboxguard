@@ -28,6 +28,75 @@ h3 {
     background-color: var(--ink);
 }
 
+.logo-wrap {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+}
+
+.logo-mark {
+    position: relative;
+    width: 1.4rem;
+    height: 1.4rem;
+    border: 2px solid #3b82f6;
+    border-radius: 0.42rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.logo-envelope {
+    position: absolute;
+    width: 0.72rem;
+    height: 0.48rem;
+    border: 1.8px solid #93c5fd;
+    border-radius: 0.08rem;
+}
+
+.logo-envelope::before {
+    content: "";
+    position: absolute;
+    left: 0.05rem;
+    right: 0.05rem;
+    top: 0.02rem;
+    height: 0.3rem;
+    border-top: 1.6px solid #93c5fd;
+    transform: skewY(-18deg);
+}
+
+.logo-check {
+    position: absolute;
+    width: 0.44rem;
+    height: 0.22rem;
+    border-left: 2px solid #10b981;
+    border-bottom: 2px solid #10b981;
+    transform: rotate(-45deg);
+    right: -0.1rem;
+    bottom: 0.04rem;
+}
+
+.logo-text {
+    font-size: 0.82rem;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    color: #bfdbfe;
+}
+
+.login-link {
+    font-size: 0.85rem;
+    color: #94a3b8;
+    text-decoration: none;
+    border: 1px solid rgba(148, 163, 184, 0.3);
+    border-radius: 999px;
+    padding: 0.3rem 0.8rem;
+    transition: border-color 180ms ease, color 180ms ease;
+}
+
+.login-link:hover {
+    color: #cbd5e1;
+    border-color: rgba(148, 163, 184, 0.55);
+}
+
 .page-glow {
     position: absolute;
     inset: -40% auto auto 45%;
@@ -145,4 +214,17 @@ h3 {
 #result.visible {
     display: block;
     animation: riseIn 420ms ease;
+}
+
+.locked-item {
+    position: relative;
+    padding-left: 1.25rem;
+}
+
+.locked-item::before {
+    content: "\1F512";
+    position: absolute;
+    left: 0;
+    top: 0.02rem;
+    font-size: 0.82rem;
 }

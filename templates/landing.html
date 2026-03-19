@@ -22,10 +22,17 @@
   <body class="bg-ink text-slate-100 min-h-screen antialiased">
     <main class="relative overflow-hidden">
       <div class="page-glow"></div>
-      <section class="mx-auto max-w-5xl px-5 py-12 md:py-20">
-        <p class="inline-flex rounded-full border border-blue-400/40 bg-blue-500/10 px-4 py-1 text-xs font-semibold tracking-[0.16em] text-blue-200">
-          INBOXGUARD
-        </p>
+      <section class="mx-auto max-w-5xl px-5 py-10 md:py-14">
+        <div class="flex items-center justify-between gap-4">
+          <div class="logo-wrap">
+            <span class="logo-mark" aria-hidden="true">
+              <span class="logo-envelope"></span>
+              <span class="logo-check"></span>
+            </span>
+            <span class="logo-text">INBOXGUARD</span>
+          </div>
+          <a href="#" class="login-link">Login</a>
+        </div>
         <p class="mt-4 text-sm uppercase tracking-[0.12em] text-slate-400">Intent Focus: {{ focus_query }}</p>
 
         <h1 class="mt-6 max-w-4xl text-4xl font-bold leading-tight md:text-6xl">
@@ -67,6 +74,8 @@
           <p class="mt-2 text-sm text-slate-300">This tool is tuned for high-intent outbound deliverability issues and manual fix reports.</p>
 
           <form id="risk-form" class="mt-4 space-y-4">
+            <p class="text-base font-semibold text-slate-100">Paste your email. See what is broken in 5 seconds.</p>
+            <p class="text-xs text-slate-400">Last scan: 72/100 (High Risk)</p>
             <div>
               <label for="email" class="mb-2 block text-sm text-slate-300">Paste email copy</label>
               <textarea id="email" name="email" rows="8" required class="w-full rounded-2xl border border-slate-700 bg-slate-950/70 p-4 text-sm text-slate-100 outline-none ring-0 transition focus:border-blue-500">Subject: Quick question about your outreach
@@ -91,15 +100,15 @@ Your Name</textarea>
             <div id="example-scan" class="rounded-2xl border border-red-500/40 bg-red-500/10 p-4">
               <p class="text-sm font-semibold text-red-100">Example Scan: Risk Score 68/100 (High Risk)</p>
               <ul class="mt-2 space-y-2 text-sm text-slate-100">
-                <li class="risk-item">SPF misalignment detected</li>
-                <li class="risk-item">4 spam-trigger phrases found</li>
-                <li class="risk-item">Sending pattern looks automated</li>
+                <li class="risk-item">Your emails may go to spam due to SPF misalignment</li>
+                <li class="risk-item">Your open rates may drop from spam-trigger wording</li>
+                <li class="risk-item">Your domain may look like automated outreach traffic</li>
               </ul>
             </div>
           </form>
         </div>
 
-        <section id="result" class="mt-8 rounded-3xl border border-slate-700 bg-slate-900/85 p-6 shadow-2xl">
+        <section id="result" class="mt-5 rounded-3xl border border-slate-700 bg-slate-900/85 p-6 shadow-2xl">
           <div class="flex flex-wrap items-end justify-between gap-3">
             <div>
               <p class="text-sm uppercase tracking-[0.16em] text-slate-400">Partial risk result</p>
@@ -111,12 +120,21 @@ Your Name</textarea>
 
           <div id="result-loading" class="mt-5 hidden rounded-2xl border border-blue-500/45 bg-blue-500/10 p-4 text-sm text-blue-100">
             <span class="spinner"></span>
-            Analyzing deliverability signals...
+            <span id="loading-step">Analyzing SPF...</span>
           </div>
 
           <ul id="findings" class="mt-5 space-y-3">
             <li class="finding-row medium">We will show what is hurting your deliverability. Fixes are hidden.</li>
           </ul>
+
+          <div id="locked-fixes" class="mt-5 hidden rounded-2xl border border-amber-400/40 bg-amber-500/10 p-4">
+            <p class="text-sm font-semibold text-amber-100">Fixes detected (locked)</p>
+            <ul class="mt-2 space-y-2 text-sm text-amber-50">
+              <li class="locked-item">Fix #1 detected (locked)</li>
+              <li class="locked-item">Fix #2 detected (locked)</li>
+              <li class="locked-item">Fix #3 detected (locked)</li>
+            </ul>
+          </div>
 
           <div class="mt-5 rounded-2xl border border-emerald-500/35 bg-emerald-500/10 p-4">
             <ul class="space-y-2 text-sm text-emerald-100">
