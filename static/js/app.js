@@ -161,7 +161,9 @@ function renderBreakdown(summary) {
     scoreBreakdownNode.innerHTML = "";
     breakdown.slice(0, 5).forEach((item) => {
         const li = document.createElement("li");
-        li.textContent = `- ${item.label} (-${item.points}): ${item.reason}`;
+        const points = Number(item.points) || 0;
+        const sign = points >= 0 ? "+" : "";
+        li.textContent = `- ${item.label} (${sign}${points}): ${item.reason}`;
         scoreBreakdownNode.appendChild(li);
     });
     scoreBreakdownWrap.classList.remove("hidden");
@@ -220,6 +222,17 @@ function extractDomainFromRawClient(rawText) {
 
     const emailMatch = rawText.match(/[A-Z0-9._%+-]+@([A-Z0-9.-]+\.[A-Z]{2,})/i);
     return emailMatch && emailMatch[1] ? emailMatch[1].toLowerCase() : "";
+}
+
+function isFullEmailLikeContent(rawText) {
+    if (!rawText) {
+        return false;
+    }
+    const text = rawText.trim();
+    const hasEnoughLength = text.length >= 40;
+    const hasMultipleLines = text.split(/\r?\n/).filter(Boolean).length >= 3;
+    const hasEmailAddress = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i.test(text);
+    return hasEnoughLength && hasMultipleLines && hasEmailAddress;
 }
 
 form.addEventListener("submit", async (event) => {
@@ -324,11 +337,20 @@ leadEmailInput.addEventListener("input", () => {
 });
 
 if (rawEmailInput) {
-    rawEmailInput.addEventListener("paste", () => {
+    rawEmailInput.addEventListener("paste", (event) => {
+        if (event.type !== "paste") {
+            return;
+        }
+
         // Delay to ensure pasted content is available.
         setTimeout(() => {
             const rawText = rawEmailInput.value.trim();
             if (!rawText) {
+                return;
+            }
+
+            // Autofill only for real full-email content, not subject-only snippets.
+            if (!isFullEmailLikeContent(rawText)) {
                 return;
             }
 

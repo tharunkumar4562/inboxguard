@@ -5,6 +5,7 @@ def score_risk(signals: Dict) -> Dict:
     risk_points = 0
     findings: List[Dict[str, str]] = []
     breakdown: List[Dict[str, str | int]] = []
+    score = 70
 
     email_type = signals.get("email_type", "cold outreach")
     auth_verifiable = signals.get("auth_verifiable", False)
@@ -22,10 +23,16 @@ def score_risk(signals: Dict) -> Dict:
         return points
 
     def add_penalty(points: int, label: str, reason: str, category: str = "content"):
-        nonlocal risk_points
+        nonlocal risk_points, score
         applied_points = weighted(points, category=category)
         risk_points += applied_points
-        breakdown.append({"label": label, "points": applied_points, "reason": reason})
+        score -= applied_points
+        breakdown.append({"label": label, "points": -applied_points, "reason": reason})
+
+    def add_boost(points: int, label: str, reason: str):
+        nonlocal score
+        score += points
+        breakdown.append({"label": label, "points": points, "reason": reason})
 
     findings.append(
         {
@@ -46,6 +53,19 @@ def score_risk(signals: Dict) -> Dict:
             "fix": "Paste full raw headers for stronger SPF/DKIM/DMARC verification.",
         }
     )
+
+    if email_type == "transactional":
+        add_boost(10, "Transactional profile", "System-style email profile lowers spam-risk weighting")
+    elif email_type == "marketing/newsletter":
+        add_boost(4, "Newsletter profile", "Broadcast email profile applies moderated weighting")
+    elif email_type == "informational/system":
+        add_boost(6, "Informational profile", "Informational notices get neutral-safe baseline treatment")
+
+    if signals.get("is_no_reply_sender") and email_type in ("transactional", "marketing/newsletter", "informational/system"):
+        add_boost(3, "System sender pattern", "No-reply sender is common for system/broadcast mail")
+
+    if not auth_verifiable:
+        add_penalty(4, "Limited authentication evidence", "Headers are incomplete, so authentication confidence is constrained")
 
     if auth_verifiable and not signals.get("spf", False):
         add_penalty(20, "SPF policy missing", "Domain identity cannot be reliably verified", category="infra")
@@ -202,7 +222,7 @@ def score_risk(signals: Dict) -> Dict:
             if high_seen > 3:
                 item["severity"] = "medium"
 
-    score = max(35, 100 - risk_points)
+    score = max(35, min(95, score))
 
     if score >= 80:
         band = "Low Risk"
