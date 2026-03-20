@@ -16,6 +16,14 @@ SPAM_TERMS = {
     "meeting request",
 }
 
+CTA_PHRASES = {
+    "click here",
+    "register now",
+    "apply now",
+    "get started",
+    "join now",
+}
+
 AGGRESSIVE_TONE_TERMS = {
     "last chance",
     "reply today",
@@ -95,7 +103,45 @@ INFORMATIONAL_MARKERS = {
 
 def normalize_domain(domain: str) -> str:
     value = domain.strip().lower()
-    return value.replace("https://", "").replace("http://", "").split("/")[0]
+    if not value:
+        return ""
+
+    value = value.replace("https://", "").replace("http://", "").split("/")[0]
+    value = value.strip("<>()[]{}.,;\"' ")
+
+    # If user passed full email instead of domain, keep the host part only.
+    if "@" in value:
+        value = value.rsplit("@", 1)[-1]
+
+    return value
+
+
+def root_domain(domain: str) -> str:
+    clean = normalize_domain(domain)
+    if not clean:
+        return ""
+
+    parts = clean.split(".")
+    if len(parts) <= 2:
+        return clean
+
+    # Lightweight effective-root fallback used for DNS checks.
+    two_level_suffixes = {"co.uk", "org.uk", "com.au", "co.in"}
+    suffix = ".".join(parts[-2:])
+    if suffix in two_level_suffixes and len(parts) >= 3:
+        return ".".join(parts[-3:])
+    return ".".join(parts[-2:])
+
+
+def domain_candidates(domain: str) -> List[str]:
+    clean = normalize_domain(domain)
+    if not clean:
+        return []
+
+    root = root_domain(clean)
+    if root and root != clean:
+        return [clean, root]
+    return [clean]
 
 
 def count_links(text: str) -> int:
@@ -242,6 +288,11 @@ def detect_confidence_killers(text: str) -> List[str]:
     return sorted([term for term in CONFIDENCE_KILLERS if term in content])
 
 
+def detect_cta_phrases(text: str) -> List[str]:
+    content = text.lower()
+    return sorted([phrase for phrase in CTA_PHRASES if phrase in content])
+
+
 def automation_signal_score(text: str) -> Dict[str, object]:
     body = email_body_without_headers(text).lower()
     repeated_phrase_hits = 0
@@ -295,6 +346,11 @@ def extract_domain_from_text(text: str) -> str:
     from_match = re.search(r"^\s*From:\s*(?:.*<)?[A-Z0-9._%+-]+@([A-Z0-9.-]+\.[A-Z]{2,})>?", text, flags=re.IGNORECASE | re.MULTILINE)
     if from_match:
         return normalize_domain(from_match.group(1))
+
+    # Fallback: find any email address in the pasted text.
+    email_match = re.search(r"[A-Z0-9._%+-]+@([A-Z0-9.-]+\.[A-Z]{2,})", text, flags=re.IGNORECASE)
+    if email_match:
+        return normalize_domain(email_match.group(1))
 
     link_match = re.search(r"https?://[^\s)>'\"]+", text, flags=re.IGNORECASE)
     if link_match:

@@ -24,8 +24,12 @@ const switchToManual = document.getElementById("switch-to-manual");
 const switchToPaste = document.getElementById("switch-to-paste");
 const scoreBreakdownWrap = document.getElementById("score-breakdown-wrap");
 const scoreBreakdownNode = document.getElementById("score-breakdown");
+const contentScoreNode = document.getElementById("content-score-value");
+const infraImpactNode = document.getElementById("infra-impact-value");
+const finalScoreNode = document.getElementById("final-score-value");
 const problemSummary = document.getElementById("problem-summary");
 const analysisModeNote = document.getElementById("analysis-mode-note");
+const capabilityNoteNode = document.getElementById("capability-note");
 const errorBanner = document.createElement("div");
 errorBanner.id = "error-banner";
 errorBanner.className = "hidden fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-red-500/90 text-white px-6 py-3 rounded-lg shadow-lg font-semibold";
@@ -174,10 +178,14 @@ function renderRisk(summary) {
     const emailTypeConfidence = summary.email_type_confidence || 72;
     const modeLabel = summary.analysis_mode_label || "Content Only";
     const modeDetail = summary.analysis_mode_note || "Based on content signals only.";
+    const capabilityNote = summary.capability_note || "Based on content + domain checks only (no real inbox placement testing).";
 
     bandNode.textContent = `Inbox chance: ~${inboxChance}% • Spam risk: ~${spamRisk}% • Email type: ${emailType} (${emailTypeConfidence}%)`;
     if (analysisModeNote) {
         analysisModeNote.textContent = `${modeLabel}: ${modeDetail}`;
+    }
+    if (capabilityNoteNode) {
+        capabilityNoteNode.textContent = capabilityNote;
     }
 
     scoreNode.classList.remove("text-red-500", "text-blue-400", "text-emerald-400", "text-yellow-400");
@@ -246,6 +254,21 @@ function renderBreakdown(summary) {
     }
 
     const breakdown = summary.breakdown || [];
+    const contentScore = summary.content_score;
+    const infraImpact = summary.infra_impact;
+    const finalScore = summary.final_score || summary.score;
+
+    if (contentScoreNode) {
+        contentScoreNode.textContent = Number.isFinite(Number(contentScore)) ? `${contentScore}/100` : "-";
+    }
+    if (infraImpactNode) {
+        const infraNumber = Number(infraImpact);
+        infraImpactNode.textContent = Number.isFinite(infraNumber) ? `${infraNumber}` : "0";
+    }
+    if (finalScoreNode) {
+        finalScoreNode.textContent = Number.isFinite(Number(finalScore)) ? `${finalScore}/100` : "-";
+    }
+
     if (!breakdown.length) {
         scoreBreakdownWrap.classList.add("hidden");
         scoreBreakdownNode.innerHTML = "";

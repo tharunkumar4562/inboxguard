@@ -127,10 +127,15 @@ Your message starts here..."></textarea>
             <li class="finding-row medium">Your email has issues that can push it to spam. Fixes are locked.</li>
           </ul>
 
-          <p class="mt-4 text-sm font-semibold text-slate-200">Analysis confidence: Medium. Headers are not fully verifiable from partial content alone.</p>
+          <p id="capability-note" class="mt-4 text-sm font-semibold text-slate-200">Based on content + domain checks only (no real inbox placement testing).</p>
 
           <div id="score-breakdown-wrap" class="mt-5 hidden rounded-2xl border border-slate-700/80 bg-slate-950/55 p-4">
             <p class="text-sm font-semibold text-slate-100">Score breakdown</p>
+            <div id="score-summary-lines" class="mt-2 space-y-1 text-sm text-slate-200">
+              <p>Content Score: <span id="content-score-value">-</span></p>
+              <p>Infra Impact: <span id="infra-impact-value">-</span></p>
+              <p>Final Score: <span id="final-score-value">-</span></p>
+            </div>
             <ul id="score-breakdown" class="mt-2 space-y-2 text-sm text-slate-300"></ul>
           </div>
 

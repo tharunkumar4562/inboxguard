@@ -8,10 +8,14 @@ from scorer import score_risk
 from utils import (
     automation_signal_score,
     count_links,
+    detect_cta_phrases,
     detect_email_type,
     detect_confidence_killers,
     detect_tracking_style_links,
+    domain_candidates,
     email_body_without_headers,
+    extract_domain_from_text,
+    extract_subject_from_raw,
     find_aggressive_tone_terms,
     find_spam_terms,
     has_excessive_caps,
@@ -23,29 +27,58 @@ from utils import (
 )
 
 
-def _has_txt_record(domain: str, marker: str) -> bool:
+def _txt_record_status(domain: str, marker: str) -> str:
+    """Return one of: found | missing | unknown."""
     try:
         answers = dns.resolver.resolve(domain, "TXT")
+        found = False
         for answer in answers:
             text = "".join(part.decode("utf-8") if isinstance(part, bytes) else str(part) for part in answer.strings)
             if marker.lower() in text.lower():
-                return True
-        return False
+                found = True
+                break
+        return "found" if found else "missing"
+    except dns.resolver.NXDOMAIN:
+        return "missing"
+    except dns.resolver.NoAnswer:
+        return "missing"
+    except dns.resolver.NoNameservers:
+        return "unknown"
+    except dns.exception.Timeout:
+        return "unknown"
     except (dns.exception.DNSException, Exception):
-        return False
+        return "unknown"
 
 
-def _check_spf(domain: str) -> bool:
-    return _has_txt_record(domain, "v=spf1")
+def _check_spf(domain: str) -> Dict[str, str]:
+    for candidate in domain_candidates(domain):
+        status = _txt_record_status(candidate, "v=spf1")
+        if status == "found":
+            return {"status": "found", "domain": candidate}
+        if status == "unknown":
+            return {"status": "unknown", "domain": candidate}
+    return {"status": "missing", "domain": normalize_domain(domain)}
 
 
-def _check_dkim(domain: str) -> bool:
+def _check_dkim(domain: str) -> Dict[str, str]:
     # Common selector fallback for lightweight checks.
-    return _has_txt_record(f"default._domainkey.{domain}", "v=DKIM1")
+    for candidate in domain_candidates(domain):
+        status = _txt_record_status(f"default._domainkey.{candidate}", "v=DKIM1")
+        if status == "found":
+            return {"status": "found", "domain": candidate}
+        if status == "unknown":
+            return {"status": "unknown", "domain": candidate}
+    return {"status": "missing", "domain": normalize_domain(domain)}
 
 
-def _check_dmarc(domain: str) -> bool:
-    return _has_txt_record(f"_dmarc.{domain}", "v=DMARC1")
+def _check_dmarc(domain: str) -> Dict[str, str]:
+    for candidate in domain_candidates(domain):
+        status = _txt_record_status(f"_dmarc.{candidate}", "v=DMARC1")
+        if status == "found":
+            return {"status": "found", "domain": candidate}
+        if status == "unknown":
+            return {"status": "unknown", "domain": candidate}
+    return {"status": "missing", "domain": normalize_domain(domain)}
 
 
 def _check_blacklist_status(domain: str) -> Dict:
@@ -60,6 +93,7 @@ def _check_blacklist_status(domain: str) -> Dict:
     ]
     
     blacklist_hits = []
+    had_unknown = False
     domain_parts = domain.split(".")
     
     # Query each DNSBL
@@ -73,13 +107,12 @@ def _check_blacklist_status(domain: str) -> Dict:
             if answers:
                 blacklist_hits.append(dnsbl.split(".")[0].upper())  # Extract provider name
         except (dns.exception.DNSException, Exception):
-            # Not listed on this DNSBL
-            pass
+            had_unknown = True
     
     return {
         "blacklisted": len(blacklist_hits) > 0,
         "lists": blacklist_hits,
-        "status": "on_blacklist" if blacklist_hits else "clean"
+        "status": "on_blacklist" if blacklist_hits else ("unknown" if had_unknown else "clean")
     }
 
 
@@ -129,9 +162,34 @@ def _is_short_generic_email(raw_email: str) -> bool:
     return body_words <= 35 and has_generic_marker
 
 
-def analyze_email(email: str, domain: str, raw_email: str = "", analysis_mode: str = "content") -> Dict:
-    clean_domain = normalize_domain(domain)
+def _normalized_input(email: str, domain: str, raw_email: str) -> Dict[str, str]:
     source_text = raw_email.strip() or email
+    subject = extract_subject_from_raw(source_text)
+    body = email_body_without_headers(source_text) or source_text
+
+    parsed_domain = normalize_domain(domain)
+    if not parsed_domain:
+        parsed_domain = normalize_domain(_extract_from_domain(source_text) or "")
+    if not parsed_domain:
+        parsed_domain = normalize_domain(extract_domain_from_text(source_text) or "")
+    if not parsed_domain:
+        parsed_domain = normalize_domain(domain)
+
+    normalized_email = f"Subject: {subject}\n\n{body}" if subject else body
+    return {
+        "subject": subject,
+        "body": body,
+        "domain": parsed_domain,
+        "email": normalized_email,
+        "source": source_text,
+    }
+
+
+def analyze_email(email: str, domain: str, raw_email: str = "", analysis_mode: str = "content") -> Dict:
+    normalized = _normalized_input(email, domain, raw_email)
+    clean_domain = normalized["domain"]
+    source_text = normalized["source"]
+    normalized_email = normalized["email"]
     mode = (analysis_mode or "content").strip().lower()
     if mode not in ("content", "full"):
         mode = "content"
@@ -150,9 +208,9 @@ def analyze_email(email: str, domain: str, raw_email: str = "", analysis_mode: s
                 "header_mismatch": False,
                 "header_note": "From/SPF alignment not checked because full headers were not provided",
             }
-        spf = _check_spf(clean_domain)
-        dkim = _check_dkim(clean_domain)
-        dmarc = _check_dmarc(clean_domain)
+        spf_result = _check_spf(clean_domain)
+        dkim_result = _check_dkim(clean_domain)
+        dmarc_result = _check_dmarc(clean_domain)
         blacklist_status = _check_blacklist_status(clean_domain)
     else:
         header_alignment = {
@@ -161,22 +219,23 @@ def analyze_email(email: str, domain: str, raw_email: str = "", analysis_mode: s
             "header_mismatch": False,
             "header_note": "Authentication checks not verified because full headers were not provided",
         }
-        spf = False
-        dkim = False
-        dmarc = False
+        spf_result = {"status": "not_checked", "domain": ""}
+        dkim_result = {"status": "not_checked", "domain": ""}
+        dmarc_result = {"status": "not_checked", "domain": ""}
         blacklist_status = {"blacklisted": False, "lists": [], "status": "unknown"}
 
-    aggressive_tone_terms = find_aggressive_tone_terms(email)
+    aggressive_tone_terms = find_aggressive_tone_terms(normalized_email)
 
-    link_count = count_links(email)
+    link_count = count_links(normalized_email)
     too_many_links = link_count > 3
-    tracking_style_links = detect_tracking_style_links(email)
-    short_generic_email = _is_short_generic_email(email)
-    opener_profile = classify_opener(email)
-    intent_profile = classify_intent_clarity(email)
-    confidence_killers = detect_confidence_killers(email)
-    automation_profile = automation_signal_score(email)
-    email_type_profile = detect_email_type(email)
+    tracking_style_links = detect_tracking_style_links(normalized_email)
+    short_generic_email = _is_short_generic_email(normalized_email)
+    opener_profile = classify_opener(normalized_email)
+    intent_profile = classify_intent_clarity(normalized_email)
+    confidence_killers = detect_confidence_killers(normalized_email)
+    automation_profile = automation_signal_score(normalized_email)
+    email_type_profile = detect_email_type(normalized_email)
+    cta_phrases = detect_cta_phrases(normalized_email)
 
     sending_pattern_risk = too_many_links or bool(aggressive_tone_terms) or short_generic_email
 
@@ -184,19 +243,26 @@ def analyze_email(email: str, domain: str, raw_email: str = "", analysis_mode: s
         "analysis_mode": mode,
         "auth_verifiable": auth_verifiable,
         "analysis_confidence": "high" if full_mode and clean_domain else "medium",
-        "spf": spf,
-        "dkim": dkim,
-        "dmarc": dmarc,
+        "spf": spf_result.get("status") == "found",
+        "dkim": dkim_result.get("status") == "found",
+        "dmarc": dmarc_result.get("status") == "found",
+        "spf_status": spf_result.get("status", "unknown"),
+        "dkim_status": dkim_result.get("status", "unknown"),
+        "dmarc_status": dmarc_result.get("status", "unknown"),
+        "spf_checked_domain": spf_result.get("domain", clean_domain),
+        "dkim_checked_domain": dkim_result.get("domain", clean_domain),
+        "dmarc_checked_domain": dmarc_result.get("domain", clean_domain),
         "blacklist_status": blacklist_status,
         "from_domain": header_alignment["from_domain"],
         "spf_aligned": header_alignment["spf_aligned"],
         "header_mismatch": header_alignment["header_mismatch"],
         "header_note": header_alignment["header_note"],
-        "spam_terms": find_spam_terms(email),
+        "spam_terms": find_spam_terms(normalized_email),
         "link_count": link_count,
         "too_many_links": too_many_links,
+        "cta_phrases": cta_phrases,
         "tracking_style_links": tracking_style_links,
-        "excessive_caps": has_excessive_caps(email),
+        "excessive_caps": has_excessive_caps(normalized_email),
         "aggressive_tone_terms": aggressive_tone_terms,
         "short_generic_email": short_generic_email,
         "sending_pattern_risk": sending_pattern_risk,
@@ -210,7 +276,7 @@ def analyze_email(email: str, domain: str, raw_email: str = "", analysis_mode: s
         "template_markers": automation_profile["template_markers"],
         "email_type": email_type_profile["type"],
         "email_type_reason": email_type_profile["reason"],
-        "is_no_reply_sender": is_no_reply_sender(email),
+        "is_no_reply_sender": is_no_reply_sender(normalized_email),
     }
 
     scored = score_risk(signals)
@@ -225,10 +291,17 @@ def analyze_email(email: str, domain: str, raw_email: str = "", analysis_mode: s
             "analysis_mode": scored.get("analysis_mode", mode),
             "analysis_mode_label": scored.get("analysis_mode_label", "Content Only"),
             "analysis_mode_note": scored.get("analysis_mode_note", "Based on content signals only."),
+            "capability_note": scored.get(
+                "capability_note",
+                "Based on content and optional domain checks only. No real inbox placement testing is performed.",
+            ),
             "inbox_chance": scored.get("inbox_chance", 50),
             "spam_risk": scored.get("spam_risk", 50),
             "email_type": scored.get("email_type", "email"),
             "email_type_confidence": scored.get("email_type_confidence", 72),
+            "content_score": scored.get("content_score", scored["score"]),
+            "infra_impact": scored.get("infra_impact", 0),
+            "final_score": scored.get("final_score", scored["score"]),
             "detected_signals": scored.get("detected_signals", []),
             "risk_points": scored["risk_points"],
             "breakdown": scored["breakdown"],
