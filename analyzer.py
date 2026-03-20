@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Dict, List
 import re
 
 import dns.exception
@@ -46,6 +46,41 @@ def _check_dkim(domain: str) -> bool:
 
 def _check_dmarc(domain: str) -> bool:
     return _has_txt_record(f"_dmarc.{domain}", "v=DMARC1")
+
+
+def _check_blacklist_status(domain: str) -> Dict:
+    """Check if domain is on major blacklists (DNSBL)."""
+    if not domain:
+        return {"blacklisted": False, "lists": [], "status": "unknown"}
+    
+    # Public DNSBL providers - these are free and reliable
+    dnsbl_providers = [
+        "zen.spamhaus.org",      # Spamhaus (most reliable)
+        "dnsbl.sorbs.net",        # SORBS
+    ]
+    
+    blacklist_hits = []
+    domain_parts = domain.split(".")
+    
+    # Query each DNSBL
+    for dnsbl in dnsbl_providers:
+        try:
+            # Reverse domain octets for DNSBL query
+            reversed_domain = ".".join(reversed(domain_parts))
+            query_domain = f"{reversed_domain}.{dnsbl}"
+            
+            answers = dns.resolver.resolve(query_domain, "A", lifetime=2.0)
+            if answers:
+                blacklist_hits.append(dnsbl.split(".")[0].upper())  # Extract provider name
+        except (dns.exception.DNSException, Exception):
+            # Not listed on this DNSBL
+            pass
+    
+    return {
+        "blacklisted": len(blacklist_hits) > 0,
+        "lists": blacklist_hits,
+        "status": "on_blacklist" if blacklist_hits else "clean"
+    }
 
 
 def _has_header_evidence(raw_email: str) -> bool:
@@ -105,6 +140,7 @@ def analyze_email(email: str, domain: str, raw_email: str = "") -> Dict:
         spf = _check_spf(clean_domain)
         dkim = _check_dkim(clean_domain)
         dmarc = _check_dmarc(clean_domain)
+        blacklist_status = _check_blacklist_status(clean_domain)
     else:
         header_alignment = {
             "from_domain": "",
@@ -115,6 +151,7 @@ def analyze_email(email: str, domain: str, raw_email: str = "") -> Dict:
         spf = False
         dkim = False
         dmarc = False
+        blacklist_status = {"blacklisted": False, "lists": [], "status": "unknown"}
 
     aggressive_tone_terms = find_aggressive_tone_terms(email)
 
@@ -136,6 +173,7 @@ def analyze_email(email: str, domain: str, raw_email: str = "") -> Dict:
         "spf": spf,
         "dkim": dkim,
         "dmarc": dmarc,
+        "blacklist_status": blacklist_status,
         "from_domain": header_alignment["from_domain"],
         "spf_aligned": header_alignment["spf_aligned"],
         "header_mismatch": header_alignment["header_mismatch"],

@@ -32,19 +32,19 @@ def score_risk(signals: Dict) -> Dict:
         {
             "severity": "low",
             "title": "Email type detected",
-            "issue": f"Classified as {email_type}.",
-            "impact": signals.get("email_type_reason", "Scoring weights adjusted by email category."),
-            "fix": "Review this classification before applying any remediation plan.",
+            "issue": f"This looks like a {email_type.replace('/', ' / ')}.",
+            "impact": signals.get("email_type_reason", "").replace("Scoring weights adjusted by email category", "This affects how spam filters treat your email"),
+            "fix": None,
         }
     )
 
     findings.append(
         {
             "severity": "low",
-            "title": "Analysis confidence",
-            "issue": f"Confidence: {confidence.capitalize()}.",
-            "impact": "Authentication-level claims are only made when enough header evidence is provided.",
-            "fix": "Paste full raw headers for stronger SPF/DKIM/DMARC verification.",
+            "title": "Sender verification status",
+            "issue": f"{'✅ Full headers provided - sender identity can be verified' if auth_verifiable else '⚠️ Partial email pasted - some authentication checks not available'}" ,
+            "impact": "Full headers let us verify you're really the sender. Partial email limits our checks.",
+            "fix": "Paste complete email including headers for full verification." if not auth_verifiable else None,
         }
     )
 
@@ -186,6 +186,26 @@ def score_risk(signals: Dict) -> Dict:
         })
 
     # === AUTH INFRASTRUCTURE CHECKS (when headers provided) ===
+    blacklist_status = signals.get("blacklist_status", {})
+    if blacklist_status.get("blacklisted", False):
+        add_penalty(30, "Domain on blacklist", "Your domain is currently listed on spam blacklists", category="infra")
+        lists = ", ".join(blacklist_status.get("lists", []))
+        findings.append({
+            "severity": "high",
+            "title": "⚠️ Domain is on spam blacklists",
+            "issue": f"Your domain is listed on: {lists}. ISPs automatically block messages from blacklisted domains.",
+            "impact": "Your emails will go straight to spam until the blacklist issue is resolved.",
+            "fix": "If this is a mistake, request delisting from the blacklist provider. If you just started using this domain, wait 24-48 hours for lists to refresh.",
+        })
+    elif auth_verifiable:
+        findings.append({
+            "severity": "low",
+            "title": "✅ Domain reputation is clean",
+            "issue": "Your domain is not on major spam blacklists.",
+            "impact": None,
+            "fix": None,
+        })
+
     if auth_verifiable and not signals.get("spf", False):
         add_penalty(18, "SPF policy missing", "Domain identity cannot be reliably verified", category="infra")
         findings.append({
