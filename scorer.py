@@ -9,7 +9,8 @@ def score_risk(signals: Dict) -> Dict:
     breakdown: List[Dict[str, str | int]] = []
     detected_signals: List[str] = []
     score = 64
-    max_content_penalty = 24
+    # Hard content downside cap to prevent over-sensitive swings.
+    max_content_penalty = 12
 
     email_type = signals.get("email_type", "cold outreach")
     mode = signals.get("analysis_mode", "content")
@@ -85,16 +86,24 @@ def score_risk(signals: Dict) -> Dict:
         detected_signals.append("• Personalization detected")
 
     if has_subject and 40 <= body_word_count <= 260:
-        add_boost(8, "Clear structure", "Subject + readable body length detected")
+        add_boost(10, "Clear structure", "Subject + readable body length detected")
 
     if not spam_terms:
-        add_boost(5, "No promotional spam terms", "Copy avoids common trigger phrases")
+        add_boost(8, "Clean content", "Copy avoids common trigger phrases")
 
     if not aggressive_terms:
-        add_boost(4, "Neutral tone", "No urgency pressure terms detected")
+        add_boost(6, "Neutral tone", "No urgency pressure terms detected")
+
+    if email_type in ("informational/system", "transactional"):
+        add_boost(8, "Informational trust profile", "Message style looks informational over promotional")
+
+    language_penalty = 0
+    targeting_penalty = 0
+    structure_penalty = 0
+    friction_penalty = 0
 
     if email_type == "cold outreach" and not has_personalization:
-        add_penalty(12, "No personalization", "Looks like bulk email instead of 1:1 outreach")
+        targeting_penalty += 8
         detected_signals.append("• No personalization detected (looks like bulk email)")
         findings.append(
             {
@@ -107,8 +116,8 @@ def score_risk(signals: Dict) -> Dict:
         )
 
     if spam_terms:
-        promo_penalty = min(20, len(spam_terms) * 8)
-        add_penalty(promo_penalty, "Promotional phrasing", f"Found: {', '.join(spam_terms[:3])}", category="content")
+        promo_penalty = min(8, len(spam_terms) * 4)
+        language_penalty += promo_penalty
         detected_signals.append(f"• {len(spam_terms)} promotional phrase(s) ({', '.join(spam_terms[:2])})")
 
     normalized_cta = {p.strip().lower() for p in cta_phrases}
@@ -134,24 +143,21 @@ def score_risk(signals: Dict) -> Dict:
         )
 
     pressure_penalty = max(cta_penalty, urgency_penalty)
+    pressure_reason = ""
     if pressure_penalty:
         reason_parts: List[str] = []
         if cta_phrases:
             reason_parts.append(f"CTA: {', '.join(cta_phrases[:2])}")
         if non_overlap_urgency:
             reason_parts.append(f"Urgency: {', '.join(non_overlap_urgency[:2])}")
-        add_penalty(
-            pressure_penalty,
-            "CTA/Urgency pressure",
-            " | ".join(reason_parts),
-            category="content",
-        )
+        language_penalty += pressure_penalty
+        pressure_reason = " | ".join(reason_parts)
 
     if signals.get("too_many_links", False):
-        add_penalty(14, "Too many links", "Link-heavy copy resembles bulk campaigns", category="content")
+        friction_penalty += 8
         detected_signals.append(f"• {link_count} links detected")
     elif link_count >= 2:
-        add_penalty(8, "Multiple links", "Multiple links increase promotional footprint", category="content")
+        friction_penalty += 5
         detected_signals.append(f"• {link_count} links detected")
     elif link_count == 1:
         add_boost(2, "Single link", "Focused call-to-action pattern")
@@ -160,10 +166,10 @@ def score_risk(signals: Dict) -> Dict:
         detected_signals.append("• 0 links detected")
 
     if signals.get("excessive_caps", False):
-        add_penalty(8, "Excessive capitalization", "Shouting style is a spam indicator", category="content")
+        structure_penalty += 4
 
     if signals.get("short_generic_email", False):
-        add_penalty(10, "Generic CTA structure", "Short + generic outreach is high-risk", category="content")
+        structure_penalty += 5
         findings.append(
             {
                 "severity": "medium",
@@ -175,26 +181,61 @@ def score_risk(signals: Dict) -> Dict:
         )
 
     if confidence_killers:
-        add_penalty(min(10, len(confidence_killers) * 5), "Saturated phrasing", "Overused opener language detected", category="content")
+        language_penalty += min(4, len(confidence_killers) * 2)
 
     opener_type = signals.get("opener_type")
     if email_type == "cold outreach" and opener_type in ("generic", "pattern-based"):
-        add_penalty(8, "Generic opener pattern", signals.get("opener_reason", "Overused opener"), category="content")
+        targeting_penalty += 4
 
     intent_type = signals.get("intent_type")
     if email_type == "cold outreach" and intent_type in ("no-cta", "vague"):
-        add_penalty(10, "Generic/unclear CTA", "No clear low-friction ask detected", category="content")
+        targeting_penalty += 4
 
     if signals.get("tracking_style_links", False):
-        add_penalty(6, "Tracking links", "Tracking parameters can reduce trust", category="content")
+        friction_penalty += 3
+
+    # Group normalization to avoid overlap double counting.
+    language_penalty = min(8, language_penalty)
+    targeting_penalty = min(8, targeting_penalty)
+    structure_penalty = min(6, structure_penalty)
+    friction_penalty = min(8, friction_penalty)
+
+    if language_penalty > 0:
+        add_penalty(
+            language_penalty,
+            "Language pressure",
+            pressure_reason or "Promotional or urgency-heavy phrasing detected",
+            category="content",
+        )
+    if targeting_penalty > 0:
+        add_penalty(
+            targeting_penalty,
+            "Targeting clarity risk",
+            "Personalization/opener/CTA clarity signals indicate template-like outreach",
+            category="content",
+        )
+    if structure_penalty > 0:
+        add_penalty(
+            structure_penalty,
+            "Structure risk",
+            "Formatting pattern resembles generic outreach",
+            category="content",
+        )
+    if friction_penalty > 0:
+        add_penalty(
+            friction_penalty,
+            "Friction risk",
+            "Links/tracking footprint increases promotional profile",
+            category="content",
+        )
 
     # Profile adjustments (light-touch)
     if email_type == "transactional":
-        add_boost(8, "Transactional profile", "Legitimate notification pattern")
+        add_boost(6, "Transactional profile", "Legitimate notification pattern")
     elif email_type == "marketing/newsletter":
         add_boost(3, "Newsletter profile", "Broadcast pattern recognized")
     elif email_type == "informational/system":
-        add_boost(6, "Informational profile", "Announcement/system style recognized")
+        add_boost(5, "Informational profile", "Announcement/system style recognized")
 
     # Infra checks only in full mode
     if full_mode:
