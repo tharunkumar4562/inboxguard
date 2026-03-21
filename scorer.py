@@ -73,7 +73,6 @@ def score_risk(signals: Dict) -> Dict:
     link_count = int(signals.get("link_count", 0))
     confidence_killers = signals.get("confidence_killers") or []
     body_word_count = int(signals.get("body_word_count", 0))
-    subject_length = int(signals.get("subject_length", 0))
 
     has_personalization = any(
         marker in (signals.get("email_type_reason", "").lower())
@@ -85,8 +84,10 @@ def score_risk(signals: Dict) -> Dict:
         add_boost(8, "Personalization detected", "Recipient-specific context detected")
         detected_signals.append("• Personalization detected")
 
+    # Keep structure scoring mode-agnostic: base it on body quality only.
+    # This avoids paste/manual drift caused by subject parsing differences.
     structure_score = 0
-    if subject_length > 5:
+    if 20 <= body_word_count <= 320:
         structure_score += 5
     if 50 <= body_word_count <= 320:
         structure_score += 5
