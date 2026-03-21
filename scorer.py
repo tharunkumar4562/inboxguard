@@ -85,8 +85,10 @@ def score_risk(signals: Dict) -> Dict:
         add_boost(8, "Personalization detected", "Recipient-specific context detected")
         detected_signals.append("• Personalization detected")
 
-    if has_subject and 40 <= body_word_count <= 260:
-        add_boost(10, "Clear structure", "Subject + readable body length detected")
+    if has_subject:
+        add_boost(4, "Subject present", "A clear subject improves trust signals")
+        if 40 <= body_word_count <= 260:
+            add_boost(4, "Readable body length", "Body length is in a healthy outreach range")
 
     if not spam_terms:
         add_boost(8, "Clean content", "Copy avoids common trigger phrases")
