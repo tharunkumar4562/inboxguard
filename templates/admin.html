@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{{ page_title or "InboxGuard Admin Dashboard" }}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/static/css/styles.css" />
+  </head>
+  <body class="bg-ink text-slate-100 min-h-screen antialiased">
+    <main class="mx-auto max-w-6xl px-5 py-8 md:py-10">
+      <header class="mb-8 border-b border-slate-800/70 pb-4">
+        <h1 class="text-3xl font-bold md:text-4xl">InboxGuard Admin Dashboard</h1>
+        <p class="mt-2 text-sm text-slate-300">Updated: {{ metrics.updated_at or "n/a" }}</p>
+      </header>
+
+      <section class="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <article class="rounded-2xl border border-slate-700 bg-slate-900/70 p-4">
+          <p class="text-xs uppercase tracking-[0.16em] text-slate-400">Views</p>
+          <p class="mt-2 text-3xl font-bold">{{ metrics.counters.page_views or 0 }}</p>
+        </article>
+        <article class="rounded-2xl border border-slate-700 bg-slate-900/70 p-4">
+          <p class="text-xs uppercase tracking-[0.16em] text-slate-400">CTA Clicks</p>
+          <p class="mt-2 text-3xl font-bold">{{ metrics.counters.cta_clicks or 0 }}</p>
+        </article>
+        <article class="rounded-2xl border border-slate-700 bg-slate-900/70 p-4">
+          <p class="text-xs uppercase tracking-[0.16em] text-slate-400">Access Requests</p>
+          <p class="mt-2 text-3xl font-bold">{{ metrics.counters.access_requests or 0 }}</p>
+        </article>
+        <article class="rounded-2xl border border-slate-700 bg-slate-900/70 p-4">
+          <p class="text-xs uppercase tracking-[0.16em] text-slate-400">Analyze Requests</p>
+          <p class="mt-2 text-3xl font-bold">{{ metrics.counters.analyze_requests or 0 }}</p>
+        </article>
+        <article class="rounded-2xl border border-slate-700 bg-slate-900/70 p-4">
+          <p class="text-xs uppercase tracking-[0.16em] text-slate-400">Content Mode</p>
+          <p class="mt-2 text-3xl font-bold">{{ metrics.mode_summary.content or 0 }}</p>
+          <p class="mt-1 text-xs text-slate-400">{{ metrics.mode_summary.content_pct or 0 }}%</p>
+        </article>
+        <article class="rounded-2xl border border-slate-700 bg-slate-900/70 p-4">
+          <p class="text-xs uppercase tracking-[0.16em] text-slate-400">Full Mode</p>
+          <p class="mt-2 text-3xl font-bold">{{ metrics.mode_summary.full or 0 }}</p>
+          <p class="mt-1 text-xs text-slate-400">{{ metrics.mode_summary.full_pct or 0 }}%</p>
+        </article>
+      </section>
+
+      <section class="mt-8 grid grid-cols-1 gap-6 md:grid-cols-2">
+        <article class="rounded-2xl border border-slate-700 bg-slate-900/70 p-4">
+          <h2 class="text-xl font-semibold">Views By Page</h2>
+          <ul class="mt-3 space-y-1 text-sm text-slate-200">
+            {% if metrics.by_page %}
+              {% for page, count in metrics.by_page.items() %}
+                <li>- {{ page }}: {{ count }}</li>
+              {% endfor %}
+            {% else %}
+              <li>- No data yet</li>
+            {% endif %}
+          </ul>
+        </article>
+
+        <article class="rounded-2xl border border-slate-700 bg-slate-900/70 p-4">
+          <h2 class="text-xl font-semibold">Event Counts</h2>
+          <ul class="mt-3 space-y-1 text-sm text-slate-200">
+            {% if metrics.by_event %}
+              {% for event_name, count in metrics.by_event.items() %}
+                <li>- {{ event_name }}: {{ count }}</li>
+              {% endfor %}
+            {% else %}
+              <li>- No data yet</li>
+            {% endif %}
+          </ul>
+        </article>
+      </section>
+
+      <section class="mt-8 rounded-2xl border border-slate-700 bg-slate-900/70 p-4">
+        <h2 class="text-xl font-semibold">Recent Events</h2>
+        <div class="mt-3 overflow-x-auto">
+          <table class="min-w-full text-left text-sm text-slate-200">
+            <thead>
+              <tr class="border-b border-slate-700 text-slate-400">
+                <th class="px-3 py-2">Time (UTC)</th>
+                <th class="px-3 py-2">Event</th>
+                <th class="px-3 py-2">Meta</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% if metrics.events %}
+                {% for row in metrics.events %}
+                  <tr class="border-b border-slate-800/70">
+                    <td class="px-3 py-2">{{ row.time }}</td>
+                    <td class="px-3 py-2">{{ row.event }}</td>
+                    <td class="px-3 py-2">{{ row.meta }}</td>
+                  </tr>
+                {% endfor %}
+              {% else %}
+                <tr>
+                  <td class="px-3 py-3" colspan="3">No events recorded yet.</td>
+                </tr>
+              {% endif %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

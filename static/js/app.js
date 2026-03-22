@@ -43,6 +43,24 @@ const loadingMessages = ["Analyzing SPF...", "Checking DKIM and DMARC...", "Scan
 let loadingTimer = null;
 let currentInputMode = "paste";
 
+function sendTrackEvent(eventName, target = "", mode = "") {
+    if (!eventName) {
+        return;
+    }
+    const payload = new FormData();
+    payload.set("event", eventName);
+    payload.set("target", target || "");
+    payload.set("mode", mode || "");
+
+    fetch("/track", {
+        method: "POST",
+        body: payload,
+        keepalive: true,
+    }).catch(() => {
+        // Fire-and-forget analytics should not affect UX.
+    });
+}
+
 const pillStyle = {
     "High Risk": {
         cls: "border-red-500/60 bg-red-500/15 text-red-100",
@@ -449,6 +467,18 @@ form.addEventListener("submit", async (event) => {
 leadEmailInput.addEventListener("input", () => {
     updateLeadLinks(domainInput ? domainInput.value : "");
 });
+
+if (unlockLink) {
+    unlockLink.addEventListener("click", () => {
+        sendTrackEvent("cta_click", "whatsapp_unlock", analysisModeInput ? analysisModeInput.value : "");
+    });
+}
+
+if (emailRequestLink) {
+    emailRequestLink.addEventListener("click", () => {
+        sendTrackEvent("cta_click", "email_request_link", analysisModeInput ? analysisModeInput.value : "");
+    });
+}
 
 if (domainInput) {
     domainInput.addEventListener("input", () => {

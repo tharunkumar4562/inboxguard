@@ -1,14 +1,16 @@
 from datetime import date
 from pathlib import Path
 import logging
+import os
 
-from fastapi import FastAPI, Form, Request
-from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse, Response
+from fastapi import FastAPI, Form, Request, HTTPException
+from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse, Response, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from jinja2 import TemplateNotFound, TemplateError
 
 from analyzer import analyze_email
+from analytics import get_dashboard_data, track_event
 from utils import build_email_from_raw, extract_domain_from_text
 
 app = FastAPI(title="InboxGuard")
@@ -22,6 +24,7 @@ app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
 SITE_URL = "https://inboxguard-production-90ab.up.railway.app"
+ADMIN_TOKEN = os.getenv("INBOXGUARD_ADMIN_TOKEN", "")
 LONG_TAIL_PAGES = [
     {
         "slug": "fix-godaddy-spam-issues",
@@ -91,6 +94,7 @@ def health() -> dict:
 
 @app.get("/", response_class=HTMLResponse)
 def home(request: Request):
+    track_event("page_view", {"page": "home"})
     return render_template_safe(
         request,
         "index.html",
@@ -110,6 +114,7 @@ def login_page(request: Request):
 
 @app.get("/access", response_class=HTMLResponse)
 def access_page(request: Request):
+    track_event("page_view", {"page": "access"})
     return render_template_safe(
         request,
         "login.html",
@@ -136,6 +141,8 @@ def programmatic_page(request: Request, slug: str):
             },
             status_code=404,
         )
+
+    track_event("page_view", {"page": f"p/{slug}"})
 
     title = f"{item['query']} | InboxGuard"
     description = (
@@ -234,6 +241,8 @@ def analyze(
     if mode not in ("content", "full"):
         mode = "content"
 
+    track_event("analyze_request", {"mode": mode})
+
     result = analyze_email(
         parsed_email,
         parsed_domain,
@@ -243,6 +252,54 @@ def analyze(
         body_override=parsed_body,
     )
     return result
+
+
+@app.post("/track")
+def track(
+    event: str = Form(""),
+    target: str = Form(""),
+    mode: str = Form(""),
+):
+    event_name = (event or "").strip().lower()
+    if event_name not in {"cta_click", "page_view", "access_request"}:
+        return JSONResponse({"ok": True})
+
+    meta = {
+        "target": (target or "")[:120],
+        "mode": (mode or "")[:20],
+    }
+    track_event(event_name, meta)
+    return JSONResponse({"ok": True})
+
+
+@app.post("/request-access")
+def request_access(email: str = Form("")):
+    clean_email = (email or "").strip()
+    track_event("access_request", {"email": clean_email[:120]})
+    return JSONResponse({"ok": True})
+
+
+def _verify_admin_token(token: str) -> None:
+    if not ADMIN_TOKEN:
+        raise HTTPException(status_code=404, detail="Not found")
+    if token != ADMIN_TOKEN:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+
+@app.get("/admin", response_class=HTMLResponse)
+def admin_dashboard(request: Request, token: str = ""):
+    _verify_admin_token(token)
+    metrics = get_dashboard_data()
+    return render_template_safe(
+        request,
+        "admin.html",
+        {
+            "page_title": "InboxGuard Admin Dashboard",
+            "canonical_url": f"{SITE_URL}/admin",
+            "meta_description": "Private InboxGuard metrics dashboard.",
+            "metrics": metrics,
+        },
+    )
 
 
 if __name__ == "__main__":

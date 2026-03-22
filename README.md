@@ -31,16 +31,35 @@ Open `http://127.0.0.1:8000`.
 
 ## Scoring Rules
 
-- Missing SPF: -20
-- Missing DKIM: -20
-- Missing DMARC: -20
-- Spam phrases: -10
-- Too many links: -15
-- Excessive caps: -10
+- Penalty-first model (no positive stacking)
+- Baseline starts at 100 and subtracts risk penalties
+- Content penalties include CTA pressure, spam phrases, link density, targeting quality, and tracking footprint
+- Full mode adds infrastructure penalties for SPF/DKIM/DMARC/auth alignment/reputation
+- Non-linear interaction penalties are applied for combinations like SPF+DKIM missing or CTA+multi-link pattern
 
 Final score:
 
-`score = max(0, 100 - risk_points)`
+`score = max(0, min(100, 100 - total_penalty))`
+
+## Private Admin Dashboard
+
+You can enable a private dashboard to track:
+
+- Page views
+- CTA clicks
+- Access requests
+- Analyze requests
+- Mode usage (`content` vs `full`)
+
+Set an environment variable before launch/deploy:
+
+`INBOXGUARD_ADMIN_TOKEN=your-secret-token`
+
+Open dashboard with:
+
+`/admin?token=your-secret-token`
+
+If token is missing, dashboard route returns `404`.
 
 ## Notes
 

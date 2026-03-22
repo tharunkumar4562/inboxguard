@@ -1,29 +1,67 @@
 from typing import Dict, List, Optional
 
 
+# Penalty-first model: start at 100 and subtract risk.
+# This avoids top-end saturation and makes issues materially visible.
+CONTENT_PENALTIES = {
+    "spam_phrases": 20,
+    "cta_pressure": 15,
+    "urgency_pressure": 12,
+    "link_density": 15,
+    "tracking_links": 8,
+    "short_generic": 10,
+    "cold_no_personalization": 12,
+    "targeting_unclear": 8,
+    "excessive_caps": 8,
+    "confidence_killers": 6,
+    "automation_high": 10,
+    "missing_list_unsubscribe": 12,
+}
+
+INFRA_PENALTIES = {
+    "blacklisted_domain": 45,
+    "spf_missing": 35,
+    "dkim_missing": 30,
+    "dmarc_missing": 20,
+    "dkim_not_verifiable": 15,
+    "spf_misaligned": 20,
+    "auth_not_verifiable": 8,
+}
+
+
+def _clamp_score(value: int) -> int:
+    return max(0, min(100, value))
+
+
+def _impact_from_points(points: int) -> float:
+    return max(0.05, min(1.0, round(points / 100, 2)))
+
+
+def _to_int(value: object, fallback: int = 0) -> int:
+    try:
+        return int(value)  # type: ignore[arg-type]
+    except Exception:
+        return fallback
+
+
+def _severity_for_points(points: int) -> str:
+    if points >= 25:
+        return "high"
+    if points >= 12:
+        return "medium"
+    return "low"
+
+
 def score_risk(signals: Dict) -> Dict:
-    risk_points = 0
-    infra_penalty_points = 0
-    content_penalty_points = 0
     findings: List[Dict[str, Optional[str]]] = []
     breakdown: List[Dict[str, str | int]] = []
     detected_signals: List[str] = []
-    score = 64
-    # Hard content downside cap to prevent over-sensitive swings.
-    max_content_penalty = 12
+    issues: List[Dict[str, object]] = []
 
     email_type = signals.get("email_type", "cold outreach")
     mode = signals.get("analysis_mode", "content")
     full_mode = mode == "full"
     auth_verifiable = bool(signals.get("auth_verifiable", False))
-
-    email_type_confidence = 72
-    if email_type == "cold outreach" and signals.get("automation_level") == "high":
-        email_type_confidence = 85
-    elif email_type == "transactional" and signals.get("is_no_reply_sender"):
-        email_type_confidence = 88
-    elif email_type == "marketing/newsletter" and signals.get("email_type_reason"):
-        email_type_confidence = 78
 
     mode_label = "Full Deliverability Check" if full_mode else "Content Only"
     mode_note = (
@@ -32,30 +70,6 @@ def score_risk(signals: Dict) -> Dict:
         else "Based on message content only. Domain infrastructure checks are not applied."
     )
 
-    def add_penalty(points: int, label: str, reason: str, category: str = "content"):
-        nonlocal risk_points, score, infra_penalty_points, content_penalty_points
-        if points <= 0:
-            return
-
-        if category == "content":
-            remaining = max_content_penalty - content_penalty_points
-            if remaining <= 0:
-                return
-            points = min(points, remaining)
-            content_penalty_points += points
-
-        risk_points += points
-        if category == "infra":
-            infra_penalty_points += points
-        score -= points
-        breakdown.append({"label": label, "points": -points, "reason": reason})
-
-    def add_boost(points: int, label: str, reason: str):
-        nonlocal score
-        score += points
-        breakdown.append({"label": label, "points": points, "reason": reason})
-
-    # Classification context
     findings.append(
         {
             "severity": "low",
@@ -66,223 +80,251 @@ def score_risk(signals: Dict) -> Dict:
         }
     )
 
-    # Content signals
+    # Extract commonly used signals.
     spam_terms = signals.get("spam_terms") or []
     cta_phrases = signals.get("cta_phrases") or []
     aggressive_terms = signals.get("aggressive_tone_terms") or []
     link_count = int(signals.get("link_count", 0))
+    too_many_links = bool(signals.get("too_many_links", False))
+    tracking_style_links = bool(signals.get("tracking_style_links", False))
+    short_generic_email = bool(signals.get("short_generic_email", False))
     confidence_killers = signals.get("confidence_killers") or []
-    body_word_count = int(signals.get("body_word_count", 0))
+    opener_type = str(signals.get("opener_type", ""))
+    intent_type = str(signals.get("intent_type", ""))
+    has_list_unsubscribe_marker = bool(signals.get("has_list_unsubscribe_marker", False))
 
+    content_penalty_points = 0
+    infra_penalty_points = 0
+
+    def add_breakdown(label: str, points: int, reason: str, category: str = "content") -> None:
+        nonlocal content_penalty_points, infra_penalty_points
+        points = int(max(0, points))
+        if points == 0:
+            return
+        if category == "infra":
+            infra_penalty_points += points
+        else:
+            content_penalty_points += points
+        breakdown.append({"label": label, "points": -points, "reason": reason})
+
+    def add_issue(
+        issue_type: str,
+        title: str,
+        points: int,
+        action: str,
+        why: str,
+        providers: List[str] | None = None,
+    ) -> None:
+        severity = _severity_for_points(points)
+        findings.append(
+            {
+                "severity": severity,
+                "title": title,
+                "issue": why,
+                "impact": f"Estimated impact: {points} points.",
+                "fix": action,
+            }
+        )
+        issues.append(
+            {
+                "type": issue_type,
+                "title": title,
+                "impact": _impact_from_points(points),
+                "points": points,
+                "action": action,
+                "why": why,
+                "providers": providers or ["all"],
+            }
+        )
+
+    # Content penalties.
+    if spam_terms:
+        points = min(30, CONTENT_PENALTIES["spam_phrases"] + max(0, len(spam_terms) - 1) * 4)
+        add_breakdown("Spam phrase risk", points, f"Found trigger terms: {', '.join(spam_terms[:3])}")
+        add_issue(
+            "spam_phrases",
+            "Promotional phrasing detected",
+            points,
+            "Replace promotional terms with neutral wording and concrete value.",
+            "Trigger phrases often map to promotions/spam buckets.",
+            ["gmail", "yahoo"],
+        )
+        detected_signals.append(f"• Spam terms: {', '.join(spam_terms[:2])}")
+
+    if cta_phrases:
+        points = min(25, CONTENT_PENALTIES["cta_pressure"] + max(0, len(cta_phrases) - 1) * 3)
+        add_breakdown("CTA pressure", points, f"CTA terms: {', '.join(cta_phrases[:2])}")
+        add_issue(
+            "cta_pressure",
+            "CTA pressure is high",
+            points,
+            "Use one low-pressure CTA and remove urgency wording.",
+            "Urgency-heavy CTAs are commonly treated as campaign-style behavior.",
+            ["gmail", "yahoo", "outlook"],
+        )
+        detected_signals.append(f"• CTA phrases detected ({', '.join(cta_phrases[:2])})")
+
+    normalized_cta = {p.strip().lower() for p in cta_phrases}
+    non_overlap_urgency = [t for t in aggressive_terms if t.strip().lower() not in normalized_cta]
+    if non_overlap_urgency:
+        points = min(20, CONTENT_PENALTIES["urgency_pressure"] + max(0, len(non_overlap_urgency) - 1) * 3)
+        add_breakdown("Urgency language", points, f"Urgency terms: {', '.join(non_overlap_urgency[:2])}")
+        add_issue(
+            "urgency_pressure",
+            "Urgency language detected",
+            points,
+            "Replace urgency terms with calm, specific timing.",
+            "Pressure language can reduce trust and increase filtering probability.",
+            ["gmail", "outlook", "yahoo"],
+        )
+        detected_signals.append("• Uses urgency language")
+
+    if too_many_links:
+        points = CONTENT_PENALTIES["link_density"]
+        add_breakdown("High link density", points, f"Detected {link_count} links")
+        add_issue(
+            "link_density",
+            "Link footprint is high",
+            points,
+            "Reduce links to one direct destination URL.",
+            "Many links increase promotional classification risk.",
+            ["gmail", "outlook", "yahoo"],
+        )
+        detected_signals.append(f"• {link_count} links detected")
+    elif link_count >= 2:
+        points = max(8, CONTENT_PENALTIES["link_density"] - 5)
+        add_breakdown("Multiple links", points, f"Detected {link_count} links")
+        add_issue(
+            "link_density",
+            "Multiple links detected",
+            points,
+            "Prefer one clear link instead of multiple destinations.",
+            "Multiple links increase campaign-like footprint.",
+            ["gmail", "outlook", "yahoo"],
+        )
+        detected_signals.append(f"• {link_count} links detected")
+    elif link_count == 1:
+        detected_signals.append("• 1 link detected")
+    else:
+        detected_signals.append("• 0 links detected")
+
+    if tracking_style_links:
+        points = CONTENT_PENALTIES["tracking_links"]
+        add_breakdown("Tracking-style links", points, "Tracking/redirect-like URL pattern detected")
+        add_issue(
+            "tracking_link_reputation",
+            "Tracking-style URL pattern",
+            points,
+            "Use direct destination URLs without redirect-style tracking params.",
+            "Tracking URL patterns lower trust with mailbox filters.",
+            ["gmail", "outlook"],
+        )
+
+    if short_generic_email:
+        points = CONTENT_PENALTIES["short_generic"]
+        add_breakdown("Generic short copy", points, "Message appears short and template-like")
+        add_issue(
+            "short_generic_email",
+            "Generic call-to-action detected",
+            points,
+            "Use recipient-specific context and one concrete ask.",
+            "Generic short requests resemble bulk outreach patterns.",
+            ["gmail", "outlook", "yahoo"],
+        )
+
+    if signals.get("excessive_caps", False):
+        points = CONTENT_PENALTIES["excessive_caps"]
+        add_breakdown("Excessive capitalization", points, "All-caps usage detected")
+
+    if confidence_killers:
+        points = min(12, CONTENT_PENALTIES["confidence_killers"] + len(confidence_killers))
+        add_breakdown("Low-trust language", points, "Uncertain or hedging language detected")
+
+    # Targeting/persona penalties.
     has_personalization = any(
         marker in (signals.get("email_type_reason", "").lower())
         for marker in ["noticed", "saw your", "about your", "personali"]
     )
 
-    # Positive signals first: this improves score spread so good emails can actually score high.
-    if has_personalization:
-        add_boost(8, "Personalization detected", "Recipient-specific context detected")
-        detected_signals.append("• Personalization detected")
-
-    # Keep structure scoring mode-agnostic: base it on body quality only.
-    # This avoids paste/manual drift caused by subject parsing differences.
-    structure_score = 0
-    if 20 <= body_word_count <= 320:
-        structure_score += 5
-    if 50 <= body_word_count <= 320:
-        structure_score += 5
-    if structure_score:
-        add_boost(structure_score, "Clear structure", "Subject/body structure quality detected")
-
-    if not spam_terms:
-        add_boost(8, "Clean content", "Copy avoids common trigger phrases")
-
-    if not aggressive_terms:
-        add_boost(6, "Neutral tone", "No urgency pressure terms detected")
-
-    if email_type in ("informational/system", "transactional"):
-        add_boost(8, "Informational trust profile", "Message style looks informational over promotional")
-
-    language_penalty = 0
-    targeting_penalty = 0
-    structure_penalty = 0
-    friction_penalty = 0
-
     if email_type == "cold outreach" and not has_personalization:
-        targeting_penalty += 8
-        detected_signals.append("• No personalization detected (looks like bulk email)")
-        findings.append(
-            {
-                "severity": "high",
-                "title": "No personalization detected",
-                "issue": "This message reads like a template, not a person-to-person email.",
-                "impact": "Template-style outreach is downranked by inbox providers.",
-                "fix": "Add recipient-specific context such as company detail, recent post, or role-specific pain.",
-            }
+        points = CONTENT_PENALTIES["cold_no_personalization"]
+        add_breakdown("No personalization", points, "Cold outreach without recipient-specific context")
+        add_issue(
+            "no_personalization",
+            "No personalization detected",
+            points,
+            "Add one recipient-specific reference in your opener.",
+            "Template-style outreach is downranked by providers.",
+            ["gmail", "outlook", "yahoo"],
+        )
+        detected_signals.append("• No personalization detected")
+
+    if opener_type in ("generic", "pattern-based"):
+        points = CONTENT_PENALTIES["targeting_unclear"]
+        add_breakdown("Generic opener", points, "Opening line appears reusable across many recipients")
+
+    if intent_type in ("no-cta", "vague"):
+        points = CONTENT_PENALTIES["targeting_unclear"]
+        add_breakdown("Vague intent", points, "Call-to-action is vague or missing")
+
+    if signals.get("automation_level") == "high":
+        points = CONTENT_PENALTIES["automation_high"]
+        add_breakdown("Automation footprint", points, "High template/automation markers detected")
+
+    if email_type in ("marketing/newsletter", "cold outreach") and link_count >= 1 and not has_list_unsubscribe_marker:
+        points = CONTENT_PENALTIES["missing_list_unsubscribe"]
+        add_breakdown("List-Unsubscribe missing", points, "Campaign-style mail without unsubscribe marker")
+        add_issue(
+            "missing_list_unsubscribe",
+            "List-Unsubscribe signal missing",
+            points,
+            "Add unsubscribe/manage-preferences controls for campaign-style sends.",
+            "Outlook is stricter on list-unsubscribe expectations.",
+            ["outlook"],
         )
 
-    if spam_terms:
-        promo_penalty = min(8, len(spam_terms) * 4)
-        language_penalty += promo_penalty
-        detected_signals.append(f"• {len(spam_terms)} promotional phrase(s) ({', '.join(spam_terms[:2])})")
+    # Infrastructure penalties (full mode only).
+    spf_status = signals.get("spf_status", "not_checked")
+    dkim_status = signals.get("dkim_status", "not_checked")
+    dmarc_status = signals.get("dmarc_status", "not_checked")
+    spf_aligned = bool(signals.get("spf_aligned", False))
+    blacklist_status = signals.get("blacklist_status", {})
+    blacklisted = bool(blacklist_status.get("blacklisted", False))
 
-    normalized_cta = {p.strip().lower() for p in cta_phrases}
-    non_overlap_urgency = [t for t in aggressive_terms if t.strip().lower() not in normalized_cta]
-
-    cta_penalty = 0
-    urgency_penalty = 0
-    if cta_phrases:
-        cta_penalty = min(10, 6 + max(0, len(cta_phrases) - 1) * 2)
-        detected_signals.append(f"• CTA phrases detected ({', '.join(cta_phrases[:2])})")
-
-    if non_overlap_urgency:
-        urgency_penalty = min(10, len(non_overlap_urgency) * 6)
-        detected_signals.append("• Uses urgency language (can trigger spam filters)")
-        findings.append(
-            {
-                "severity": "high",
-                "title": "Urgency language detected",
-                "issue": "Pressure words can make this look promotional or suspicious.",
-                "impact": "Urgency-heavy language increases filtering risk.",
-                "fix": "Replace urgency words with clear, neutral timing and a calm CTA.",
-            }
-        )
-
-    pressure_penalty = max(cta_penalty, urgency_penalty)
-    pressure_reason = ""
-    if pressure_penalty:
-        reason_parts: List[str] = []
-        if cta_phrases:
-            reason_parts.append(f"CTA: {', '.join(cta_phrases[:2])}")
-        if non_overlap_urgency:
-            reason_parts.append(f"Urgency: {', '.join(non_overlap_urgency[:2])}")
-        language_penalty += pressure_penalty
-        pressure_reason = " | ".join(reason_parts)
-
-    if signals.get("too_many_links", False):
-        friction_penalty += 8
-        detected_signals.append(f"• {link_count} links detected")
-    elif link_count >= 2:
-        friction_penalty += 5
-        detected_signals.append(f"• {link_count} links detected")
-    elif link_count == 1:
-        add_boost(2, "Single link", "Focused call-to-action pattern")
-        detected_signals.append("• 1 link detected")
-    else:
-        detected_signals.append("• 0 links detected")
-
-    if signals.get("excessive_caps", False):
-        structure_penalty += 4
-
-    if signals.get("short_generic_email", False):
-        structure_penalty += 5
-        findings.append(
-            {
-                "severity": "medium",
-                "title": "Generic call-to-action detected",
-                "issue": "Your ask sounds broad and reusable across many recipients.",
-                "impact": "Generic CTA patterns reduce trust and raise spam risk.",
-                "fix": "Use one concrete ask tied to recipient context.",
-            }
-        )
-
-    if confidence_killers:
-        language_penalty += min(4, len(confidence_killers) * 2)
-
-    opener_type = signals.get("opener_type")
-    if email_type == "cold outreach" and opener_type in ("generic", "pattern-based"):
-        targeting_penalty += 4
-
-    intent_type = signals.get("intent_type")
-    if email_type == "cold outreach" and intent_type in ("no-cta", "vague"):
-        targeting_penalty += 4
-
-    if signals.get("tracking_style_links", False):
-        friction_penalty += 3
-
-    # Group normalization to avoid overlap double counting.
-    language_penalty = min(8, language_penalty)
-    targeting_penalty = min(8, targeting_penalty)
-    structure_penalty = min(6, structure_penalty)
-    friction_penalty = min(8, friction_penalty)
-
-    if language_penalty > 0:
-        add_penalty(
-            language_penalty,
-            "Language pressure",
-            pressure_reason or "Promotional or urgency-heavy phrasing detected",
-            category="content",
-        )
-    if targeting_penalty > 0:
-        add_penalty(
-            targeting_penalty,
-            "Targeting clarity risk",
-            "Personalization/opener/CTA clarity signals indicate template-like outreach",
-            category="content",
-        )
-    if structure_penalty > 0:
-        add_penalty(
-            structure_penalty,
-            "Structure risk",
-            "Formatting pattern resembles generic outreach",
-            category="content",
-        )
-    if friction_penalty > 0:
-        add_penalty(
-            friction_penalty,
-            "Friction risk",
-            "Links/tracking footprint increases promotional profile",
-            category="content",
-        )
-
-    # Profile adjustments (light-touch)
-    if email_type == "transactional":
-        add_boost(6, "Transactional profile", "Legitimate notification pattern")
-    elif email_type == "marketing/newsletter":
-        add_boost(3, "Newsletter profile", "Broadcast pattern recognized")
-    elif email_type == "informational/system":
-        add_boost(5, "Informational profile", "Announcement/system style recognized")
-
-    # Infra checks only in full mode
     if full_mode:
-        if auth_verifiable:
-            findings.append(
-                {
-                    "severity": "low",
-                    "title": "✅ Domain-level checks included",
-                    "issue": "This score includes SPF, DKIM, DMARC, blacklist and alignment checks.",
-                    "impact": "Scores can be lower than content-only mode when domain setup is weak.",
-                    "fix": None,
-                }
-            )
-        else:
-            add_penalty(2, "Verification incomplete", "Full mode requested without enough verifiable domain/header evidence", category="infra")
-            findings.append(
-                {
-                    "severity": "low",
-                    "title": "⚠️ Full mode requested but headers/domain were incomplete",
-                    "issue": "Domain checks were limited by missing verifiable header/domain data.",
-                    "impact": "Paste complete headers and a valid domain for strict full-mode validation.",
-                    "fix": None,
-                }
-            )
+        if not auth_verifiable:
+            points = INFRA_PENALTIES["auth_not_verifiable"]
+            add_breakdown("Authentication not fully verifiable", points, "Headers/domain evidence is partial", category="infra")
 
-        blacklist_status = signals.get("blacklist_status", {})
-        if blacklist_status.get("blacklisted", False):
+        if blacklisted:
+            points = INFRA_PENALTIES["blacklisted_domain"]
             lists = ", ".join(blacklist_status.get("lists", []))
-            add_penalty(16, "Domain blacklist status", f"Listed on {lists}", category="infra")
+            add_breakdown("Domain blacklist risk", points, f"Domain listed on: {lists}", category="infra")
+            add_issue(
+                "blacklisted_domain",
+                "Domain appears on blacklist",
+                points,
+                "Resolve blacklist listings and warm sender reputation before campaigns.",
+                "Blacklisted domains are strongly penalized by providers.",
+                ["gmail", "outlook", "yahoo"],
+            )
             detected_signals.append(f"• Domain listed on blacklist(s): {lists}")
         elif blacklist_status.get("status") == "unknown":
             detected_signals.append("• Blacklist check skipped (network-limited)")
         else:
             detected_signals.append("• Blacklist: not detected")
 
-        spf_status = signals.get("spf_status", "missing")
-        dkim_status = signals.get("dkim_status", "missing")
-        dmarc_status = signals.get("dmarc_status", "missing")
-
         if spf_status == "missing":
-            add_penalty(8, "SPF missing", f"SPF record not found on {signals.get('spf_checked_domain', 'domain')}", category="infra")
+            points = INFRA_PENALTIES["spf_missing"]
+            add_breakdown("SPF missing", points, "SPF record not found", category="infra")
+            add_issue(
+                "spf_missing",
+                "SPF is missing",
+                points,
+                "Publish SPF including all approved sending hosts.",
+                "Without SPF, providers cannot validate sender authorization.",
+                ["gmail", "outlook", "yahoo"],
+            )
             detected_signals.append("• SPF missing")
         elif spf_status == "unknown":
             detected_signals.append("• SPF lookup unavailable")
@@ -290,22 +332,58 @@ def score_risk(signals: Dict) -> Dict:
             detected_signals.append("• SPF found")
 
         if dkim_status == "missing":
-            add_penalty(6, "DKIM record missing", f"Selector record not found on {signals.get('dkim_checked_domain', 'domain')}", category="infra")
+            points = INFRA_PENALTIES["dkim_missing"]
+            add_breakdown("DKIM missing", points, "DKIM selector record not found", category="infra")
+            add_issue(
+                "dkim_missing",
+                "DKIM signing missing",
+                points,
+                "Enable DKIM signing at your ESP and validate selector DNS records.",
+                "Missing DKIM weakens sender authenticity checks.",
+                ["gmail", "outlook", "yahoo"],
+            )
             detected_signals.append("• DKIM record missing")
         elif dkim_status == "not_verifiable":
-            add_penalty(2, "DKIM not verifiable", "Signed headers/selector were not available for strict DKIM validation", category="infra")
+            points = INFRA_PENALTIES["dkim_not_verifiable"]
+            add_breakdown("DKIM not fully verifiable", points, "Signed headers/selector evidence is partial", category="infra")
+            add_issue(
+                "dkim_not_verifiable",
+                "DKIM cannot be fully verified",
+                points,
+                "Send full signed headers or verify selector configuration in your ESP.",
+                "Providers cannot fully confirm DKIM authenticity from this input.",
+                ["gmail", "outlook", "yahoo"],
+            )
             detected_signals.append("• DKIM not verifiable (requires signed headers)")
         elif dkim_status == "unknown":
             detected_signals.append("• DKIM lookup unavailable")
         else:
             detected_signals.append("• DKIM found")
 
-        if not signals.get("spf_aligned", False):
-            add_penalty(10, "From alignment mismatch", "From domain does not align with SPF domain", category="infra")
+        if spf_status == "found" and not spf_aligned:
+            points = INFRA_PENALTIES["spf_misaligned"]
+            add_breakdown("SPF alignment mismatch", points, "From domain does not align with SPF domain", category="infra")
+            add_issue(
+                "spf_misaligned",
+                "SPF found but not aligned",
+                points,
+                "Align From domain with SPF-authenticated envelope domain.",
+                "Alignment failure reduces domain trust.",
+                ["gmail", "outlook", "yahoo"],
+            )
             detected_signals.append("• SPF alignment failed")
 
         if dmarc_status == "missing":
-            add_penalty(6, "DMARC missing", f"DMARC policy not found on {signals.get('dmarc_checked_domain', 'domain')}", category="infra")
+            points = INFRA_PENALTIES["dmarc_missing"]
+            add_breakdown("DMARC missing", points, "DMARC policy record not found", category="infra")
+            add_issue(
+                "dmarc_missing",
+                "DMARC policy missing",
+                points,
+                "Publish DMARC policy (p=none first, then enforce gradually).",
+                "DMARC adds policy-level trust and spoofing control.",
+                ["yahoo", "outlook", "gmail"],
+            )
             detected_signals.append("• DMARC missing")
         elif dmarc_status == "unknown":
             detected_signals.append("• DMARC lookup unavailable")
@@ -314,40 +392,67 @@ def score_risk(signals: Dict) -> Dict:
     else:
         detected_signals.append("• Domain-level checks skipped (Content Only mode)")
 
-    content_score = max(35, min(95, score + infra_penalty_points))
+    # Non-linear interactions: combined issues are risk multipliers.
+    combo_points = 0
+    if full_mode and spf_status == "missing" and dkim_status == "missing":
+        combo_points += 15
+        add_breakdown(
+            "Auth stack collapse",
+            15,
+            "SPF and DKIM are both missing; providers apply stronger trust penalties.",
+            category="infra",
+        )
 
-    if content_score >= 80 and infra_penalty_points > 0:
-        relief = min(6, max(1, round(infra_penalty_points * 0.25)))
-        score += relief
-        breakdown.append({
-            "label": "High-quality content relief",
-            "points": relief,
-            "reason": "Strong content softens infrastructure drag in heuristic scoring",
-        })
+    if full_mode and spf_status == "missing" and dmarc_status == "missing":
+        combo_points += 10
+        add_breakdown(
+            "Policy + auth gap",
+            10,
+            "SPF and DMARC both missing compounds sender authenticity risk.",
+            category="infra",
+        )
 
-    score = max(35, min(95, score))
+    if cta_phrases and (too_many_links or link_count >= 2):
+        combo_points += 10
+        add_breakdown(
+            "Campaign-style spike",
+            10,
+            "CTA pressure combined with multi-link footprint increases promotional risk.",
+        )
 
-    # Ensure infra penalties are visible in full mode even near score ceiling.
-    if full_mode and infra_penalty_points > 0:
-        score = min(score, 95 - min(6, infra_penalty_points))
+    if spam_terms and signals.get("excessive_caps", False):
+        combo_points += 8
+        add_breakdown(
+            "Spam-style language spike",
+            8,
+            "Spam terms combined with all-caps style amplifies filtering risk.",
+        )
 
-    if score >= 80:
+    if tracking_style_links and too_many_links:
+        combo_points += 7
+        add_breakdown(
+            "Tracking footprint spike",
+            7,
+            "Tracking-style URLs combined with many links reduces trust sharply.",
+        )
+
+    # Score computation (no artificial 95 ceiling).
+    total_penalty = content_penalty_points + infra_penalty_points
+    content_score = _clamp_score(100 - content_penalty_points)
+    final_score = _clamp_score(100 - total_penalty)
+
+    # Risk band.
+    if final_score >= 80:
         risk_band = "Likely Inbox"
         risk_pill_style = "low"
-    elif score >= 60:
+    elif final_score >= 60:
         risk_band = "⚠️ May hit Promotions/Spam"
         risk_pill_style = "medium"
     else:
         risk_band = "❌ Likely Spam"
         risk_pill_style = "high"
 
-    spf_status = signals.get("spf_status", "not_checked")
-    dkim_status = signals.get("dkim_status", "not_checked")
-    dmarc_status = signals.get("dmarc_status", "not_checked")
-    spf_aligned = bool(signals.get("spf_aligned", False))
-    blacklist_status = signals.get("blacklist_status", {})
-    blacklisted = bool(blacklist_status.get("blacklisted", False))
-
+    # Confidence model.
     if not full_mode:
         deliverability_confidence = "medium"
         confidence_note = "Content-only mode: sender authentication confidence is not fully verified."
@@ -357,7 +462,7 @@ def score_risk(signals: Dict) -> Dict:
             confidence_note = "Authentication or sender reputation has high uncertainty/risk."
         elif dkim_status in ("missing", "not_verifiable") or dmarc_status in ("missing", "unknown"):
             deliverability_confidence = "medium"
-            confidence_note = "Content looks strong, but authentication verification is partial."
+            confidence_note = "Content may be strong, but authentication verification is partial."
         elif spf_status == "found" and dkim_status == "found" and dmarc_status == "found":
             deliverability_confidence = "high"
             confidence_note = "Authentication checks are complete and aligned."
@@ -365,148 +470,11 @@ def score_risk(signals: Dict) -> Dict:
             deliverability_confidence = "medium"
             confidence_note = "Some infrastructure checks are inconclusive."
 
-    issues: List[Dict[str, object]] = []
-    has_list_unsubscribe_marker = bool(signals.get("has_list_unsubscribe_marker", False))
-    tracking_style_links = bool(signals.get("tracking_style_links", False))
-    too_many_links = bool(signals.get("too_many_links", False))
-
-    def impact_value(issue: Dict[str, object]) -> float:
-        value = issue.get("impact", 0.0)
-        if isinstance(value, (int, float)):
-            return float(value)
-        return 0.0
-
-    def add_issue(
-        issue_type: str,
-        title: str,
-        impact: float,
-        action: str,
-        why: str,
-        providers: List[str] | None = None,
-    ):
-        issues.append(
-            {
-                "type": issue_type,
-                "title": title,
-                "impact": impact,
-                "action": action,
-                "why": why,
-                "providers": providers or ["all"],
-            }
-        )
-
-    if spam_terms:
-        add_issue(
-            "spam_phrases",
-            "Promotional phrasing detected",
-            0.35,
-            "Replace promotional terms with neutral, specific wording.",
-            f"Found trigger phrases: {', '.join(spam_terms[:3])}. These are frequently associated with promotional filtering.",
-            ["gmail", "yahoo"],
-        )
-
-    if cta_phrases or non_overlap_urgency:
-        add_issue(
-            "aggressive_cta",
-            "CTA pressure is high",
-            0.3,
-            "Use one low-pressure CTA and remove urgency wording.",
-            "Urgency-heavy CTA patterns are often treated as campaign-style mail.",
-            ["gmail", "yahoo", "outlook"],
-        )
-
-    if too_many_links or link_count >= 2 or tracking_style_links:
-        add_issue(
-            "link_density",
-            "Link footprint is high",
-            0.4,
-            "Limit to one clean link and remove heavy tracking parameters.",
-            "High link density/tracking parameters increase promotional classification risk.",
-            ["gmail", "yahoo", "outlook"],
-        )
-
-    if tracking_style_links:
-        add_issue(
-            "tracking_link_reputation",
-            "Tracking-style URL pattern",
-            0.3,
-            "Use direct destination URLs without redirect-style tracking params.",
-            "Tracking and redirect-style URLs reduce trust with provider filters.",
-            ["gmail"],
-        )
-
-    if email_type in ("marketing/newsletter", "cold outreach") and link_count >= 1 and not has_list_unsubscribe_marker:
-        add_issue(
-            "missing_list_unsubscribe",
-            "List-Unsubscribe signal missing",
-            0.55,
-            "Add visible unsubscribe/manage-preferences controls for campaign-style mail.",
-            "Outlook is stricter on list-unsubscribe signals for non-transactional sends.",
-            ["outlook"],
-        )
-
-    if full_mode:
-        if blacklisted:
-            add_issue(
-                "blacklisted_domain",
-                "Domain appears on blacklist",
-                1.0,
-                "Resolve blacklist listings and warm reputation before sending campaigns.",
-                "Mailbox providers strongly penalize listed sender domains.",
-                ["gmail", "yahoo", "outlook"],
-            )
-
-        if spf_status == "missing":
-            add_issue(
-                "spf_missing",
-                "SPF is missing",
-                0.9,
-                "Publish SPF and include all approved sending hosts.",
-                "Without SPF, providers cannot validate sender authorization.",
-                ["gmail", "yahoo", "outlook"],
-            )
-        elif spf_status == "found" and not spf_aligned:
-            add_issue(
-                "spf_misaligned",
-                "SPF found but not aligned",
-                0.85,
-                "Align From domain with the SPF-authenticated envelope domain.",
-                "Alignment failures reduce domain trust even when SPF exists.",
-                ["gmail", "yahoo", "outlook"],
-            )
-
-        if dkim_status == "missing":
-            add_issue(
-                "dkim_missing",
-                "DKIM signing missing",
-                0.8,
-                "Enable DKIM signing at your sender (ESP/mail provider).",
-                "Missing DKIM weakens cryptographic sender authenticity checks.",
-                ["gmail", "yahoo", "outlook"],
-            )
-        elif dkim_status == "not_verifiable":
-            add_issue(
-                "dkim_not_verifiable",
-                "DKIM cannot be fully verified",
-                0.45,
-                "Send with full signed headers or verify selector configuration in your ESP.",
-                "Providers cannot fully confirm DKIM authenticity from this input.",
-                ["gmail", "yahoo", "outlook"],
-            )
-
-        if dmarc_status == "missing":
-            add_issue(
-                "dmarc_missing",
-                "DMARC policy missing",
-                0.7,
-                "Publish DMARC policy (start with p=none, then enforce as reputation stabilizes).",
-                "DMARC provides policy-level alignment and spoofing protection signals.",
-                ["yahoo", "outlook"],
-            )
-
-    unique_fixes = {}
-    for item in sorted(issues, key=impact_value, reverse=True):
-        key = item["type"]
+    # Top fixes.
+    unique_fixes: Dict[str, Dict[str, object]] = {}
+    issues_sorted = sorted(issues, key=lambda item: _to_int(item.get("points", 0)), reverse=True)
+    for item in issues_sorted:
+        key = str(item.get("type", "unknown"))
         if key not in unique_fixes:
             unique_fixes[key] = item
     top_fixes = list(unique_fixes.values())[:3]
@@ -514,29 +482,37 @@ def score_risk(signals: Dict) -> Dict:
     if not top_fixes:
         top_fixes = [
             {
-                "type": "improve_personalization",
-                "title": "Optional improvement: add personalization",
-                "impact": 0.15,
-                "action": "Reference recipient context (role/company/recent event) in opener.",
-                "why": "Context-specific intros often improve trust and reply likelihood.",
+                "type": "no_critical_issues",
+                "title": "No critical issues detected",
+                "impact": 0.05,
+                "points": 5,
+                "action": "Keep authentication and message style consistent across sends.",
+                "why": "Current input does not show major penalty drivers.",
                 "providers": ["all"],
             }
         ]
 
+    # Provider view with differentiated sensitivity.
+    provider_rules = {
+        "gmail": {"spam_phrases": 1.3, "cta_pressure": 1.2, "tracking_link_reputation": 1.2, "dkim_missing": 1.0, "spf_missing": 1.0},
+        "outlook": {"missing_list_unsubscribe": 1.35, "dkim_missing": 1.1, "spf_misaligned": 1.2, "cta_pressure": 1.0},
+        "yahoo": {"dmarc_missing": 1.25, "spf_missing": 1.1, "spam_phrases": 1.15, "dkim_missing": 1.05},
+    }
+
     provider_results: Dict[str, Dict[str, object]] = {}
-    provider_list = ["gmail", "outlook", "yahoo"]
-    provider_base_score = content_score if not full_mode else score
-
-    for provider in provider_list:
+    for provider in ["gmail", "outlook", "yahoo"]:
+        issue_points = 0
         provider_issues: List[Dict[str, object]] = []
-        for issue in issues:
+        for issue in issues_sorted:
             providers = issue.get("providers", ["all"])
-            if isinstance(providers, list) and (provider in providers or "all" in providers):
-                provider_issues.append(issue)
+            if isinstance(providers, list) and ("all" in providers or provider in providers):
+                base_points = _to_int(issue.get("points", 0))
+                multiplier = provider_rules.get(provider, {}).get(str(issue.get("type", "")), 1.0)
+                adjusted = int(round(base_points * multiplier))
+                issue_points += adjusted
+                provider_issues.append({**issue, "points": adjusted})
 
-        provider_penalty = sum(int(round(impact_value(issue) * 10)) for issue in provider_issues)
-        provider_score = max(35, min(95, provider_base_score - provider_penalty))
-
+        provider_score = _clamp_score(100 - issue_points)
         if provider_score >= 80:
             provider_status = "likely_inbox"
         elif provider_score >= 60:
@@ -544,19 +520,27 @@ def score_risk(signals: Dict) -> Dict:
         else:
             provider_status = "high_risk"
 
+        provider_top_issue = "No major provider-specific issue"
         if provider_issues:
-            best_issue = max(provider_issues, key=impact_value)
-            provider_top_issue = str(best_issue.get("title", "No major provider-specific issue"))
-        else:
-            provider_top_issue = "No major provider-specific issue"
+            provider_top_issue = str(max(provider_issues, key=lambda item: _to_int(item.get("points", 0))).get("title", provider_top_issue))
+
         provider_results[provider] = {
             "score": provider_score,
             "status": provider_status,
             "top_issue": provider_top_issue,
         }
 
+    # A stable confidence score for the existing UI's email type confidence field.
+    email_type_confidence = 72
+    if email_type == "cold outreach" and signals.get("automation_level") == "high":
+        email_type_confidence = 85
+    elif email_type == "transactional" and signals.get("is_no_reply_sender"):
+        email_type_confidence = 88
+    elif email_type == "marketing/newsletter" and signals.get("email_type_reason"):
+        email_type_confidence = 78
+
     return {
-        "score": score,
+        "score": final_score,
         "risk_band": risk_band,
         "risk_pill_style": risk_pill_style,
         "email_type": email_type,
@@ -568,12 +552,12 @@ def score_risk(signals: Dict) -> Dict:
         "infra_included": full_mode,
         "content_score": content_score,
         "infra_impact": -infra_penalty_points,
-        "final_score": score,
+        "final_score": final_score,
         "deliverability_confidence": deliverability_confidence,
         "confidence_note": confidence_note,
         "top_fixes": top_fixes,
         "provider_results": provider_results,
-        "risk_points": risk_points,
+        "risk_points": total_penalty,
         "breakdown": breakdown,
         "findings": findings,
         "detected_signals": detected_signals,
