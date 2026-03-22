@@ -100,8 +100,18 @@ def log_template_environment() -> None:
 
 
 @app.get("/health")
-def health() -> dict[str, str]:
-    return {"status": "ok"}
+def health() -> dict:
+    template_files = sorted([p.name for p in TEMPLATES_DIR.glob("*.html")]) if TEMPLATES_DIR.exists() else []
+    return {
+        "status": "ok",
+        "module_file": str(Path(__file__).resolve()),
+        "base_dir": str(BASE_DIR),
+        "templates_dir": str(TEMPLATES_DIR),
+        "templates_exists": TEMPLATES_DIR.exists(),
+        "template_files": template_files,
+        "static_dir": str(STATIC_DIR),
+        "static_exists": STATIC_DIR.exists(),
+    }
 
 
 @app.get("/", response_class=HTMLResponse)
