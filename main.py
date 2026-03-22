@@ -1,6 +1,8 @@
 from datetime import date
 from pathlib import Path
 import logging
+import os
+from html import escape
 
 from fastapi import FastAPI, Form, Request
 from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse, Response
@@ -21,7 +23,7 @@ TEMPLATES_DIR = BASE_DIR / "templates"
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
-SITE_URL = "https://inboxguard-production-90ab.up.railway.app"
+SITE_URL = os.getenv("SITE_URL", "https://inboxguard.me")
 LONG_TAIL_PAGES = [
     {
         "slug": "fix-godaddy-spam-issues",
@@ -46,24 +48,36 @@ LONG_TAIL_BY_SLUG = {item["slug"]: item for item in LONG_TAIL_PAGES}
 
 
 def render_template_safe(request: Request, template_name: str, context: dict, status_code: int = 200):
+    error_info = None
     try:
         payload = {"request": request, **context}
         return templates.TemplateResponse(template_name, payload, status_code=status_code)
-    except TemplateNotFound:
+    except TemplateNotFound as exc:
         logger.exception("Template not found: %s", template_name)
-    except TemplateError:
+        error_info = f"TemplateNotFound: {exc}"
+    except TemplateError as exc:
         logger.exception("Template render error for %s", template_name)
-    except Exception:
+        error_info = f"TemplateError: {exc}"
+    except Exception as exc:
         logger.exception("Unexpected template error for %s", template_name)
+        error_info = f"UnexpectedError: {exc}"
+
+    template_path = TEMPLATES_DIR / template_name
+    template_exists = template_path.exists()
+    diagnostic_line = f"Template file exists: {template_exists}. Path: {template_path}"
+    detail_line = escape(error_info or "Unknown template error")
 
     return HTMLResponse(
         content=(
             "<!doctype html><html><head><title>InboxGuard</title></head>"
             "<body><h1>InboxGuard is recovering</h1>"
             "<p>Please refresh in a minute. If the issue persists, use /health to verify service status.</p>"
+            f"<p>{escape(diagnostic_line)}</p>"
+            f"<pre>{detail_line}</pre>"
             "</body></html>"
         ),
         status_code=503,
+        headers={"X-InboxGuard-Template-Error": (error_info or "unknown")[:180]},
     )
 
 
