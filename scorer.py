@@ -156,8 +156,25 @@ def score_risk(signals: Dict) -> Dict:
         )
         detected_signals.append(f"• Spam terms: {', '.join(spam_terms[:2])}")
 
+    normalized_cta = {p.strip().lower() for p in cta_phrases}
+    non_overlap_urgency = [t for t in aggressive_terms if t.strip().lower() not in normalized_cta]
+
     if cta_phrases:
-        points = min(28, CONTENT_PENALTIES["cta_pressure"] + max(0, len(cta_phrases) - 1) * 4)
+        cta_count = len(cta_phrases)
+        points = min(25, 12 + cta_count * 5)
+
+        # Single CTA in informational/system content with no links is lower risk than campaign copy.
+        if (
+            email_type in ("informational/system", "transactional")
+            and cta_count == 1
+            and link_count == 0
+            and not spam_terms
+        ):
+            points = max(10, points - 4)
+
+        if non_overlap_urgency:
+            points = min(28, points + 4)
+
         add_breakdown("CTA pressure", points, f"CTA terms: {', '.join(cta_phrases[:2])}")
         add_issue(
             "cta_pressure",
@@ -169,8 +186,6 @@ def score_risk(signals: Dict) -> Dict:
         )
         detected_signals.append(f"• CTA phrases detected ({', '.join(cta_phrases[:2])})")
 
-    normalized_cta = {p.strip().lower() for p in cta_phrases}
-    non_overlap_urgency = [t for t in aggressive_terms if t.strip().lower() not in normalized_cta]
     if non_overlap_urgency:
         points = min(20, CONTENT_PENALTIES["urgency_pressure"] + max(0, len(non_overlap_urgency) - 1) * 3)
         add_breakdown("Urgency language", points, f"Urgency terms: {', '.join(non_overlap_urgency[:2])}")
