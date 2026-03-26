@@ -81,6 +81,17 @@ nav {
     background: rgba(15, 118, 110, 0.12);
 }
 
+.nav-item span {
+    margin-left: 6px;
+    font-size: 0.72rem;
+    color: var(--text-muted);
+}
+
+.nav-item.disabled {
+    opacity: 0.62;
+    cursor: not-allowed;
+}
+
 .main-area {
     padding: 22px;
 }
@@ -194,6 +205,11 @@ select {
     justify-content: center;
 }
 
+.action-panel .btn-primary {
+    font-size: 1.02rem;
+    padding: 12px 16px;
+}
+
 .btn-secondary {
     border: 1px solid var(--border-strong);
     background: #0f1a2e;
@@ -263,6 +279,26 @@ select {
     padding: 12px;
 }
 
+.status-card-primary {
+    border-color: var(--border-strong);
+    background: #111b30;
+}
+
+.status-card-primary.critical-bg {
+    border-color: #7f1d1d;
+    background: #241419;
+}
+
+.status-card-primary.warning-bg {
+    border-color: #78350f;
+    background: #221b12;
+}
+
+.status-card-primary.safe-bg {
+    border-color: #065f46;
+    background: #132a23;
+}
+
 .status-label {
     margin: 0;
     color: var(--text-secondary);
@@ -287,6 +323,10 @@ select {
 
 .status-value.safe {
     color: var(--safe);
+}
+
+.status-value.pending {
+    color: #cbd5e1;
 }
 
 .card-critical {
@@ -317,6 +357,11 @@ select {
 .issue-desc {
     font-size: 0.9rem;
     color: #fecaca;
+}
+
+.consequence-panel {
+    border-color: #78350f;
+    background: #20190f;
 }
 
 .badge {
@@ -356,6 +401,19 @@ select {
 }
 
 .support-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.advanced-block summary {
+    cursor: pointer;
+    font-weight: 600;
+    color: #cbd5e1;
+}
+
+.advanced-content {
+    margin-top: 12px;
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 10px;
@@ -441,6 +499,7 @@ select {
     .status-grid,
     .actions,
     .support-grid,
+    .advanced-content,
     .inline-fields,
     .email-row {
         grid-template-columns: 1fr;

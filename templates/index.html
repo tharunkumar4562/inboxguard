@@ -20,10 +20,10 @@
         <nav>
           <button class="nav-item active" type="button">Dashboard</button>
           <button class="nav-item" type="button">Threat Scan</button>
-          <button class="nav-item" type="button">Signal Detection</button>
-          <button class="nav-item" type="button">Provider Intel</button>
-          <button class="nav-item" type="button">Action Queue</button>
-          <button class="nav-item" type="button">Reports</button>
+          <button class="nav-item disabled" type="button">Signal Detection <span>Coming soon</span></button>
+          <button class="nav-item disabled" type="button">Provider Intel <span>Coming soon</span></button>
+          <button class="nav-item disabled" type="button">Action Queue <span>Coming soon</span></button>
+          <button class="nav-item disabled" type="button">Reports <span>Coming soon</span></button>
         </nav>
       </aside>
 
@@ -52,7 +52,7 @@
               </div>
             </div>
 
-            <button type="submit" id="run-check" class="btn-danger">Detect Spam Triggers Before Sending</button>
+            <button type="submit" id="run-check" class="btn-danger">Analyze Email Risk</button>
             <p class="micro">Scannable in under 5 seconds. No signup required.</p>
 
             <div id="result-loading" class="loading hidden">
@@ -69,36 +69,43 @@
               <span class="pill">Live</span>
             </div>
             <div class="status-grid">
-              <article class="status-card">
+              <article id="status-risk-card" class="status-card status-card-primary">
                 <p class="status-label">Risk Status</p>
-                <p id="status-risk-band" class="status-value critical">Critical</p>
-              </article>
-              <article class="status-card">
-                <p class="status-label">Risk Score</p>
-                <p id="status-risk-score" class="status-value">--</p>
+                <p id="status-risk-band" class="status-value pending">Awaiting Analysis</p>
               </article>
               <article class="status-card">
                 <p class="status-label">Primary Issue</p>
-                <p id="status-primary-issue" class="status-value">--</p>
+                <p id="status-primary-issue" class="status-value">Not analyzed</p>
+              </article>
+              <article class="status-card">
+                <p class="status-label">Confidence</p>
+                <p id="status-confidence" class="status-value">Not analyzed</p>
               </article>
               <article class="status-card">
                 <p class="status-label">Infrastructure</p>
-                <p id="status-infra" class="status-value">--</p>
+                <p id="status-infra" class="status-value">Not analyzed</p>
               </article>
             </div>
           </section>
 
-          <section class="main-panel card card-critical" id="biggest-risk-card">
+          <section class="main-panel card" id="biggest-risk-card">
             <h3>Biggest Risk Right Now</h3>
-            <p id="biggest-risk-title" class="main-issue">Broadcast-style promotional tone</p>
+            <p id="biggest-risk-title" class="main-issue">No scan yet</p>
             <div class="issue-meta">
-              <span id="biggest-risk-impact" class="badge badge-red">HIGH</span>
-              <span id="biggest-risk-desc" class="issue-desc">Likely to be classified as bulk behavior.</span>
+              <span id="biggest-risk-impact" class="badge badge-yellow">PENDING</span>
+              <span id="biggest-risk-desc" class="issue-desc">Run analysis to detect the top deliverability blocker.</span>
             </div>
           </section>
 
+          <section class="card consequence-panel">
+            <h3>If You Send This Email</h3>
+            <ul id="consequence-list" class="compact-list">
+              <li>No scan yet - run analysis to project likely consequences.</li>
+            </ul>
+          </section>
+
           <section class="action-panel card">
-            <h3>Action Panel</h3>
+            <h3>Next Actions</h3>
             <div class="actions">
               <button id="fix-now" type="button" class="btn-primary">Fix Email Now</button>
               <button id="rewrite-action" type="button" class="btn-secondary">Rewrite for Deliverability</button>
@@ -111,37 +118,40 @@
             <article class="card">
               <h3>What is hurting deliverability</h3>
               <ul id="hurt-list" class="compact-list">
-                <li>Run scan to load active risk signals.</li>
+                <li>No scan yet - run analysis to detect deliverability risks.</li>
               </ul>
             </article>
 
             <article class="card">
               <h3>Fix this before sending</h3>
               <ul id="top-fixes-list" class="compact-list">
-                <li>Run scan to load fixes.</li>
-              </ul>
-            </article>
-
-            <article class="card">
-              <h3>Provider View</h3>
-              <ul id="provider-view-list" class="compact-list">
-                <li>Gmail: --</li>
-                <li>Outlook: --</li>
-                <li>Yahoo: --</li>
-              </ul>
-            </article>
-
-            <article class="card">
-              <h3>Score Breakdown</h3>
-              <ul id="score-breakdown" class="compact-list">
-                <li>No penalty data yet.</li>
+                <li>No fixes loaded yet - run analysis first.</li>
               </ul>
             </article>
           </section>
 
+          <details class="card advanced-block">
+            <summary>Advanced View (Provider + Penalties)</summary>
+            <div class="advanced-content">
+              <article class="card">
+                <h3>Provider View</h3>
+                <ul id="provider-view-list" class="compact-list">
+                  <li>Provider view will appear after analysis.</li>
+                </ul>
+              </article>
+
+              <article class="card">
+                <h3>Score Breakdown</h3>
+                <ul id="score-breakdown" class="compact-list">
+                  <li>No penalty data yet.</li>
+                </ul>
+              </article>
+            </div>
+          </details>
+
           <section id="result-cta" class="cta-panel card">
-            <p class="workflow-step">Step 1 complete: detection</p>
-            <h3>Step 2: apply full fix plan</h3>
+            <p id="workflow-state" class="workflow-step">Step 1: Run analysis</p>
+            <h3 id="workflow-title">Step 2: Fix required issues</h3>
             <a id="unlock-link" href="https://wa.me/?text=I%20want%20to%20unlock%20the%20full%20report%20for%20yourdomain.com" target="_blank" rel="noopener noreferrer" class="btn-primary">Fix Email Now</a>
             <div class="email-row">
               <input id="lead-email" type="email" placeholder="you@company.com" />

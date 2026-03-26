@@ -8,8 +8,9 @@ const resultLoading = document.getElementById("result-loading");
 const loadingStep = document.getElementById("loading-step");
 
 const statusRiskBandNode = document.getElementById("status-risk-band");
-const statusRiskScoreNode = document.getElementById("status-risk-score");
+const statusRiskCardNode = document.getElementById("status-risk-card");
 const statusPrimaryIssueNode = document.getElementById("status-primary-issue");
+const statusConfidenceNode = document.getElementById("status-confidence");
 const statusInfraNode = document.getElementById("status-infra");
 
 const biggestRiskCard = document.getElementById("biggest-risk-card");
@@ -19,6 +20,7 @@ const biggestRiskDescNode = document.getElementById("biggest-risk-desc");
 
 const hurtListNode = document.getElementById("hurt-list");
 const topFixesListNode = document.getElementById("top-fixes-list");
+const consequenceListNode = document.getElementById("consequence-list");
 const providerViewListNode = document.getElementById("provider-view-list");
 const scoreBreakdownNode = document.getElementById("score-breakdown");
 
@@ -30,6 +32,8 @@ const domainActionButton = document.getElementById("domain-action");
 const unlockLink = document.getElementById("unlock-link");
 const leadEmailInput = document.getElementById("lead-email");
 const emailRequestLink = document.getElementById("email-request-link");
+const workflowStateNode = document.getElementById("workflow-state");
+const workflowTitleNode = document.getElementById("workflow-title");
 
 const loadingMessages = [
     "Collecting risk telemetry...",
@@ -37,7 +41,7 @@ const loadingMessages = [
     "Prioritizing remediation actions...",
 ];
 
-const defaultSubmitLabel = submitButton ? submitButton.textContent : "Detect Spam Triggers Before Sending";
+const defaultSubmitLabel = submitButton ? submitButton.textContent : "Analyze Email Risk";
 let loadingTimer = null;
 let lastSummary = null;
 
@@ -145,7 +149,7 @@ function getPrimaryIssue(summary, findings) {
 }
 
 function renderStatusOverview(summary, signals, findings) {
-    if (!statusRiskBandNode || !statusRiskScoreNode || !statusPrimaryIssueNode || !statusInfraNode) {
+    if (!statusRiskBandNode || !statusPrimaryIssueNode || !statusConfidenceNode || !statusInfraNode) {
         return;
     }
 
@@ -163,9 +167,20 @@ function renderStatusOverview(summary, signals, findings) {
 
     statusRiskBandNode.textContent = label;
     statusRiskBandNode.className = `status-value ${className}`;
+    if (statusRiskCardNode) {
+        statusRiskCardNode.classList.remove("critical-bg", "warning-bg", "safe-bg");
+        if (className === "critical") {
+            statusRiskCardNode.classList.add("critical-bg");
+        } else if (className === "warning") {
+            statusRiskCardNode.classList.add("warning-bg");
+        } else if (className === "safe") {
+            statusRiskCardNode.classList.add("safe-bg");
+        }
+    }
 
-    statusRiskScoreNode.textContent = `${summary.score || 0}/100`;
     statusPrimaryIssueNode.textContent = getPrimaryIssue(summary, findings);
+    const confidence = (summary.deliverability_confidence || "medium").toString();
+    statusConfidenceNode.textContent = `${confidence.charAt(0).toUpperCase()}${confidence.slice(1)} confidence`;
 
     const mode = String(summary.analysis_mode || "content");
     if (mode === "content") {
@@ -212,8 +227,13 @@ function renderBiggestRisk(summary, findings) {
         return;
     }
 
-    biggestRiskTitleNode.textContent = primary.title || "Risk signal detected";
-    biggestRiskDescNode.textContent = (primary.issue || primary.impact || "Likely to reduce inbox placement.").split(".")[0] + ".";
+    const title = String(primary.title || "Risk signal detected");
+    if (title.toLowerCase().includes("broadcast")) {
+        biggestRiskTitleNode.textContent = "This email looks like a bulk campaign";
+    } else {
+        biggestRiskTitleNode.textContent = title;
+    }
+    biggestRiskDescNode.textContent = `Reason: ${(primary.issue || primary.impact || "Pattern increases spam filtering risk").split(".")[0]}.`;
 
     const severity = String(primary.severity || "medium").toLowerCase();
     const impact = severity === "high" ? "HIGH" : severity === "low" ? "LOW" : "MEDIUM";
@@ -235,7 +255,7 @@ function renderHurtingList(findings) {
     const filtered = (findings || []).filter((item) => !String(item.title || "").toLowerCase().startsWith("analysis mode"));
 
     if (!filtered.length) {
-        hurtListNode.innerHTML = "<li>No high-priority deliverability threats detected.</li>";
+        hurtListNode.innerHTML = "<li>No scan yet - run analysis to detect deliverability risks.</li>";
         return;
     }
 
@@ -244,6 +264,33 @@ function renderHurtingList(findings) {
         const sev = String(item.severity || "medium").toUpperCase();
         li.textContent = `${item.title || "Risk"} (${sev})`;
         hurtListNode.appendChild(li);
+    });
+}
+
+function renderConsequences(summary) {
+    if (!consequenceListNode) {
+        return;
+    }
+
+    consequenceListNode.innerHTML = "";
+    const isHigh = ["High Spam-Risk Signals", "High Risk"].includes(String(summary.risk_band || ""));
+
+    const lines = isHigh
+        ? [
+            "Likely filtered as bulk or spam by mailbox providers.",
+            "Inbox placement can drop across future sends.",
+            "Domain reputation can degrade if unchanged drafts are sent repeatedly.",
+        ]
+        : [
+            "Risk remains moderate; unresolved issues can still lower delivery.",
+            "Repeated borderline patterns can reduce trust over time.",
+            "Fixing top signals now protects domain reputation.",
+        ];
+
+    lines.forEach((line) => {
+        const li = document.createElement("li");
+        li.textContent = line;
+        consequenceListNode.appendChild(li);
     });
 }
 
@@ -296,8 +343,12 @@ function renderProviderView(summary) {
         high_risk_signals: "Critical",
     };
 
+    let availableCount = 0;
     ["gmail", "outlook", "yahoo"].forEach((provider) => {
         const item = providerResults[provider];
+        if (item) {
+            availableCount += 1;
+        }
         const providerName = provider.charAt(0).toUpperCase() + provider.slice(1);
         const li = document.createElement("li");
 
@@ -310,6 +361,10 @@ function renderProviderView(summary) {
 
         providerViewListNode.appendChild(li);
     });
+
+    if (!availableCount) {
+        providerViewListNode.innerHTML = "<li>Provider view will appear after analysis.</li>";
+    }
 }
 
 function renderScoreBreakdown(summary) {
@@ -460,9 +515,17 @@ if (form) {
             renderStatusOverview(summary, signals, findings);
             renderBiggestRisk(summary, findings);
             renderHurtingList(findings);
+            renderConsequences(summary);
             renderFixes(summary);
             renderProviderView(summary);
             renderScoreBreakdown(summary);
+
+            if (workflowStateNode) {
+                workflowStateNode.textContent = "Step 1: Scan Complete";
+            }
+            if (workflowTitleNode) {
+                workflowTitleNode.textContent = "Step 2: Fix Required";
+            }
 
             updateLeadLinks(data.domain || domainText);
 
