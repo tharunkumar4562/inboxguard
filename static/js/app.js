@@ -70,15 +70,15 @@ const pillStyle = {
         scoreCls: "text-red-500",
     },
     "Needs Review": {
-        cls: "border-yellow-500/60 bg-yellow-500/15 text-yellow-100",
+        cls: "border-amber-300 bg-amber-50 text-amber-700",
         scoreCls: "text-yellow-400",
     },
     "Content Safe": {
-        cls: "border-emerald-500/60 bg-emerald-500/15 text-emerald-100",
+        cls: "border-emerald-300 bg-emerald-50 text-emerald-700",
         scoreCls: "text-emerald-400",
     },
     "High Spam-Risk Signals": {
-        cls: "border-red-500/60 bg-red-500/15 text-red-100",
+        cls: "border-rose-300 bg-rose-50 text-rose-700",
         scoreCls: "text-red-500",
     },
 };
@@ -293,9 +293,9 @@ function renderProviderView(summary) {
         const li = document.createElement("li");
         const label = provider.charAt(0).toUpperCase() + provider.slice(1);
         const statusLabel = {
-            content_safe: "content_safe",
-            needs_review: "needs_review",
-            high_risk_signals: "high_risk_signals",
+            content_safe: "Content Safe",
+            needs_review: "Needs Review",
+            high_risk_signals: "High Risk Signals",
         }[data.status] || data.status;
         li.textContent = `- ${label}: ${statusLabel} (${data.score}/100), top issue: ${data.top_issue}`;
         providerViewListNode.appendChild(li);
