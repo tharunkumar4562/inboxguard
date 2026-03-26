@@ -37,6 +37,9 @@ const providerViewListNode = document.getElementById("provider-view-list");
 const verdictLabelNode = document.getElementById("verdict-label");
 const realWorldRiskNode = document.getElementById("real-world-risk");
 const missingFactorsListNode = document.getElementById("missing-factors-list");
+const verdictHeadlineNode = document.getElementById("verdict-headline");
+const verdictSublineNode = document.getElementById("verdict-subline");
+const defaultSubmitLabel = submitButton ? submitButton.textContent : "Check Deliverability Risk ->";
 const errorBanner = document.createElement("div");
 errorBanner.id = "error-banner";
 errorBanner.className = "hidden fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-red-500/90 text-white px-6 py-3 rounded-lg shadow-lg font-semibold";
@@ -71,11 +74,11 @@ const pillStyle = {
     },
     "Needs Review": {
         cls: "border-amber-300 bg-amber-50 text-amber-800",
-        scoreCls: "text-yellow-400",
+        scoreCls: "text-amber-500",
     },
     "Content Safe": {
         cls: "border-emerald-300 bg-emerald-50 text-emerald-800",
-        scoreCls: "text-emerald-400",
+        scoreCls: "text-emerald-600",
     },
     "High Spam-Risk Signals": {
         cls: "border-red-300 bg-red-50 text-red-800",
@@ -206,6 +209,22 @@ function renderRisk(summary) {
     if (analysisModeNote) {
         analysisModeNote.textContent = `${modeLabel}: ${modeDetail}`;
     }
+    if (verdictHeadlineNode) {
+        const headlineMap = {
+            "Content Safe": "Content Looks Safe - Reputation Can Still Override",
+            "Needs Review": "Moderate Deliverability Risk Detected",
+            "High Spam-Risk Signals": "High Deliverability Risk - Fix Before Sending",
+        };
+        verdictHeadlineNode.textContent = headlineMap[label] || "Deliverability Risk Assessment";
+    }
+    if (verdictSublineNode) {
+        const sublineMap = {
+            "Content Safe": "No major direct spam triggers detected in this draft. Historical sender signals can still drive spam placement.",
+            "Needs Review": "This draft has risk patterns that can reduce inbox placement probability.",
+            "High Spam-Risk Signals": "This draft contains strong patterns commonly classified as bulk/spam behavior.",
+        };
+        verdictSublineNode.textContent = sublineMap[label] || "We found issues that can hurt deliverability.";
+    }
     if (capabilityNoteNode) {
         capabilityNoteNode.textContent = capabilityNote;
     }
@@ -326,7 +345,7 @@ function setInputMode(mode) {
                 manualBodyInput.disabled = true;
             }
             if (submitButton) {
-                submitButton.textContent = "Check Deliverability Risk ->";
+                submitButton.textContent = defaultSubmitLabel;
             }
         } else {
             manualModeWrap.classList.remove("hidden");
@@ -344,7 +363,7 @@ function setInputMode(mode) {
                 manualBodyInput.disabled = false;
             }
             if (submitButton) {
-                submitButton.textContent = "Check Deliverability Risk ->";
+                submitButton.textContent = defaultSubmitLabel;
             }
         }
     }
@@ -487,7 +506,7 @@ form.addEventListener("submit", async (event) => {
         resultSection.classList.add("visible");
     } finally {
         submitButton.disabled = false;
-        submitButton.textContent = "Check Deliverability Risk ->";
+        submitButton.textContent = defaultSubmitLabel;
     }
 });
 

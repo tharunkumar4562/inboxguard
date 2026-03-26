@@ -22,8 +22,8 @@
   <body class="bg-ink text-slate-100 min-h-screen antialiased">
     <main class="relative overflow-hidden">
       <div class="page-glow"></div>
-      <section class="mx-auto max-w-5xl px-5 py-8 md:py-10">
-        <header class="mb-10 flex items-center justify-between gap-4 border-b border-slate-800/70 pb-4">
+      <section class="mx-auto max-w-5xl px-5 py-8 md:py-12">
+        <header class="mb-8 flex items-center justify-between gap-4 border-b border-slate-800/70 pb-4">
           <div class="logo-wrap">
             <svg class="logo-svg" viewBox="0 0 32 32" aria-hidden="true">
               <path d="M16 3 L26 8 L26 16 C26 22 22 27 16 29 C10 27 6 22 6 16 L6 8 Z" fill="none" stroke="#3B82F6" stroke-width="2"></path>
@@ -36,84 +36,80 @@
           <a href="/access" class="login-link">Get Access</a>
         </header>
 
-        <h1 class="mt-6 max-w-3xl text-4xl font-bold leading-tight md:text-6xl">
-          Don&apos;t send that email yet.
-        </h1>
-        <p class="mt-4 max-w-2xl text-base text-slate-300 md:text-xl">
-          Detect what can break deliverability before you send.
-        </p>
+        <section class="hero-block rounded-3xl border border-blue-500/35 bg-slate-900/70 p-6 shadow-2xl shadow-blue-950/30 md:p-8">
+          <h1 class="max-w-4xl text-4xl font-bold leading-tight md:text-6xl">Before You Send That Email</h1>
+          <p class="mt-4 max-w-3xl text-base text-slate-200 md:text-2xl">Check if it will damage your domain reputation.</p>
+          <p class="mt-5 max-w-3xl text-lg text-slate-300">Most cold emails do not fail because of content. They fail because of hidden deliverability signals.</p>
 
-        <div class="mt-10">
-          <section class="rounded-3xl border border-blue-500/35 bg-slate-900/70 p-6 shadow-2xl shadow-blue-950/30 md:p-8">
-            <form id="risk-form" class="space-y-4">
-              <p class="text-2xl font-bold uppercase tracking-[0.04em] text-slate-100">PASTE YOUR EMAIL (Ctrl + V)</p>
-              <p class="text-sm font-medium text-red-100/90">Most emails fail silently. Check before you send.</p>
-              <div id="paste-mode-wrap" class="space-y-3">
-                <div>
-                  <textarea id="raw-email" name="raw_email" rows="7" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" class="w-full rounded-2xl border border-slate-700 bg-slate-950/70 p-4 text-base text-slate-100 outline-none ring-0 transition focus:border-blue-500" placeholder="sender@example.com
-Subject: Your email subject
-
-Hi [Name],
-
-Your message starts here..."></textarea>
-                </div>
-                <p class="text-sm text-slate-300">Paste mode analyzes your raw email only.</p>
-                <div class="form-divider" aria-hidden="true">OR</div>
-                <button id="switch-to-manual" type="button" class="w-full text-left text-sm font-semibold text-blue-200 transition hover:text-blue-100">Enter details manually -></button>
+          <form id="risk-form" class="mt-8 space-y-4">
+            <div id="paste-mode-wrap" class="space-y-3">
+              <div>
+                <textarea id="raw-email" name="raw_email" rows="9" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" class="w-full rounded-2xl border border-slate-700 bg-slate-950/70 p-4 text-base text-slate-100 outline-none ring-0 transition focus:border-blue-500" placeholder="Paste the email you are about to send"></textarea>
               </div>
-              <div id="manual-mode-wrap" class="hidden space-y-3">
-                <p class="structured-label">Manual mode</p>
-                <div>
-                  <label for="email-quick" class="mb-2 block text-sm text-slate-400">Subject</label>
-                  <input id="email-quick" name="email" type="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" class="w-full rounded-2xl border border-slate-700 bg-slate-950/70 p-4 text-sm text-slate-100 outline-none ring-0 transition focus:border-blue-500" placeholder="Subject line" />
-                </div>
-                <div>
-                  <label for="domain" class="mb-2 block text-sm text-slate-400">Domain</label>
-                  <input id="domain" name="domain" type="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" class="w-full rounded-2xl border border-slate-700 bg-slate-950/70 p-3 text-sm text-slate-100 outline-none transition focus:border-blue-500" placeholder="yourdomain.com" />
-                </div>
-                <div>
-                  <label for="manual-body" class="mb-2 block text-sm text-slate-400">Email body (optional)</label>
-                  <textarea id="manual-body" rows="4" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" class="w-full rounded-2xl border border-slate-700 bg-slate-950/70 p-3 text-sm text-slate-100 outline-none transition focus:border-blue-500" placeholder="Paste email body"></textarea>
-                </div>
-                <button id="switch-to-paste" type="button" class="w-full text-left text-sm font-semibold text-blue-200 transition hover:text-blue-100">Use paste mode instead -></button>
-              </div>
-              <div class="rounded-2xl border border-slate-700 bg-slate-950/50 p-3">
-                <label for="analysis-mode" class="mb-2 block text-sm font-semibold text-slate-200">Analysis Mode</label>
-                <select id="analysis-mode" name="analysis_mode" class="w-full rounded-xl border border-slate-700 bg-slate-950/70 p-3 text-sm text-slate-100 outline-none transition focus:border-blue-500">
-                  <option value="content" selected>Content Only (message quality)</option>
-                  <option value="full">Full Deliverability Check (content + SPF/DKIM/DMARC)</option>
-                </select>
-                <p class="mt-2 text-xs text-slate-400">Use the same mode when comparing tests. Full mode can score lower due to domain issues.</p>
-              </div>
-              <p class="pt-2 text-sm text-slate-200">Takes 5 seconds. No setup needed.</p>
-              <button type="submit" id="run-check" class="my-3 w-full rounded-2xl bg-blue-600 px-6 py-4 text-lg font-bold text-white shadow-lg shadow-blue-900/40 transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60">
-                Check Deliverability Risk ->
-              </button>
-              <p class="pb-3 text-center text-xs text-slate-400">No signup required • No data stored</p>
-            </form>
-          </section>
-        </div>
+              <p class="text-sm text-slate-300">Paste the email you&apos;re about to send. We&apos;ll tell you what might break it.</p>
+              <div class="form-divider" aria-hidden="true">OR</div>
+              <button id="switch-to-manual" type="button" class="w-full text-left text-sm font-semibold text-blue-200 transition hover:text-blue-100">Enter details manually -></button>
+            </div>
 
-        <section id="result" class="report-light hidden mt-5 rounded-3xl border border-slate-300 bg-white p-6 shadow-xl">
+            <div id="manual-mode-wrap" class="hidden space-y-3">
+              <p class="structured-label">Manual mode</p>
+              <div>
+                <label for="email-quick" class="mb-2 block text-sm text-slate-400">Subject</label>
+                <input id="email-quick" name="email" type="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" class="w-full rounded-2xl border border-slate-700 bg-slate-950/70 p-4 text-sm text-slate-100 outline-none ring-0 transition focus:border-blue-500" placeholder="Subject line" />
+              </div>
+              <div>
+                <label for="domain" class="mb-2 block text-sm text-slate-400">Domain</label>
+                <input id="domain" name="domain" type="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" class="w-full rounded-2xl border border-slate-700 bg-slate-950/70 p-3 text-sm text-slate-100 outline-none transition focus:border-blue-500" placeholder="yourdomain.com" />
+              </div>
+              <div>
+                <label for="manual-body" class="mb-2 block text-sm text-slate-400">Email body</label>
+                <textarea id="manual-body" rows="5" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" class="w-full rounded-2xl border border-slate-700 bg-slate-950/70 p-3 text-sm text-slate-100 outline-none transition focus:border-blue-500" placeholder="Paste email body"></textarea>
+              </div>
+              <button id="switch-to-paste" type="button" class="w-full text-left text-sm font-semibold text-blue-200 transition hover:text-blue-100">Use paste mode instead -></button>
+            </div>
+
+            <div class="rounded-2xl border border-slate-700 bg-slate-950/50 p-3">
+              <label for="analysis-mode" class="mb-2 block text-sm font-semibold text-slate-200">Analysis Mode</label>
+              <select id="analysis-mode" name="analysis_mode" class="w-full rounded-xl border border-slate-700 bg-slate-950/70 p-3 text-sm text-slate-100 outline-none transition focus:border-blue-500">
+                <option value="content" selected>Content Only (message quality)</option>
+                <option value="full">Full Deliverability Check (content + SPF/DKIM/DMARC)</option>
+              </select>
+              <p class="mt-2 text-xs text-slate-400">Use the same mode when comparing tests. Full mode can score lower due to domain issues.</p>
+            </div>
+
+            <button type="submit" id="run-check" class="my-3 w-full rounded-2xl bg-blue-600 px-6 py-4 text-xl font-bold text-white shadow-lg shadow-blue-900/40 transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60">
+              Check Before You Burn Your Domain
+            </button>
+            <p class="pb-2 text-center text-xs text-slate-400">Used by cold email operators to avoid spam placement • Takes 5 seconds • No signup required</p>
+          </form>
+        </section>
+
+        <section id="result" class="report-light hidden mt-7 rounded-3xl border border-slate-300 bg-white p-6 shadow-xl">
+          <div class="verdict-main">
+            <p class="text-sm uppercase tracking-[0.16em] text-slate-500">Deliverability Verdict</p>
+            <h2 id="verdict-headline" class="mt-2 text-3xl font-bold text-slate-900">Analyzing...</h2>
+            <p id="verdict-subline" class="mt-2 text-base text-slate-700">We are identifying what can hurt this email before sending.</p>
+          </div>
+
           <div class="flex flex-wrap items-end justify-between gap-3">
             <div>
-              <p class="text-sm uppercase tracking-[0.16em] text-slate-500">Deliverability Diagnostic Report</p>
+              <p class="text-sm uppercase tracking-[0.16em] text-slate-500">Score Context (Secondary)</p>
               <h3 class="mt-2 text-2xl font-bold">
                 Risk Score: <span id="score" class="text-red-500">Calculating...</span>
               </h3>
-              <p id="risk-band" class="mt-1 text-sm text-slate-300">You're likely safe, but some patterns may reduce inbox placement.</p>
-              <p id="analysis-mode-note" class="mt-1 text-xs text-slate-400">Mode details will appear here.</p>
+              <p id="risk-band" class="mt-1 text-sm text-slate-700">You're likely safe, but some patterns may reduce inbox placement.</p>
+              <p id="analysis-mode-note" class="mt-1 text-xs text-slate-600">Mode details will appear here.</p>
             </div>
-            <div id="risk-pill" class="rounded-full border border-red-500/60 bg-red-500/15 px-4 py-1 text-sm font-semibold text-red-100">High Risk</div>
+            <div id="risk-pill" class="rounded-full border border-red-300 bg-red-50 px-4 py-1 text-sm font-semibold text-red-800">High Risk</div>
           </div>
 
-          <div class="mt-4 h-3 w-full rounded-full bg-slate-800/80">
+          <div class="mt-4 h-3 w-full rounded-full bg-slate-200">
             <div id="score-bar-fill" class="h-3 rounded-full bg-gradient-to-r from-emerald-400 via-yellow-400 to-red-500 transition-all duration-300" style="width: 0%"></div>
           </div>
 
           <div id="problem-summary" class="mt-4 rounded-2xl border border-slate-300 bg-white p-4">
             <p class="text-sm font-semibold text-slate-900">Detected signals</p>
-            <ul id="detected-signals" class="mt-2 space-y-1 text-sm text-slate-200">
+            <ul id="detected-signals" class="mt-2 space-y-1 text-sm text-slate-700">
               <li>Analyzing...</li>
             </ul>
           </div>
@@ -123,15 +119,15 @@ Your message starts here..."></textarea>
             <span id="loading-step">Analyzing SPF...</span>
           </div>
 
-          <p class="mt-5 text-sm font-semibold text-slate-900">What hurts deliverability first</p>
+          <p class="mt-5 text-xl font-semibold text-slate-900">What hurts deliverability first</p>
           <ul id="findings" class="mt-2 space-y-3">
             <li class="finding-row medium">Your email has issues that can push it to spam. Fixes are locked.</li>
           </ul>
 
-          <p id="capability-note" class="mt-4 text-sm font-semibold text-slate-200">Based on content + domain checks only (no real inbox placement testing).</p>
+          <p id="capability-note" class="mt-4 text-sm font-semibold text-slate-700">Based on content + domain checks only (no real inbox placement testing).</p>
 
-          <div id="real-risk-wrap" class="mt-4 rounded-2xl border border-amber-500/65 bg-amber-50 p-4">
-            <p class="text-sm font-semibold text-amber-900">Real-world risk gap</p>
+          <div id="real-risk-wrap" class="mt-5 rounded-2xl border border-amber-500/65 bg-amber-50 p-4">
+            <p class="text-sm font-semibold text-amber-900">Missing critical signals</p>
             <p id="verdict-label" class="mt-1 text-sm font-semibold text-slate-900">-</p>
             <p id="real-world-risk" class="mt-1 text-sm text-slate-700">-</p>
             <p class="mt-2 text-xs text-slate-600">This score does not include sender reputation or engagement signals used by mailbox providers.</p>
@@ -170,10 +166,10 @@ Your message starts here..."></textarea>
             <ul id="score-breakdown" class="mt-2 space-y-2 text-sm text-slate-700"></ul>
           </div>
 
-          <div id="result-cta" class="mt-6 hidden rounded-2xl border border-blue-500/35 bg-gradient-to-r from-blue-600/15 to-indigo-600/20 p-5">
+          <div id="result-cta" class="mt-6 hidden rounded-2xl border border-slate-300 bg-slate-50 p-5">
             <p class="text-base font-semibold">Improve your email performance</p>
-            <p class="mt-1 text-sm text-slate-300">Unlock exact fixes tailored to your email.</p>
-            <ul class="mt-3 space-y-1 text-sm text-slate-200">
+            <p class="mt-1 text-sm text-slate-600">Unlock exact fixes tailored to your email.</p>
+            <ul class="mt-3 space-y-1 text-sm text-slate-700">
               <li>- Improve reply rate</li>
               <li>- Reduce spam triggers</li>
               <li>- Strengthen trust signals</li>
@@ -182,13 +178,44 @@ Your message starts here..."></textarea>
               Get Full Fix Report
             </a>
             <div class="mt-4 border-t border-slate-700/70 pt-4">
-              <p class="text-sm text-slate-200">Prefer email delivery? Enter email and your report request.</p>
+              <p class="text-sm text-slate-700">Prefer email delivery? Enter email and your report request.</p>
               <div class="mt-2 flex flex-col gap-2 sm:flex-row">
-                <input id="lead-email" type="email" placeholder="you@company.com" class="w-full rounded-xl border border-slate-700 bg-slate-950/70 px-3 py-2 text-sm text-slate-100 outline-none transition focus:border-blue-500" />
-                <a id="email-request-link" href="mailto:inboxguard.beta@gmail.com?subject=InboxGuard%20Full%20Fix%20Report%20Request&body=Domain:%20yourdomain.com%0AEmail:%20you@company.com" class="inline-flex items-center justify-center rounded-xl border border-blue-400/45 bg-slate-900 px-4 py-2 text-sm font-semibold text-blue-200 transition hover:border-blue-300 hover:text-blue-100">
+                <input id="lead-email" type="email" placeholder="you@company.com" class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-blue-500" />
+                <a id="email-request-link" href="mailto:inboxguard.beta@gmail.com?subject=InboxGuard%20Full%20Fix%20Report%20Request&body=Domain:%20yourdomain.com%0AEmail:%20you@company.com" class="inline-flex items-center justify-center rounded-xl border border-blue-300 bg-white px-4 py-2 text-sm font-semibold text-blue-700 transition hover:border-blue-400 hover:text-blue-800">
                   Send Report Request
                 </a>
               </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="mt-8 rounded-3xl border border-slate-300 bg-white p-6 shadow-xl">
+          <h3 class="text-2xl font-semibold text-slate-900">Why your emails fail (and you do not even know)</h3>
+          <ul class="mt-3 space-y-2 text-base text-slate-700">
+            <li>- Emails can look fine and still go to spam</li>
+            <li>- Generic tools give scores but not failure-first diagnostics</li>
+            <li>- Most checks happen after damage is already done</li>
+          </ul>
+        </section>
+
+        <section class="mt-8 rounded-3xl border border-slate-300 bg-white p-6 shadow-xl">
+          <h3 class="text-2xl font-semibold text-slate-900">How it works</h3>
+          <div class="mt-4 grid gap-4 md:grid-cols-4">
+            <div class="rounded-xl border border-slate-200 p-4">
+              <p class="text-sm font-semibold text-slate-900">1. Paste your email</p>
+              <p class="mt-2 text-sm text-slate-600">Drop the exact message you are about to send.</p>
+            </div>
+            <div class="rounded-xl border border-slate-200 p-4">
+              <p class="text-sm font-semibold text-slate-900">2. Analyze hidden threats</p>
+              <p class="mt-2 text-sm text-slate-600">Detect content + technical signals that can hurt deliverability.</p>
+            </div>
+            <div class="rounded-xl border border-slate-200 p-4">
+              <p class="text-sm font-semibold text-slate-900">3. Fix highest-impact issues</p>
+              <p class="mt-2 text-sm text-slate-600">Follow prioritized actions before you send.</p>
+            </div>
+            <div class="rounded-xl border border-slate-200 p-4">
+              <p class="text-sm font-semibold text-slate-900">4. Protect domain reputation</p>
+              <p class="mt-2 text-sm text-slate-600">Make pre-send checking a habit.</p>
             </div>
           </div>
         </section>
