@@ -55,14 +55,24 @@
             <button type="submit" id="run-check" class="btn-danger">Analyze Email Risk</button>
             <p class="micro">Scannable in under 5 seconds. No signup required.</p>
 
-            <div id="result-loading" class="loading hidden">
-              <span class="spinner"></span>
-              <span id="loading-step">Analyzing threat signals...</span>
+            <div id="result-loading" class="loading-panel hidden">
+              <p class="loading-title">Analyzing your email...</p>
+              <ul class="loading-steps">
+                <li id="load-step-1">Checking content signals...</li>
+                <li id="load-step-2">Detecting spam patterns...</li>
+                <li id="load-step-3">Evaluating provider rules...</li>
+                <li id="load-step-4">Scoring risk signals...</li>
+              </ul>
+              <p class="loading-current"><span class="spinner"></span><span id="loading-step">Initializing scan...</span></p>
             </div>
           </form>
         </section>
 
-        <section id="result" class="dashboard-grid">
+        <section id="idle-note" class="card idle-note">
+          <p>No analysis yet. Paste your email and run scan to detect deliverability risks.</p>
+        </section>
+
+        <section id="result" class="dashboard-grid hidden">
           <section class="status-overview card">
             <div class="section-head">
               <h2>Status Overview</h2>
@@ -108,9 +118,11 @@
             <h3>Next Actions</h3>
             <div class="actions">
               <button id="fix-now" type="button" class="btn-primary">Fix Email Now</button>
-              <button id="rewrite-action" type="button" class="btn-secondary">Rewrite for Deliverability</button>
-              <button id="personalize-action" type="button" class="btn-secondary">Add Personalization</button>
-              <button id="domain-action" type="button" class="btn-secondary">Check Domain Health</button>
+            </div>
+            <div class="action-links">
+              <button id="rewrite-action" type="button" class="link-action">Rewrite for Deliverability</button>
+              <button id="personalize-action" type="button" class="link-action">Add Personalization</button>
+              <button id="domain-action" type="button" class="link-action">Check Domain Health</button>
             </div>
           </section>
 
@@ -149,13 +161,23 @@
             </div>
           </details>
 
-          <section id="result-cta" class="cta-panel card">
-            <p id="workflow-state" class="workflow-step">Step 1: Run analysis</p>
-            <h3 id="workflow-title">Step 2: Fix required issues</h3>
-            <a id="unlock-link" href="https://wa.me/?text=I%20want%20to%20unlock%20the%20full%20report%20for%20yourdomain.com" target="_blank" rel="noopener noreferrer" class="btn-primary">Fix Email Now</a>
-            <div class="email-row">
-              <input id="lead-email" type="email" placeholder="you@company.com" />
-              <a id="email-request-link" href="mailto:inboxguard.beta@gmail.com?subject=InboxGuard%20Full%20Fix%20Report%20Request&body=Domain:%20yourdomain.com%0AEmail:%20you@company.com" class="btn-secondary">Send Report Request</a>
+          <section id="fix-output" class="cta-panel card hidden">
+            <p id="workflow-state" class="workflow-step">Step 2: Fix in progress</p>
+            <h3 id="workflow-title">Improved Draft Generated</h3>
+            <div class="transform-tags">
+              <span class="tag">Removed spam triggers</span>
+              <span class="tag">Added personalization</span>
+              <span class="tag">Simplified structure</span>
+            </div>
+            <div class="rewrite-grid">
+              <article>
+                <p class="rewrite-label">Before</p>
+                <pre id="before-email" class="rewrite-box">-</pre>
+              </article>
+              <article>
+                <p class="rewrite-label">After</p>
+                <pre id="after-email" class="rewrite-box">-</pre>
+              </article>
             </div>
           </section>
         </section>
