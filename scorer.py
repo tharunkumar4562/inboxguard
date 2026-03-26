@@ -10,7 +10,7 @@ CONTENT_PENALTIES = {
     "link_density": 15,
     "tracking_links": 8,
     "short_generic": 10,
-    "missing_personalization": 8,
+    "missing_personalization": 10,
     "targeting_unclear": 8,
     "excessive_caps": 12,
     "exclamation_abuse": 10,
@@ -18,8 +18,8 @@ CONTENT_PENALTIES = {
     "confidence_killers": 6,
     "automation_high": 10,
     "missing_list_unsubscribe": 12,
-    "broadcast_marketing": 12,
-    "generic_salutation": 6,
+    "broadcast_marketing": 16,
+    "generic_salutation": 8,
 }
 
 INFRA_PENALTIES = {

@@ -1,58 +1,49 @@
 const form = document.getElementById("risk-form");
 const resultSection = document.getElementById("result");
-const scoreNode = document.getElementById("score");
-const scoreBarFill = document.getElementById("score-bar-fill");
-const bandNode = document.getElementById("risk-band");
-const findingsNode = document.getElementById("findings");
-const riskPill = document.getElementById("risk-pill");
-const submitButton = document.getElementById("run-check");
-const unlockLink = document.getElementById("unlock-link");
-const leadEmailInput = document.getElementById("lead-email");
-const emailRequestLink = document.getElementById("email-request-link");
-const resultLoading = document.getElementById("result-loading");
-const resultCta = document.getElementById("result-cta");
-const loadingStep = document.getElementById("loading-step");
-const lockedFixes = document.getElementById("locked-fixes");
-const emailQuickInput = document.getElementById("email-quick");
 const rawEmailInput = document.getElementById("raw-email");
 const domainInput = document.getElementById("domain");
-const manualBodyInput = document.getElementById("manual-body");
 const analysisModeInput = document.getElementById("analysis-mode");
-const pasteModeWrap = document.getElementById("paste-mode-wrap");
-const manualModeWrap = document.getElementById("manual-mode-wrap");
-const switchToManual = document.getElementById("switch-to-manual");
-const switchToPaste = document.getElementById("switch-to-paste");
-const scoreBreakdownWrap = document.getElementById("score-breakdown-wrap");
-const scoreBreakdownNode = document.getElementById("score-breakdown");
-const contentScoreNode = document.getElementById("content-score-value");
-const infraImpactNode = document.getElementById("infra-impact-value");
-const finalScoreNode = document.getElementById("final-score-value");
-const problemSummary = document.getElementById("problem-summary");
-const analysisModeNote = document.getElementById("analysis-mode-note");
-const capabilityNoteNode = document.getElementById("capability-note");
-const confidenceValueNode = document.getElementById("confidence-value");
-const confidenceNoteNode = document.getElementById("confidence-note");
+const submitButton = document.getElementById("run-check");
+const resultLoading = document.getElementById("result-loading");
+const loadingStep = document.getElementById("loading-step");
+
+const verdictHeadlineNode = document.getElementById("verdict-headline");
+const verdictSublineNode = document.getElementById("verdict-subline");
+const verdictWarningNode = document.getElementById("verdict-warning");
+const findingsNode = document.getElementById("findings");
 const topFixesListNode = document.getElementById("top-fixes-list");
-const providerViewListNode = document.getElementById("provider-view-list");
+const whyMattersListNode = document.getElementById("why-matters-list");
 const verdictLabelNode = document.getElementById("verdict-label");
 const realWorldRiskNode = document.getElementById("real-world-risk");
 const missingFactorsListNode = document.getElementById("missing-factors-list");
-const verdictHeadlineNode = document.getElementById("verdict-headline");
-const verdictSublineNode = document.getElementById("verdict-subline");
-const defaultSubmitLabel = submitButton ? submitButton.textContent : "Check Deliverability Risk ->";
+const providerViewListNode = document.getElementById("provider-view-list");
+const scoreBreakdownWrap = document.getElementById("score-breakdown-wrap");
+const scoreBreakdownNode = document.getElementById("score-breakdown");
+
+const resultCta = document.getElementById("result-cta");
+const unlockLink = document.getElementById("unlock-link");
+const leadEmailInput = document.getElementById("lead-email");
+const emailRequestLink = document.getElementById("email-request-link");
+
+const loadingMessages = [
+    "Scanning high-risk language...",
+    "Checking authentication posture...",
+    "Prioritizing fixes before send...",
+];
+
+const defaultSubmitLabel = submitButton ? submitButton.textContent : "Check Before You Burn Your Domain";
+let loadingTimer = null;
+
 const errorBanner = document.createElement("div");
 errorBanner.id = "error-banner";
-errorBanner.className = "hidden fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-red-500/90 text-white px-6 py-3 rounded-lg shadow-lg font-semibold";
+errorBanner.className = "hidden";
 document.body.appendChild(errorBanner);
-
-const loadingMessages = ["Analyzing SPF...", "Checking DKIM and DMARC...", "Scanning content and sending pattern..."];
-let loadingTimer = null;
-let currentInputMode = "paste";
 
 function sendTrackEvent(eventName, target = "", mode = "") {
     if (!eventName) {
         return;
     }
+
     const payload = new FormData();
     payload.set("event", eventName);
     payload.set("target", target || "");
@@ -63,76 +54,8 @@ function sendTrackEvent(eventName, target = "", mode = "") {
         body: payload,
         keepalive: true,
     }).catch(() => {
-        // Fire-and-forget analytics should not affect UX.
+        // Analytics must never break user flow.
     });
-}
-
-const pillStyle = {
-    "High Risk": {
-        cls: "border-red-300 bg-red-50 text-red-800",
-        scoreCls: "text-red-500",
-    },
-    "Needs Review": {
-        cls: "border-amber-300 bg-amber-50 text-amber-800",
-        scoreCls: "text-amber-500",
-    },
-    "Content Safe": {
-        cls: "border-emerald-300 bg-emerald-50 text-emerald-800",
-        scoreCls: "text-emerald-600",
-    },
-    "High Spam-Risk Signals": {
-        cls: "border-red-300 bg-red-50 text-red-800",
-        scoreCls: "text-red-500",
-    },
-};
-
-function renderFindings(findings) {
-    findingsNode.innerHTML = "";
-
-    if (!findings || findings.length === 0) {
-        findingsNode.innerHTML = '<li class="finding-row low">No major red flags detected from the provided content.</li>';
-        return;
-    }
-
-    findings.forEach((item) => {
-        const li = document.createElement("li");
-        li.className = `finding-row ${item.severity || "medium"}`;
-        const title = item.title || "Signal";
-        const consequence = item.impact || item.issue || item.message || "Deliverability may be affected.";
-        const sev = item.severity || "medium";
-        const impactText = sev === "high" ? "High Impact" : sev === "low" ? "Low Impact" : "Medium Impact";
-
-        li.innerHTML = `
-            <p class="finding-title">${title}</p>
-            <p class="finding-impact ${sev}">${impactText}</p>
-            <p class="finding-note">${consequence}</p>
-    `;
-        findingsNode.appendChild(li);
-    });
-}
-
-function renderDetectedSignals(signals) {
-    const detectedNode = document.getElementById("detected-signals");
-    if (!detectedNode) {
-        return;
-    }
-
-    detectedNode.innerHTML = "";
-
-    if (!signals || signals.length === 0) {
-        detectedNode.innerHTML = '<li>No specific signals detected</li>';
-        return;
-    }
-
-    signals.forEach((signal) => {
-        const li = document.createElement("li");
-        li.textContent = signal;
-        detectedNode.appendChild(li);
-    });
-}
-
-function sleep(ms) {
-    return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 function showError(message) {
@@ -140,19 +63,24 @@ function showError(message) {
     errorBanner.classList.remove("hidden");
     setTimeout(() => {
         errorBanner.classList.add("hidden");
-    }, 4000);
+    }, 4200);
+}
+
+function sleep(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 function startLoadingSteps() {
     if (!loadingStep) {
         return;
     }
+
     let idx = 0;
     loadingStep.textContent = loadingMessages[idx];
     loadingTimer = setInterval(() => {
         idx = (idx + 1) % loadingMessages.length;
         loadingStep.textContent = loadingMessages[idx];
-    }, 580);
+    }, 650);
 }
 
 function stopLoadingSteps() {
@@ -163,115 +91,91 @@ function stopLoadingSteps() {
 }
 
 function setLoadingState(isLoading) {
-    if (isLoading) {
-        resultLoading.classList.remove("hidden");
-        resultCta.classList.add("hidden");
-        if (lockedFixes) {
-            lockedFixes.classList.add("hidden");
-        }
-        findingsNode.innerHTML = "";
-        bandNode.textContent = "Analyzing your email...";
-        if (analysisModeNote) {
-            analysisModeNote.textContent = "Preparing mode-specific analysis...";
-        }
-        scoreNode.textContent = "Calculating...";
-        if (problemSummary) {
-            problemSummary.classList.add("hidden");
-        }
-        startLoadingSteps();
+    if (!resultLoading || !submitButton) {
         return;
     }
-    resultLoading.classList.add("hidden");
-    stopLoadingSteps();
+
+    if (isLoading) {
+        resultLoading.classList.remove("hidden");
+        submitButton.disabled = true;
+        submitButton.textContent = "Analyzing...";
+        startLoadingSteps();
+    } else {
+        resultLoading.classList.add("hidden");
+        submitButton.disabled = false;
+        submitButton.textContent = defaultSubmitLabel;
+        stopLoadingSteps();
+    }
 }
 
 function updateLeadLinks(domain) {
-    const cleanDomain = (domain || "yourdomain.com").trim();
+    if (!unlockLink || !emailRequestLink) {
+        return;
+    }
+
+    const cleanDomain = (domain || "yourdomain.com").trim() || "yourdomain.com";
     const waText = encodeURIComponent(`I want to unlock the full report for ${cleanDomain}`);
     unlockLink.href = `https://wa.me/?text=${waText}`;
 
-    const email = (leadEmailInput.value || "").trim() || "you@company.com";
+    const email = (leadEmailInput && leadEmailInput.value ? leadEmailInput.value : "").trim() || "you@company.com";
     const subject = encodeURIComponent("InboxGuard Full Fix Report Request");
     const body = encodeURIComponent(`Domain: ${cleanDomain}\nEmail: ${email}`);
     emailRequestLink.href = `mailto:inboxguard.beta@gmail.com?subject=${subject}&body=${body}`;
 }
 
-function renderRisk(summary) {
-    const label = summary.risk_band;
-    const variant = pillStyle[label] || pillStyle["High Spam-Risk Signals"];
-
-    scoreNode.textContent = `${summary.score}/100`;
-
-    const emailType = summary.email_type || "email";
-    const emailTypeConfidence = summary.email_type_confidence || 72;
-    const modeLabel = summary.analysis_mode_label || "Content Only";
-    const modeDetail = summary.analysis_mode_note || "Based on content signals only.";
-    const capabilityNote = summary.capability_note || "Based on content + domain checks only (no real inbox placement testing).";
-
-    bandNode.textContent = `Heuristic risk index: ${summary.score}/100 (not inbox probability) • Email type: ${emailType} (${emailTypeConfidence}%)`;
-    if (analysisModeNote) {
-        analysisModeNote.textContent = `${modeLabel}: ${modeDetail}`;
-    }
-    if (verdictHeadlineNode) {
-        const headlineMap = {
-            "Content Safe": "Content Looks Safe - Reputation Can Still Override",
-            "Needs Review": "Moderate Deliverability Risk Detected",
-            "High Spam-Risk Signals": "High Risk - Likely Spam",
-        };
-        verdictHeadlineNode.textContent = headlineMap[label] || "Deliverability Risk Assessment";
-    }
-    if (verdictSublineNode) {
-        const sublineMap = {
-            "Content Safe": "No major direct spam triggers detected in this draft. Historical sender signals can still drive spam placement.",
-            "Needs Review": "This draft has risk patterns that can reduce inbox placement probability.",
-            "High Spam-Risk Signals": "This draft contains strong patterns commonly classified as bulk/spam behavior.",
-        };
-        verdictSublineNode.textContent = sublineMap[label] || "We found issues that can hurt deliverability.";
-    }
-    if (capabilityNoteNode) {
-        capabilityNoteNode.textContent = capabilityNote;
-    }
-    if (verdictLabelNode) {
-        verdictLabelNode.textContent = summary.verdict_label || "Content/technical diagnostic only";
-    }
-    if (realWorldRiskNode) {
-        realWorldRiskNode.textContent = summary.real_world_risk || "UNKNOWN (reputation and engagement history not analyzed).";
-    }
-    if (missingFactorsListNode) {
-        const missingFactors = summary.missing_factors || [];
-        missingFactorsListNode.innerHTML = "";
-        if (!missingFactors.length) {
-            missingFactorsListNode.innerHTML = "<li>- Sender reputation and engagement factors are not included.</li>";
-        } else {
-            missingFactors.forEach((factor) => {
-                const li = document.createElement("li");
-                li.textContent = `- ${factor}`;
-                missingFactorsListNode.appendChild(li);
-            });
-        }
-    }
-    if (confidenceValueNode) {
-        const confidence = (summary.deliverability_confidence || "medium").toUpperCase();
-        confidenceValueNode.textContent = confidence;
-    }
-    if (confidenceNoteNode) {
-        confidenceNoteNode.textContent = summary.confidence_note || "Confidence depends on available authentication evidence.";
+function renderVerdict(summary) {
+    if (!verdictHeadlineNode || !verdictSublineNode || !verdictWarningNode) {
+        return;
     }
 
-    scoreNode.classList.remove("text-red-500", "text-blue-400", "text-emerald-400", "text-yellow-400");
-    scoreNode.classList.add(variant.scoreCls);
+    const label = summary.risk_band || "Needs Review";
 
-    if (scoreBarFill) {
-        const clamped = Math.max(0, Math.min(100, Number(summary.score) || 0));
-        scoreBarFill.style.width = `${clamped}%`;
+    const headlineMap = {
+        "Content Safe": "Content Looks Safe - Delivery Risk Can Still Exist",
+        "Needs Review": "Moderate Risk - Review Before Sending",
+        "High Spam-Risk Signals": "High Risk - Likely Spam",
+        "High Risk": "High Risk - Likely Spam",
+    };
+
+    const sublineMap = {
+        "Content Safe": "No major direct spam triggers found in this draft.",
+        "Needs Review": "This draft has risk patterns that can hurt inbox placement.",
+        "High Spam-Risk Signals": "Strong risk patterns detected that can trigger bulk or spam filtering.",
+        "High Risk": "Strong risk patterns detected that can trigger bulk or spam filtering.",
+    };
+
+    verdictHeadlineNode.textContent = headlineMap[label] || "Deliverability risk detected";
+    verdictSublineNode.textContent = sublineMap[label] || "This draft contains deliverability risks that should be fixed first.";
+    verdictWarningNode.textContent = "Sending this email as-is may hurt your domain reputation.";
+}
+
+function renderFindings(findings) {
+    if (!findingsNode) {
+        return;
     }
 
-    riskPill.className = `rounded-full border px-4 py-1 text-sm font-semibold ${variant.cls}`;
-    riskPill.textContent = label;
+    findingsNode.innerHTML = "";
 
-    if (problemSummary) {
-        problemSummary.classList.remove("hidden");
+    if (!findings || !findings.length) {
+        findingsNode.innerHTML = "<li class=\"card finding-row low\"><p class=\"finding-title\">No critical risks detected</p><p class=\"finding-impact low\">Low Impact</p><p class=\"finding-note\">No major red flags were found in this draft.</p></li>";
+        return;
     }
+
+    findings.slice(0, 4).forEach((item) => {
+        const severity = item.severity || "medium";
+        const impactText = severity === "high" ? "High Impact" : severity === "low" ? "Low Impact" : "Medium Impact";
+        const title = item.title || "Risk signal";
+        const note = item.issue || item.impact || item.message || "This pattern can reduce inbox trust.";
+
+        const li = document.createElement("li");
+        li.className = `card finding-row ${severity}`;
+        li.innerHTML = `
+            <p class="finding-title">${title}</p>
+            <p class="finding-impact ${severity}">${impactText}</p>
+            <p class="finding-note">${note}</p>
+        `;
+        findingsNode.appendChild(li);
+    });
 }
 
 function renderTopFixes(summary) {
@@ -281,19 +185,65 @@ function renderTopFixes(summary) {
 
     topFixesListNode.innerHTML = "";
     const fixes = summary.top_fixes || [];
+
     if (!fixes.length) {
-        topFixesListNode.innerHTML = "<li>- No urgent fixes identified for this input.</li>";
+        topFixesListNode.innerHTML = "<li class=\"card\">No urgent action is required for this draft right now.</li>";
         return;
     }
 
-    fixes.forEach((item) => {
+    fixes.slice(0, 3).forEach((fix, index) => {
+        const title = fix.title || fix.type || "Fix issue";
+        const action = fix.action || "Resolve this signal before sending.";
         const li = document.createElement("li");
-        const impact = Math.round((Number(item.impact) || 0) * 100);
-        const title = item.title || item.type || "Issue";
-        const why = item.why || "This can reduce deliverability confidence.";
-        const action = item.action || "Review and resolve before sending.";
-        li.textContent = `- ${title} (${impact}% impact) | Why: ${why} | Fix: ${action}`;
+        li.className = "card";
+        li.innerHTML = `<strong>${index + 1}. ${title}</strong><p>${action}</p>`;
         topFixesListNode.appendChild(li);
+    });
+}
+
+function renderWhyMatters(summary) {
+    if (!whyMattersListNode) {
+        return;
+    }
+
+    const findings = summary.findings || [];
+    whyMattersListNode.innerHTML = "";
+
+    const lines = [];
+    if (findings.length) {
+        lines.push("Broadcast-style and template signals increase bulk filtering probability.");
+        lines.push("Low personalization can reduce trust scores in mailbox filtering systems.");
+    }
+    lines.push("Authentication or alignment gaps reduce sender trust with providers.");
+    lines.push("Ignoring repeated risk patterns can damage domain reputation over time.");
+
+    lines.slice(0, 3).forEach((line) => {
+        const li = document.createElement("li");
+        li.className = "card";
+        li.textContent = line;
+        whyMattersListNode.appendChild(li);
+    });
+}
+
+function renderRealityGap(summary) {
+    if (!verdictLabelNode || !realWorldRiskNode || !missingFactorsListNode) {
+        return;
+    }
+
+    verdictLabelNode.textContent = summary.verdict_label || "Content and technical diagnostic only";
+    realWorldRiskNode.textContent = summary.real_world_risk || "Real inbox placement remains uncertain without sender reputation and engagement history.";
+
+    const missing = summary.missing_factors || [];
+    missingFactorsListNode.innerHTML = "";
+    if (!missing.length) {
+        missingFactorsListNode.innerHTML = "<li>Sender reputation history</li><li>Engagement history</li><li>Complaint rates</li>";
+        return;
+    }
+
+    missing.forEach((factor) => {
+        const li = document.createElement("li");
+        li.textContent = factor;
+        missingFactorsListNode.appendChild(li);
     });
 }
 
@@ -304,71 +254,28 @@ function renderProviderView(summary) {
 
     providerViewListNode.innerHTML = "";
     const providerResults = summary.provider_results || {};
-    const providers = ["gmail", "outlook", "yahoo"];
 
-    providers.forEach((provider) => {
-        const data = providerResults[provider];
-        if (!data) {
+    const statusMap = {
+        content_safe: "Content Safe",
+        needs_review: "Needs Review",
+        high_risk_signals: "High Risk",
+    };
+
+    ["gmail", "outlook", "yahoo"].forEach((provider) => {
+        const item = providerResults[provider];
+        if (!item) {
             return;
         }
-
         const li = document.createElement("li");
-        const label = provider.charAt(0).toUpperCase() + provider.slice(1);
-        const statusLabel = {
-            content_safe: "Content Safe",
-            needs_review: "Needs Review",
-            high_risk_signals: "High Risk Signals",
-        }[data.status] || data.status;
-        li.textContent = `- ${label}: ${statusLabel} (${data.score}/100), top issue: ${data.top_issue}`;
+        li.className = "card";
+        const providerName = provider.charAt(0).toUpperCase() + provider.slice(1);
+        const status = statusMap[item.status] || item.status || "Needs Review";
+        li.textContent = `${providerName}: ${status} (top issue: ${item.top_issue || "risk signals detected"})`;
         providerViewListNode.appendChild(li);
     });
 
     if (!providerViewListNode.children.length) {
-        providerViewListNode.innerHTML = "<li>- Provider-specific breakdown unavailable for this mode/input.</li>";
-    }
-}
-
-function setInputMode(mode) {
-    currentInputMode = mode;
-
-    if (pasteModeWrap && manualModeWrap) {
-        if (mode === "paste") {
-            pasteModeWrap.classList.remove("hidden");
-            manualModeWrap.classList.add("hidden");
-            if (rawEmailInput) {
-                rawEmailInput.disabled = false;
-            }
-            if (emailQuickInput) {
-                emailQuickInput.disabled = true;
-            }
-            if (domainInput) {
-                domainInput.disabled = true;
-            }
-            if (manualBodyInput) {
-                manualBodyInput.disabled = true;
-            }
-            if (submitButton) {
-                submitButton.textContent = defaultSubmitLabel;
-            }
-        } else {
-            manualModeWrap.classList.remove("hidden");
-            pasteModeWrap.classList.add("hidden");
-            if (rawEmailInput) {
-                rawEmailInput.disabled = true;
-            }
-            if (emailQuickInput) {
-                emailQuickInput.disabled = false;
-            }
-            if (domainInput) {
-                domainInput.disabled = false;
-            }
-            if (manualBodyInput) {
-                manualBodyInput.disabled = false;
-            }
-            if (submitButton) {
-                submitButton.textContent = defaultSubmitLabel;
-            }
-        }
+        providerViewListNode.innerHTML = "<li class=\"card\">Provider-specific view is unavailable for this input.</li>";
     }
 }
 
@@ -378,21 +285,6 @@ function renderBreakdown(summary) {
     }
 
     const breakdown = summary.breakdown || [];
-    const contentScore = summary.content_score;
-    const infraImpact = summary.infra_impact;
-    const finalScore = summary.final_score || summary.score;
-
-    if (contentScoreNode) {
-        contentScoreNode.textContent = Number.isFinite(Number(contentScore)) ? `${contentScore}/100` : "-";
-    }
-    if (infraImpactNode) {
-        const infraNumber = Number(infraImpact);
-        infraImpactNode.textContent = Number.isFinite(infraNumber) ? `${infraNumber}` : "0";
-    }
-    if (finalScoreNode) {
-        finalScoreNode.textContent = Number.isFinite(Number(finalScore)) ? `${finalScore}/100` : "-";
-    }
-
     if (!breakdown.length) {
         scoreBreakdownWrap.classList.add("hidden");
         scoreBreakdownNode.innerHTML = "";
@@ -400,122 +292,78 @@ function renderBreakdown(summary) {
     }
 
     scoreBreakdownNode.innerHTML = "";
-    breakdown.slice(0, 5).forEach((item) => {
+    breakdown.slice(0, 6).forEach((item) => {
         const li = document.createElement("li");
-        const points = Number(item.points) || 0;
-        const sign = points >= 0 ? "+" : "";
-        li.textContent = `- ${item.label} (${sign}${points}): ${item.reason}`;
+        li.textContent = `${item.label}: ${item.points}`;
         scoreBreakdownNode.appendChild(li);
     });
     scoreBreakdownWrap.classList.remove("hidden");
 }
 
+if (form) {
+    form.addEventListener("submit", async (event) => {
+        event.preventDefault();
 
-form.addEventListener("submit", async (event) => {
-    event.preventDefault();
+        const rawText = rawEmailInput ? rawEmailInput.value.trim() : "";
+        const domainText = domainInput ? domainInput.value.trim() : "";
 
-    const quickText = emailQuickInput ? emailQuickInput.value.trim() : "";
-    const rawText = rawEmailInput ? rawEmailInput.value.trim() : "";
-    const domainText = domainInput ? domainInput.value.trim() : "";
-    const manualBodyText = manualBodyInput ? manualBodyInput.value.trim() : "";
-    const manualSubjectText = quickText;
-
-    const useRawEmail = currentInputMode === "paste";
-    const useManualFields = currentInputMode === "manual";
-
-    if (useRawEmail && rawText.length < 20) {
-        showError("Paste a full email to scan");
-        return;
-    }
-
-    if (useManualFields && !quickText && !domainText && !manualBodyText) {
-        showError("Enter subject, domain, or body in manual mode");
-        return;
-    }
-
-    let finalRawEmail = rawText;
-    let finalEmail = quickText;
-    let finalDomain = domainText;
-    const selectedMode = analysisModeInput ? analysisModeInput.value : "content";
-    if (useManualFields && manualBodyText) {
-        const subjectLine = finalEmail || "No subject";
-        finalEmail = `Subject: ${subjectLine}\n\n${manualBodyText}`;
-    }
-
-    submitButton.disabled = true;
-    submitButton.textContent = "Analyzing...";
-    resultSection.classList.remove("hidden");
-    resultSection.classList.add("visible");
-    setLoadingState(true);
-
-    try {
-        // Construct payload based on source of truth
-        const payload = new FormData();
-
-        if (useRawEmail) {
-            // ONLY send raw_email, ignore manual fields
-            payload.set("raw_email", finalRawEmail);
-        } else {
-            // ONLY send manual fields, no raw_email
-            payload.set("email", finalEmail);
-            payload.set("domain", finalDomain);
-            payload.set("manual_subject", manualSubjectText);
-            payload.set("manual_body", manualBodyText);
-        }
-        payload.set("analysis_mode", selectedMode);
-
-        const [response] = await Promise.all([
-            fetch("/analyze", {
-                method: "POST",
-                body: payload,
-            }),
-            sleep(2000),
-        ]);
-
-        if (!response.ok) {
-            throw new Error("Unable to run risk check. Please try again.");
+        if (rawText.length < 20) {
+            showError("Paste the full email draft before scanning.");
+            return;
         }
 
-        const data = await response.json();
-        renderRisk(data.summary);
-        renderBreakdown(data.summary);
-        renderTopFixes(data.summary);
-        renderProviderView(data.summary);
-        renderDetectedSignals(data.summary.detected_signals);
-        renderFindings(data.partial_findings);
-        updateLeadLinks(data.domain);
-        if (lockedFixes) {
-            lockedFixes.classList.remove("hidden");
-        }
-        resultCta.classList.remove("hidden");
-        setLoadingState(false);
+        setLoadingState(true);
 
-        resultSection.classList.remove("hidden");
-        resultSection.classList.add("visible");
-        resultSection.scrollIntoView({ behavior: "smooth", block: "start" });
-    } catch (error) {
-        setLoadingState(false);
-        if (scoreBreakdownWrap) {
-            scoreBreakdownWrap.classList.add("hidden");
-        }
-        if (problemSummary) {
-            problemSummary.classList.add("hidden");
-        }
-        findingsNode.innerHTML = `<li class="finding-row high">${error.message}</li>`;
-        scoreNode.textContent = "Not available";
-        bandNode.textContent = "Scan failed.";
-        updateLeadLinks(document.getElementById("domain").value);
-        resultSection.classList.remove("hidden");
-        resultSection.classList.add("visible");
-    } finally {
-        submitButton.disabled = false;
-        submitButton.textContent = defaultSubmitLabel;
-    }
-});
+        try {
+            const payload = new FormData();
+            payload.set("raw_email", rawText);
+            if (domainText) {
+                payload.set("domain", domainText);
+            }
+            payload.set("analysis_mode", analysisModeInput ? analysisModeInput.value : "content");
 
-leadEmailInput.addEventListener("input", () => {
-    updateLeadLinks(domainInput ? domainInput.value : "");
-});
+            const [response] = await Promise.all([
+                fetch("/analyze", {
+                    method: "POST",
+                    body: payload,
+                }),
+                sleep(1200),
+            ]);
+
+            if (!response.ok) {
+                throw new Error("Unable to run risk check. Please try again.");
+            }
+
+            const data = await response.json();
+            const summary = data.summary || {};
+
+            renderVerdict(summary);
+            renderFindings(data.partial_findings || summary.findings || []);
+            renderTopFixes(summary);
+            renderWhyMatters(summary);
+            renderRealityGap(summary);
+            renderProviderView(summary);
+            renderBreakdown(summary);
+
+            updateLeadLinks(data.domain || domainText);
+
+            if (resultCta) {
+                resultCta.classList.remove("hidden");
+            }
+            if (resultSection) {
+                resultSection.classList.remove("hidden");
+                resultSection.scrollIntoView({ behavior: "smooth", block: "start" });
+            }
+
+            sendTrackEvent("analyze", "submit", analysisModeInput ? analysisModeInput.value : "content");
+        } catch (error) {
+            const message = error && error.message ? error.message : "Scan failed.";
+            showError(message);
+        } finally {
+            setLoadingState(false);
+        }
+    });
+}
 
 if (unlockLink) {
     unlockLink.addEventListener("click", () => {
@@ -529,43 +377,16 @@ if (emailRequestLink) {
     });
 }
 
+if (leadEmailInput) {
+    leadEmailInput.addEventListener("input", () => {
+        updateLeadLinks(domainInput ? domainInput.value : "");
+    });
+}
+
 if (domainInput) {
     domainInput.addEventListener("input", () => {
         updateLeadLinks(domainInput.value);
     });
 }
 
-if (switchToManual) {
-    switchToManual.addEventListener("click", () => setInputMode("manual"));
-}
-
-if (switchToPaste) {
-    switchToPaste.addEventListener("click", () => setInputMode("paste"));
-}
-
-if (rawEmailInput) {
-    rawEmailInput.addEventListener("input", () => {
-        if (rawEmailInput.value.trim()) {
-            setInputMode("paste");
-        }
-    });
-}
-
-if (emailQuickInput) {
-    emailQuickInput.addEventListener("input", () => {
-        if (emailQuickInput.value.trim()) {
-            setInputMode("manual");
-        }
-    });
-}
-
-if (manualBodyInput) {
-    manualBodyInput.addEventListener("input", () => {
-        if (manualBodyInput.value.trim()) {
-            setInputMode("manual");
-        }
-    });
-}
-
 updateLeadLinks(domainInput ? domainInput.value : "");
-setInputMode("paste");
