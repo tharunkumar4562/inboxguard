@@ -261,6 +261,30 @@ h3 {
     animation: riseIn 420ms ease;
 }
 
+.report-light {
+    color: #0f172a;
+}
+
+.report-light #risk-band,
+.report-light #analysis-mode-note,
+.report-light #capability-note {
+    color: #334155 !important;
+}
+
+.report-light #detected-signals {
+    color: #1e293b !important;
+}
+
+.report-light .finding-row {
+    background: #f8fafc;
+    border-color: #cbd5e1;
+    color: #0f172a;
+}
+
+.report-light .finding-title {
+    color: #0f172a;
+}
+
 .locked-item {
     position: relative;
     padding-left: 1.25rem;

@@ -489,7 +489,8 @@ def score_risk(signals: Dict) -> Dict:
         )
 
     # Score computation (no artificial 95 ceiling).
-    baseline_score = 100 if full_mode else 95
+    # Content-only is intentionally conservative because sender reputation is unknown.
+    baseline_score = 100 if full_mode else 92
     total_penalty = content_penalty_points + infra_penalty_points
     content_score = _clamp_score(baseline_score - content_penalty_points)
     final_score = _clamp_score(baseline_score - total_penalty)
