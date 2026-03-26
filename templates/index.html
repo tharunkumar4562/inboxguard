@@ -97,7 +97,7 @@ Your message starts here..."></textarea>
         <section id="result" class="report-light hidden mt-5 rounded-3xl border border-slate-300 bg-white p-6 shadow-xl">
           <div class="flex flex-wrap items-end justify-between gap-3">
             <div>
-              <p class="text-sm uppercase tracking-[0.16em] text-slate-500">Deliverability Risk Report</p>
+              <p class="text-sm uppercase tracking-[0.16em] text-slate-500">Deliverability Diagnostic Report</p>
               <h3 class="mt-2 text-2xl font-bold">
                 Risk Score: <span id="score" class="text-red-500">Calculating...</span>
               </h3>
@@ -111,7 +111,7 @@ Your message starts here..."></textarea>
             <div id="score-bar-fill" class="h-3 rounded-full bg-gradient-to-r from-emerald-400 via-yellow-400 to-red-500 transition-all duration-300" style="width: 0%"></div>
           </div>
 
-          <div id="problem-summary" class="report-card mt-4 rounded-2xl border border-slate-300 bg-white p-4">
+          <div id="problem-summary" class="mt-4 rounded-2xl border border-slate-300 bg-white p-4">
             <p class="text-sm font-semibold text-slate-900">Detected signals</p>
             <ul id="detected-signals" class="mt-2 space-y-1 text-sm text-slate-200">
               <li>Analyzing...</li>
@@ -130,7 +130,7 @@ Your message starts here..."></textarea>
 
           <p id="capability-note" class="mt-4 text-sm font-semibold text-slate-200">Based on content + domain checks only (no real inbox placement testing).</p>
 
-          <div id="real-risk-wrap" class="report-card mt-4 rounded-2xl border border-amber-500/65 bg-amber-50 p-4">
+          <div id="real-risk-wrap" class="mt-4 rounded-2xl border border-amber-500/65 bg-amber-50 p-4">
             <p class="text-sm font-semibold text-amber-900">Real-world risk gap</p>
             <p id="verdict-label" class="mt-1 text-sm font-semibold text-slate-900">-</p>
             <p id="real-world-risk" class="mt-1 text-sm text-slate-700">-</p>
@@ -140,27 +140,27 @@ Your message starts here..."></textarea>
             </ul>
           </div>
 
-          <div id="confidence-wrap" class="report-card mt-4 rounded-2xl border border-slate-300 bg-white p-4">
+          <div id="confidence-wrap" class="mt-4 rounded-2xl border border-slate-300 bg-white p-4">
             <p class="text-sm font-semibold text-slate-900">Deliverability confidence</p>
             <p id="confidence-value" class="mt-1 text-sm text-slate-900">-</p>
             <p id="confidence-note" class="mt-1 text-xs text-slate-600">-</p>
           </div>
 
-          <div id="top-fixes-wrap" class="report-card mt-4 rounded-2xl border border-slate-300 bg-white p-4">
+          <div id="top-fixes-wrap" class="mt-4 rounded-2xl border border-slate-300 bg-white p-4">
             <p class="text-sm font-semibold text-slate-900">Fix this first</p>
             <ul id="top-fixes-list" class="mt-2 space-y-2 text-sm text-slate-800">
               <li>- Analyzing fix priorities...</li>
             </ul>
           </div>
 
-          <div id="provider-view-wrap" class="report-card mt-4 rounded-2xl border border-slate-300 bg-white p-4">
+          <div id="provider-view-wrap" class="mt-4 rounded-2xl border border-slate-300 bg-white p-4">
             <p class="text-sm font-semibold text-slate-900">Provider view</p>
             <ul id="provider-view-list" class="mt-2 space-y-1 text-sm text-slate-800">
               <li>- Analyzing provider-specific risk...</li>
             </ul>
           </div>
 
-          <div id="score-breakdown-wrap" class="report-card mt-5 hidden rounded-2xl border border-slate-300 bg-white p-4">
+          <div id="score-breakdown-wrap" class="mt-5 hidden rounded-2xl border border-slate-300 bg-white p-4">
             <p class="text-sm font-semibold text-slate-900">Score breakdown</p>
             <div id="score-summary-lines" class="mt-2 space-y-1 text-sm text-slate-800">
               <p>Content Score: <span id="content-score-value">-</span></p>
