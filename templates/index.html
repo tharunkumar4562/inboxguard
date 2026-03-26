@@ -18,8 +18,8 @@
           <p class="sub">Deliverability Threat Center</p>
         </div>
         <nav>
-          <button class="nav-item active" type="button">Dashboard</button>
-          <button class="nav-item" type="button">Threat Scan</button>
+          <button id="tab-dashboard" class="nav-item active" type="button">Dashboard</button>
+          <button id="tab-threat-scan" class="nav-item" type="button">Threat Scan</button>
           <button class="nav-item disabled" type="button">Signal Detection <span>Coming soon</span></button>
           <button class="nav-item disabled" type="button">Provider Intel <span>Coming soon</span></button>
           <button class="nav-item disabled" type="button">Action Queue <span>Coming soon</span></button>
@@ -29,9 +29,10 @@
 
       <main class="main-area">
         <header class="topbar">
-          <h1>Email Deliverability Threat Console</h1>
+          <h1>Prevent your cold emails from going to spam</h1>
           <a class="access-link" href="/access">Get Access</a>
         </header>
+        <p id="tab-feedback" class="tab-feedback">Dashboard mode active.</p>
 
         <section class="scan-panel card">
           <form id="risk-form" class="scan-form">
@@ -105,6 +106,7 @@
               <span id="biggest-risk-impact" class="badge badge-yellow">PENDING</span>
               <span id="biggest-risk-desc" class="issue-desc">Run analysis to detect the top deliverability blocker.</span>
             </div>
+            <p id="trust-hook" class="trust-hook">Based on patterns commonly flagged by Gmail and Outlook filters.</p>
           </section>
 
           <section class="card consequence-panel">
@@ -164,6 +166,7 @@
           <section id="fix-output" class="cta-panel card hidden">
             <p id="workflow-state" class="workflow-step">Step 2: Fix in progress</p>
             <h3 id="workflow-title">Improved Draft Generated</h3>
+            <p id="improvement-estimate" class="improvement-estimate">Estimated inbox improvement: pending</p>
             <div class="transform-tags">
               <span class="tag">Removed spam triggers</span>
               <span class="tag">Added personalization</span>

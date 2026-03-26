@@ -134,6 +134,12 @@ nav {
     letter-spacing: -0.01em;
 }
 
+.tab-feedback {
+    margin: 0 0 10px;
+    color: var(--text-secondary);
+    font-size: 0.86rem;
+}
+
 .access-link {
     border: 1px solid var(--border-strong);
     border-radius: 999px;
@@ -152,6 +158,10 @@ nav {
 
 .scan-panel {
     margin-bottom: 14px;
+}
+
+.scan-panel.focused {
+    border-color: #0f766e;
 }
 
 .idle-note {
@@ -433,6 +443,12 @@ select {
     color: #fecaca;
 }
 
+.trust-hook {
+    margin: 10px 0 0;
+    color: #9ca3af;
+    font-size: 0.84rem;
+}
+
 .consequence-panel {
     border-color: #78350f;
     background: #20190f;
@@ -582,6 +598,13 @@ select {
     font-size: 0.78rem;
     text-transform: uppercase;
     letter-spacing: 0.08em;
+}
+
+.improvement-estimate {
+    margin: 0;
+    color: #a7f3d0;
+    font-size: 0.92rem;
+    font-weight: 600;
 }
 
 .email-row {

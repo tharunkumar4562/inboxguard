@@ -8,6 +8,7 @@ CONTENT_PENALTIES = {
     "cta_pressure": 20,
     "urgency_pressure": 14,
     "link_density": 15,
+    "link_image_imbalance": 7,
     "tracking_links": 8,
     "short_generic": 10,
     "missing_personalization": 10,
@@ -91,6 +92,8 @@ def score_risk(signals: Dict) -> Dict:
     link_count = int(signals.get("link_count", 0))
     too_many_links = bool(signals.get("too_many_links", False))
     tracking_style_links = bool(signals.get("tracking_style_links", False))
+    link_image_imbalance = bool(signals.get("link_image_imbalance", False))
+    image_count = _to_int(signals.get("image_count", 0))
     short_generic_email = bool(signals.get("short_generic_email", False))
     exclamation_count = _to_int(signals.get("exclamation_count", 0))
     repetitive_structure = bool(signals.get("repetitive_structure", False))
@@ -242,6 +245,18 @@ def score_risk(signals: Dict) -> Dict:
             "Use direct destination URLs without redirect-style tracking params.",
             "Tracking URL patterns lower trust with mailbox filters.",
             ["gmail", "outlook"],
+        )
+
+    if link_image_imbalance:
+        points = CONTENT_PENALTIES["link_image_imbalance"]
+        add_breakdown("Link/image imbalance", points, f"Detected {link_count} links with only {image_count} image marker(s)")
+        add_issue(
+            "link_image_imbalance",
+            "Link/image balance looks unnatural",
+            points,
+            "Reduce link count or add a balanced visual/text structure before sending.",
+            "Filters often downrank drafts that look like dense link payloads.",
+            ["gmail", "outlook", "yahoo"],
         )
 
     if short_generic_email:

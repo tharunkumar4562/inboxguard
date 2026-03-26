@@ -258,6 +258,14 @@ def _has_generic_salutation(text: str) -> bool:
     return any(token in content for token in ["hi there", "hello there", "dear user", "dear customer"])
 
 
+def _count_image_markers(text: str) -> int:
+    content = text or ""
+    html_images = len(re.findall(r"<img\b", content, flags=re.IGNORECASE))
+    markdown_images = len(re.findall(r"!\[[^\]]*\]\([^\)]+\)", content, flags=re.IGNORECASE))
+    linked_images = len(re.findall(r"https?://[^\s]+\.(?:png|jpg|jpeg|gif|webp)", content, flags=re.IGNORECASE))
+    return html_images + markdown_images + linked_images
+
+
 def _extract_subject_header_only(text: str) -> str:
     match = re.search(r"^\s*Subject:\s*(.+)$", text or "", flags=re.IGNORECASE | re.MULTILINE)
     return _normalize_text(match.group(1)) if match else ""
@@ -365,6 +373,8 @@ def analyze_email(
     repetitive_structure = _repetitive_structure(normalized_body)
     marketing_marker_count = _count_marketing_markers(normalized_body)
     generic_salutation = _has_generic_salutation(normalized_body)
+    image_count = _count_image_markers(source_text)
+    link_image_imbalance = link_count >= 3 and image_count == 0
 
     signals = {
         "analysis_mode": mode,
@@ -402,6 +412,8 @@ def analyze_email(
         "repetitive_structure": repetitive_structure,
         "marketing_marker_count": marketing_marker_count,
         "generic_salutation": generic_salutation,
+        "image_count": image_count,
+        "link_image_imbalance": link_image_imbalance,
         "opener_type": opener_profile["type"],
         "opener_reason": opener_profile["reason"],
         "intent_type": intent_profile["type"],
