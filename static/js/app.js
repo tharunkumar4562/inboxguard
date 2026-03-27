@@ -28,7 +28,6 @@ const trustHookNode = document.getElementById("trust-hook");
 const consequenceListNode = document.getElementById("consequence-list");
 const hurtListNode = document.getElementById("hurt-list");
 const topFixesListNode = document.getElementById("top-fixes-list");
-const providerViewListNode = document.getElementById("provider-view-list");
 const scoreBreakdownNode = document.getElementById("score-breakdown");
 
 const fixNowButton = document.getElementById("fix-now");
@@ -42,6 +41,11 @@ const improvementEstimateNode = document.getElementById("improvement-estimate");
 const fixOutput = document.getElementById("fix-output");
 const beforeEmailNode = document.getElementById("before-email");
 const afterEmailNode = document.getElementById("after-email");
+const useFixedButton = document.getElementById("use-fixed");
+const editManualButton = document.getElementById("edit-manual");
+const feedbackInboxButton = document.getElementById("feedback-inbox");
+const feedbackSpamButton = document.getElementById("feedback-spam");
+const feedbackUnsureButton = document.getElementById("feedback-unsure");
 
 const loadSteps = [
     "Checking content signals...",
@@ -52,8 +56,9 @@ const loadSteps = [
 
 const defaultSubmitLabel = submitButton ? submitButton.textContent : "Analyze Email Risk";
 let latestSummary = null;
-let latestSignals = null;
 let latestFindings = [];
+let latestRewriteContext = null;
+let latestLearningProfile = null;
 
 const errorBanner = document.createElement("div");
 errorBanner.id = "error-banner";
@@ -152,16 +157,17 @@ function setResultState() {
     }
 }
 
-async function fakeDelaySequence() {
+function startRealtimeScanSteps() {
     if (!loadingStep) {
-        await sleep(1800);
-        return;
+        return null;
     }
 
-    for (const step of loadSteps) {
-        loadingStep.textContent = step;
-        await sleep(560);
-    }
+    let idx = 0;
+    loadingStep.textContent = loadSteps[idx];
+    return setInterval(() => {
+        idx = (idx + 1) % loadSteps.length;
+        loadingStep.textContent = loadSteps[idx];
+    }, 280);
 }
 
 function setImpactBadge(node, impact) {
@@ -272,7 +278,10 @@ function renderBiggestRisk(findings) {
     setImpactBadge(biggestRiskImpactNode, impact);
 
     if (trustHookNode) {
-        trustHookNode.textContent = "Based on patterns commonly flagged by Gmail and Outlook filters.";
+        const samples = latestLearningProfile && Number(latestLearningProfile.sample_size || 0) > 0
+            ? ` Feedback-trained on ${latestLearningProfile.sample_size} outcome sample(s).`
+            : "";
+        trustHookNode.textContent = `Based on patterns commonly flagged by Gmail and Outlook filters.${samples}`;
     }
 
     if (impact === "HIGH") {
@@ -366,34 +375,6 @@ function renderFixes(summary) {
     });
 }
 
-function renderProvider(summary) {
-    if (!providerViewListNode) {
-        return;
-    }
-
-    providerViewListNode.innerHTML = "";
-    const results = summary.provider_results || {};
-    const map = { content_safe: "Safe", needs_review: "Warning", high_risk_signals: "Critical" };
-    let found = 0;
-
-    ["gmail", "outlook", "yahoo"].forEach((provider) => {
-        const row = results[provider];
-        const li = document.createElement("li");
-        const p = provider.charAt(0).toUpperCase() + provider.slice(1);
-        if (!row) {
-            li.textContent = `${p}: No data`;
-        } else {
-            found += 1;
-            li.textContent = `${p}: ${map[row.status] || "Warning"} | Top issue: ${row.top_issue || "Risk signals"}`;
-        }
-        providerViewListNode.appendChild(li);
-    });
-
-    if (!found) {
-        providerViewListNode.innerHTML = "<li>Provider view will appear after analysis.</li>";
-    }
-}
-
 function renderBreakdown(summary) {
     if (!scoreBreakdownNode) {
         return;
@@ -428,45 +409,6 @@ function renderBreakdown(summary) {
         scoreBreakdownNode.appendChild(li);
     });
 }
-
-function improvedRewrite(text) {
-    const body = String(text || "").trim();
-    const stripped = body
-        .replace(/we'?re excited to introduce[^.]*\.?/gi, "")
-        .replace(/what smart mesh delivers[^\n]*/gi, "")
-        .replace(/game-ready meshes[^.]*\.?/gi, "")
-        .replace(/lightweight geometry[^.]*\.?/gi, "")
-        .replace(/scalable asset generation[^.]*\.?/gi, "")
-        .trim();
-
-    return `Hi {{FirstName}},\n\nI noticed your team is shipping 3D assets for real-time workflows.\n\nWe can help reduce mesh cleanup time by generating cleaner topology upfront for your current pipeline.\n\nWould a short 2-step test workflow be useful this week?\n\n${stripped ? `Context kept:\n${stripped.slice(0, 240)}...` : ""}`.trim();
-}
-
-async function estimateImprovement(originalScore, rewrittenText) {
-    const payload = new FormData();
-    payload.set("raw_email", rewrittenText);
-    if (domainInput && domainInput.value.trim()) {
-        payload.set("domain", domainInput.value.trim());
-    }
-    payload.set("analysis_mode", analysisModeInput ? analysisModeInput.value : "content");
-
-    try {
-        const response = await fetch("/analyze", {
-            method: "POST",
-            body: payload,
-        });
-        if (!response.ok) {
-            return null;
-        }
-        const data = await response.json();
-        const newScore = Number(data.summary?.final_score || data.summary?.score || 0);
-        const base = Number(originalScore || 0);
-        return Math.max(0, newScore - base);
-    } catch {
-        return null;
-    }
-}
-
 async function showFixTransformation() {
     if (!fixOutput || !beforeEmailNode || !afterEmailNode || !rawEmailInput || !fixNowButton) {
         return;
@@ -481,42 +423,61 @@ async function showFixTransformation() {
     fixNowButton.disabled = true;
     fixNowButton.textContent = "Fixing...";
 
-    await sleep(1100);
-    const rewritten = improvedRewrite(original);
-    beforeEmailNode.textContent = original;
-    afterEmailNode.textContent = rewritten;
-    rawEmailInput.value = rewritten;
-
-    if (workflowStateNode) {
-        workflowStateNode.textContent = "Step 2: Fix complete";
-    }
-    if (workflowTitleNode) {
-        workflowTitleNode.textContent = "Improved draft ready - re-run scan to confirm";
-    }
-
-    const currentScore = latestSummary ? Number(latestSummary.final_score || latestSummary.score || 0) : 0;
-    const improvement = await estimateImprovement(currentScore, rewritten);
-    if (improvementEstimateNode) {
-        if (improvement === null) {
-            improvementEstimateNode.textContent = "Score lift estimate unavailable - click Analyze Email Risk to measure.";
-        } else {
-            improvementEstimateNode.textContent = `Estimated score lift after rewrite: +${Math.round(improvement)} points`;
+    try {
+        const payload = new FormData();
+        payload.set("raw_email", original);
+        if (domainInput && domainInput.value.trim()) {
+            payload.set("domain", domainInput.value.trim());
         }
-    }
+        payload.set("analysis_mode", analysisModeInput ? analysisModeInput.value : "content");
 
-    fixOutput.classList.remove("hidden");
-    fixOutput.classList.add("fade-in");
-    fixOutput.scrollIntoView({ behavior: "smooth", block: "start" });
+        const response = await fetch("/rewrite", {
+            method: "POST",
+            body: payload,
+        });
+        if (!response.ok) {
+            throw new Error("Rewrite failed. Try again.");
+        }
+        const data = await response.json();
+        const rewritten = String(data.rewritten_text || original);
+
+        beforeEmailNode.textContent = String(data.original_text || original);
+        afterEmailNode.textContent = rewritten;
+        rawEmailInput.value = rewritten;
+
+        latestRewriteContext = {
+            original_text: String(data.original_text || original),
+            rewritten_text: rewritten,
+            from_risk_band: String(data.from_risk_band || "Needs Review"),
+            to_risk_band: String(data.to_risk_band || "Needs Review"),
+            score_delta: Number(data.score_delta || 0),
+        };
+
+        if (workflowStateNode) {
+            workflowStateNode.textContent = "Step 2: Fix complete";
+        }
+        if (workflowTitleNode) {
+            workflowTitleNode.textContent = "Safer version generated";
+        }
+
+        if (improvementEstimateNode) {
+            const delta = Number(data.score_delta || 0);
+            improvementEstimateNode.textContent = `Risk shift: ${data.from_risk_band} -> ${data.to_risk_band} | Score delta: ${delta >= 0 ? "+" : ""}${delta}`;
+        }
+
+        fixOutput.classList.remove("hidden");
+        fixOutput.classList.add("fade-in");
+        fixOutput.scrollIntoView({ behavior: "smooth", block: "start" });
+    } catch (error) {
+        showError(error && error.message ? error.message : "Rewrite failed.");
+    }
 
     fixNowButton.disabled = false;
     fixNowButton.textContent = "Fix Email Now";
 }
 
 function runQuickRewrite() {
-    if (!rawEmailInput) {
-        return;
-    }
-    rawEmailInput.value = improvedRewrite(rawEmailInput.value || "");
+    showFixTransformation();
 }
 
 function addPersonalization() {
@@ -532,6 +493,52 @@ function checkDomainHealth() {
     }
     analysisModeInput.value = "full";
     activateTab("threat-scan");
+}
+
+function useFixedVersion() {
+    if (!afterEmailNode || !rawEmailInput) {
+        return;
+    }
+    rawEmailInput.value = afterEmailNode.textContent || rawEmailInput.value;
+    showError("Fixed version applied to editor. Re-scan before send.");
+}
+
+function editManually() {
+    if (!rawEmailInput) {
+        return;
+    }
+    rawEmailInput.focus();
+    showError("Manual edit mode active.");
+}
+
+async function sendFeedback(outcome) {
+    if (!latestRewriteContext) {
+        showError("Generate a fixed version first.");
+        return;
+    }
+
+    try {
+        const payload = new FormData();
+        payload.set("outcome", outcome);
+        payload.set("original_text", latestRewriteContext.original_text || "");
+        payload.set("rewritten_text", latestRewriteContext.rewritten_text || "");
+        payload.set("from_risk_band", latestRewriteContext.from_risk_band || "");
+        payload.set("to_risk_band", latestRewriteContext.to_risk_band || "");
+
+        const response = await fetch("/feedback", {
+            method: "POST",
+            body: payload,
+        });
+        if (!response.ok) {
+            throw new Error("Could not save feedback");
+        }
+        const data = await response.json();
+        latestLearningProfile = data.learning_profile || latestLearningProfile;
+        const samples = latestLearningProfile ? Number(latestLearningProfile.sample_size || 0) : 0;
+        showError(`Feedback saved. Model updated with ${samples} sample(s).`);
+    } catch (error) {
+        showError(error && error.message ? error.message : "Could not save feedback");
+    }
 }
 
 if (dashboardTab) {
@@ -552,6 +559,21 @@ if (personalizeActionButton) {
 if (domainActionButton) {
     domainActionButton.addEventListener("click", checkDomainHealth);
 }
+if (useFixedButton) {
+    useFixedButton.addEventListener("click", useFixedVersion);
+}
+if (editManualButton) {
+    editManualButton.addEventListener("click", editManually);
+}
+if (feedbackInboxButton) {
+    feedbackInboxButton.addEventListener("click", () => sendFeedback("inbox"));
+}
+if (feedbackSpamButton) {
+    feedbackSpamButton.addEventListener("click", () => sendFeedback("spam"));
+}
+if (feedbackUnsureButton) {
+    feedbackUnsureButton.addEventListener("click", () => sendFeedback("not_sure"));
+}
 
 if (form) {
     form.addEventListener("submit", async (event) => {
@@ -567,7 +589,7 @@ if (form) {
         }
 
         setLoadingState();
-        await fakeDelaySequence();
+        const loadingTicker = startRealtimeScanSteps();
 
         try {
             const payload = new FormData();
@@ -587,12 +609,15 @@ if (form) {
             }
 
             const data = await response.json();
+            if (loadingTicker) {
+                clearInterval(loadingTicker);
+            }
             const summary = data.summary || {};
             const signals = data.signals || {};
             const findings = data.partial_findings || summary.findings || [];
+            latestLearningProfile = data.learning_profile || latestLearningProfile;
 
             latestSummary = summary;
-            latestSignals = signals;
             latestFindings = findings;
 
             renderStatus(summary, signals, findings);
@@ -600,7 +625,6 @@ if (form) {
             renderConsequences(summary);
             renderHurting(findings);
             renderFixes(summary);
-            renderProvider(summary);
             renderBreakdown(summary);
 
             if (workflowStateNode) {
@@ -619,6 +643,9 @@ if (form) {
             }
             activateTab("dashboard");
         } catch (error) {
+            if (loadingTicker) {
+                clearInterval(loadingTicker);
+            }
             showError(error && error.message ? error.message : "Scan failed.");
             setIdleState();
         }

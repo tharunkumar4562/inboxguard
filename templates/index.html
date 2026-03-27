@@ -29,7 +29,7 @@
 
       <main class="main-area">
         <header class="topbar">
-          <h1>Prevent your cold emails from going to spam</h1>
+          <h1>Pre-Send Email Correction Engine</h1>
           <a class="access-link" href="/access">Get Access</a>
         </header>
         <p id="tab-feedback" class="tab-feedback">Dashboard mode active.</p>
@@ -145,15 +145,8 @@
           </section>
 
           <details class="card advanced-block">
-            <summary>Advanced View (Provider + Penalties)</summary>
+            <summary>Advanced evidence (scoring math)</summary>
             <div class="advanced-content">
-              <article class="card">
-                <h3>Provider View</h3>
-                <ul id="provider-view-list" class="compact-list">
-                  <li>Provider view will appear after analysis.</li>
-                </ul>
-              </article>
-
               <article class="card">
                 <h3>Score Breakdown</h3>
                 <ul id="score-breakdown" class="compact-list">
@@ -181,6 +174,18 @@
                 <p class="rewrite-label">After</p>
                 <pre id="after-email" class="rewrite-box">-</pre>
               </article>
+            </div>
+            <div class="actions" style="margin-top: 12px;">
+              <button id="use-fixed" type="button" class="btn-primary">Use Fixed Version</button>
+              <button id="edit-manual" type="button" class="btn-secondary">Edit Manually</button>
+            </div>
+            <div class="feedback-row" style="margin-top: 12px;">
+              <p class="micro" style="margin-bottom: 6px;">After sending, where did this land?</p>
+              <div class="action-links">
+                <button id="feedback-inbox" type="button" class="link-action">Inbox</button>
+                <button id="feedback-spam" type="button" class="link-action">Spam</button>
+                <button id="feedback-unsure" type="button" class="link-action">Not Sure</button>
+              </div>
             </div>
           </section>
         </section>

@@ -11,6 +11,7 @@ from jinja2 import TemplateNotFound, TemplateError
 
 from analyzer import analyze_email
 from analytics import get_dashboard_data, track_event
+from correction_engine import get_learning_profile, record_feedback, rewrite_email_text
 from utils import build_email_from_raw, extract_domain_from_text
 
 app = FastAPI(title="InboxGuard")
@@ -251,6 +252,114 @@ def analyze(
         subject_override=parsed_subject,
         body_override=parsed_body,
     )
+    result["learning_profile"] = get_learning_profile()
+    return result
+
+
+def _risk_rank(band: str) -> int:
+    normalized = str(band or "").strip().lower()
+    if "high" in normalized:
+        return 3
+    if "review" in normalized or "medium" in normalized:
+        return 2
+    if "safe" in normalized or "low" in normalized:
+        return 1
+    return 2
+
+
+@app.post("/rewrite")
+def rewrite_email(
+    raw_email: str = Form(""),
+    domain: str = Form(""),
+    analysis_mode: str = Form("content"),
+):
+    original = (raw_email or "").strip()
+    clean_domain = (domain or "").strip()
+
+    if len(original) < 20:
+        raise HTTPException(status_code=400, detail="Email draft is too short to rewrite")
+
+    mode = (analysis_mode or "content").strip().lower()
+    if mode not in ("content", "full"):
+        mode = "content"
+
+    before = analyze_email(original, clean_domain, original, mode)
+    before_summary = before.get("summary", {})
+    findings = before.get("partial_findings", [])
+    issue_titles = [str(item.get("title", "")) for item in findings if isinstance(item, dict)]
+
+    rewritten = rewrite_email_text(original, issue_titles)
+    after = analyze_email(rewritten, clean_domain, rewritten, mode)
+    after_summary = after.get("summary", {})
+
+    before_score = int(before_summary.get("final_score", before_summary.get("score", 0)))
+    after_score = int(after_summary.get("final_score", after_summary.get("score", 0)))
+
+    # Trust guardrail: never return a rewrite that performs worse than the original.
+    if after_score < before_score:
+        rewritten = original
+        after = before
+        after_summary = before_summary
+        after_score = before_score
+
+    score_delta = after_score - before_score
+
+    from_band = str(before_summary.get("risk_band", "Needs Review"))
+    to_band = str(after_summary.get("risk_band", "Needs Review"))
+
+    track_event(
+        "rewrite_request",
+        {
+            "mode": mode,
+            "score_delta": score_delta,
+            "from_risk_band": from_band,
+            "to_risk_band": to_band,
+            "improved": _risk_rank(to_band) < _risk_rank(from_band),
+        },
+    )
+
+    return {
+        "ok": True,
+        "original_text": original,
+        "rewritten_text": rewritten,
+        "from_risk_band": from_band,
+        "to_risk_band": to_band,
+        "from_score": before_score,
+        "to_score": after_score,
+        "score_delta": score_delta,
+        "learning_profile": get_learning_profile(),
+        "before_summary": before_summary,
+        "after_summary": after_summary,
+    }
+
+
+@app.post("/feedback")
+def submit_feedback(
+    outcome: str = Form("not_sure"),
+    original_text: str = Form(""),
+    rewritten_text: str = Form(""),
+    from_risk_band: str = Form(""),
+    to_risk_band: str = Form(""),
+):
+    result = record_feedback(
+        {
+            "outcome": outcome,
+            "original_text": original_text,
+            "rewritten_text": rewritten_text,
+            "from_risk_band": from_risk_band,
+            "to_risk_band": to_risk_band,
+        }
+    )
+
+    track_event(
+        "rewrite_feedback",
+        {
+            "outcome": result.get("outcome", "not_sure"),
+            "from_risk_band": (from_risk_band or "")[:40],
+            "to_risk_band": (to_risk_band or "")[:40],
+        },
+    )
+
     return result
 
 
