@@ -3,22 +3,49 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>{{ page_title or "InboxGuard | Deliverability Threat Center" }}</title>
+    <title>{{ page_title or "InboxGuard | Fix risky emails before you send" }}</title>
     <meta name="description" content="{{ meta_description or 'InboxGuard detects deliverability threats before email send.' }}" />
-    <link rel="icon" href="/static/favicon.svg" type="image/svg+xml" />
-    <link rel="alternate icon" href="/static/favicon.svg" />
+    <meta name="application-name" content="InboxGuard" />
+    <meta name="robots" content="index,follow,max-image-preview:large" />
+    <link rel="canonical" href="{{ canonical_url or 'https://inboxguard.me/' }}" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="InboxGuard" />
+    <meta property="og:title" content="{{ page_title or 'InboxGuard | Fix risky emails before you send' }}" />
+    <meta property="og:description" content="{{ meta_description or 'Find out why emails that look fine still land in spam, then fix them before sending.' }}" />
+    <meta property="og:url" content="{{ canonical_url or 'https://inboxguard.me/' }}" />
+    <meta property="og:image" content="https://inboxguard.me/static/favicon-48.png" />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="{{ page_title or 'InboxGuard | Fix risky emails before you send' }}" />
+    <meta name="twitter:description" content="{{ meta_description or 'Find out why emails that look fine still land in spam, then fix them before sending.' }}" />
+    <meta name="twitter:image" content="https://inboxguard.me/static/favicon-48.png" />
+    <link rel="icon" href="/static/favicon-48.png" type="image/png" sizes="48x48" />
+    <link rel="icon" href="/static/favicon.svg" type="image/svg+xml" sizes="any" />
+    <link rel="apple-touch-icon" href="/static/favicon-48.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="/static/css/styles.css" />
     <script type="application/ld+json">
-      {
-        "@context": "https://schema.org",
-        "@type": "Organization",
-        "name": "InboxGuard",
-        "url": "https://inboxguard-production-90ab.up.railway.app",
-        "logo": "https://inboxguard-production-90ab.up.railway.app/static/favicon.svg"
-      }
+      [
+        {
+          "@context": "https://schema.org",
+          "@type": "Organization",
+          "name": "InboxGuard",
+          "url": "https://inboxguard.me",
+          "logo": "https://inboxguard.me/static/favicon-48.png"
+        },
+        {
+          "@context": "https://schema.org",
+          "@type": "WebSite",
+          "name": "InboxGuard",
+          "url": "https://inboxguard.me",
+          "potentialAction": {
+            "@type": "SearchAction",
+            "target": "https://inboxguard.me/?q={search_term_string}",
+            "query-input": "required name=search_term_string"
+          }
+        }
+      ]
     </script>
   </head>
   <body>
@@ -26,28 +53,34 @@
       <aside class="sidebar">
         <div class="brand-wrap">
           <p class="brand">INBOXGUARD</p>
-          <p class="sub">Deliverability Threat Center</p>
+          <p class="sub">Fix Before You Send</p>
         </div>
         <nav>
-          <button id="tab-dashboard" class="nav-item active" type="button">Dashboard</button>
-          <button id="tab-threat-scan" class="nav-item" type="button">Threat Scan</button>
-          <button class="nav-item disabled" type="button">Signal Detection <span>Coming soon</span></button>
-          <button class="nav-item disabled" type="button">Provider Intel <span>Coming soon</span></button>
-          <button class="nav-item disabled" type="button">Action Queue <span>Coming soon</span></button>
+          <button id="tab-dashboard" class="nav-item active" type="button">Home</button>
+          <button id="tab-threat-scan" class="nav-item" type="button">Scan Email</button>
+          <button class="nav-item disabled" type="button">Saved Fixes <span>Coming soon</span></button>
+          <button class="nav-item disabled" type="button">Inbox Tips <span>Coming soon</span></button>
+          <button class="nav-item disabled" type="button">Results <span>Coming soon</span></button>
           <button class="nav-item disabled" type="button">Reports <span>Coming soon</span></button>
         </nav>
       </aside>
 
       <main class="main-area">
         <header class="topbar">
-          <h1>Pre-Send Email Correction Engine</h1>
+          <h1>InboxGuard</h1>
           <a class="access-link" href="/access">Get Access</a>
         </header>
-        <p id="tab-feedback" class="tab-feedback">Dashboard mode active.</p>
+        <section class="hero-story card">
+          <h2>Your cold email looked fine. Gmail disagreed.</h2>
+          <p>Most emails fail because of hidden bulk patterns, not obvious mistakes.</p>
+          <p>This catches those patterns before you send, then rewrites your draft into a safer version you can actually use.</p>
+          <p class="hero-note">Check before send. Protect your domain reputation.</p>
+        </section>
+        <p id="tab-feedback" class="tab-feedback">Paste your draft below to scan and fix it before sending.</p>
 
         <section class="scan-panel card">
           <form id="risk-form" class="scan-form">
-            <label class="input-label" for="raw-email">Email Draft Input</label>
+            <label class="input-label" for="raw-email">Paste The Email You Plan To Send</label>
             <textarea id="raw-email" name="raw_email" rows="8" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Paste subject and body here..."></textarea>
 
             <div class="inline-fields">
@@ -64,7 +97,7 @@
               </div>
             </div>
 
-            <button type="submit" id="run-check" class="btn-danger">Analyze Email Risk</button>
+            <button type="submit" id="run-check" class="btn-danger">Check Before Sending</button>
             <p class="micro">Scannable in under 5 seconds. No signup required.</p>
 
             <div id="result-loading" class="loading-panel hidden">

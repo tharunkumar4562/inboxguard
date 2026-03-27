@@ -31,9 +31,6 @@ const topFixesListNode = document.getElementById("top-fixes-list");
 const scoreBreakdownNode = document.getElementById("score-breakdown");
 
 const fixNowButton = document.getElementById("fix-now");
-const rewriteActionButton = document.getElementById("rewrite-action");
-const personalizeActionButton = document.getElementById("personalize-action");
-const domainActionButton = document.getElementById("domain-action");
 
 const workflowStateNode = document.getElementById("workflow-state");
 const workflowTitleNode = document.getElementById("workflow-title");
@@ -99,13 +96,13 @@ function activateTab(tab) {
         if (rawEmailInput) {
             rawEmailInput.focus();
         }
-        setTabFeedback("Threat Scan mode active. Paste draft and click Analyze Email Risk.");
+        setTabFeedback("Scan mode active. Paste your email and click Check Before Sending.");
     } else {
         dashboardTab.classList.add("active");
         if (scanPanel) {
             scanPanel.classList.remove("focused");
         }
-        setTabFeedback("Dashboard mode active.");
+        setTabFeedback("Home mode active. Paste your draft below to scan and fix it.");
     }
 }
 
@@ -502,25 +499,6 @@ async function showFixTransformation() {
     fixNowButton.textContent = "Fix Email Now";
 }
 
-function runQuickRewrite() {
-    showFixTransformation();
-}
-
-function addPersonalization() {
-    if (!rawEmailInput) {
-        return;
-    }
-    rawEmailInput.value = `Hi {{FirstName}},\nI noticed [recipient-specific detail].\n\n${rawEmailInput.value || ""}`;
-}
-
-function checkDomainHealth() {
-    if (!analysisModeInput) {
-        return;
-    }
-    analysisModeInput.value = "full";
-    activateTab("threat-scan");
-}
-
 function useFixedVersion() {
     if (!afterEmailNode || !rawEmailInput) {
         return;
@@ -575,15 +553,6 @@ if (threatScanTab) {
 }
 if (fixNowButton) {
     fixNowButton.addEventListener("click", showFixTransformation);
-}
-if (rewriteActionButton) {
-    rewriteActionButton.addEventListener("click", runQuickRewrite);
-}
-if (personalizeActionButton) {
-    personalizeActionButton.addEventListener("click", addPersonalization);
-}
-if (domainActionButton) {
-    domainActionButton.addEventListener("click", checkDomainHealth);
 }
 if (useFixedButton) {
     useFixedButton.addEventListener("click", useFixedVersion);

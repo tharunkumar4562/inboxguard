@@ -4,7 +4,7 @@ import logging
 import os
 
 from fastapi import FastAPI, Form, Request, HTTPException
-from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse, Response, JSONResponse
+from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse, Response, JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from jinja2 import TemplateNotFound, TemplateError
@@ -24,7 +24,7 @@ TEMPLATES_DIR = BASE_DIR / "templates"
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
-SITE_URL = "https://inboxguard-production-90ab.up.railway.app"
+SITE_URL = os.getenv("INBOXGUARD_SITE_URL", "https://inboxguard.me")
 ADMIN_TOKEN = os.getenv("INBOXGUARD_ADMIN_TOKEN", "")
 LONG_TAIL_PAGES = [
     {
@@ -93,6 +93,11 @@ def health() -> dict:
     return {"status": "ok"}
 
 
+@app.get("/favicon.ico")
+def favicon_ico():
+    return FileResponse(STATIC_DIR / "favicon-48.png", media_type="image/png")
+
+
 @app.get("/", response_class=HTMLResponse)
 def home(request: Request):
     track_event("page_view", {"page": "home"})
@@ -100,10 +105,10 @@ def home(request: Request):
         request,
         "index.html",
         {
-            "page_title": "Email Deliverability Audit | InboxGuard",
-            "meta_description": "Run a fast email deliverability audit before sending. Check SPF, DKIM, DMARC, header alignment, and outreach risk signals.",
+            "page_title": "InboxGuard | Your cold email looked fine. Gmail disagreed.",
+            "meta_description": "Find out why emails that look fine still land in spam. Fix risky drafts before you hit send and protect your domain.",
             "canonical_url": f"{SITE_URL}/",
-            "focus_query": "email deliverability audit",
+            "focus_query": "why did my email go to spam",
         },
     )
 

@@ -129,9 +129,34 @@ nav {
 
 .topbar h1 {
     margin: 0;
-    font-size: 2rem;
+    font-size: 1.35rem;
     line-height: 1.1;
     letter-spacing: -0.01em;
+}
+
+.hero-story {
+    margin-bottom: 12px;
+    border-color: #1d4ed8;
+    background: linear-gradient(135deg, #172554 0%, #0f172a 100%);
+}
+
+.hero-story h2 {
+    margin: 0 0 10px;
+    font-size: 2rem;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+}
+
+.hero-story p {
+    margin: 0 0 8px;
+    color: #cbd5e1;
+    max-width: 920px;
+}
+
+.hero-story .hero-note {
+    margin-top: 2px;
+    font-weight: 700;
+    color: #bfdbfe;
 }
 
 .tab-feedback {
@@ -567,7 +592,7 @@ select {
 
 .rewrite-grid {
     display: grid;
-    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 10px;
 }
 
@@ -662,10 +687,8 @@ select {
     .topbar h1 {
         font-size: 1.6rem;
     }
-}
 
-.rewrite-grid article:last-child .rewrite-box {
-    border-color: #065f46;
-    background: #0d1f1a;
-    max-height: 280px;
+    .hero-story h2 {
+        font-size: 1.7rem;
+    }
 }
