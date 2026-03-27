@@ -96,13 +96,13 @@ function activateTab(tab) {
         if (rawEmailInput) {
             rawEmailInput.focus();
         }
-        setTabFeedback("Scan mode active. Paste your email and click Check Before Sending.");
+        setTabFeedback("Scan mode active. Paste your email and click Fix Before Sending.");
     } else {
         dashboardTab.classList.add("active");
         if (scanPanel) {
             scanPanel.classList.remove("focused");
         }
-        setTabFeedback("Home mode active. Paste your draft below to scan and fix it.");
+        setTabFeedback("Ready to scan. Paste your draft and hit Fix Before Sending to find issues.");
     }
 }
 

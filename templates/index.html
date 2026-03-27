@@ -161,23 +161,19 @@
           </section>
 
           <section class="action-panel card">
-            <h3>Next Actions</h3>
-            <div class="actions">
-              <button id="fix-now" type="button" class="btn-primary">Fix Email Now</button>
+            <button id="fix-now" type="button" class="btn-primary" style="width: 100%; margin-bottom: 1rem;">Fix My Email</button>
+            <div style="font-size: 0.9rem; color: #8b94a5; line-height: 1.5;">
+              <strong>What this does:</strong> Removes spam signals, adds personalization, makes it 1:1 instead of broadcast.
             </div>
           </section>
 
           <section class="support-grid">
             <article class="card">
-              <h3>What is hurting deliverability</h3>
+              <h3>Issues Detected</h3>
               <ul id="hurt-list" class="compact-list">
                 <li>No scan yet - run analysis to detect deliverability risks.</li>
               </ul>
-            </article>
-
-            <article class="card">
-              <h3>Fix this before sending</h3>
-              <ul id="top-fixes-list" class="compact-list">
+              <ul id="top-fixes-list" class="compact-list" style="margin-top: 1rem; border-top: 1px solid #264653; padding-top: 1rem;">
                 <li>No fixes loaded yet - run analysis first.</li>
               </ul>
             </article>
@@ -198,7 +194,7 @@
           <section id="fix-output" class="cta-panel card hidden">
             <p id="workflow-state" class="workflow-step">Step 2: Fix in progress</p>
             <h3 id="workflow-title">Improved Draft Generated</h3>
-            <p id="improvement-estimate" class="improvement-estimate">Score lift estimate: pending</p>
+            <p id="improvement-estimate" class="improvement-estimate" style="color: #2ecc71; font-weight: 500;">Ready to use</p>
             <div class="transform-tags">
               <span class="tag">Removed spam triggers</span>
               <span class="tag">Added personalization</span>
