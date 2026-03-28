@@ -44,6 +44,7 @@ const fixOutput = document.getElementById("fix-output");
 const beforeEmailNode = document.getElementById("before-email");
 const afterEmailNode = document.getElementById("after-email");
 const useFixedButton = document.getElementById("use-fixed");
+const restoreOriginalButton = document.getElementById("restore-original");
 const editManualButton = document.getElementById("edit-manual");
 const feedbackInboxButton = document.getElementById("feedback-inbox");
 const feedbackSpamButton = document.getElementById("feedback-spam");
@@ -572,6 +573,14 @@ function useFixedVersion() {
     showError("Fixed version applied to editor. Re-scan before send.");
 }
 
+function restoreOriginalDraft() {
+    if (!rawEmailInput || !latestRewriteContext) {
+        return;
+    }
+    rawEmailInput.value = latestRewriteContext.original_text || rawEmailInput.value;
+    showError("Original draft restored.");
+}
+
 function editManually() {
     if (!rawEmailInput) {
         return;
@@ -621,6 +630,9 @@ if (fixNowButton) {
 }
 if (useFixedButton) {
     useFixedButton.addEventListener("click", useFixedVersion);
+}
+if (restoreOriginalButton) {
+    restoreOriginalButton.addEventListener("click", restoreOriginalDraft);
 }
 if (editManualButton) {
     editManualButton.addEventListener("click", editManually);
