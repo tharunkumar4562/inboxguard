@@ -473,7 +473,6 @@ async function showFixTransformation() {
 
         beforeEmailNode.textContent = String(data.original_text || original);
         afterEmailNode.textContent = rewritten;
-        rawEmailInput.value = rewritten;
 
         latestRewriteContext = {
             original_text: String(data.original_text || original),

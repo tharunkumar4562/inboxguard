@@ -307,9 +307,9 @@ def _infer_rewrite_style(rewrite_style: str, aggressive: bool) -> str:
 
 def _target_word_bounds(style: str) -> tuple[int, int]:
     if style == "safe":
-        return (80, 100)
+        return (80, 120)
     if style == "aggressive":
-        return (30, 60)
+        return (25, 50)
     return (50, 80)
 
 
@@ -447,10 +447,15 @@ def _rewrite_update_or_transactional_safe(subject: str, body: str) -> str:
     value = _extract_core_value(core)
     
     subject_line = subject or "important update"
+    secondary = ""
+    core_sentences = re.split(r"(?<=[.!?])\s+", core)
+    if len(core_sentences) > 1:
+        secondary = _first_meaningful_sentence(core_sentences[1])
     return (
         f"Hey {{{{first_name}}}},\n\n"
-        f"Sharing a quick update — {subject_line.lower()}.\n\n"
-        f"{value}\n\n"
+        f"Sharing a quick update on {subject_line.lower()}.\n\n"
+        f"{value}\n"
+        + (f"{secondary}\n\n" if secondary else "\n") +
         f"If helpful, I can share more details."
     )
 
@@ -462,7 +467,7 @@ def _rewrite_update_or_transactional_balanced(subject: str, body: str) -> str:
     subject_line = (subject or "important update").strip().lower()
     return (
         f"Hey {{{{first_name}}}},\n\n"
-        f"Quick question on {subject_line} — is this relevant for you right now?\n\n"
+        f"Quick question on {subject_line}, is this relevant for you right now?\n\n"
         f"{value}\n\n"
         "Happy to share details if useful."
     )
@@ -470,18 +475,12 @@ def _rewrite_update_or_transactional_balanced(subject: str, body: str) -> str:
 
 def _rewrite_update_or_transactional_aggressive(subject: str, body: str) -> str:
     """Aggressive mode is shortest and reply-oriented."""
-    core = re.sub(r"\s+", " ", (body or "").strip())
-    value = _first_meaningful_sentence(_extract_core_value(core))
-    if len(value.split()) > 14:
-        value_words = value.split()
-        value = " ".join(value_words[:14]).strip()
-        if not value.endswith((".", "?", "!")):
-            value += "."
+    context = _derive_context_hint(body)
+    audience = _extract_audience_hint(body)
     return (
         f"Hey {{{{first_name}}}},\n\n"
-        "Quick check: want the short version?\n\n"
-        f"{value}\n\n"
-        "Want me to send the details?"
+        f"Are you currently exploring {context}?\n\n"
+        f"If yes, I can send two options that usually fit {audience}."
     )
 
 
