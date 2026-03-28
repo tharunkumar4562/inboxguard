@@ -412,8 +412,8 @@ def _compose_cold_outreach_rewrite(original_text: str, style: str) -> str:
     return "\n".join(line.strip() if line else "" for line in body_lines).strip()
 
 
-def _rewrite_update_or_transactional(subject: str, body: str) -> str:
-    """Rewrite policy/transactional emails to be concise and scannable."""
+def _rewrite_update_or_transactional_safe(subject: str, body: str) -> str:
+    """Safe mode keeps more context with minimal risk cleanup."""
     core = body
     core = re.sub(r"^(hi there|hello there|dear user|dear customer)[,\s]*", "", core, flags=re.IGNORECASE)
     core = re.sub(r"\bwe'?re (excited|pleased|thrilled) to\b", "", core, flags=re.IGNORECASE)
@@ -426,9 +426,39 @@ def _rewrite_update_or_transactional(subject: str, body: str) -> str:
     subject_line = subject or "important update"
     return (
         f"Hey {{{{first_name}}}},\n\n"
-        f"Quick heads up — {subject_line.lower()}.\n\n"
+        f"Sharing a quick update — {subject_line.lower()}.\n\n"
         f"{value}\n\n"
-        f"Let me know if you have questions."
+        f"If helpful, I can share more details."
+    )
+
+
+def _rewrite_update_or_transactional_balanced(subject: str, body: str) -> str:
+    """Balanced mode shifts to question-first with context preserved."""
+    core = re.sub(r"\s+", " ", (body or "").strip())
+    value = _extract_core_value(core)
+    subject_line = (subject or "important update").strip().lower()
+    return (
+        f"Hey {{{{first_name}}}},\n\n"
+        f"Quick question on {subject_line} — is this relevant for you right now?\n\n"
+        f"{value}\n\n"
+        "Happy to share details if useful."
+    )
+
+
+def _rewrite_update_or_transactional_aggressive(subject: str, body: str) -> str:
+    """Aggressive mode is shortest and reply-oriented."""
+    core = re.sub(r"\s+", " ", (body or "").strip())
+    value = _first_meaningful_sentence(_extract_core_value(core))
+    if len(value.split()) > 14:
+        value_words = value.split()
+        value = " ".join(value_words[:14]).strip()
+        if not value.endswith((".", "?", "!")):
+            value += "."
+    return (
+        f"Hey {{{{first_name}}}},\n\n"
+        "Quick check: want the short version?\n\n"
+        f"{value}\n\n"
+        "Want me to send the details?"
     )
 
 
@@ -455,13 +485,23 @@ def rewrite_email_text(
     is_broadcast = "broadcast" in issue_blob or "personalization" in issue_blob or "mass" in issue_blob
     normalized_intent = (intent_type or "").strip().lower()
 
-    # COLD OUTREACH / BROADCAST EMAILS: Use specific, context-aware rewrite
+    # COLD OUTREACH / BROADCAST EMAILS: hard split by style.
     if is_broadcast or "cold" in normalized_intent or "outreach" in normalized_intent:
-        text = _compose_cold_outreach_rewrite(original_text, style)
+        if style == "safe":
+            text = _compose_cold_outreach_rewrite(original_text, "safe")
+        elif style == "aggressive":
+            text = _compose_cold_outreach_rewrite(original_text, "aggressive")
+        else:
+            text = _compose_cold_outreach_rewrite(original_text, "balanced")
 
-    # TRANSACTIONAL / POLICY UPDATES: Use concise notification style
+    # TRANSACTIONAL / POLICY UPDATES: hard split by style.
     elif normalized_intent in {"informational/system", "transactional", "update"}:
-        text = _rewrite_update_or_transactional(subject, body)
+        if style == "safe":
+            text = _rewrite_update_or_transactional_safe(subject, body)
+        elif style == "aggressive":
+            text = _rewrite_update_or_transactional_aggressive(subject, body)
+        else:
+            text = _rewrite_update_or_transactional_balanced(subject, body)
 
     # EVERYTHING ELSE: Add conversational question hook
     else:

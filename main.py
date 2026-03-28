@@ -303,6 +303,18 @@ def _summarize_rewrite_changes(original: str, rewritten: str, issue_titles: list
     return changes[:4]
 
 
+def _style_acceptance(style: str, from_band: str, to_band: str, score_delta: int) -> bool:
+    from_rank = _risk_rank(from_band)
+    to_rank = _risk_rank(to_band)
+    band_got_worse = to_rank > from_rank
+
+    if style == "safe":
+        return (not band_got_worse) and score_delta >= 0
+    if style == "balanced":
+        return (not band_got_worse) and score_delta >= -2
+    return score_delta >= -6
+
+
 @app.post("/rewrite")
 def rewrite_email(
     raw_email: str = Form(""),
@@ -324,6 +336,13 @@ def rewrite_email(
     if style not in ("safe", "balanced", "aggressive"):
         style = "balanced"
 
+    if os.getenv("INBOXGUARD_REWRITE_DEBUG", "0") == "1":
+        debug_safe = rewrite_email_text(original, intent_type="cold outreach", rewrite_style="safe")
+        debug_balanced = rewrite_email_text(original, intent_type="cold outreach", rewrite_style="balanced")
+        debug_aggressive = rewrite_email_text(original, intent_type="cold outreach", rewrite_style="aggressive")
+        if debug_safe == debug_balanced or debug_balanced == debug_aggressive or debug_safe == debug_aggressive:
+            logger.warning("Rewrite style collapse detected for current draft")
+
     before = analyze_email(original, clean_domain, original, mode)
     before_summary = before.get("summary", {})
     findings = before.get("partial_findings", [])
@@ -331,44 +350,34 @@ def rewrite_email(
     email_intent = str(before_summary.get("email_type", "cold outreach"))
 
     before_score = int(before_summary.get("final_score", before_summary.get("score", 0)))
-    best_rewritten = original
-    best_after = before
-    best_after_summary = before_summary
-    best_after_score = before_score
+    rewritten = rewrite_email_text(original, issue_titles, intent_type=email_intent, rewrite_style=style)
+    if len(rewritten.strip()) < 20:
+        rewritten = original
 
-    styles_to_try = [style]
-    if style == "balanced":
-        styles_to_try.append("safe")
-    else:
-        styles_to_try.append("balanced")
-
-    candidates = [
-        rewrite_email_text(original, issue_titles, intent_type=email_intent, rewrite_style=style_name)
-        for style_name in styles_to_try
-    ]
-
-    for candidate in candidates:
-        candidate_text = (candidate or "").strip()
-        if len(candidate_text) < 20:
-            continue
-        candidate_after = analyze_email(candidate_text, clean_domain, candidate_text, mode)
-        candidate_summary = candidate_after.get("summary", {})
-        candidate_score = int(candidate_summary.get("final_score", candidate_summary.get("score", 0)))
-        if candidate_score > best_after_score:
-            best_rewritten = candidate_text
-            best_after = candidate_after
-            best_after_summary = candidate_summary
-            best_after_score = candidate_score
-
-    rewritten = best_rewritten
-    after = best_after
-    after_summary = best_after_summary
-    after_score = best_after_score
+    after = analyze_email(rewritten, clean_domain, rewritten, mode)
+    after_summary = after.get("summary", {})
+    after_score = int(after_summary.get("final_score", after_summary.get("score", 0)))
 
     score_delta = after_score - before_score
 
     from_band = str(before_summary.get("risk_band", "Needs Review"))
     to_band = str(after_summary.get("risk_band", "Needs Review"))
+
+    if not _style_acceptance(style, from_band, to_band, score_delta):
+        rewritten = original
+        after = before
+        after_summary = before_summary
+        after_score = before_score
+        score_delta = 0
+        to_band = from_band
+
+    logger.info(
+        "Rewrite mode=%s from_band=%s to_band=%s score_delta=%s",
+        style,
+        from_band,
+        to_band,
+        score_delta,
+    )
 
     track_event(
         "rewrite_request",
@@ -383,6 +392,7 @@ def rewrite_email(
     )
 
     rewrite_changes = _summarize_rewrite_changes(original, rewritten, issue_titles)
+    rewrite_changes.insert(0, f"Mode applied: {style.title()}.")
 
     return {
         "ok": True,

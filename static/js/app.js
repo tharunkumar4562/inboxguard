@@ -35,6 +35,7 @@ const rewriteStyleInput = document.getElementById("rewrite-style");
 
 const workflowStateNode = document.getElementById("workflow-state");
 const workflowTitleNode = document.getElementById("workflow-title");
+const rewriteModeDisplayNode = document.getElementById("rewrite-mode-display");
 const improvementEstimateNode = document.getElementById("improvement-estimate");
 const rewriteChangesNode = document.getElementById("rewrite-changes");
 const rewriteTrustNoteNode = document.getElementById("rewrite-trust-note");
@@ -499,6 +500,16 @@ async function showFixTransformation() {
         if (improvementEstimateNode) {
             const delta = Number(data.score_delta || 0);
             improvementEstimateNode.textContent = `Risk shift: ${data.from_risk_band} -> ${data.to_risk_band} | Score delta: ${delta >= 0 ? "+" : ""}${delta}`;
+        }
+
+        if (rewriteModeDisplayNode) {
+            const mode = String(data.rewrite_style || "balanced").toLowerCase();
+            const modeLabel = mode === "safe"
+                ? "Safe (keeps more detail)"
+                : mode === "aggressive"
+                    ? "Aggressive (max reply rate)"
+                    : "Balanced (best mix)";
+            rewriteModeDisplayNode.textContent = `Rewrite mode: ${modeLabel}`;
         }
 
         if (rewriteChangesNode) {

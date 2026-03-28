@@ -165,9 +165,9 @@
               <div>
                 <label for="rewrite-style">Rewrite Style</label>
                 <select id="rewrite-style" name="rewrite_style">
-                  <option value="safe">Safer (keep context)</option>
-                  <option value="balanced" selected>Balanced (recommended)</option>
-                  <option value="aggressive">Aggressive (shortest)</option>
+                  <option value="safe">Safe (keeps more detail)</option>
+                  <option value="balanced" selected>Balanced (best mix)</option>
+                  <option value="aggressive">Aggressive (max reply rate)</option>
                 </select>
               </div>
             </div>
@@ -204,6 +204,7 @@
           <section id="fix-output" class="cta-panel card hidden">
             <p id="workflow-state" class="workflow-step">Step 2: Fix in progress</p>
             <h3 id="workflow-title">Improved Draft Generated</h3>
+            <p id="rewrite-mode-display" class="micro">Rewrite mode: Balanced (best mix)</p>
             <p id="improvement-estimate" class="improvement-estimate" style="color: #2ecc71; font-weight: 500;">Ready to use</p>
             <div class="rewrite-proof">
               <p class="rewrite-proof-title">What changed:</p>
