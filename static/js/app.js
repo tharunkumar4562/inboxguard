@@ -39,6 +39,7 @@ const rewriteModeDisplayNode = document.getElementById("rewrite-mode-display");
 const improvementEstimateNode = document.getElementById("improvement-estimate");
 const rewriteChangesNode = document.getElementById("rewrite-changes");
 const rewriteTrustNoteNode = document.getElementById("rewrite-trust-note");
+const rewriteLimitationsNode = document.getElementById("rewrite-limitations");
 const fixOutput = document.getElementById("fix-output");
 const beforeEmailNode = document.getElementById("before-email");
 const afterEmailNode = document.getElementById("after-email");
@@ -483,23 +484,24 @@ async function showFixTransformation() {
             rewrite_style: String(data.rewrite_style || "balanced"),
         };
 
-        const changed = latestRewriteContext.score_delta > 0 || latestRewriteContext.from_risk_band !== latestRewriteContext.to_risk_band;
-        if (!changed) {
-            showError("No reliable risk reduction found yet. Edit manually and re-scan.");
-            fixOutput.classList.add("hidden");
-            return;
-        }
+        const rewriteOutcome = String(data.rewrite_outcome || "neutral").toLowerCase();
 
         if (workflowStateNode) {
             workflowStateNode.textContent = "Step 2: Fix complete";
         }
         if (workflowTitleNode) {
-            workflowTitleNode.textContent = "Safer version generated";
+            workflowTitleNode.textContent = rewriteOutcome === "improved"
+                ? "Safer version generated"
+                : "Best safer version generated";
         }
 
         if (improvementEstimateNode) {
             const delta = Number(data.score_delta || 0);
-            improvementEstimateNode.textContent = `Risk shift: ${data.from_risk_band} -> ${data.to_risk_band} | Score delta: ${delta >= 0 ? "+" : ""}${delta}`;
+            if (rewriteOutcome === "improved") {
+                improvementEstimateNode.textContent = `Risk shift: ${data.from_risk_band} -> ${data.to_risk_band} | Score delta: ${delta >= 0 ? "+" : ""}${delta}`;
+            } else {
+                improvementEstimateNode.textContent = "No major risk shift detected. We still simplified structure to reduce bulk-style triggers.";
+            }
         }
 
         if (rewriteModeDisplayNode) {
@@ -530,8 +532,23 @@ async function showFixTransformation() {
 
         if (rewriteTrustNoteNode) {
             rewriteTrustNoteNode.textContent = String(
-                data.rewrite_trust_note || "Based on pattern shifts commonly flagged by Gmail and Outlook filters."
+                data.rewrite_trust_note || "This version removes common bulk-style patterns flagged by Gmail and Outlook filters."
             );
+        }
+
+        if (rewriteLimitationsNode) {
+            const notes = Array.isArray(data.rewrite_limitations) ? data.rewrite_limitations : [];
+            rewriteLimitationsNode.innerHTML = "";
+            notes.slice(0, 3).forEach((note) => {
+                const li = document.createElement("li");
+                li.textContent = String(note);
+                rewriteLimitationsNode.appendChild(li);
+            });
+            if (!notes.length) {
+                const li = document.createElement("li");
+                li.textContent = "Final placement still depends on domain reputation, list quality, and send behavior.";
+                rewriteLimitationsNode.appendChild(li);
+            }
         }
 
         fixOutput.classList.remove("hidden");

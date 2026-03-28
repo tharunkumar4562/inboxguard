@@ -287,6 +287,13 @@ def _extract_core_value(body: str) -> str:
     # Truncate if still too long
     if len(core) > 150:
         core = core[:150].rsplit(" ", 1)[0] + "."
+
+    core_low = core.lower()
+    is_list_like = core.count(",") >= 3 or "&" in core or core.count("|") >= 2
+    if is_list_like or any(token in core_low for token in ["cash prize", "apply now", "limited time", "live right now"]):
+        if any(token in core_low for token in ["student", "internship", "hackathon", "education", "funding"]):
+            return "We found a few student-focused opportunities that may be relevant."
+        return "We found a few relevant opportunities worth sharing."
     
     return core if core else "We've built something worth checking out."
 
@@ -335,14 +342,30 @@ def _extract_offer_line(text: str) -> str:
     for line in candidates:
         low = line.lower()
         if any(token in low for token in priority_tokens):
-            return _first_meaningful_sentence(line)
+            selected = _first_meaningful_sentence(line)
+            break
+    else:
+        selected = ""
 
     # Fall back to the first non-greeting sentence.
-    for line in candidates:
-        low = line.lower()
-        if not any(low.startswith(prefix) for prefix in ["hi", "hello", "dear", "hey", "regards", "best"]):
-            return _first_meaningful_sentence(line)
-    return _first_meaningful_sentence(candidates[0])
+    if not selected:
+        for line in candidates:
+            low = line.lower()
+            if not any(low.startswith(prefix) for prefix in ["hi", "hello", "dear", "hey", "regards", "best"]):
+                selected = _first_meaningful_sentence(line)
+                break
+    if not selected:
+        selected = _first_meaningful_sentence(candidates[0])
+
+    # Condense list-like/promotional statements to avoid repeating broadcast dumps.
+    selected_low = selected.lower()
+    is_list_like = selected.count(",") >= 3 or "&" in selected or selected.count("|") >= 2
+    if is_list_like or any(token in selected_low for token in ["cash prize", "apply now", "limited", "live right now"]):
+        if any(token in selected_low for token in ["student", "internship", "hackathon", "education", "funding"]):
+            return "We found a few student-focused opportunities that look relevant."
+        return "We identified a few relevant opportunities worth sharing."
+
+    return selected
 
 
 def _extract_audience_hint(text: str) -> str:

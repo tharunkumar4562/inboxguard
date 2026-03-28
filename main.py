@@ -315,6 +315,23 @@ def _style_acceptance(style: str, from_band: str, to_band: str, score_delta: int
     return score_delta >= -6
 
 
+def _rewrite_outcome(style: str, from_band: str, to_band: str, score_delta: int) -> str:
+    if _style_acceptance(style, from_band, to_band, score_delta):
+        if score_delta > 0 or _risk_rank(to_band) < _risk_rank(from_band):
+            return "improved"
+    return "neutral"
+
+
+def _rewrite_limitations(mode: str, score_delta: int, from_band: str, to_band: str) -> list[str]:
+    notes: list[str] = []
+    if score_delta <= 0 and _risk_rank(to_band) >= _risk_rank(from_band):
+        notes.append("Limited movement in risk score after rewrite.")
+    if mode == "content":
+        notes.append("Scan was content-only; infrastructure and sender signals were not included.")
+    notes.append("Final placement also depends on sender reputation, list quality, and send behavior.")
+    return notes[:3]
+
+
 @app.post("/rewrite")
 def rewrite_email(
     raw_email: str = Form(""),
@@ -363,13 +380,7 @@ def rewrite_email(
     from_band = str(before_summary.get("risk_band", "Needs Review"))
     to_band = str(after_summary.get("risk_band", "Needs Review"))
 
-    if not _style_acceptance(style, from_band, to_band, score_delta):
-        rewritten = original
-        after = before
-        after_summary = before_summary
-        after_score = before_score
-        score_delta = 0
-        to_band = from_band
+    rewrite_outcome = _rewrite_outcome(style, from_band, to_band, score_delta)
 
     logger.info(
         "Rewrite mode=%s from_band=%s to_band=%s score_delta=%s",
@@ -393,6 +404,8 @@ def rewrite_email(
 
     rewrite_changes = _summarize_rewrite_changes(original, rewritten, issue_titles)
     rewrite_changes.insert(0, f"Mode applied: {style.title()}.")
+    if rewrite_outcome == "neutral":
+        rewrite_changes.insert(1, "No major risk shift detected, but bulk-style patterns were still reduced.")
 
     return {
         "ok": True,
@@ -404,8 +417,10 @@ def rewrite_email(
         "from_score": before_score,
         "to_score": after_score,
         "score_delta": score_delta,
+        "rewrite_outcome": rewrite_outcome,
+        "rewrite_limitations": _rewrite_limitations(mode, score_delta, from_band, to_band),
         "rewrite_changes": rewrite_changes,
-        "rewrite_trust_note": "Based on pattern shifts commonly flagged by Gmail and Outlook filters.",
+        "rewrite_trust_note": "This version removes common bulk-style patterns flagged by Gmail and Outlook filters.",
         "learning_profile": get_learning_profile(),
         "before_summary": before_summary,
         "after_summary": after_summary,
