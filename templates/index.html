@@ -161,6 +161,16 @@
           </section>
 
           <section class="action-panel card">
+            <div class="inline-fields rewrite-controls">
+              <div>
+                <label for="rewrite-style">Rewrite Style</label>
+                <select id="rewrite-style" name="rewrite_style">
+                  <option value="safe">Safer (keep context)</option>
+                  <option value="balanced" selected>Balanced (recommended)</option>
+                  <option value="aggressive">Aggressive (shortest)</option>
+                </select>
+              </div>
+            </div>
             <button id="fix-now" type="button" class="btn-primary" style="width: 100%; margin-bottom: 1rem;">Fix My Email</button>
             <div style="font-size: 0.9rem; color: #8b94a5; line-height: 1.5;">
               <strong>What this does:</strong> Removes spam signals, adds personalization, makes it 1:1 instead of broadcast.
@@ -195,6 +205,12 @@
             <p id="workflow-state" class="workflow-step">Step 2: Fix in progress</p>
             <h3 id="workflow-title">Improved Draft Generated</h3>
             <p id="improvement-estimate" class="improvement-estimate" style="color: #2ecc71; font-weight: 500;">Ready to use</p>
+            <div class="rewrite-proof">
+              <p class="rewrite-proof-title">What changed:</p>
+              <ul id="rewrite-changes" class="compact-list">
+                <li>Reduced bulk-style patterns and tightened structure.</li>
+              </ul>
+            </div>
             <div class="transform-tags">
               <span class="tag">Removed spam triggers</span>
               <span class="tag">Added personalization</span>
@@ -210,7 +226,7 @@
                 <pre id="after-email" class="rewrite-box">-</pre>
               </article>
             </div>
-            <p class="micro">This version reduces bulk-email patterns commonly flagged by Gmail and Outlook.</p>
+            <p id="rewrite-trust-note" class="micro">Based on pattern shifts commonly flagged by Gmail and Outlook filters.</p>
             <div class="actions" style="margin-top: 12px;">
               <button id="use-fixed" type="button" class="btn-primary">Use Fixed Version</button>
               <button id="edit-manual" type="button" class="btn-secondary">Edit Manually</button>

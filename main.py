@@ -281,11 +281,34 @@ def _risk_rank(band: str) -> int:
     return 2
 
 
+def _summarize_rewrite_changes(original: str, rewritten: str, issue_titles: list[str]) -> list[str]:
+    original_words = len((original or "").split())
+    rewritten_words = len((rewritten or "").split())
+    changes: list[str] = []
+
+    if original_words and rewritten_words:
+        changes.append(f"Reduced length ({original_words} -> {rewritten_words} words).")
+
+    issue_blob = " ".join(issue_titles).lower()
+    if any(token in issue_blob for token in ["urgency", "pressure"]):
+        changes.append("Removed pressure language and softened urgency phrasing.")
+    if any(token in issue_blob for token in ["broadcast", "mass", "personalization"]):
+        changes.append("Shifted broadcast tone into a 1:1 message format.")
+    if any(token in issue_blob for token in ["cta", "call to action"]):
+        changes.append("Used a lower-pressure CTA to improve trust signals.")
+
+    if not changes:
+        changes.append("Simplified structure and improved readability for mailbox filters.")
+
+    return changes[:4]
+
+
 @app.post("/rewrite")
 def rewrite_email(
     raw_email: str = Form(""),
     domain: str = Form(""),
     analysis_mode: str = Form("content"),
+    rewrite_style: str = Form("balanced"),
 ):
     original = (raw_email or "").strip()
     clean_domain = (domain or "").strip()
@@ -296,6 +319,10 @@ def rewrite_email(
     mode = (analysis_mode or "content").strip().lower()
     if mode not in ("content", "full"):
         mode = "content"
+
+    style = (rewrite_style or "balanced").strip().lower()
+    if style not in ("safe", "balanced", "aggressive"):
+        style = "balanced"
 
     before = analyze_email(original, clean_domain, original, mode)
     before_summary = before.get("summary", {})
@@ -309,9 +336,15 @@ def rewrite_email(
     best_after_summary = before_summary
     best_after_score = before_score
 
+    styles_to_try = [style]
+    if style == "balanced":
+        styles_to_try.append("safe")
+    else:
+        styles_to_try.append("balanced")
+
     candidates = [
-        rewrite_email_text(original, issue_titles, intent_type=email_intent, aggressive=False),
-        rewrite_email_text(original, issue_titles, intent_type=email_intent, aggressive=True),
+        rewrite_email_text(original, issue_titles, intent_type=email_intent, rewrite_style=style_name)
+        for style_name in styles_to_try
     ]
 
     for candidate in candidates:
@@ -341,6 +374,7 @@ def rewrite_email(
         "rewrite_request",
         {
             "mode": mode,
+            "rewrite_style": style,
             "score_delta": score_delta,
             "from_risk_band": from_band,
             "to_risk_band": to_band,
@@ -348,15 +382,20 @@ def rewrite_email(
         },
     )
 
+    rewrite_changes = _summarize_rewrite_changes(original, rewritten, issue_titles)
+
     return {
         "ok": True,
         "original_text": original,
         "rewritten_text": rewritten,
+        "rewrite_style": style,
         "from_risk_band": from_band,
         "to_risk_band": to_band,
         "from_score": before_score,
         "to_score": after_score,
         "score_delta": score_delta,
+        "rewrite_changes": rewrite_changes,
+        "rewrite_trust_note": "Based on pattern shifts commonly flagged by Gmail and Outlook filters.",
         "learning_profile": get_learning_profile(),
         "before_summary": before_summary,
         "after_summary": after_summary,

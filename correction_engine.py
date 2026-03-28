@@ -220,6 +220,12 @@ def _shorten_text(text: str, aggressiveness: str) -> str:
 
 def _derive_context_hint(text: str) -> str:
     low = (text or "").lower()
+    if any(token in low for token in ["loan", "funding", "education", "repayment", "interest"]):
+        return "education funding"
+    if any(token in low for token in ["student", "undergraduate", "university", "campus"]):
+        return "students planning next steps"
+    if any(token in low for token in ["hackathon", "internship", "placement", "career"]):
+        return "career opportunities"
     if any(token in low for token in ["3d", "mesh", "asset", "pipeline"]):
         return "3D workflows"
     if any(token in low for token in ["sales", "outbound", "prospect", "lead"]):
@@ -285,28 +291,125 @@ def _extract_core_value(body: str) -> str:
     return core if core else "We've built something worth checking out."
 
 
-def _rewrite_cold_outreach(context: str) -> str:
-    """Generate a dramatically shortened, 1:1 conversational rewrite."""
-    return (
-        f"Hey {{{{first_name}}}},\n\n"
-        f"Quick question — are you exploring solutions for {context}?\n\n"
-        f"We've helped a few people in your space get this working smoothly.\n\n"
-        f"If you're open, I can share how."
-    )
+def _infer_rewrite_style(rewrite_style: str, aggressive: bool) -> str:
+    style = (rewrite_style or "balanced").strip().lower()
+    if style not in {"safe", "balanced", "aggressive"}:
+        style = "aggressive" if aggressive else "balanced"
+    return style
 
 
-def _rewrite_cold_outreach_aggressive(body: str, context: str) -> str:
-    """Ultra-short 1:1 rewrite (80-100 words max)."""
-    pain = _extract_pain_point(body)
-    # Remove the "Are you..." prefix since we include it below
-    pain_question = pain
-    
-    return (
-        f"Hey {{{{first_name}}}},\n\n"
-        f"{pain_question}\n\n"
-        f"We built {context} specifically for this.\n\n"
-        f"Worth 5 minutes?"
-    )
+def _target_word_bounds(style: str) -> tuple[int, int]:
+    if style == "safe":
+        return (80, 100)
+    if style == "aggressive":
+        return (30, 60)
+    return (50, 80)
+
+
+def _first_meaningful_sentence(text: str) -> str:
+    compact = re.sub(r"\s+", " ", (text or "").strip())
+    if not compact:
+        return ""
+    parts = re.split(r"(?<=[.!?])\s+", compact)
+    return (parts[0] if parts else compact).strip()
+
+
+def _extract_offer_line(text: str) -> str:
+    candidates = [line.strip() for line in (text or "").splitlines() if line.strip()]
+    if not candidates:
+        return ""
+
+    priority_tokens = [
+        "help",
+        "offer",
+        "loan",
+        "funding",
+        "approval",
+        "repayment",
+        "internship",
+        "hackathon",
+        "improve",
+        "reduce",
+        "increase",
+    ]
+    for line in candidates:
+        low = line.lower()
+        if any(token in low for token in priority_tokens):
+            return _first_meaningful_sentence(line)
+
+    # Fall back to the first non-greeting sentence.
+    for line in candidates:
+        low = line.lower()
+        if not any(low.startswith(prefix) for prefix in ["hi", "hello", "dear", "hey", "regards", "best"]):
+            return _first_meaningful_sentence(line)
+    return _first_meaningful_sentence(candidates[0])
+
+
+def _extract_audience_hint(text: str) -> str:
+    low = (text or "").lower()
+    if any(token in low for token in ["student", "undergraduate", "campus", "university"]):
+        return "students"
+    if any(token in low for token in ["founder", "startup"]):
+        return "founders"
+    if any(token in low for token in ["sales", "sdr", "ae", "pipeline"]):
+        return "sales teams"
+    if any(token in low for token in ["marketer", "campaign", "brand"]):
+        return "marketing teams"
+    return "teams"
+
+
+def _cta_for_context(style: str, context: str) -> str:
+    if "funding" in context or "loan" in context:
+        if style == "aggressive":
+            return "Want me to share the eligibility and timeline details?"
+        return "Happy to share details if this is relevant for you."
+    ctas = {
+        "safe": "If useful, I can share a quick breakdown.",
+        "balanced": "Would it help if I shared how this works?",
+        "aggressive": "Want me to send the quick version?",
+    }
+    return ctas.get(style, ctas["balanced"])
+
+
+def _compose_cold_outreach_rewrite(original_text: str, style: str) -> str:
+    context = _derive_context_hint(original_text)
+    audience = _extract_audience_hint(original_text)
+    offer_line = _extract_offer_line(original_text)
+    pain_line = _extract_pain_point(original_text)
+
+    if not offer_line:
+        offer_line = f"We help {audience} handle {context} with less friction."
+
+    if style == "safe":
+        opening = f"Saw you're working on {context}."
+        body_lines = [
+            f"Hey {{{{first_name}}}},",
+            "",
+            opening,
+            offer_line,
+            "",
+            _cta_for_context(style, context),
+        ]
+    elif style == "aggressive":
+        body_lines = [
+            f"Hey {{{{first_name}}}},",
+            "",
+            pain_line,
+            offer_line,
+            "",
+            _cta_for_context(style, context),
+        ]
+    else:
+        body_lines = [
+            f"Hey {{{{first_name}}}},",
+            "",
+            f"Quick note for {audience} working on {context}.",
+            offer_line,
+            "",
+            _cta_for_context(style, context),
+        ]
+
+    return "\n".join(line.strip() if line else "" for line in body_lines).strip()
 
 
 def _rewrite_update_or_transactional(subject: str, body: str) -> str:
@@ -333,80 +436,52 @@ def rewrite_email_text(
     original_text: str,
     detected_issues: List[str] | None = None,
     intent_type: str = "cold outreach",
+    rewrite_style: str = "balanced",
     aggressive: bool = False,
 ) -> str:
-    profile = get_learning_profile()
     text = (original_text or "").strip()
     if not text:
         return ""
 
+    style = _infer_rewrite_style(rewrite_style, aggressive)
+    _, max_words = _target_word_bounds(style)
+
     parsed = _extract_subject_and_body(text)
     subject = parsed["subject"]
     body = parsed["body"]
-    
+
     # Detect if this is broadcast-style (the biggest flag for needed transformation)
     issue_blob = " ".join(detected_issues or []).lower()
     is_broadcast = "broadcast" in issue_blob or "personalization" in issue_blob or "mass" in issue_blob
     normalized_intent = (intent_type or "").strip().lower()
-    
+
     # COLD OUTREACH / BROADCAST EMAILS: Use specific, context-aware rewrite
     if is_broadcast or "cold" in normalized_intent or "outreach" in normalized_intent:
-        context = _derive_context_hint(original_text)
-        
-        if aggressive:
-            # Ultra-aggressive: extremely short, 1:1, curiosity-driven
-            text = _rewrite_cold_outreach_aggressive(body, context)
-        else:
-            # Standard: concise but slightly more context
-            text = _rewrite_cold_outreach(context)
-    
+        text = _compose_cold_outreach_rewrite(original_text, style)
+
     # TRANSACTIONAL / POLICY UPDATES: Use concise notification style
     elif normalized_intent in {"informational/system", "transactional", "update"}:
         text = _rewrite_update_or_transactional(subject, body)
-    
+
     # EVERYTHING ELSE: Add conversational question hook
     else:
         # Ensure we have a question to hook the reader
-        text = _ensure_question_hook(text, "high" if aggressive else "medium")
-    
+        text = _ensure_question_hook(text, "high" if style == "aggressive" else "medium")
+
     # Final cleanup
     text = re.sub(r"\n{3,}", "\n\n", text)
     text = text.strip()
-    
-    # Aggressive mode: TARGET 80-100 WORDS (vs. normal 120+)
-    if aggressive:
-        # Hard cut at word count
-        words = text.split()
-        if len(words) > 100:
-            kept = " ".join(words[:100]).strip()
-            # Ensure we end at a sentence boundary
-            if not kept.endswith((".", "?", "!")):
-                last_sentence_end = max(
-                    kept.rfind("."),
-                    kept.rfind("?"),
-                    kept.rfind("!"),
-                )
-                if last_sentence_end > 0:
-                    kept = kept[:last_sentence_end + 1]
-                else:
-                    kept += "."
-            text = kept
-    else:
-        # Normal mode: 120-140 words
-        words = text.split()
-        if len(words) > 150:
-            kept = " ".join(words[:120]).strip()
-            if not kept.endswith((".", "?", "!")):
-                last_sentence_end = max(
-                    kept.rfind("."),
-                    kept.rfind("?"),
-                    kept.rfind("!"),
-                )
-                if last_sentence_end > 0:
-                    kept = kept[:last_sentence_end + 1]
-                else:
-                    kept += "."
-            text = kept
+
+    words = text.split()
+    if len(words) > max_words:
+        kept = " ".join(words[:max_words]).strip()
+        if not kept.endswith((".", "?", "!")):
+            last_sentence_end = max(kept.rfind("."), kept.rfind("?"), kept.rfind("!"))
+            if last_sentence_end > 0:
+                kept = kept[: last_sentence_end + 1]
+            else:
+                kept += "."
+        text = kept
 
     # Guarantee minimum personalization
     if "{{first_name}}" not in text.lower():

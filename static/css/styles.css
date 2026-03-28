@@ -509,6 +509,17 @@ select {
     font-size: 1rem;
 }
 
+.rewrite-controls {
+    margin-bottom: 10px;
+}
+
+.rewrite-controls label {
+    display: block;
+    margin-bottom: 5px;
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+}
+
 .actions {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
@@ -572,6 +583,24 @@ select {
 .cta-panel {
     display: grid;
     gap: 10px;
+}
+
+.rewrite-proof {
+    border: 1px solid var(--border-subtle);
+    border-radius: 10px;
+    padding: 10px;
+    background: #0f1a2e;
+}
+
+.rewrite-proof-title {
+    margin: 0;
+    font-size: 0.86rem;
+    color: #cbd5e1;
+    font-weight: 600;
+}
+
+.rewrite-proof .compact-list {
+    margin-top: 8px;
 }
 
 .transform-tags {

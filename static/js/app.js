@@ -31,10 +31,13 @@ const topFixesListNode = document.getElementById("top-fixes-list");
 const scoreBreakdownNode = document.getElementById("score-breakdown");
 
 const fixNowButton = document.getElementById("fix-now");
+const rewriteStyleInput = document.getElementById("rewrite-style");
 
 const workflowStateNode = document.getElementById("workflow-state");
 const workflowTitleNode = document.getElementById("workflow-title");
 const improvementEstimateNode = document.getElementById("improvement-estimate");
+const rewriteChangesNode = document.getElementById("rewrite-changes");
+const rewriteTrustNoteNode = document.getElementById("rewrite-trust-note");
 const fixOutput = document.getElementById("fix-output");
 const beforeEmailNode = document.getElementById("before-email");
 const afterEmailNode = document.getElementById("after-email");
@@ -454,6 +457,7 @@ async function showFixTransformation() {
             payload.set("domain", domainInput.value.trim());
         }
         payload.set("analysis_mode", analysisModeInput ? analysisModeInput.value : "content");
+        payload.set("rewrite_style", rewriteStyleInput ? rewriteStyleInput.value : "balanced");
 
         const response = await fetch("/rewrite", {
             method: "POST",
@@ -475,6 +479,7 @@ async function showFixTransformation() {
             from_risk_band: String(data.from_risk_band || "Needs Review"),
             to_risk_band: String(data.to_risk_band || "Needs Review"),
             score_delta: Number(data.score_delta || 0),
+            rewrite_style: String(data.rewrite_style || "balanced"),
         };
 
         const changed = latestRewriteContext.score_delta > 0 || latestRewriteContext.from_risk_band !== latestRewriteContext.to_risk_band;
@@ -494,6 +499,28 @@ async function showFixTransformation() {
         if (improvementEstimateNode) {
             const delta = Number(data.score_delta || 0);
             improvementEstimateNode.textContent = `Risk shift: ${data.from_risk_band} -> ${data.to_risk_band} | Score delta: ${delta >= 0 ? "+" : ""}${delta}`;
+        }
+
+        if (rewriteChangesNode) {
+            rewriteChangesNode.innerHTML = "";
+            const lines = Array.isArray(data.rewrite_changes) ? data.rewrite_changes : [];
+            if (!lines.length) {
+                const li = document.createElement("li");
+                li.textContent = "Improved clarity and reduced bulk-style patterns.";
+                rewriteChangesNode.appendChild(li);
+            } else {
+                lines.slice(0, 4).forEach((line) => {
+                    const li = document.createElement("li");
+                    li.textContent = String(line);
+                    rewriteChangesNode.appendChild(li);
+                });
+            }
+        }
+
+        if (rewriteTrustNoteNode) {
+            rewriteTrustNoteNode.textContent = String(
+                data.rewrite_trust_note || "Based on pattern shifts commonly flagged by Gmail and Outlook filters."
+            );
         }
 
         fixOutput.classList.remove("hidden");
