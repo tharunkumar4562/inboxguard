@@ -350,6 +350,37 @@ def _contains_risky_tokens(text: str) -> bool:
     return any(re.search(pattern, low) for pattern in patterns)
 
 
+def _split_subject_body(text: str) -> tuple[str, str]:
+    content = (text or "").strip()
+    if not content:
+        return ("", "")
+    match = re.search(r"^\s*Subject:\s*(.+)$", content, flags=re.IGNORECASE | re.MULTILINE)
+    if not match:
+        lines = [line.strip() for line in content.splitlines() if line.strip()]
+        if len(lines) >= 2:
+            first_line = lines[0]
+            second_line = lines[1].lower()
+            looks_like_subject = (
+                len(first_line.split()) >= 3
+                and len(first_line) <= 95
+                and not bool(re.match(r"^(hi|hello|dear|hey)\b", first_line.lower()))
+            )
+            second_is_greeting = bool(re.match(r"^(hi|hello|dear|hey)\b", second_line))
+            if looks_like_subject and second_is_greeting:
+                body_lines = []
+                removed = False
+                for line in content.splitlines():
+                    if not removed and line.strip() == first_line:
+                        removed = True
+                        continue
+                    body_lines.append(line)
+                return (first_line, "\n".join(body_lines).strip())
+        return ("", content)
+    subject = match.group(1).strip()
+    body = re.sub(r"^\s*Subject:\s*.+$", "", content, count=1, flags=re.IGNORECASE | re.MULTILINE).strip()
+    return (subject, body)
+
+
 @app.post("/rewrite")
 def rewrite_email(
     raw_email: str = Form(""),
@@ -448,6 +479,10 @@ def rewrite_email(
     if rewrite_outcome == "failed_fix":
         limitations.insert(0, "Risky urgency/CTA tokens still remain in the rewritten output.")
 
+    original_subject, original_body = _split_subject_body(original)
+    rewritten_subject, rewritten_body = _split_subject_body(rewritten)
+    subject_changed = bool(original_subject and rewritten_subject and original_subject.strip() != rewritten_subject.strip())
+
     return {
         "ok": True,
         "original_text": original,
@@ -462,6 +497,11 @@ def rewrite_email(
         "rewrite_limitations": limitations[:4],
         "rewrite_changes": rewrite_changes,
         "rewrite_trust_note": "This version removes common bulk-style patterns flagged by Gmail and Outlook filters.",
+        "original_subject": original_subject,
+        "original_body": original_body,
+        "rewritten_subject": rewritten_subject,
+        "rewritten_body": rewritten_body,
+        "subject_changed": subject_changed,
         "learning_profile": get_learning_profile(),
         "before_summary": before_summary,
         "after_summary": after_summary,

@@ -33,7 +33,6 @@ const trustHookNode = document.getElementById("trust-hook");
 
 const consequenceListNode = document.getElementById("consequence-list");
 const hurtListNode = document.getElementById("hurt-list");
-const whyFlaggedListNode = document.getElementById("why-flagged-list");
 const topFixesListNode = document.getElementById("top-fixes-list");
 const scoreBreakdownNode = document.getElementById("score-breakdown");
 
@@ -44,6 +43,7 @@ const workflowStateNode = document.getElementById("workflow-state");
 const workflowTitleNode = document.getElementById("workflow-title");
 const rewriteModeDisplayNode = document.getElementById("rewrite-mode-display");
 const improvementEstimateNode = document.getElementById("improvement-estimate");
+const subjectChangeNode = document.getElementById("subject-change");
 const rewriteChangesNode = document.getElementById("rewrite-changes");
 const rewriteTrustNoteNode = document.getElementById("rewrite-trust-note");
 const rewriteLimitationsNode = document.getElementById("rewrite-limitations");
@@ -73,7 +73,6 @@ let hasScanResult = false;
 let pendingAction = null;
 let isAuthenticated = localStorage.getItem("ig_auth_ok") === "1";
 let freeRunCount = Number(localStorage.getItem("ig_free_run_count") || "0");
-const FREE_SCAN_LIMIT = 3;
 
 const errorBanner = document.createElement("div");
 errorBanner.id = "error-banner";
@@ -114,52 +113,11 @@ function needsAuthGate(action) {
     if (isAuthenticated) {
         return false;
     }
-    // Option A: allow first few scans without auth, gate afterwards.
-    if (action === "analyze" && freeRunCount < FREE_SCAN_LIMIT) {
-        return false;
-    }
-    if (action === "fix" && freeRunCount < FREE_SCAN_LIMIT) {
+    // Option A: allow first run without auth, gate subsequent actions.
+    if (action === "analyze" && freeRunCount < 1) {
         return false;
     }
     return true;
-}
-
-function explainFinding(item) {
-    const title = String((item && item.title) || "").toLowerCase();
-    if (title.includes("urgency") || title.includes("pressure") || title.includes("cta")) {
-        return "Urgency-heavy phrases signal campaign pressure and increase filter risk.";
-    }
-    if (title.includes("broadcast") || title.includes("personalization") || title.includes("mass")) {
-        return "Broadcast-style wording looks like bulk mail instead of 1:1 outreach.";
-    }
-    if (title.includes("link") || title.includes("image")) {
-        return "Link/image density can look promotional when trust is not established.";
-    }
-    if (title.includes("dkim") || title.includes("spf") || title.includes("dmarc")) {
-        return "Authentication misalignment weakens sender trust with providers.";
-    }
-    return "This pattern is commonly filtered by mailbox providers in campaign-like sends.";
-}
-
-function renderWhyFlagged(findings) {
-    if (!whyFlaggedListNode) {
-        return;
-    }
-    whyFlaggedListNode.innerHTML = "";
-    const nonMeta = (findings || []).filter((f) => !String(f.title || "").toLowerCase().includes("analysis mode"));
-
-    if (!nonMeta.length) {
-        const li = document.createElement("li");
-        li.textContent = "No major trigger found in this scan.";
-        whyFlaggedListNode.appendChild(li);
-        return;
-    }
-
-    nonMeta.slice(0, 3).forEach((item) => {
-        const li = document.createElement("li");
-        li.textContent = `${item.title || "Risk signal"}: ${explainFinding(item)}`;
-        whyFlaggedListNode.appendChild(li);
-    });
 }
 
 function runPendingAction() {
@@ -648,8 +606,23 @@ async function showFixTransformation() {
         const data = await response.json();
         const rewritten = String(data.rewritten_text || original);
 
-        beforeEmailNode.textContent = String(data.original_text || original);
-        afterEmailNode.textContent = rewritten;
+        const originalSubject = String(data.original_subject || "").trim();
+        const originalBody = String(data.original_body || data.original_text || original).trim();
+        const rewrittenSubject = String(data.rewritten_subject || "").trim();
+        const rewrittenBody = String(data.rewritten_body || rewritten).trim();
+
+        const formatEmailBlock = (subject, body) => {
+            const parts = [];
+            if (subject) {
+                parts.push(`Subject: ${subject}`);
+            }
+            parts.push("Body:");
+            parts.push(body || "-");
+            return parts.join("\n\n");
+        };
+
+        beforeEmailNode.textContent = formatEmailBlock(originalSubject, originalBody);
+        afterEmailNode.textContent = formatEmailBlock(rewrittenSubject, rewrittenBody);
 
         latestRewriteContext = {
             original_text: String(data.original_text || original),
@@ -692,6 +665,17 @@ async function showFixTransformation() {
                     ? "Aggressive (max reply rate)"
                     : "Balanced (best mix)";
             rewriteModeDisplayNode.textContent = `Rewrite mode: ${modeLabel}`;
+        }
+
+        if (subjectChangeNode) {
+            const changed = Boolean(data.subject_changed) && originalSubject && rewrittenSubject && originalSubject !== rewrittenSubject;
+            if (changed) {
+                subjectChangeNode.textContent = `Subject updated:\n"${originalSubject}" -> "${rewrittenSubject}"`;
+                subjectChangeNode.classList.remove("hidden");
+            } else {
+                subjectChangeNode.textContent = "";
+                subjectChangeNode.classList.add("hidden");
+            }
         }
 
         if (rewriteChangesNode) {
@@ -792,7 +776,6 @@ async function runAnalyze() {
         renderBiggestRisk(summary, findings);
         renderConsequences(summary);
         renderHurting(findings);
-        renderWhyFlagged(findings);
         renderFixes(summary);
         renderBreakdown(summary);
 

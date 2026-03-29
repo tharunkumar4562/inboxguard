@@ -346,6 +346,57 @@ def _extract_offer_anchor(subject: str, body_lines: list[str], fallback_context:
     return fallback_context
 
 
+def _extract_required_entities(subject: str, body: str) -> list[str]:
+    source = f"{subject}\n{body}".strip()
+    if not source:
+        return []
+
+    required: list[str] = []
+
+    iim_phrase = re.search(r"\bIIM\s+[A-Za-z]+\b", source, flags=re.IGNORECASE)
+    if iim_phrase:
+        required.append(iim_phrase.group(0))
+
+    for acronym in re.findall(r"\b[A-Z]{2,6}\b", source):
+        if acronym.lower() in {"hi", "hey", "dear"}:
+            continue
+        required.append(acronym)
+
+    lower = source.lower()
+    intent_terms = ["summer", "program", "ai", "funding", "loan", "internship", "hackathon", "student"]
+    for term in intent_terms:
+        if re.search(rf"\b{re.escape(term)}\b", lower):
+            required.append(term)
+
+    deduped: list[str] = []
+    seen: set[str] = set()
+    for item in required:
+        key = item.lower().strip()
+        if not key or key in seen:
+            continue
+        seen.add(key)
+        deduped.append(item)
+    return deduped[:6]
+
+
+def _entity_coverage(required_entities: list[str], rewritten_text: str) -> tuple[int, int]:
+    if not required_entities:
+        return (0, 0)
+    low = (rewritten_text or "").lower()
+    matched = 0
+    for entity in required_entities:
+        token = entity.lower().strip()
+        if not token:
+            continue
+        if " " in token:
+            if token in low:
+                matched += 1
+            continue
+        if re.search(rf"\b{re.escape(token)}\b", low):
+            matched += 1
+    return (matched, len(required_entities))
+
+
 def _value_lines_for_rewrite(lines: list[str], max_lines: int = 2) -> list[str]:
     picked: list[str] = []
     for line in lines:
@@ -573,7 +624,7 @@ def _compose_cold_outreach_rewrite(original_text: str, style: str) -> str:
         lines = [
             "Hey {{first_name}},",
             "",
-            f"Quick question, are you exploring {anchor} right now?",
+            f"Sharing this because {anchor} may be relevant for you.",
             summary,
             "",
             "Happy to share details if useful.",
@@ -609,7 +660,7 @@ def _rewrite_update_or_transactional_balanced(subject: str, body: str) -> str:
     out = [
         "Hey {{first_name}},",
         "",
-        f"Quick question, is {anchor} relevant for you right now?",
+        f"Sharing this in case {anchor} is relevant for you.",
         summary_line,
         "",
         "Happy to share details if useful.",
@@ -646,6 +697,7 @@ def rewrite_email_text(
     parsed = _extract_subject_and_body(text)
     subject = parsed["subject"]
     body = parsed["body"]
+    required_entities = _extract_required_entities(subject, body)
 
     # Detect if this is broadcast-style (the biggest flag for needed transformation)
     issue_blob = " ".join(detected_issues or []).lower()
@@ -703,7 +755,7 @@ def rewrite_email_text(
                     [
                         "Hey {{first_name}},",
                         "",
-                        f"Quick question, is {parsed_anchor} relevant for you right now?",
+                        f"Sharing this in case {parsed_anchor} is relevant for you.",
                         _extract_core_value(body),
                         "",
                         "Happy to share details if useful.",
@@ -742,7 +794,25 @@ def rewrite_email_text(
             )
         else:
             text = _sanitize_rewrite_text(
-                f"Hey {{{{first_name}}}},\n\nQuick question, is {anchor} relevant for you right now?\nWe found a cleaner version of this message that removes urgency and bulk signals.\n\nHappy to share details if useful."
+                f"Hey {{{{first_name}}}},\n\nSharing this because {anchor} may be relevant for you.\nWe found a cleaner version of this message that removes urgency and bulk signals.\n\nHappy to share details if useful."
+            )
+
+    matched_entities, total_entities = _entity_coverage(required_entities, text)
+    required_floor = max(1, total_entities // 2)
+    if total_entities > 0 and matched_entities < required_floor:
+        anchor = _extract_offer_anchor(subject, _extract_body_lines(body), _derive_context_hint(text))
+        entity_hint = required_entities[0]
+        if style == "aggressive":
+            text = _sanitize_rewrite_text(
+                f"Hey {{{{first_name}}}},\n\nAre you currently exploring {anchor}?\nIf yes, I can share one short option that may fit {entity_hint}."
+            )
+        elif style == "safe":
+            text = _sanitize_rewrite_text(
+                f"Hey {{{{first_name}}}},\n\nSharing a quick update on {anchor}.\nThis keeps the core context around {entity_hint} while removing urgency.\n\nIf helpful, I can share more details."
+            )
+        else:
+            text = _sanitize_rewrite_text(
+                f"Hey {{{{first_name}}}},\n\nSharing this because {anchor} may be relevant for you.\nThis keeps the core context around {entity_hint} while reducing bulk-style signals.\n\nHappy to share details if useful."
             )
 
     final_text = text.strip()
