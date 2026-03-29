@@ -11,6 +11,71 @@ FEEDBACK_FILE = DATA_DIR / "rewrite_feedback.json"
 MODEL_FILE = DATA_DIR / "rewrite_model.json"
 _LOCK = threading.Lock()
 
+SPAM_LINE_PATTERNS = [
+    r"\blast chance\b",
+    r"\bonly\s+\d+\s+(day|days|hour|hours|left)\b",
+    r"\bregister now\b",
+    r"\bapply now\b",
+    r"\blimited time\b",
+    r"\bact now\b",
+    r"\bbook now\b",
+    r"\burgent\b",
+    r"\bexpires?\b",
+]
+
+
+def _normalize_text_for_compare(text: str) -> str:
+    return re.sub(r"\s+", " ", (text or "").strip().lower())
+
+
+def _dedupe_lines(text: str) -> str:
+    seen = set()
+    out = []
+    for line in (text or "").splitlines():
+        cleaned = line.strip()
+        if not cleaned:
+            if out and out[-1] != "":
+                out.append("")
+            continue
+        key = _normalize_text_for_compare(cleaned)
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(cleaned)
+    return "\n".join(out).strip()
+
+
+def _contains_spam_line(text: str) -> bool:
+    low = (text or "").lower()
+    return any(re.search(pattern, low) for pattern in SPAM_LINE_PATTERNS)
+
+
+def _strip_spam_lines(text: str) -> str:
+    kept = []
+    for line in (text or "").splitlines():
+        if not line.strip():
+            kept.append("")
+            continue
+        if _contains_spam_line(line):
+            continue
+        kept.append(line)
+    return "\n".join(kept).strip()
+
+
+def _word_ngrams(text: str, n: int = 3) -> set[tuple[str, ...]]:
+    words = re.findall(r"[a-z0-9]+", (text or "").lower())
+    if len(words) < n:
+        return set()
+    return {tuple(words[i : i + n]) for i in range(0, len(words) - n + 1)}
+
+
+def _ngram_overlap_ratio(original: str, rewritten: str, n: int = 3) -> float:
+    a = _word_ngrams(original, n)
+    b = _word_ngrams(rewritten, n)
+    if not a or not b:
+        return 0.0
+    return len(a & b) / max(len(b), 1)
+
 
 def _default_model() -> Dict:
     return {
@@ -298,6 +363,99 @@ def _extract_core_value(body: str) -> str:
     return core if core else "We've built something worth checking out."
 
 
+def _extract_offer_entity(text: str) -> str:
+    patterns = [
+        r"\bIIM\s+[A-Z][a-zA-Z]+\b",
+        r"\b[A-Z][a-zA-Z]+\s+University\b",
+        r"\bAI\s+program\b",
+        r"\bsummer\s+program\b",
+        r"\bcertification\b",
+    ]
+    src = text or ""
+    for pattern in patterns:
+        match = re.search(pattern, src, flags=re.IGNORECASE)
+        if match:
+            return match.group(0)
+    return ""
+
+
+def _extract_intent_summary(text: str) -> str:
+    compact = re.sub(r"\s+", " ", (text or "").strip())
+    if not compact:
+        return "a relevant opportunity"
+    if any(token in compact.lower() for token in ["summer", "program", "course", "certification"]):
+        if any(token in compact.lower() for token in ["ai", "machine learning"]):
+            return "a short AI learning opportunity"
+        return "a short learning opportunity"
+    if any(token in compact.lower() for token in ["funding", "loan", "repayment"]):
+        return "a funding opportunity"
+    return "a relevant opportunity"
+
+
+def _topic_prompt(text: str) -> str:
+    low = (text or "").lower()
+    if "summer" in low and ("ai" in low or "machine learning" in low):
+        return "short AI programs this summer"
+    if "summer" in low and "program" in low:
+        return "short summer programs"
+    if "funding" in low or "loan" in low:
+        return "education funding options"
+    if "internship" in low or "hackathon" in low:
+        return "student opportunities"
+    return "relevant opportunities"
+
+
+def _clean_body_for_rewrite(body: str) -> str:
+    lines = []
+    for line in (body or "").splitlines():
+        stripped = line.strip()
+        if not stripped:
+            continue
+        if re.match(r"^(hi|hello|hey|dear)\b", stripped, flags=re.IGNORECASE):
+            continue
+        if re.match(r"^(regards|best|thanks|thank you|sincerely)\b", stripped, flags=re.IGNORECASE):
+            continue
+        if _contains_spam_line(stripped):
+            continue
+        lines.append(stripped)
+    return " ".join(lines).strip()
+
+
+def _rebuild_from_intent(original_text: str, style: str) -> str:
+    context = _derive_context_hint(original_text)
+    audience = _extract_audience_hint(original_text)
+    entity = _extract_offer_entity(original_text)
+    summary = _extract_intent_summary(original_text)
+
+    entity_line = f"It is related to {entity}." if entity else f"It is relevant for {audience}."
+
+    if style == "safe":
+        lines = [
+            "Hey {{first_name}},",
+            "",
+            f"Sharing a quick update about {summary}.",
+            entity_line,
+            "If helpful, I can share the details.",
+        ]
+    elif style == "aggressive":
+        lines = [
+            "Hey {{first_name}},",
+            "",
+            f"Are you currently exploring {context}?",
+            f"If yes, I can share one option that fits {audience}.",
+        ]
+    else:
+        lines = [
+            "Hey {{first_name}},",
+            "",
+            f"Quick question, are you exploring {summary} right now?",
+            entity_line,
+            "Happy to share details if useful.",
+        ]
+
+    return "\n".join(lines).strip()
+
+
 def _infer_rewrite_style(rewrite_style: str, aggressive: bool) -> str:
     style = (rewrite_style or "balanced").strip().lower()
     if style not in {"safe", "balanced", "aggressive"}:
@@ -437,7 +595,7 @@ def _compose_cold_outreach_rewrite(original_text: str, style: str) -> str:
 
 def _rewrite_update_or_transactional_safe(subject: str, body: str) -> str:
     """Safe mode keeps more context with minimal risk cleanup."""
-    core = body
+    core = _clean_body_for_rewrite(body)
     core = re.sub(r"^(hi there|hello there|dear user|dear customer)[,\s]*", "", core, flags=re.IGNORECASE)
     core = re.sub(r"\bwe'?re (excited|pleased|thrilled) to\b", "", core, flags=re.IGNORECASE)
     core = re.sub(r"\bmajor (update|upgrade)\b", "update", core, flags=re.IGNORECASE)
@@ -445,42 +603,46 @@ def _rewrite_update_or_transactional_safe(subject: str, body: str) -> str:
 
     # Extract the actual value
     value = _extract_core_value(core)
+    entity = _extract_offer_entity(body)
+    value = re.sub(r"\bhi\s+[A-Za-z]+,?\s*", "", value, flags=re.IGNORECASE).strip()
+    if value.lower() in {"we've built something worth checking out.", "we found a few relevant opportunities worth sharing."}:
+        value = "We found a student-focused opportunity that may be relevant."
+    if entity and entity.lower() not in value.lower():
+        value = f"{value} This is related to {entity}." if value else f"This is related to {entity}."
     
     subject_line = subject or "important update"
-    secondary = ""
-    core_sentences = re.split(r"(?<=[.!?])\s+", core)
-    if len(core_sentences) > 1:
-        secondary = _first_meaningful_sentence(core_sentences[1])
     return (
         f"Hey {{{{first_name}}}},\n\n"
         f"Sharing a quick update on {subject_line.lower()}.\n\n"
-        f"{value}\n"
-        + (f"{secondary}\n\n" if secondary else "\n") +
+        f"{value}\n\n"
         f"If helpful, I can share more details."
     )
 
 
 def _rewrite_update_or_transactional_balanced(subject: str, body: str) -> str:
     """Balanced mode shifts to question-first with context preserved."""
-    core = re.sub(r"\s+", " ", (body or "").strip())
+    core = re.sub(r"\s+", " ", _clean_body_for_rewrite(body))
     value = _extract_core_value(core)
-    subject_line = (subject or "important update").strip().lower()
+    entity = _extract_offer_entity(body)
+    topic = _topic_prompt(body)
+    detail = f"This is related to {entity}." if entity else value
     return (
         f"Hey {{{{first_name}}}},\n\n"
-        f"Quick question on {subject_line}, is this relevant for you right now?\n\n"
-        f"{value}\n\n"
+        f"Quick question, are you exploring {topic} right now?\n\n"
+        f"{detail}\n\n"
         "Happy to share details if useful."
     )
 
 
 def _rewrite_update_or_transactional_aggressive(subject: str, body: str) -> str:
     """Aggressive mode is shortest and reply-oriented."""
-    context = _derive_context_hint(body)
-    audience = _extract_audience_hint(body)
+    topic = _topic_prompt(body)
+    entity = _extract_offer_entity(body)
+    follow_up = f"I can share one option around {entity}." if entity else "I can share one option that fits what you need."
     return (
         f"Hey {{{{first_name}}}},\n\n"
-        f"Are you currently exploring {context}?\n\n"
-        f"If yes, I can send two options that usually fit {audience}."
+        f"Are you currently exploring {topic}?\n\n"
+        f"{follow_up}"
     )
 
 
@@ -530,7 +692,19 @@ def rewrite_email_text(
         # Ensure we have a question to hook the reader
         text = _ensure_question_hook(text, "high" if style == "aggressive" else "medium")
 
+    # Constraint pass: strip known spam lines and dedupe repeated lines.
+    text = _strip_spam_lines(text)
+    text = _dedupe_lines(text)
+
+    # If rewrite still overlaps too much with original, rebuild from intent.
+    overlap_ratio = _ngram_overlap_ratio(original_text, text, n=3)
+    if overlap_ratio > 0.42 or _contains_spam_line(text):
+        text = _rebuild_from_intent(original_text, style)
+        text = _strip_spam_lines(text)
+        text = _dedupe_lines(text)
+
     # Final cleanup
+    text = text.replace("—", ",")
     text = re.sub(r"\n{3,}", "\n\n", text)
     text = text.strip()
 
