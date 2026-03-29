@@ -96,7 +96,7 @@ def health() -> dict:
 
 @app.get("/favicon.ico")
 def favicon_ico():
-    return FileResponse(STATIC_DIR / "favicon-48.png", media_type="image/png")
+    return FileResponse(STATIC_DIR / "favicon.svg", media_type="image/svg+xml")
 
 
 @app.get(f"/{GOOGLE_VERIFICATION_FILE}")
