@@ -257,10 +257,10 @@
         <h3 id="auth-modal-title">Continue to fix your email</h3>
         <p class="micro">Sign in or create account to continue this action without losing your draft.</p>
         <div class="modal-actions">
-          <button id="auth-signin" type="button" class="btn-primary">Sign In</button>
-          <button id="auth-create" type="button" class="btn-secondary">Create Account</button>
+          <button id="auth-signin" type="button" class="btn-primary" onclick="window.igAuthSignIn && window.igAuthSignIn()">Sign In</button>
+          <button id="auth-create" type="button" class="btn-secondary" onclick="window.igAuthCreate && window.igAuthCreate()">Create Account</button>
         </div>
-        <button id="auth-close" type="button" class="link-action">Not now</button>
+        <button id="auth-close" type="button" class="link-action" onclick="window.igAuthClose && window.igAuthClose()">Not now</button>
       </div>
     </div>
 

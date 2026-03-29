@@ -142,6 +142,25 @@ function onAuthSuccess(source) {
     runPendingAction();
 }
 
+function handleAuthAction(action) {
+    if (action === "signin") {
+        onAuthSuccess("signin");
+        showError("Signed in. Continuing your action...");
+        return;
+    }
+    if (action === "create") {
+        onAuthSuccess("create_account");
+        showError("Account created. Continuing your action...");
+        return;
+    }
+    hideAuthModal();
+}
+
+// Inline fallback hooks for resilient modal behavior.
+window.igAuthSignIn = () => handleAuthAction("signin");
+window.igAuthCreate = () => handleAuthAction("create");
+window.igAuthClose = () => handleAuthAction("close");
+
 function activateTab(tab) {
     if (!dashboardTab || !threatScanTab) {
         return;
@@ -802,13 +821,36 @@ if (feedbackUnsureButton) {
     feedbackUnsureButton.addEventListener("click", () => sendFeedback("not_sure"));
 }
 if (authSignInButton) {
-    authSignInButton.addEventListener("click", () => onAuthSuccess("signin"));
+    authSignInButton.addEventListener("click", () => handleAuthAction("signin"));
 }
 if (authCreateButton) {
-    authCreateButton.addEventListener("click", () => onAuthSuccess("create_account"));
+    authCreateButton.addEventListener("click", () => handleAuthAction("create"));
 }
 if (authCloseButton) {
-    authCloseButton.addEventListener("click", hideAuthModal);
+    authCloseButton.addEventListener("click", () => handleAuthAction("close"));
+}
+if (authModal) {
+    authModal.addEventListener("click", (event) => {
+        const target = event.target;
+        if (!(target instanceof HTMLElement)) {
+            return;
+        }
+        if (target.id === "auth-modal") {
+            handleAuthAction("close");
+            return;
+        }
+        if (target.id === "auth-signin") {
+            handleAuthAction("signin");
+            return;
+        }
+        if (target.id === "auth-create") {
+            handleAuthAction("create");
+            return;
+        }
+        if (target.id === "auth-close") {
+            handleAuthAction("close");
+        }
+    });
 }
 
 if (form) {
