@@ -73,6 +73,9 @@ let hasScanResult = false;
 let pendingAction = null;
 let isAuthenticated = false;
 let freeRunCount = Number(localStorage.getItem("ig_free_run_count") || "0");
+let googleConfigured = true;
+let emailOtpConfigured = true;
+let tempAccessEnabled = false;
 
 const errorBanner = document.createElement("div");
 errorBanner.id = "error-banner";
@@ -113,6 +116,9 @@ function needsAuthGate(action) {
     if (isAuthenticated) {
         return false;
     }
+    if (!googleConfigured && !emailOtpConfigured && tempAccessEnabled) {
+        return false;
+    }
     // Option A: allow first run without auth, gate subsequent actions.
     if (action === "analyze" && freeRunCount < 1) {
         return false;
@@ -128,6 +134,9 @@ async function refreshAuthStatus() {
         }
         const data = await response.json();
         isAuthenticated = Boolean(data && data.authenticated);
+        googleConfigured = data ? Boolean(data.google_configured) : true;
+        emailOtpConfigured = data ? Boolean(data.email_otp_configured) : true;
+        tempAccessEnabled = data ? Boolean(data.temp_access_enabled) : false;
     } catch (error) {
         // Keep guest path resilient when auth status endpoint is unavailable.
     }

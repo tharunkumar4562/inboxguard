@@ -45,6 +45,7 @@ SMTP_PASSWORD = os.getenv("INBOXGUARD_SMTP_PASSWORD", "")
 SMTP_FROM = os.getenv("INBOXGUARD_SMTP_FROM", "")
 GOOGLE_CLIENT_ID = os.getenv("INBOXGUARD_GOOGLE_CLIENT_ID", "")
 GOOGLE_CLIENT_SECRET = os.getenv("INBOXGUARD_GOOGLE_CLIENT_SECRET", "")
+ALLOW_TEMP_ACCESS = os.getenv("INBOXGUARD_ALLOW_TEMP_ACCESS", "1").strip().lower() not in {"0", "false", "no"}
 GOOGLE_VERIFICATION_FILE = "googleab4b33a28d8dfb88.html"
 LONG_TAIL_PAGES = [
     {
@@ -255,8 +256,6 @@ def login_page(request: Request):
 def access_page(request: Request):
     track_event("page_view", {"page": "access"})
     auth_error = request.query_params.get("error", "")
-    google_configured = bool(GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET)
-    email_otp_configured = bool(SMTP_HOST and SMTP_USERNAME and SMTP_PASSWORD and SMTP_FROM)
     return render_template_safe(
         request,
         "login.html",
@@ -267,9 +266,9 @@ def access_page(request: Request):
             "resume_mode": request.query_params.get("resume", "0"),
             "auth_mode": request.query_params.get("mode", "signin"),
             "auth_error": auth_error,
-            "google_configured": google_configured,
-            "email_otp_configured": email_otp_configured,
-            "providers_configured": bool(google_configured or email_otp_configured),
+            "google_configured": bool(GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET),
+            "email_otp_configured": bool(SMTP_HOST and SMTP_USERNAME and SMTP_PASSWORD and SMTP_FROM),
+            "temp_access_enabled": ALLOW_TEMP_ACCESS,
         },
     )
 
@@ -278,7 +277,16 @@ def access_page(request: Request):
 def auth_status(request: Request):
     email = str(request.session.get("auth_email", "")).strip().lower()
     provider = str(request.session.get("auth_provider", "")).strip().lower()
-    return {"authenticated": bool(email), "email": email, "provider": provider}
+    google_configured = bool(GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET)
+    email_otp_configured = bool(SMTP_HOST and SMTP_USERNAME and SMTP_PASSWORD and SMTP_FROM)
+    return {
+        "authenticated": bool(email),
+        "email": email,
+        "provider": provider,
+        "google_configured": google_configured,
+        "email_otp_configured": email_otp_configured,
+        "temp_access_enabled": ALLOW_TEMP_ACCESS,
+    }
 
 
 @app.get("/auth/google/login")
@@ -383,11 +391,16 @@ def auth_logout(request: Request):
     return {"ok": True}
 
 
-@app.get("/auth/continue-guest")
-def auth_continue_guest(request: Request, next: str = "/?resume=1"):
-    # Safety valve: keep users unblocked when auth providers are not configured.
-    _set_auth_session(request, "guest@inboxguard.local", "guest")
-    return RedirectResponse(url=next, status_code=303)
+@app.post("/auth/continue-temporary")
+def auth_continue_temporary(request: Request, next: str = Form("/?resume=1")):
+    if not ALLOW_TEMP_ACCESS:
+        raise HTTPException(status_code=403, detail="Temporary access is disabled")
+
+    _set_auth_session(request, "temporary@inboxguard.local", "temporary")
+    safe_next = (next or "/?resume=1").strip()
+    if not safe_next.startswith("/"):
+        safe_next = "/?resume=1"
+    return {"ok": True, "redirect": safe_next}
 
 
 @app.get("/p/{slug}", response_class=HTMLResponse)
