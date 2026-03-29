@@ -165,6 +165,30 @@ nav {
     font-size: 0.86rem;
 }
 
+.clarity-block {
+    margin-bottom: 12px;
+    border-color: #1e3a8a;
+    background: linear-gradient(135deg, #13213a 0%, #101a2f 100%);
+}
+
+.clarity-block h3 {
+    margin: 0 0 8px;
+    font-size: 1.05rem;
+}
+
+.clarity-block p {
+    margin: 0 0 8px;
+    color: #cbd5e1;
+}
+
+.clarity-list {
+    margin: 0;
+    padding-left: 20px;
+    color: #cbd5e1;
+    display: grid;
+    gap: 4px;
+}
+
 .access-link {
     border: 1px solid var(--border-strong);
     border-radius: 999px;
