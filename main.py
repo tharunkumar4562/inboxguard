@@ -254,6 +254,7 @@ def login_page(request: Request):
 @app.get("/access", response_class=HTMLResponse)
 def access_page(request: Request):
     track_event("page_view", {"page": "access"})
+    auth_error = request.query_params.get("error", "")
     return render_template_safe(
         request,
         "login.html",
@@ -263,6 +264,9 @@ def access_page(request: Request):
             "canonical_url": f"{SITE_URL}/access",
             "resume_mode": request.query_params.get("resume", "0"),
             "auth_mode": request.query_params.get("mode", "signin"),
+            "auth_error": auth_error,
+            "google_configured": bool(GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET),
+            "email_otp_configured": bool(SMTP_HOST and SMTP_USERNAME and SMTP_PASSWORD and SMTP_FROM),
         },
     )
 
@@ -278,7 +282,8 @@ def auth_status(request: Request):
 async def auth_google_login(request: Request, next: str = "/?resume=1"):
     google_client = oauth.create_client("google")
     if google_client is None:
-        raise HTTPException(status_code=503, detail="Google OAuth is not configured")
+        fallback = f"/access?mode=email&resume=1&error={quote_plus('google_not_configured')}"
+        return RedirectResponse(url=fallback, status_code=303)
 
     request.session["auth_next"] = next
     redirect_uri = f"{SITE_URL}/auth/google/callback"
@@ -289,7 +294,8 @@ async def auth_google_login(request: Request, next: str = "/?resume=1"):
 async def auth_google_callback(request: Request):
     google_client = oauth.create_client("google")
     if google_client is None:
-        raise HTTPException(status_code=503, detail="Google OAuth is not configured")
+        fallback = f"/access?mode=email&resume=1&error={quote_plus('google_not_configured')}"
+        return RedirectResponse(url=fallback, status_code=303)
 
     token = await google_client.authorize_access_token(request)
     user_info = token.get("userinfo")
