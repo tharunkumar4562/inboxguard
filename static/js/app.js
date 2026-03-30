@@ -191,9 +191,8 @@ function clearPendingContext() {
     localStorage.removeItem("ig_pending_rewrite_style");
 }
 
-function resumeAfterAccessIfNeeded() {
-    const params = new URLSearchParams(window.location.search);
-    const shouldResume = params.get("resume") === "1";
+function resumePendingAfterAuthIfNeeded() {
+    const shouldResume = localStorage.getItem("ig_resume_after_auth") === "1";
     if (!shouldResume || !isAuthenticated) {
         return;
     }
@@ -205,6 +204,17 @@ function resumeAfterAccessIfNeeded() {
         runPendingAction();
     }
     clearPendingContext();
+    localStorage.removeItem("ig_resume_after_auth");
+}
+
+function openAuthModalFromQueryIfNeeded() {
+    const params = new URLSearchParams(window.location.search);
+    const shouldOpen = params.get("auth") === "1";
+    if (!shouldOpen) {
+        return;
+    }
+
+    showAuthModal();
     const cleanUrl = window.location.pathname + window.location.hash;
     window.history.replaceState({}, document.title, cleanUrl);
 }
@@ -248,7 +258,8 @@ async function continueWithEmail() {
 
 async function continueWithGoogle() {
     stashPendingContext(pendingAction || "analyze");
-    const next = encodeURIComponent("/?resume=1");
+    localStorage.setItem("ig_resume_after_auth", "1");
+    const next = encodeURIComponent("/");
     window.location.href = `/auth/google/login?next=${next}`;
 }
 
@@ -1040,5 +1051,6 @@ if (form) {
 setIdleState();
 activateTab("dashboard");
 refreshAuthStatus().then(() => {
-    resumeAfterAccessIfNeeded();
+    resumePendingAfterAuthIfNeeded();
+    openAuthModalFromQueryIfNeeded();
 });

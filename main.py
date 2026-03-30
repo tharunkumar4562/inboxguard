@@ -447,24 +447,12 @@ def home(request: Request):
 
 @app.get("/login", response_class=HTMLResponse)
 def login_page(request: Request):
-    return RedirectResponse(url="/access", status_code=307)
+    return RedirectResponse(url="/?auth=1", status_code=303)
 
 
 @app.get("/access", response_class=HTMLResponse)
 def access_page(request: Request):
-    track_event("page_view", {"page": "access"})
-    return render_template_safe(
-        request,
-        "login.html",
-        {
-            "page_title": "Get Access | InboxGuard",
-            "meta_description": "Enter your email to unlock your full InboxGuard remediation report instantly.",
-            "canonical_url": f"{SITE_URL}/access",
-            "mode": request.query_params.get("mode", "signin"),
-            "resume": request.query_params.get("resume", "0"),
-            "google_enabled": GOOGLE_AUTH_CONFIGURED,
-        },
-    )
+    return RedirectResponse(url="/?auth=1", status_code=303)
 
 
 @app.get("/auth/status")
@@ -550,7 +538,7 @@ async def auth_google_callback(request: Request):
     user_id = _get_or_create_google_user(email)
     _set_session_user(request, user_id, email)
     track_event("access_request", {"target": "login", "mode": "google_oauth"})
-    next_url = str(request.session.pop("auth_next", "/?resume=1"))
+    next_url = str(request.session.pop("auth_next", "/"))
     return RedirectResponse(url=next_url, status_code=303)
 
 
