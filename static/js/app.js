@@ -72,10 +72,12 @@ let latestLearningProfile = null;
 let hasScanResult = false;
 let pendingAction = null;
 let isAuthenticated = false;
-let anonymousScansUsed = Number(localStorage.getItem("ig_anon_scans_used") || "0");
-let anonymousScansLimit = Number(localStorage.getItem("ig_anon_scans_limit") || "3");
-let userScansUsed = 0;
-let userScansLimit = 50;
+let freeScansUsed = Number(localStorage.getItem("ig_free_scans_used") || "0");
+const FREE_SCANS_LIMIT = 3;
+let supabaseUser = null;
+
+const SUPABASE_URL = "https://lvacialresklgbapsybb.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx2YWNpYWxyZXNrbGdiYXBzeWJiIiwicm9sZSI6ImFub24iLCJpYXQiOjE2MzI0NzI3NzksImV4cCI6MTk0ODA0Mjc3OX0.eXsqh_L9B0FKzFp7lW4Q0qJ3gZ5F5cQ5kW8mX3Y9Z0A";
 
 const errorBanner = document.createElement("div");
 errorBanner.id = "error-banner";
@@ -119,28 +121,50 @@ function hideAuthModal() {
 
 function needsAuthGate(action) {
     if (isAuthenticated) {
-        return action === "analyze" && userScansUsed >= userScansLimit;
+        return false;
     }
-    return action === "analyze" && anonymousScansUsed >= anonymousScansLimit;
+    return action === "analyze" && freeScansUsed >= FREE_SCANS_LIMIT;
 }
 
-async function refreshAuthStatus() {
-    try {
-        const response = await fetch("/auth/status", { method: "GET" });
-        if (!response.ok) {
-            return;
+async function initSupabase() {
+    const script = document.createElement("script");
+    script.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2";
+    script.onload = () => {
+        window.supabase = window.supabase || {};
+        if (window.supabase && window.supabase.createClient) {
+            const client = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            client.auth.getSession().then(({ data: { session } }) => {
+                if (session && session.user) {
+                    isAuthenticated = true;
+                    supabaseUser = session.user;
+                    hideAuthModal();
+                    resumeAfterAuthIfNeeded();
+                }
+            });
+            window.supabaseClient = client;
         }
-        const data = await response.json();
-        isAuthenticated = Boolean(data && data.authenticated);
-        anonymousScansUsed = Number(data && data.anonymous_scans_used ? data.anonymous_scans_used : 0);
-        anonymousScansLimit = Number(data && data.anonymous_scans_limit ? data.anonymous_scans_limit : 3);
-        userScansUsed = Number(data && data.user_scans_used ? data.user_scans_used : 0);
-        userScansLimit = Number(data && data.user_scans_limit ? data.user_scans_limit : 50);
+    };
+    document.head.appendChild(script);
+}
 
-        localStorage.setItem("ig_anon_scans_used", String(anonymousScansUsed));
-        localStorage.setItem("ig_anon_scans_limit", String(anonymousScansLimit));
+async function loginWithGoogle() {
+    if (!window.supabaseClient) {
+        showError("Auth system initializing. Try again in a moment.");
+        return;
+    }
+
+    try {
+        const { error } = await window.supabaseClient.auth.signInWithOAuth({
+            provider: "google",
+            options: {
+                redirectTo: window.location.origin + "/?resume=1",
+            },
+        });
+        if (error) {
+            showError(error.message || "Google login failed");
+        }
     } catch (error) {
-        // Keep UI operational even if auth status endpoint is temporarily unavailable.
+        showError(error && error.message ? error.message : "Google login failed");
     }
 }
 
@@ -209,24 +233,57 @@ function resumeAfterAccessIfNeeded() {
 }
 
 function handleAuthAction(action) {
-    if (action === "signin") {
-        stashPendingContext(pendingAction || "analyze");
+    if (action === "close") {
         hideAuthModal();
-        window.location.href = "/access?mode=signin&resume=1";
-        return;
     }
-    if (action === "create") {
-        stashPendingContext(pendingAction || "analyze");
-        hideAuthModal();
-        window.location.href = "/access?mode=signup&resume=1";
-        return;
-    }
-    hideAuthModal();
 }
 
-// Inline fallback hooks for resilient modal behavior.
-window.igAuthSignIn = () => handleAuthAction("signin");
-window.igAuthCreate = () => handleAuthAction("create");
+async function handleEmailSubmit(event) {
+    event.preventDefault();
+    const emailInput = document.getElementById("auth-email-input");
+    const email = (emailInput.value || "").trim().toLowerCase();
+    const msg = document.getElementById("auth-msg");
+
+    if (!email || !email.includes("@")) {
+        msg.textContent = "Valid email is required.";
+        return;
+    }
+
+    try {
+        const formData = new FormData();
+        formData.set("email", email);
+        
+        const response = await fetch("/auth/login-link", {
+            method: "POST",
+            body: formData,
+        });
+        if (!response.ok) {
+            const err = await response.json().catch(() => ({}));
+            throw new Error(err.detail || "Could not send link");
+        }
+        msg.textContent = "Check your email for a magic sign-in link.";
+        emailInput.value = "";
+    } catch (error) {
+        msg.textContent = error && error.message ? error.message : "Email link failed.";
+    }
+}
+
+function resumeAfterAuthIfNeeded() {
+    const action = localStorage.getItem("ig_pending_action");
+    const draft = localStorage.getItem("ig_pending_draft");
+
+    if (action && draft && isAuthenticated) {
+        if (rawEmailInput) {
+            rawEmailInput.value = draft;
+        }
+        pendingAction = action;
+        runPendingAction();
+        clearPendingContext();
+    }
+}
+
+// Inline fallback hooks
+window.igAuthGoogle = loginWithGoogle;
 window.igAuthClose = () => handleAuthAction("close");
 
 function activateTab(tab) {
@@ -740,23 +797,18 @@ async function showFixTransformation() {
 }
 
 async function runAnalyze() {
-    await refreshAuthStatus();
-
-    if (needsAuthGate("analyze")) {
-        if (isAuthenticated) {
-            showError("You reached your monthly free plan scan limit. Upgrade is required for more scans.");
-        } else {
-            showAuthModal();
-        }
-        return;
-    }
-
     const rawText = rawEmailInput ? rawEmailInput.value.trim() : "";
     const domainText = domainInput ? domainInput.value.trim() : "";
     const mode = analysisModeInput ? analysisModeInput.value : "content";
 
     if (rawText.length < 20) {
         showError("Paste the full email draft before scanning.");
+        return;
+    }
+
+    if (needsAuthGate("analyze")) {
+        stashPendingContext("analyze");
+        showAuthModal();
         return;
     }
 
@@ -777,15 +829,6 @@ async function runAnalyze() {
         });
 
         if (!response.ok) {
-            const err = await response.json().catch(() => ({}));
-            const code = String(err.detail || "");
-            if (code === "AUTH_REQUIRED") {
-                showAuthModal();
-                throw new Error("Sign in to continue scanning.");
-            }
-            if (code === "FREE_PLAN_LIMIT_REACHED") {
-                throw new Error("You reached your monthly free plan scan limit. Upgrade is required for more scans.");
-            }
             throw new Error("Unable to complete risk scan. Try again.");
         }
 
@@ -825,16 +868,8 @@ async function runAnalyze() {
         }
         activateTab("dashboard");
 
-        if (data.usage && !data.usage.authenticated) {
-            anonymousScansUsed = Number(data.usage.anonymous_scans_used || anonymousScansUsed + 1);
-            anonymousScansLimit = Number(data.usage.anonymous_scans_limit || anonymousScansLimit);
-            localStorage.setItem("ig_anon_scans_used", String(anonymousScansUsed));
-            localStorage.setItem("ig_anon_scans_limit", String(anonymousScansLimit));
-        }
-        if (data.usage && data.usage.authenticated) {
-            userScansUsed = Number(data.usage.user_scans_used || userScansUsed + 1);
-            userScansLimit = Number(data.usage.user_scans_limit || userScansLimit);
-        }
+        freeScansUsed += 1;
+        localStorage.setItem("ig_free_scans_used", String(freeScansUsed));
     } catch (error) {
         if (loadingTicker) {
             clearInterval(loadingTicker);
@@ -905,18 +940,7 @@ if (threatScanTab) {
     threatScanTab.addEventListener("click", () => activateTab("threat-scan"));
 }
 if (startButton) {
-    startButton.addEventListener("click", () => {
-        pendingAction = "analyze";
-        if (needsAuthGate("analyze")) {
-            if (isAuthenticated) {
-                showError("You reached your monthly free plan scan limit. Upgrade is required for more scans.");
-                return;
-            }
-            showAuthModal();
-            return;
-        }
-        runPendingAction();
-    });
+    startButton.addEventListener("click", () => runAnalyze());
 }
 if (fixNowButton) {
     fixNowButton.addEventListener("click", () => {
@@ -979,24 +1003,19 @@ if (authModal) {
     });
 }
 
+const authEmailForm = document.getElementById("auth-email-form");
+if (authEmailForm) {
+    authEmailForm.addEventListener("submit", handleEmailSubmit);
+}
+
 if (form) {
     form.addEventListener("submit", async (event) => {
         event.preventDefault();
-        pendingAction = "analyze";
-        if (needsAuthGate("analyze")) {
-            if (isAuthenticated) {
-                showError("You reached your monthly free plan scan limit. Upgrade is required for more scans.");
-                return;
-            }
-            showAuthModal();
-            return;
-        }
-        runPendingAction();
+        runAnalyze();
     });
 }
 
 setIdleState();
 activateTab("dashboard");
-refreshAuthStatus().then(() => {
-    resumeAfterAccessIfNeeded();
-});
+initSupabase();
+setTimeout(() => resumeAfterAccessIfNeeded(), 500);

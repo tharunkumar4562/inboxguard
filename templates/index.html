@@ -270,12 +270,20 @@ Only 1 day left to register..."></textarea>
 
     <div id="auth-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="auth-modal-title">
       <div class="modal-card">
-        <h3 id="auth-modal-title">You've used your free scans</h3>
-        <p class="micro">Create a free account to continue.</p>
+        <h3 id="auth-modal-title">Continue Your Scans</h3>
+        <p class="micro">You've used your free scans. Sign in to keep using InboxGuard.</p>
+        
         <div class="modal-actions">
-          <button id="auth-signin" type="button" class="btn-primary" onclick="window.igAuthSignIn && window.igAuthSignIn()">Sign In</button>
-          <button id="auth-create" type="button" class="btn-secondary" onclick="window.igAuthCreate && window.igAuthCreate()">Create Account</button>
+          <button id="auth-google" type="button" class="btn-primary" onclick="window.igAuthGoogle && window.igAuthGoogle()">Continue with Google</button>
         </div>
+
+        <p class="micro" style="margin-top: 16px; margin-bottom: 8px;">Or continue with email:</p>
+        <form id="auth-email-form" class="modal-actions">
+          <input id="auth-email-input" type="email" placeholder="you@company.com" class="email-input" style="width:100%; padding:8px; border-radius:8px; border:1px solid #4b5563; background:#0f172a; color:#e2e8f0; font-size:0.875rem; margin-bottom:8px;" />
+          <button type="submit" class="btn-secondary" style="width:100%;">Send Link</button>
+        </form>
+
+        <p id="auth-msg" class="micro" style="color:#fca5a5; margin-top:8px; text-align:center;"></p>
         <button id="auth-close" type="button" class="link-action" onclick="window.igAuthClose && window.igAuthClose()">Not now</button>
       </div>
     </div>
