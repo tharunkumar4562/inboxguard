@@ -8,6 +8,7 @@ import hmac
 import hashlib
 import secrets
 import sqlite3
+from typing import Any, Optional
 
 from fastapi import FastAPI, Form, Request, HTTPException
 from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse, Response, JSONResponse, FileResponse
@@ -15,6 +16,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
 from jinja2 import TemplateNotFound, TemplateError
+from authlib.integrations.starlette_client import OAuth
 
 from analyzer import analyze_email
 from analytics import get_dashboard_data, track_event
@@ -39,6 +41,8 @@ AUTH_DB_FILE = BASE_DIR / "data" / "auth.db"
 ANON_SCAN_LIMIT = int(os.getenv("INBOXGUARD_ANON_SCAN_LIMIT", "3"))
 FREE_USER_SCAN_LIMIT = int(os.getenv("INBOXGUARD_FREE_USER_SCAN_LIMIT", "50"))
 GOOGLE_OAUTH_ENABLED = os.getenv("INBOXGUARD_GOOGLE_OAUTH_ENABLED", "0").strip().lower() in {"1", "true", "yes"}
+GOOGLE_CLIENT_ID = os.getenv("INBOXGUARD_GOOGLE_CLIENT_ID", os.getenv("GOOGLE_CLIENT_ID", "")).strip()
+GOOGLE_CLIENT_SECRET = os.getenv("INBOXGUARD_GOOGLE_CLIENT_SECRET", os.getenv("GOOGLE_CLIENT_SECRET", "")).strip()
 GOOGLE_VERIFICATION_FILE = "googleab4b33a28d8dfb88.html"
 AUTH_DB_READY = False
 LONG_TAIL_PAGES = [
@@ -64,6 +68,17 @@ LONG_TAIL_PAGES = [
 LONG_TAIL_BY_SLUG = {item["slug"]: item for item in LONG_TAIL_PAGES}
 
 app.add_middleware(SessionMiddleware, secret_key=SESSION_SECRET, same_site="lax", https_only=SESSION_HTTPS_ONLY)
+
+oauth = OAuth()
+GOOGLE_AUTH_CONFIGURED = bool(GOOGLE_OAUTH_ENABLED and GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET)
+if GOOGLE_AUTH_CONFIGURED:
+    oauth.register(
+        name="google",
+        client_id=GOOGLE_CLIENT_ID,
+        client_secret=GOOGLE_CLIENT_SECRET,
+        server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
+        client_kwargs={"scope": "openid email profile"},
+    )
 
 
 def _auth_db_conn() -> sqlite3.Connection:
@@ -230,6 +245,22 @@ def _create_user(email: str, password: str) -> int:
         conn.close()
 
 
+def _get_or_create_google_user(email: str) -> int:
+    existing = _get_user_by_email(email)
+    if existing:
+        return int(existing["id"])
+
+    random_password = secrets.token_urlsafe(32)
+    return _create_user(email, random_password)
+
+
+def _google_client() -> Optional[Any]:
+    try:
+        return oauth.create_client("google")
+    except Exception:
+        return None
+
+
 def _get_usage(user_id: int) -> dict:
     _ensure_auth_db_ready()
     conn = _auth_db_conn()
@@ -326,7 +357,7 @@ def _auth_status_payload(request: Request) -> dict:
         "anonymous_scans_limit": ANON_SCAN_LIMIT,
         "user_scans_used": 0,
         "user_scans_limit": FREE_USER_SCAN_LIMIT,
-        "google_enabled": GOOGLE_OAUTH_ENABLED,
+        "google_enabled": GOOGLE_AUTH_CONFIGURED,
     }
     if user:
         usage = _get_usage(user["id"])
@@ -431,7 +462,7 @@ def access_page(request: Request):
             "canonical_url": f"{SITE_URL}/access",
             "mode": request.query_params.get("mode", "signin"),
             "resume": request.query_params.get("resume", "0"),
-            "google_enabled": GOOGLE_OAUTH_ENABLED,
+            "google_enabled": GOOGLE_AUTH_CONFIGURED,
         },
     )
 
@@ -479,8 +510,36 @@ def login(request: Request, email: str = Form(""), password: str = Form("")):
 
 
 @app.get("/auth/google/login")
-def auth_google_login():
-    raise HTTPException(status_code=503, detail="Google OAuth is not configured")
+async def auth_google_login(request: Request, next: str = "/?resume=1"):
+    client = _google_client()
+    if client is None:
+        raise HTTPException(status_code=503, detail="Google OAuth is not configured")
+
+    request.session["auth_next"] = next
+    redirect_uri = f"{SITE_URL}/auth/google/callback"
+    return await client.authorize_redirect(request, redirect_uri)
+
+
+@app.get("/auth/google/callback")
+async def auth_google_callback(request: Request):
+    client = _google_client()
+    if client is None:
+        raise HTTPException(status_code=503, detail="Google OAuth is not configured")
+
+    token = await client.authorize_access_token(request)
+    user_info = token.get("userinfo") if isinstance(token, dict) else None
+    if not user_info:
+        user_info = await client.userinfo(token=token)
+
+    email = str((user_info or {}).get("email", "")).strip().lower()
+    if not email:
+        raise HTTPException(status_code=400, detail="Google account email not available")
+
+    user_id = _get_or_create_google_user(email)
+    _set_session_user(request, user_id, email)
+    track_event("access_request", {"target": "login", "mode": "google_oauth"})
+    next_url = str(request.session.pop("auth_next", "/?resume=1"))
+    return RedirectResponse(url=next_url, status_code=303)
 
 
 @app.post("/auth/logout")
