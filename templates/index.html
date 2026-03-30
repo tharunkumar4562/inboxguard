@@ -270,24 +270,20 @@ Only 1 day left to register..."></textarea>
 
     <div id="auth-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="auth-modal-title">
       <div class="modal-card">
-        <h3 id="auth-modal-title">Continue Your Scans</h3>
-        <p class="micro">You've used your free scans. Sign in to keep using InboxGuard.</p>
-        
+        <h3 id="auth-modal-title">Continue your scans</h3>
+        <p class="micro">You've used your free scans. Continue where you left off.</p>
         <div class="modal-actions">
-          <button id="auth-google" type="button" class="btn-primary" onclick="window.igAuthGoogle && window.igAuthGoogle()">Continue with Google</button>
+          <button id="auth-signin" type="button" class="btn-primary" onclick="window.igAuthSignIn && window.igAuthSignIn()">Continue with Google</button>
         </div>
-
-        <p class="micro" style="margin-top: 16px; margin-bottom: 8px;">Or continue with email:</p>
-        <form id="auth-email-form" class="modal-actions">
-          <input id="auth-email-input" type="email" placeholder="you@company.com" class="email-input" style="width:100%; padding:8px; border-radius:8px; border:1px solid #4b5563; background:#0f172a; color:#e2e8f0; font-size:0.875rem; margin-bottom:8px;" />
-          <button type="submit" class="btn-secondary" style="width:100%;">Send Link</button>
-        </form>
-
-        <p id="auth-msg" class="micro" style="color:#fca5a5; margin-top:8px; text-align:center;"></p>
+        <p class="micro" style="margin-top: 10px;">or continue with email</p>
+        <div style="display:grid; gap:8px; margin-top:6px;">
+          <input id="auth-email" type="email" placeholder="you@company.com" style="padding:10px 12px; border-radius:10px; border:1px solid rgba(148,163,184,0.35); background:#07162e; color:#e2e8f0;" />
+          <button id="auth-create" type="button" class="btn-secondary" onclick="window.igAuthCreate && window.igAuthCreate()">Continue with Email</button>
+        </div>
         <button id="auth-close" type="button" class="link-action" onclick="window.igAuthClose && window.igAuthClose()">Not now</button>
       </div>
     </div>
 
-    <script src="/static/js/app.js?v=20260330-2"></script>
+    <script src="/static/js/app.js?v=20260330-3"></script>
   </body>
 </html>

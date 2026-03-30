@@ -348,18 +348,27 @@ def _set_session_user(request: Request, user_id: int, email: str) -> None:
 
 
 def _auth_status_payload(request: Request) -> dict:
+    user = _get_session_user(request)
     anon_used = _get_anon_scans_used(request)
     payload = {
-        "authenticated": False,
-        "email": "",
-        "provider": "supabase",
+        "authenticated": bool(user),
+        "email": user["email"] if user else "",
         "anonymous_scans_used": anon_used,
         "anonymous_scans_limit": ANON_SCAN_LIMIT,
         "user_scans_used": 0,
         "user_scans_limit": FREE_USER_SCAN_LIMIT,
         "google_enabled": GOOGLE_AUTH_CONFIGURED,
-        "message": "Supabase handles auth. Check frontend session for user state.",
     }
+    if user:
+        usage = _get_usage(user["id"])
+        payload.update(
+            {
+                "user_scans_used": usage["scans_used"],
+                "emails_scanned_count": usage["emails_scanned_count"],
+                "rewrite_clicked": usage["rewrite_clicked"],
+                "last_active": usage["last_active"],
+            }
+        )
     return payload
 
 
@@ -443,7 +452,19 @@ def login_page(request: Request):
 
 @app.get("/access", response_class=HTMLResponse)
 def access_page(request: Request):
-    return RedirectResponse(url="/?resume=1", status_code=307)
+    track_event("page_view", {"page": "access"})
+    return render_template_safe(
+        request,
+        "login.html",
+        {
+            "page_title": "Get Access | InboxGuard",
+            "meta_description": "Enter your email to unlock your full InboxGuard remediation report instantly.",
+            "canonical_url": f"{SITE_URL}/access",
+            "mode": request.query_params.get("mode", "signin"),
+            "resume": request.query_params.get("resume", "0"),
+            "google_enabled": GOOGLE_AUTH_CONFIGURED,
+        },
+    )
 
 
 @app.get("/auth/status")
@@ -451,17 +472,53 @@ def auth_status(request: Request):
     return _auth_status_payload(request)
 
 
-@app.post("/auth/login-link")
-def auth_login_link(email: str = Form("")):
+@app.post("/signup")
+def signup(request: Request, email: str = Form(""), password: str = Form("")):
+    clean_email = (email or "").strip().lower()
+    clean_password = password or ""
+    if not clean_email or "@" not in clean_email:
+        raise HTTPException(status_code=400, detail="Valid email is required")
+    if len(clean_password) < 8:
+        raise HTTPException(status_code=400, detail="Password must be at least 8 characters")
+
+    if _get_user_by_email(clean_email):
+        raise HTTPException(status_code=409, detail="Account already exists, please sign in")
+
+    user_id = _create_user(clean_email, clean_password)
+    _set_session_user(request, user_id, clean_email)
+    track_event("access_request", {"target": "signup", "mode": "email_password"})
+    return {"ok": True, "authenticated": True, "email": clean_email}
+
+
+@app.post("/login")
+def login(request: Request, email: str = Form(""), password: str = Form("")):
+    clean_email = (email or "").strip().lower()
+    clean_password = password or ""
+    if not clean_email or not clean_password:
+        raise HTTPException(status_code=400, detail="Email and password are required")
+
+    row = _get_user_by_email(clean_email)
+    if not row:
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+
+    if not _verify_password(clean_password, str(row["password_salt"]), str(row["password_hash"])):
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+
+    _set_session_user(request, int(row["id"]), clean_email)
+    track_event("access_request", {"target": "login", "mode": "email_password"})
+    return {"ok": True, "authenticated": True, "email": clean_email}
+
+
+@app.post("/auth/email/continue")
+def auth_email_continue(request: Request, email: str = Form("")):
     clean_email = (email or "").strip().lower()
     if not clean_email or "@" not in clean_email:
         raise HTTPException(status_code=400, detail="Valid email is required")
-    track_event("access_request", {"target": "email_link", "mode": "passwordless"})
-    return {
-        "ok": True,
-        "message": "Check your email for a magic link (Supabase handles this)",
-        "action": "check_email",
-    }
+
+    user_id = _get_or_create_google_user(clean_email)
+    _set_session_user(request, user_id, clean_email)
+    track_event("access_request", {"target": "continue", "mode": "email_only"})
+    return {"ok": True, "authenticated": True, "email": clean_email}
 
 
 @app.get("/auth/google/login")
