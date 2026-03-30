@@ -39,182 +39,111 @@
 
       <section class="rounded-3xl border border-slate-700 bg-slate-900/80 p-6 shadow-2xl">
         <h1 class="text-3xl font-bold">Continue Your Scans</h1>
-        <p class="mt-3 text-slate-300">Use a real provider to authenticate and continue without losing your draft.</p>
+        <p class="mt-3 text-slate-300">Create an account or sign in to keep scanning and save usage history.</p>
 
-        {% if auth_error == "google_not_configured" %}
-        <div class="mt-4 rounded-xl border border-amber-500/50 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
-          Google sign-in is not available yet. Continue now with Email OTP.
-        </div>
+        {% if google_enabled %}
+        <a href="/auth/google/login" class="mt-6 w-full inline-flex items-center justify-center rounded-2xl bg-blue-600 px-6 py-3 text-base font-bold text-white shadow-lg shadow-blue-900/40 transition hover:bg-blue-700 no-underline">
+          Sign in with Google
+        </a>
+        {% else %}
+        <button type="button" disabled class="mt-6 w-full rounded-2xl bg-slate-700/60 px-6 py-3 text-base font-bold text-slate-300 cursor-not-allowed">
+          Sign in with Google (coming soon)
+        </button>
         {% endif %}
 
-        {% if not email_otp_configured %}
-        <div class="mt-4 rounded-xl border border-rose-500/50 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
-          Email OTP is not configured on the server yet. Please configure SMTP environment variables.
-        </div>
-        {% endif %}
+        <p class="mt-4 text-center text-sm text-slate-400">or</p>
 
-        <div class="mt-6 space-y-4">
-          <a id="google-auth" href="/auth/google/login?next=/?resume=1" class="w-full inline-flex items-center justify-center rounded-2xl bg-blue-600 px-6 py-3 text-base font-bold text-white shadow-lg shadow-blue-900/40 transition hover:bg-blue-700 no-underline {% if not google_configured %}opacity-70 pointer-events-none{% endif %}">
-            Continue with Google
-          </a>
-
-          {% if temp_access_enabled and (not google_configured and not email_otp_configured) %}
-          <button id="temp-continue-btn" type="button" class="w-full rounded-2xl border border-slate-600 bg-slate-800 px-6 py-3 text-base font-semibold text-slate-100 transition hover:bg-slate-700">
-            Continue Without Provider (Temporary)
-          </button>
-          {% endif %}
-
-          <div id="otp-card" class="rounded-2xl border border-slate-700 bg-slate-950/50 p-4">
-            <p class="mb-3 text-sm text-slate-300">Or continue with Email OTP</p>
-            <p class="mb-3 text-xs text-slate-400">Step 1: Send OTP to your email. Step 2: Enter the code to continue.</p>
-            <form id="otp-request-form" class="space-y-3">
-              <div>
-                <label for="email" class="mb-2 block text-sm text-slate-300">Email</label>
-                <input id="email" name="email" type="email" required class="w-full rounded-2xl border border-slate-700 bg-slate-950/70 p-3 text-sm text-slate-100 outline-none transition focus:border-blue-500" placeholder="you@company.com" />
-              </div>
-              <button id="otp-send-btn" type="submit" class="w-full rounded-2xl bg-slate-700 px-6 py-3 text-base font-semibold text-white transition hover:bg-slate-600 disabled:opacity-60 disabled:cursor-not-allowed" {% if not email_otp_configured %}disabled{% endif %}>
-                Send OTP
-              </button>
-            </form>
-
-            <form id="otp-verify-form" class="space-y-3 mt-4 hidden">
-              <div>
-                <label for="otp" class="mb-2 block text-sm text-slate-300">Enter 6-digit OTP</label>
-                <input id="otp" name="otp" type="text" inputmode="numeric" maxlength="6" required class="w-full rounded-2xl border border-slate-700 bg-slate-950/70 p-3 text-sm text-slate-100 outline-none transition focus:border-blue-500" placeholder="123456" />
-              </div>
-              <button id="otp-verify-btn" type="submit" class="w-full rounded-2xl bg-emerald-600 px-6 py-3 text-base font-semibold text-white transition hover:bg-emerald-500 disabled:opacity-60 disabled:cursor-not-allowed" {% if not email_otp_configured %}disabled{% endif %}>
-                Verify OTP and Continue
-              </button>
-            </form>
-            <p id="auth-msg" class="mt-3 text-xs text-slate-400"></p>
+        <form id="auth-form" class="mt-4 space-y-4">
+          <div>
+            <label for="email" class="mb-2 block text-sm text-slate-300">Email</label>
+            <input id="email" name="email" type="email" required class="w-full rounded-2xl border border-slate-700 bg-slate-950/70 p-3 text-sm text-slate-100 outline-none transition focus:border-blue-500" placeholder="you@company.com" />
           </div>
-        </div>
+          <div>
+            <label for="password" class="mb-2 block text-sm text-slate-300">Password</label>
+            <input id="password" name="password" type="password" required class="w-full rounded-2xl border border-slate-700 bg-slate-950/70 p-3 text-sm text-slate-100 outline-none transition focus:border-blue-500" placeholder="At least 8 characters" />
+          </div>
+          <button id="auth-submit" type="submit" class="w-full rounded-2xl bg-blue-600 px-6 py-3 text-base font-bold text-white shadow-lg shadow-blue-900/40 transition hover:bg-blue-700">
+            Sign In
+          </button>
+          <p class="text-center text-sm text-slate-400">
+            Don't have an account?
+            <button id="toggle-mode" type="button" class="text-blue-300 hover:text-blue-200">Create one</button>
+          </p>
+          <p id="auth-msg" class="text-center text-sm text-rose-300"></p>
+        </form>
       </section>
     </main>
 
     <script>
       (function () {
-        const requestForm = document.getElementById("otp-request-form");
-        const verifyForm = document.getElementById("otp-verify-form");
-        const otpCard = document.getElementById("otp-card");
+        const form = document.getElementById("auth-form");
         const emailInput = document.getElementById("email");
-        const otpInput = document.getElementById("otp");
+        const passwordInput = document.getElementById("password");
+        const submitBtn = document.getElementById("auth-submit");
+        const toggleMode = document.getElementById("toggle-mode");
         const msg = document.getElementById("auth-msg");
-        const sendBtn = document.getElementById("otp-send-btn");
-        const verifyBtn = document.getElementById("otp-verify-btn");
-        const tempContinueBtn = document.getElementById("temp-continue-btn");
-
-        if (!requestForm || !verifyForm || !emailInput || !otpInput || !msg || !sendBtn || !verifyBtn) {
+        if (!form || !emailInput || !passwordInput || !submitBtn || !toggleMode || !msg) {
           return;
         }
 
         const params = new URLSearchParams(window.location.search);
         const resume = params.get("resume") === "1" ? "1" : "0";
-        const mode = params.get("mode") || "signin";
+        let mode = (params.get("mode") || "signin").toLowerCase() === "signup" ? "signup" : "signin";
 
-        if (mode === "email") {
-          if (otpCard) {
-            otpCard.classList.add("ring-2", "ring-blue-500/60");
+        function renderMode() {
+          if (mode === "signup") {
+            submitBtn.textContent = "Create Account";
+            toggleMode.textContent = "Sign in";
+          } else {
+            submitBtn.textContent = "Sign In";
+            toggleMode.textContent = "Create one";
           }
-          emailInput.focus();
+          msg.textContent = "";
         }
 
-        requestForm.addEventListener("submit", function (event) {
-          event.preventDefault();
-          sendBtn.disabled = true;
-          sendBtn.textContent = "Sending...";
-          msg.textContent = "";
+        toggleMode.addEventListener("click", function () {
+          mode = mode === "signin" ? "signup" : "signin";
+          renderMode();
+        });
 
-          const email = (emailInput.value || "").trim();
+        renderMode();
+
+        form.addEventListener("submit", function (event) {
+          event.preventDefault();
+          const email = (emailInput.value || "").trim().toLowerCase();
+          const password = (passwordInput.value || "").trim();
+
+          if (!email || !password) {
+            msg.textContent = "Email and password are required.";
+            return;
+          }
+
           const payload = new FormData();
           payload.set("email", email);
+          payload.set("password", password);
 
-          fetch("/auth/email/request-otp", {
+          const endpoint = mode === "signup" ? "/signup" : "/login";
+          submitBtn.disabled = true;
+
+          fetch(endpoint, {
             method: "POST",
             body: payload,
             keepalive: true,
           })
-            .then(async function (resp) {
-              if (!resp.ok) {
-                const payload = await resp.json().catch(function () { return {}; });
-                throw new Error(payload.detail || "Could not send OTP");
+            .then(async function (response) {
+              const body = await response.json().catch(function () { return {}; });
+              if (!response.ok) {
+                throw new Error(body.detail || "Authentication failed.");
               }
-              verifyForm.classList.remove("hidden");
-              msg.textContent = "OTP sent. Check your email and enter the code.";
-              sendBtn.textContent = "Resend OTP";
-              otpInput.focus();
+              window.location.href = resume === "1" ? "/?resume=1" : "/";
             })
             .catch(function (error) {
-              msg.textContent = error && error.message ? error.message : "Could not send OTP.";
+              msg.textContent = error && error.message ? error.message : "Authentication failed.";
             })
             .finally(function () {
-              sendBtn.disabled = false;
-              if (sendBtn.textContent === "Sending...") {
-                sendBtn.textContent = "Send OTP";
-              }
+              submitBtn.disabled = false;
             });
         });
-
-        verifyForm.addEventListener("submit", function (event) {
-          event.preventDefault();
-          verifyBtn.disabled = true;
-          verifyBtn.textContent = "Verifying...";
-          msg.textContent = "";
-
-          const email = (emailInput.value || "").trim();
-          const otp = (otpInput.value || "").trim();
-          const payload = new FormData();
-          payload.set("email", email);
-          payload.set("otp", otp);
-
-          fetch("/auth/email/verify-otp", {
-            method: "POST",
-            body: payload,
-            keepalive: true,
-          })
-            .then(async function (resp) {
-              const body = await resp.json().catch(function () { return {}; });
-              if (!resp.ok) {
-                throw new Error(body.detail || "OTP verification failed");
-              }
-              window.location.href = resume === "1" ? "/?resume=1" : (body.redirect || "/");
-            })
-            .catch(function (error) {
-              msg.textContent = error && error.message ? error.message : "OTP verification failed.";
-            })
-            .finally(function () {
-              verifyBtn.disabled = false;
-              verifyBtn.textContent = "Verify OTP and Continue";
-            });
-        });
-
-        if (tempContinueBtn) {
-          tempContinueBtn.addEventListener("click", function () {
-            tempContinueBtn.disabled = true;
-            tempContinueBtn.textContent = "Continuing...";
-            msg.textContent = "";
-            const payload = new FormData();
-            payload.set("next", resume === "1" ? "/?resume=1" : "/");
-
-            fetch("/auth/continue-temporary", {
-              method: "POST",
-              body: payload,
-              keepalive: true,
-            })
-              .then(async function (resp) {
-                const body = await resp.json().catch(function () { return {}; });
-                if (!resp.ok) {
-                  throw new Error(body.detail || "Temporary continue failed");
-                }
-                window.location.href = body.redirect || "/?resume=1";
-              })
-              .catch(function (error) {
-                msg.textContent = error && error.message ? error.message : "Temporary continue failed.";
-                tempContinueBtn.disabled = false;
-                tempContinueBtn.textContent = "Continue Without Provider (Temporary)";
-              });
-          });
-        }
       })();
     </script>
   </body>

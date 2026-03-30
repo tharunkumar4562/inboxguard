@@ -270,16 +270,16 @@ Only 1 day left to register..."></textarea>
 
     <div id="auth-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="auth-modal-title">
       <div class="modal-card">
-        <h3 id="auth-modal-title">Continue your scans</h3>
-        <p class="micro">Authenticate to save your progress and continue this action without losing your draft.</p>
+        <h3 id="auth-modal-title">You've used your free scans</h3>
+        <p class="micro">Create a free account to continue.</p>
         <div class="modal-actions">
-          <button id="auth-signin" type="button" class="btn-primary" onclick="window.igAuthSignIn && window.igAuthSignIn()">Continue with Google</button>
-          <button id="auth-create" type="button" class="btn-secondary" onclick="window.igAuthCreate && window.igAuthCreate()">Continue with Email OTP</button>
+          <button id="auth-signin" type="button" class="btn-primary" onclick="window.igAuthSignIn && window.igAuthSignIn()">Sign In</button>
+          <button id="auth-create" type="button" class="btn-secondary" onclick="window.igAuthCreate && window.igAuthCreate()">Create Account</button>
         </div>
         <button id="auth-close" type="button" class="link-action" onclick="window.igAuthClose && window.igAuthClose()">Not now</button>
       </div>
     </div>
 
-    <script src="/static/js/app.js?v=20260330-3"></script>
+    <script src="/static/js/app.js?v=20260330-2"></script>
   </body>
 </html>

@@ -1,14 +1,13 @@
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, timezone
 from difflib import SequenceMatcher
 from pathlib import Path
 import logging
 import os
 import re
-import sqlite3
+import hmac
 import hashlib
-import smtplib
-from email.message import EmailMessage
-from urllib.parse import quote_plus
+import secrets
+import sqlite3
 
 from fastapi import FastAPI, Form, Request, HTTPException
 from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse, Response, JSONResponse, FileResponse
@@ -16,7 +15,6 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
 from jinja2 import TemplateNotFound, TemplateError
-from authlib.integrations.starlette_client import OAuth
 
 from analyzer import analyze_email
 from analytics import get_dashboard_data, track_event
@@ -35,18 +33,14 @@ templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
 SITE_URL = os.getenv("INBOXGUARD_SITE_URL", "https://inboxguard.me")
 ADMIN_TOKEN = os.getenv("INBOXGUARD_ADMIN_TOKEN", "")
-SESSION_SECRET = os.getenv("INBOXGUARD_SESSION_SECRET", "change-this-session-secret")
+SESSION_SECRET = os.getenv("INBOXGUARD_SESSION_SECRET", "change-me-in-production")
+SESSION_HTTPS_ONLY = os.getenv("INBOXGUARD_SESSION_HTTPS_ONLY", "0").strip().lower() in {"1", "true", "yes"}
 AUTH_DB_FILE = BASE_DIR / "data" / "auth.db"
-OTP_TTL_MINUTES = int(os.getenv("INBOXGUARD_OTP_TTL_MINUTES", "10"))
-SMTP_HOST = os.getenv("INBOXGUARD_SMTP_HOST", "")
-SMTP_PORT = int(os.getenv("INBOXGUARD_SMTP_PORT", "587"))
-SMTP_USERNAME = os.getenv("INBOXGUARD_SMTP_USERNAME", "")
-SMTP_PASSWORD = os.getenv("INBOXGUARD_SMTP_PASSWORD", "")
-SMTP_FROM = os.getenv("INBOXGUARD_SMTP_FROM", "")
-GOOGLE_CLIENT_ID = os.getenv("INBOXGUARD_GOOGLE_CLIENT_ID", "")
-GOOGLE_CLIENT_SECRET = os.getenv("INBOXGUARD_GOOGLE_CLIENT_SECRET", "")
-ALLOW_TEMP_ACCESS = os.getenv("INBOXGUARD_ALLOW_TEMP_ACCESS", "1").strip().lower() not in {"0", "false", "no"}
+ANON_SCAN_LIMIT = int(os.getenv("INBOXGUARD_ANON_SCAN_LIMIT", "3"))
+FREE_USER_SCAN_LIMIT = int(os.getenv("INBOXGUARD_FREE_USER_SCAN_LIMIT", "50"))
+GOOGLE_OAUTH_ENABLED = os.getenv("INBOXGUARD_GOOGLE_OAUTH_ENABLED", "0").strip().lower() in {"1", "true", "yes"}
 GOOGLE_VERIFICATION_FILE = "googleab4b33a28d8dfb88.html"
+AUTH_DB_READY = False
 LONG_TAIL_PAGES = [
     {
         "slug": "fix-godaddy-spam-issues",
@@ -69,17 +63,7 @@ LONG_TAIL_PAGES = [
 ]
 LONG_TAIL_BY_SLUG = {item["slug"]: item for item in LONG_TAIL_PAGES}
 
-app.add_middleware(SessionMiddleware, secret_key=SESSION_SECRET, same_site="lax", https_only=True)
-
-oauth = OAuth()
-if GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET:
-    oauth.register(
-        name="google",
-        client_id=GOOGLE_CLIENT_ID,
-        client_secret=GOOGLE_CLIENT_SECRET,
-        server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
-        client_kwargs={"scope": "openid email profile"},
-    )
+app.add_middleware(SessionMiddleware, secret_key=SESSION_SECRET, same_site="lax", https_only=SESSION_HTTPS_ONLY)
 
 
 def _auth_db_conn() -> sqlite3.Connection:
@@ -97,19 +81,34 @@ def _ensure_auth_db() -> None:
             CREATE TABLE IF NOT EXISTS users (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 email TEXT UNIQUE NOT NULL,
-                provider TEXT NOT NULL,
+                password_hash TEXT NOT NULL,
+                password_salt TEXT NOT NULL,
                 created_at TEXT NOT NULL,
-                last_login_at TEXT NOT NULL
+                last_active TEXT NOT NULL
             )
             """
         )
         conn.execute(
             """
-            CREATE TABLE IF NOT EXISTS otp_codes (
-                email TEXT PRIMARY KEY,
-                code_hash TEXT NOT NULL,
-                expires_at TEXT NOT NULL,
-                created_at TEXT NOT NULL
+            CREATE TABLE IF NOT EXISTS usage (
+                user_id INTEGER PRIMARY KEY,
+                scans_used INTEGER NOT NULL DEFAULT 0,
+                emails_scanned_count INTEGER NOT NULL DEFAULT 0,
+                rewrite_clicked INTEGER NOT NULL DEFAULT 0,
+                last_scan TEXT,
+                last_active TEXT,
+                FOREIGN KEY(user_id) REFERENCES users(id)
+            )
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS anon_usage (
+                anon_id TEXT NOT NULL,
+                period_key TEXT NOT NULL,
+                scans_used INTEGER NOT NULL DEFAULT 0,
+                last_scan TEXT,
+                PRIMARY KEY (anon_id, period_key)
             )
             """
         )
@@ -118,60 +117,228 @@ def _ensure_auth_db() -> None:
         conn.close()
 
 
-def _hash_otp(email: str, otp: str) -> str:
-    material = f"{email.lower().strip()}:{otp}:{SESSION_SECRET}"
-    return hashlib.sha256(material.encode("utf-8")).hexdigest()
-
-
-def _upsert_user(email: str, provider: str) -> None:
-    clean_email = (email or "").strip().lower()
-    if not clean_email:
+def _ensure_auth_db_ready() -> None:
+    global AUTH_DB_READY
+    if AUTH_DB_READY:
         return
-    now = datetime.now(timezone.utc).isoformat()
+    _ensure_auth_db()
+    AUTH_DB_READY = True
+
+
+def _now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def _period_key() -> str:
+    now = datetime.now(timezone.utc)
+    return f"{now.year:04d}-{now.month:02d}"
+
+
+def _hash_password(password: str, salt: str) -> str:
+    digest = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt.encode("utf-8"), 120000)
+    return digest.hex()
+
+
+def _new_password_credentials(password: str) -> tuple[str, str]:
+    salt = secrets.token_hex(16)
+    return salt, _hash_password(password, salt)
+
+
+def _verify_password(password: str, salt: str, expected_hash: str) -> bool:
+    return hmac.compare_digest(_hash_password(password, salt), expected_hash)
+
+
+def _get_or_create_anon_id(request: Request) -> str:
+    anon_id = str(request.session.get("anon_id", "")).strip()
+    if anon_id:
+        return anon_id
+    anon_id = secrets.token_urlsafe(18)
+    request.session["anon_id"] = anon_id
+    return anon_id
+
+
+def _get_anon_scans_used(request: Request) -> int:
+    _ensure_auth_db_ready()
+    anon_id = _get_or_create_anon_id(request)
     conn = _auth_db_conn()
     try:
-        existing = conn.execute("SELECT email FROM users WHERE email=?", (clean_email,)).fetchone()
-        if existing:
-            conn.execute("UPDATE users SET provider=?, last_login_at=? WHERE email=?", (provider, now, clean_email))
-        else:
-            conn.execute(
-                "INSERT INTO users(email, provider, created_at, last_login_at) VALUES (?, ?, ?, ?)",
-                (clean_email, provider, now, now),
-            )
+        row = conn.execute(
+            "SELECT scans_used FROM anon_usage WHERE anon_id=? AND period_key=?",
+            (anon_id, _period_key()),
+        ).fetchone()
+        return int(row["scans_used"]) if row else 0
+    finally:
+        conn.close()
+
+
+def _increment_anon_scan(request: Request) -> int:
+    _ensure_auth_db_ready()
+    anon_id = _get_or_create_anon_id(request)
+    now = _now_iso()
+    period = _period_key()
+    conn = _auth_db_conn()
+    try:
+        conn.execute(
+            """
+            INSERT INTO anon_usage(anon_id, period_key, scans_used, last_scan)
+            VALUES (?, ?, 1, ?)
+            ON CONFLICT(anon_id, period_key) DO UPDATE SET
+                scans_used = scans_used + 1,
+                last_scan = excluded.last_scan
+            """,
+            (anon_id, period, now),
+        )
+        conn.commit()
+        row = conn.execute(
+            "SELECT scans_used FROM anon_usage WHERE anon_id=? AND period_key=?",
+            (anon_id, period),
+        ).fetchone()
+        return int(row["scans_used"]) if row else 0
+    finally:
+        conn.close()
+
+
+def _get_user_by_email(email: str):
+    _ensure_auth_db_ready()
+    conn = _auth_db_conn()
+    try:
+        return conn.execute("SELECT * FROM users WHERE email=?", (email,)).fetchone()
+    finally:
+        conn.close()
+
+
+def _create_user(email: str, password: str) -> int:
+    _ensure_auth_db_ready()
+    now = _now_iso()
+    salt, password_hash = _new_password_credentials(password)
+    conn = _auth_db_conn()
+    try:
+        cursor = conn.execute(
+            "INSERT INTO users(email, password_hash, password_salt, created_at, last_active) VALUES (?, ?, ?, ?, ?)",
+            (email, password_hash, salt, now, now),
+        )
+        if cursor.lastrowid is None:
+            raise HTTPException(status_code=500, detail="Could not create user account")
+        user_id = int(cursor.lastrowid)
+        conn.execute(
+            "INSERT INTO usage(user_id, scans_used, emails_scanned_count, rewrite_clicked, last_active) VALUES (?, 0, 0, 0, ?)",
+            (user_id, now),
+        )
+        conn.commit()
+        return user_id
+    finally:
+        conn.close()
+
+
+def _get_usage(user_id: int) -> dict:
+    _ensure_auth_db_ready()
+    conn = _auth_db_conn()
+    try:
+        row = conn.execute(
+            "SELECT scans_used, emails_scanned_count, rewrite_clicked, last_scan, last_active FROM usage WHERE user_id=?",
+            (user_id,),
+        ).fetchone()
+        if not row:
+            return {
+                "scans_used": 0,
+                "emails_scanned_count": 0,
+                "rewrite_clicked": 0,
+                "last_scan": "",
+                "last_active": "",
+            }
+        return {
+            "scans_used": int(row["scans_used"]),
+            "emails_scanned_count": int(row["emails_scanned_count"]),
+            "rewrite_clicked": int(row["rewrite_clicked"]),
+            "last_scan": str(row["last_scan"] or ""),
+            "last_active": str(row["last_active"] or ""),
+        }
+    finally:
+        conn.close()
+
+
+def _increment_user_scan(user_id: int) -> int:
+    _ensure_auth_db_ready()
+    now = _now_iso()
+    conn = _auth_db_conn()
+    try:
+        conn.execute(
+            """
+            INSERT INTO usage(user_id, scans_used, emails_scanned_count, rewrite_clicked, last_scan, last_active)
+            VALUES (?, 1, 1, 0, ?, ?)
+            ON CONFLICT(user_id) DO UPDATE SET
+                scans_used = scans_used + 1,
+                emails_scanned_count = emails_scanned_count + 1,
+                last_scan = excluded.last_scan,
+                last_active = excluded.last_active
+            """,
+            (user_id, now, now),
+        )
+        conn.execute("UPDATE users SET last_active=? WHERE id=?", (now, user_id))
+        conn.commit()
+        row = conn.execute("SELECT scans_used FROM usage WHERE user_id=?", (user_id,)).fetchone()
+        return int(row["scans_used"]) if row else 0
+    finally:
+        conn.close()
+
+
+def _increment_rewrite_clicked(user_id: int) -> None:
+    _ensure_auth_db_ready()
+    now = _now_iso()
+    conn = _auth_db_conn()
+    try:
+        conn.execute(
+            """
+            INSERT INTO usage(user_id, scans_used, emails_scanned_count, rewrite_clicked, last_active)
+            VALUES (?, 0, 0, 1, ?)
+            ON CONFLICT(user_id) DO UPDATE SET
+                rewrite_clicked = rewrite_clicked + 1,
+                last_active = excluded.last_active
+            """,
+            (user_id, now),
+        )
+        conn.execute("UPDATE users SET last_active=? WHERE id=?", (now, user_id))
         conn.commit()
     finally:
         conn.close()
 
 
-def _set_auth_session(request: Request, email: str, provider: str) -> None:
-    request.session["auth_email"] = (email or "").strip().lower()
-    request.session["auth_provider"] = provider
-    request.session["auth_at"] = datetime.now(timezone.utc).isoformat()
+def _get_session_user(request: Request):
+    user_id = int(request.session.get("user_id", 0) or 0)
+    email = str(request.session.get("user_email", "")).strip().lower()
+    if user_id <= 0 or not email:
+        return None
+    return {"id": user_id, "email": email}
 
 
-def _send_otp_email(email: str, otp: str) -> None:
-    if not (SMTP_HOST and SMTP_USERNAME and SMTP_PASSWORD and SMTP_FROM):
-        raise HTTPException(status_code=503, detail="Email OTP provider is not configured")
+def _set_session_user(request: Request, user_id: int, email: str) -> None:
+    request.session["user_id"] = user_id
+    request.session["user_email"] = email
 
-    message = EmailMessage()
-    message["Subject"] = "Your InboxGuard verification code"
-    message["From"] = SMTP_FROM
-    message["To"] = email
-    message.set_content(
-        "\n".join(
-            [
-                "Your InboxGuard OTP code:",
-                otp,
-                "",
-                f"This code expires in {OTP_TTL_MINUTES} minutes.",
-            ]
+
+def _auth_status_payload(request: Request) -> dict:
+    user = _get_session_user(request)
+    anon_used = _get_anon_scans_used(request)
+    payload = {
+        "authenticated": bool(user),
+        "email": user["email"] if user else "",
+        "anonymous_scans_used": anon_used,
+        "anonymous_scans_limit": ANON_SCAN_LIMIT,
+        "user_scans_used": 0,
+        "user_scans_limit": FREE_USER_SCAN_LIMIT,
+        "google_enabled": GOOGLE_OAUTH_ENABLED,
+    }
+    if user:
+        usage = _get_usage(user["id"])
+        payload.update(
+            {
+                "user_scans_used": usage["scans_used"],
+                "emails_scanned_count": usage["emails_scanned_count"],
+                "rewrite_clicked": usage["rewrite_clicked"],
+                "last_active": usage["last_active"],
+            }
         )
-    )
-
-    with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=20) as smtp:
-        smtp.starttls()
-        smtp.login(SMTP_USERNAME, SMTP_PASSWORD)
-        smtp.send_message(message)
+    return payload
 
 
 def render_template_safe(request: Request, template_name: str, context: dict, status_code: int = 200):
@@ -255,7 +422,6 @@ def login_page(request: Request):
 @app.get("/access", response_class=HTMLResponse)
 def access_page(request: Request):
     track_event("page_view", {"page": "access"})
-    auth_error = request.query_params.get("error", "")
     return render_template_safe(
         request,
         "login.html",
@@ -263,144 +429,65 @@ def access_page(request: Request):
             "page_title": "Get Access | InboxGuard",
             "meta_description": "Enter your email to unlock your full InboxGuard remediation report instantly.",
             "canonical_url": f"{SITE_URL}/access",
-            "resume_mode": request.query_params.get("resume", "0"),
-            "auth_mode": request.query_params.get("mode", "signin"),
-            "auth_error": auth_error,
-            "google_configured": bool(GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET),
-            "email_otp_configured": bool(SMTP_HOST and SMTP_USERNAME and SMTP_PASSWORD and SMTP_FROM),
-            "temp_access_enabled": ALLOW_TEMP_ACCESS,
+            "mode": request.query_params.get("mode", "signin"),
+            "resume": request.query_params.get("resume", "0"),
+            "google_enabled": GOOGLE_OAUTH_ENABLED,
         },
     )
 
 
 @app.get("/auth/status")
 def auth_status(request: Request):
-    email = str(request.session.get("auth_email", "")).strip().lower()
-    provider = str(request.session.get("auth_provider", "")).strip().lower()
-    google_configured = bool(GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET)
-    email_otp_configured = bool(SMTP_HOST and SMTP_USERNAME and SMTP_PASSWORD and SMTP_FROM)
-    return {
-        "authenticated": bool(email),
-        "email": email,
-        "provider": provider,
-        "google_configured": google_configured,
-        "email_otp_configured": email_otp_configured,
-        "temp_access_enabled": ALLOW_TEMP_ACCESS,
-    }
+    return _auth_status_payload(request)
+
+
+@app.post("/signup")
+def signup(request: Request, email: str = Form(""), password: str = Form("")):
+    clean_email = (email or "").strip().lower()
+    clean_password = password or ""
+    if not clean_email or "@" not in clean_email:
+        raise HTTPException(status_code=400, detail="Valid email is required")
+    if len(clean_password) < 8:
+        raise HTTPException(status_code=400, detail="Password must be at least 8 characters")
+
+    if _get_user_by_email(clean_email):
+        raise HTTPException(status_code=409, detail="Account already exists, please sign in")
+
+    user_id = _create_user(clean_email, clean_password)
+    _set_session_user(request, user_id, clean_email)
+    track_event("access_request", {"target": "signup", "mode": "email_password"})
+    return {"ok": True, "authenticated": True, "email": clean_email}
+
+
+@app.post("/login")
+def login(request: Request, email: str = Form(""), password: str = Form("")):
+    clean_email = (email or "").strip().lower()
+    clean_password = password or ""
+    if not clean_email or not clean_password:
+        raise HTTPException(status_code=400, detail="Email and password are required")
+
+    row = _get_user_by_email(clean_email)
+    if not row:
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+
+    if not _verify_password(clean_password, str(row["password_salt"]), str(row["password_hash"])):
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+
+    _set_session_user(request, int(row["id"]), clean_email)
+    track_event("access_request", {"target": "login", "mode": "email_password"})
+    return {"ok": True, "authenticated": True, "email": clean_email}
 
 
 @app.get("/auth/google/login")
-async def auth_google_login(request: Request, next: str = "/?resume=1"):
-    google_client = oauth.create_client("google")
-    if google_client is None:
-        fallback = f"/access?mode=email&resume=1&error={quote_plus('google_not_configured')}"
-        return RedirectResponse(url=fallback, status_code=303)
-
-    request.session["auth_next"] = next
-    redirect_uri = f"{SITE_URL}/auth/google/callback"
-    return await google_client.authorize_redirect(request, redirect_uri)
-
-
-@app.get("/auth/google/callback")
-async def auth_google_callback(request: Request):
-    google_client = oauth.create_client("google")
-    if google_client is None:
-        fallback = f"/access?mode=email&resume=1&error={quote_plus('google_not_configured')}"
-        return RedirectResponse(url=fallback, status_code=303)
-
-    token = await google_client.authorize_access_token(request)
-    user_info = token.get("userinfo")
-    if not user_info:
-        user_info = await google_client.userinfo(token=token)
-
-    email = str((user_info or {}).get("email", "")).strip().lower()
-    if not email:
-        raise HTTPException(status_code=400, detail="Google account email not available")
-
-    _upsert_user(email, "google")
-    _set_auth_session(request, email, "google")
-    next_url = str(request.session.pop("auth_next", "/?resume=1"))
-    return RedirectResponse(url=next_url, status_code=303)
-
-
-@app.post("/auth/email/request-otp")
-def auth_email_request_otp(email: str = Form("")):
-    clean_email = (email or "").strip().lower()
-    if not clean_email or "@" not in clean_email:
-        raise HTTPException(status_code=400, detail="Valid email is required")
-
-    otp = str(int.from_bytes(os.urandom(4), "big") % 900000 + 100000)
-    code_hash = _hash_otp(clean_email, otp)
-    created_at = datetime.now(timezone.utc)
-    expires_at = created_at + timedelta(minutes=OTP_TTL_MINUTES)
-
-    conn = _auth_db_conn()
-    try:
-        conn.execute(
-            """
-            INSERT INTO otp_codes(email, code_hash, expires_at, created_at)
-            VALUES (?, ?, ?, ?)
-            ON CONFLICT(email) DO UPDATE SET code_hash=excluded.code_hash, expires_at=excluded.expires_at, created_at=excluded.created_at
-            """,
-            (clean_email, code_hash, expires_at.isoformat(), created_at.isoformat()),
-        )
-        conn.commit()
-    finally:
-        conn.close()
-
-    _send_otp_email(clean_email, otp)
-    return {"ok": True}
-
-
-@app.post("/auth/email/verify-otp")
-def auth_email_verify_otp(request: Request, email: str = Form(""), otp: str = Form("")):
-    clean_email = (email or "").strip().lower()
-    clean_otp = re.sub(r"\D", "", otp or "")
-    if not clean_email or len(clean_otp) != 6:
-        raise HTTPException(status_code=400, detail="Email and 6-digit OTP are required")
-
-    conn = _auth_db_conn()
-    try:
-        row = conn.execute("SELECT code_hash, expires_at FROM otp_codes WHERE email=?", (clean_email,)).fetchone()
-        if not row:
-            raise HTTPException(status_code=400, detail="OTP not requested for this email")
-
-        expires_at = datetime.fromisoformat(str(row["expires_at"]))
-        if datetime.now(timezone.utc) > expires_at:
-            conn.execute("DELETE FROM otp_codes WHERE email=?", (clean_email,))
-            conn.commit()
-            raise HTTPException(status_code=400, detail="OTP expired, request a new code")
-
-        expected_hash = str(row["code_hash"])
-        if _hash_otp(clean_email, clean_otp) != expected_hash:
-            raise HTTPException(status_code=400, detail="Invalid OTP")
-
-        conn.execute("DELETE FROM otp_codes WHERE email=?", (clean_email,))
-        conn.commit()
-    finally:
-        conn.close()
-
-    _upsert_user(clean_email, "email_otp")
-    _set_auth_session(request, clean_email, "email_otp")
-    return {"ok": True, "redirect": "/?resume=1"}
+def auth_google_login():
+    raise HTTPException(status_code=503, detail="Google OAuth is not configured")
 
 
 @app.post("/auth/logout")
 def auth_logout(request: Request):
-    request.session.clear()
+    request.session.pop("user_id", None)
+    request.session.pop("user_email", None)
     return {"ok": True}
-
-
-@app.post("/auth/continue-temporary")
-def auth_continue_temporary(request: Request, next: str = Form("/?resume=1")):
-    if not ALLOW_TEMP_ACCESS:
-        raise HTTPException(status_code=403, detail="Temporary access is disabled")
-
-    _set_auth_session(request, "temporary@inboxguard.local", "temporary")
-    safe_next = (next or "/?resume=1").strip()
-    if not safe_next.startswith("/"):
-        safe_next = "/?resume=1"
-    return {"ok": True, "redirect": safe_next}
 
 
 @app.get("/p/{slug}", response_class=HTMLResponse)
@@ -472,6 +559,7 @@ def sitemap_xml():
 
 @app.post("/analyze")
 def analyze(
+    request: Request,
     email: str = Form(""),
     domain: str = Form(""),
     raw_email: str = Form(""),
@@ -518,7 +606,17 @@ def analyze(
     if mode not in ("content", "full"):
         mode = "content"
 
-    track_event("analyze_request", {"mode": mode})
+    user = _get_session_user(request)
+    if user:
+        usage = _get_usage(user["id"])
+        if usage["scans_used"] >= FREE_USER_SCAN_LIMIT:
+            raise HTTPException(status_code=402, detail="FREE_PLAN_LIMIT_REACHED")
+    else:
+        anon_used = _get_anon_scans_used(request)
+        if anon_used >= ANON_SCAN_LIMIT:
+            raise HTTPException(status_code=401, detail="AUTH_REQUIRED")
+
+    track_event("analyze_request", {"mode": mode, "auth": "user" if user else "anon"})
 
     result = analyze_email(
         parsed_email,
@@ -529,6 +627,20 @@ def analyze(
         body_override=parsed_body,
     )
     result["learning_profile"] = get_learning_profile()
+    if user:
+        user_scans = _increment_user_scan(user["id"])
+        result["usage"] = {
+            "authenticated": True,
+            "user_scans_used": user_scans,
+            "user_scans_limit": FREE_USER_SCAN_LIMIT,
+        }
+    else:
+        anon_scans = _increment_anon_scan(request)
+        result["usage"] = {
+            "authenticated": False,
+            "anonymous_scans_used": anon_scans,
+            "anonymous_scans_limit": ANON_SCAN_LIMIT,
+        }
     return result
 
 
@@ -800,12 +912,13 @@ def submit_feedback(
 
 @app.post("/track")
 def track(
+    request: Request,
     event: str = Form(""),
     target: str = Form(""),
     mode: str = Form(""),
 ):
     event_name = (event or "").strip().lower()
-    if event_name not in {"cta_click", "page_view", "access_request"}:
+    if event_name not in {"cta_click", "page_view", "access_request", "rewrite_clicked"}:
         return JSONResponse({"ok": True})
 
     meta = {
@@ -813,6 +926,10 @@ def track(
         "mode": (mode or "")[:20],
     }
     track_event(event_name, meta)
+    if event_name == "rewrite_clicked":
+        user = _get_session_user(request)
+        if user:
+            _increment_rewrite_clicked(user["id"])
     return JSONResponse({"ok": True})
 
 

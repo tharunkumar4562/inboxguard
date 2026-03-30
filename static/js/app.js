@@ -72,10 +72,10 @@ let latestLearningProfile = null;
 let hasScanResult = false;
 let pendingAction = null;
 let isAuthenticated = false;
-let freeRunCount = Number(localStorage.getItem("ig_free_run_count") || "0");
-let googleConfigured = true;
-let emailOtpConfigured = true;
-let tempAccessEnabled = false;
+let anonymousScansUsed = Number(localStorage.getItem("ig_anon_scans_used") || "0");
+let anonymousScansLimit = Number(localStorage.getItem("ig_anon_scans_limit") || "3");
+let userScansUsed = 0;
+let userScansLimit = 50;
 
 const errorBanner = document.createElement("div");
 errorBanner.id = "error-banner";
@@ -102,6 +102,11 @@ function showAuthModal() {
     if (!authModal) {
         return;
     }
+
+    const msgNode = authModal.querySelector(".micro");
+    if (msgNode) {
+        msgNode.textContent = "You've used your free scans. Create a free account or sign in to continue.";
+    }
     authModal.classList.remove("hidden");
 }
 
@@ -114,16 +119,9 @@ function hideAuthModal() {
 
 function needsAuthGate(action) {
     if (isAuthenticated) {
-        return false;
+        return action === "analyze" && userScansUsed >= userScansLimit;
     }
-    if (!googleConfigured && !emailOtpConfigured && tempAccessEnabled) {
-        return false;
-    }
-    // Option A: allow first run without auth, gate subsequent actions.
-    if (action === "analyze" && freeRunCount < 1) {
-        return false;
-    }
-    return true;
+    return action === "analyze" && anonymousScansUsed >= anonymousScansLimit;
 }
 
 async function refreshAuthStatus() {
@@ -134,11 +132,15 @@ async function refreshAuthStatus() {
         }
         const data = await response.json();
         isAuthenticated = Boolean(data && data.authenticated);
-        googleConfigured = data ? Boolean(data.google_configured) : true;
-        emailOtpConfigured = data ? Boolean(data.email_otp_configured) : true;
-        tempAccessEnabled = data ? Boolean(data.temp_access_enabled) : false;
+        anonymousScansUsed = Number(data && data.anonymous_scans_used ? data.anonymous_scans_used : 0);
+        anonymousScansLimit = Number(data && data.anonymous_scans_limit ? data.anonymous_scans_limit : 3);
+        userScansUsed = Number(data && data.user_scans_used ? data.user_scans_used : 0);
+        userScansLimit = Number(data && data.user_scans_limit ? data.user_scans_limit : 50);
+
+        localStorage.setItem("ig_anon_scans_used", String(anonymousScansUsed));
+        localStorage.setItem("ig_anon_scans_limit", String(anonymousScansLimit));
     } catch (error) {
-        // Keep guest path resilient when auth status endpoint is unavailable.
+        // Keep UI operational even if auth status endpoint is temporarily unavailable.
     }
 }
 
@@ -206,30 +208,17 @@ function resumeAfterAccessIfNeeded() {
     window.history.replaceState({}, document.title, cleanUrl);
 }
 
-function onAuthSuccess(source) {
-    isAuthenticated = true;
-    hideAuthModal();
-
-    const payload = new FormData();
-    payload.set("event", "access_request");
-    payload.set("target", source || "auth_modal");
-    payload.set("mode", "resume_pending_action");
-    fetch("/track", { method: "POST", body: payload }).catch(() => null);
-
-    runPendingAction();
-}
-
 function handleAuthAction(action) {
     if (action === "signin") {
         stashPendingContext(pendingAction || "analyze");
         hideAuthModal();
-        window.location.href = "/auth/google/login?next=" + encodeURIComponent("/?resume=1");
+        window.location.href = "/access?mode=signin&resume=1";
         return;
     }
     if (action === "create") {
         stashPendingContext(pendingAction || "analyze");
         hideAuthModal();
-        window.location.href = "/access?mode=email&resume=1";
+        window.location.href = "/access?mode=signup&resume=1";
         return;
     }
     hideAuthModal();
@@ -752,6 +741,16 @@ async function showFixTransformation() {
 
 async function runAnalyze() {
     await refreshAuthStatus();
+
+    if (needsAuthGate("analyze")) {
+        if (isAuthenticated) {
+            showError("You reached your monthly free plan scan limit. Upgrade is required for more scans.");
+        } else {
+            showAuthModal();
+        }
+        return;
+    }
+
     const rawText = rawEmailInput ? rawEmailInput.value.trim() : "";
     const domainText = domainInput ? domainInput.value.trim() : "";
     const mode = analysisModeInput ? analysisModeInput.value : "content";
@@ -778,6 +777,15 @@ async function runAnalyze() {
         });
 
         if (!response.ok) {
+            const err = await response.json().catch(() => ({}));
+            const code = String(err.detail || "");
+            if (code === "AUTH_REQUIRED") {
+                showAuthModal();
+                throw new Error("Sign in to continue scanning.");
+            }
+            if (code === "FREE_PLAN_LIMIT_REACHED") {
+                throw new Error("You reached your monthly free plan scan limit. Upgrade is required for more scans.");
+            }
             throw new Error("Unable to complete risk scan. Try again.");
         }
 
@@ -817,8 +825,16 @@ async function runAnalyze() {
         }
         activateTab("dashboard");
 
-        freeRunCount += 1;
-        localStorage.setItem("ig_free_run_count", String(freeRunCount));
+        if (data.usage && !data.usage.authenticated) {
+            anonymousScansUsed = Number(data.usage.anonymous_scans_used || anonymousScansUsed + 1);
+            anonymousScansLimit = Number(data.usage.anonymous_scans_limit || anonymousScansLimit);
+            localStorage.setItem("ig_anon_scans_used", String(anonymousScansUsed));
+            localStorage.setItem("ig_anon_scans_limit", String(anonymousScansLimit));
+        }
+        if (data.usage && data.usage.authenticated) {
+            userScansUsed = Number(data.usage.user_scans_used || userScansUsed + 1);
+            userScansLimit = Number(data.usage.user_scans_limit || userScansLimit);
+        }
     } catch (error) {
         if (loadingTicker) {
             clearInterval(loadingTicker);
@@ -892,6 +908,10 @@ if (startButton) {
     startButton.addEventListener("click", () => {
         pendingAction = "analyze";
         if (needsAuthGate("analyze")) {
+            if (isAuthenticated) {
+                showError("You reached your monthly free plan scan limit. Upgrade is required for more scans.");
+                return;
+            }
             showAuthModal();
             return;
         }
@@ -900,11 +920,11 @@ if (startButton) {
 }
 if (fixNowButton) {
     fixNowButton.addEventListener("click", () => {
+        const payload = new FormData();
+        payload.set("event", "rewrite_clicked");
+        fetch("/track", { method: "POST", body: payload }).catch(() => null);
+
         pendingAction = "fix";
-        if (needsAuthGate("fix")) {
-            showAuthModal();
-            return;
-        }
         runPendingAction();
     });
 }
@@ -964,6 +984,10 @@ if (form) {
         event.preventDefault();
         pendingAction = "analyze";
         if (needsAuthGate("analyze")) {
+            if (isAuthenticated) {
+                showError("You reached your monthly free plan scan limit. Upgrade is required for more scans.");
+                return;
+            }
             showAuthModal();
             return;
         }

@@ -3,6 +3,4 @@ uvicorn[standard]
 jinja2
 python-multipart
 dnspython
-authlib
 itsdangerous
-httpx
