@@ -87,18 +87,29 @@
         </section>
         <p id="tab-feedback" class="tab-feedback">Paste your draft below to scan and fix it before sending.</p>
 
+        <section class="usage-live-grid">
+          <article class="usage-live-card">
+            <p class="usage-live-label">Scans Used</p>
+            <p id="usage-scans-used" class="usage-live-value">0</p>
+          </article>
+          <article class="usage-live-card">
+            <p class="usage-live-label">Emails Scanned</p>
+            <p id="usage-emails-scanned" class="usage-live-value">0</p>
+          </article>
+          <article class="usage-live-card">
+            <p class="usage-live-label">Rewrite Clicks</p>
+            <p id="usage-rewrite-clicked" class="usage-live-value">0</p>
+          </article>
+          <article class="usage-live-card">
+            <p class="usage-live-label">Last Active</p>
+            <p id="usage-last-active" class="usage-live-value usage-live-small">Guest session</p>
+          </article>
+        </section>
+
         <section class="scan-panel card">
           <form id="risk-form" class="scan-form">
-            <div class="usage-guide">
-              <p><strong>How to use this:</strong></p>
-              <ol>
-                <li>Paste your full email (subject + body)</li>
-                <li>Click "Fix Before Sending"</li>
-                <li>See what Gmail will flag and a safer version</li>
-              </ol>
-              <p class="tip">Tip: Try a promotional or cold email for best results.</p>
-            </div>
-            <label class="input-label" for="raw-email">Paste The Email You Plan To Send</label>
+            <label class="input-label" for="raw-email">Paste your email draft</label>
+            <p class="micro" style="margin: 0 0 8px;">Paste your email -> Click Analyze Email -> Get fixes instantly.</p>
             <textarea id="raw-email" name="raw_email" rows="8" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Paste your full email here (include subject + message)
 
 Example:
@@ -107,21 +118,24 @@ Subject: Last chance to apply
 Hi John,
 Only 1 day left to register..."></textarea>
 
-            <div class="inline-fields">
-              <div>
-                <label for="domain">Domain</label>
-                <input id="domain" name="domain" type="text" placeholder="yourdomain.com" autocomplete="off" />
+            <details class="advanced-options">
+              <summary>Advanced options (optional)</summary>
+              <div class="inline-fields" style="margin-top: 10px;">
+                <div>
+                  <label for="domain">Domain</label>
+                  <input id="domain" name="domain" type="text" placeholder="yourdomain.com" autocomplete="off" />
+                </div>
+                <div>
+                  <label for="analysis-mode">Scan Mode</label>
+                  <select id="analysis-mode" name="analysis_mode">
+                    <option value="content" selected>Content only</option>
+                    <option value="full">Full (content + SPF/DKIM/DMARC)</option>
+                  </select>
+                </div>
               </div>
-              <div>
-                <label for="analysis-mode">Scan Mode</label>
-                <select id="analysis-mode" name="analysis_mode">
-                  <option value="content" selected>Content only</option>
-                  <option value="full">Full (content + SPF/DKIM/DMARC)</option>
-                </select>
-              </div>
-            </div>
+            </details>
 
-            <button type="submit" id="run-check" class="btn-danger">Fix Before Sending</button>
+            <button type="submit" id="run-check" class="btn-danger">Analyze Email</button>
             <p class="micro">Scannable in under 5 seconds. No signup required.</p>
 
             <div id="result-loading" class="loading-panel hidden">
@@ -195,7 +209,7 @@ Only 1 day left to register..."></textarea>
                 </select>
               </div>
             </div>
-            <button id="fix-now" type="button" class="btn-primary" style="width: 100%; margin-bottom: 1rem;">Fix My Email</button>
+            <button id="fix-now" type="button" class="btn-primary" style="width: 100%; margin-bottom: 1rem;">Fix Issues</button>
             <div style="font-size: 0.9rem; color: #8b94a5; line-height: 1.5;">
               <strong>What this does:</strong> Removes spam signals, adds personalization, makes it 1:1 instead of broadcast.
             </div>
@@ -290,6 +304,6 @@ Only 1 day left to register..."></textarea>
       </div>
     </div>
 
-    <script src="/static/js/app.js?v=20260330-5"></script>
+    <script src="/static/js/app.js?v=20260401-1"></script>
   </body>
 </html>

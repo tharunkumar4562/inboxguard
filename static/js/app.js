@@ -68,7 +68,12 @@ const loadSteps = [
     "Scoring risk signals...",
 ];
 
-const defaultSubmitLabel = submitButton ? submitButton.textContent : "Analyze Email Risk";
+const usageScansUsedNode = document.getElementById("usage-scans-used");
+const usageEmailsScannedNode = document.getElementById("usage-emails-scanned");
+const usageRewriteClickedNode = document.getElementById("usage-rewrite-clicked");
+const usageLastActiveNode = document.getElementById("usage-last-active");
+
+const defaultSubmitLabel = submitButton ? submitButton.textContent : "Analyze Email";
 let latestSummary = null;
 let latestFindings = [];
 let latestRewriteContext = null;
@@ -131,6 +136,37 @@ function needsAuthGate(action) {
     return action === "analyze" && anonymousScansUsed >= anonymousScansLimit;
 }
 
+function formatLastActive(value) {
+    if (!value) {
+        return "Guest session";
+    }
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+        return "Just now";
+    }
+    return date.toLocaleString();
+}
+
+function updateUsageStats(data) {
+    if (!usageScansUsedNode || !usageEmailsScannedNode || !usageRewriteClickedNode || !usageLastActiveNode) {
+        return;
+    }
+
+    if (data && data.authenticated) {
+        usageScansUsedNode.textContent = String(data.user_scans_used || 0);
+        usageEmailsScannedNode.textContent = String(data.emails_scanned_count || data.user_scans_used || 0);
+        usageRewriteClickedNode.textContent = String(data.rewrite_clicked || 0);
+        usageLastActiveNode.textContent = formatLastActive(data.last_active || "");
+        return;
+    }
+
+    const scans = data ? Number(data.anonymous_scans_used || 0) : anonymousScansUsed;
+    usageScansUsedNode.textContent = String(scans);
+    usageEmailsScannedNode.textContent = String(scans);
+    usageRewriteClickedNode.textContent = "0";
+    usageLastActiveNode.textContent = "Guest session";
+}
+
 function updateProfileNav() {
     if (!profileLink) {
         return;
@@ -184,6 +220,7 @@ async function refreshAuthStatus() {
         localStorage.setItem("ig_anon_scans_used", String(anonymousScansUsed));
         localStorage.setItem("ig_anon_scans_limit", String(anonymousScansLimit));
         updateProfileNav();
+        updateUsageStats(data || {});
     } catch (error) {
         // Keep UI operational even if auth status endpoint is temporarily unavailable.
     }
@@ -518,7 +555,7 @@ function renderBiggestRisk(summary, findings) {
             setImpactBadge(biggestRiskImpactNode, "LOW");
             biggestRiskCard.classList.remove("card-critical");
             if (trustHookNode) {
-                trustHookNode.textContent = "Scan complete. Use Fix My Email to make it 1:1 and personal.";
+                trustHookNode.textContent = "Scan complete. Use Fix Issues to make it 1:1 and personal.";
             }
             return;
         }
@@ -834,20 +871,11 @@ async function showFixTransformation() {
     }
 
     fixNowButton.disabled = false;
-    fixNowButton.textContent = "Fix My Email";
+    fixNowButton.textContent = "Fix Issues";
 }
 
 async function runAnalyze() {
     await refreshAuthStatus();
-
-    if (needsAuthGate("analyze")) {
-        if (isAuthenticated) {
-            showError("You reached your monthly free plan scan limit. Upgrade is required for more scans.");
-        } else {
-            showAuthModal();
-        }
-        return;
-    }
 
     const rawText = rawEmailInput ? rawEmailInput.value.trim() : "";
     const domainText = domainInput ? domainInput.value.trim() : "";
@@ -928,10 +956,15 @@ async function runAnalyze() {
             anonymousScansLimit = Number(data.usage.anonymous_scans_limit || anonymousScansLimit);
             localStorage.setItem("ig_anon_scans_used", String(anonymousScansUsed));
             localStorage.setItem("ig_anon_scans_limit", String(anonymousScansLimit));
+            updateUsageStats({
+                authenticated: false,
+                anonymous_scans_used: anonymousScansUsed,
+            });
         }
         if (data.usage && data.usage.authenticated) {
             userScansUsed = Number(data.usage.user_scans_used || userScansUsed + 1);
             userScansLimit = Number(data.usage.user_scans_limit || userScansLimit);
+            await refreshAuthStatus();
         }
     } catch (error) {
         if (loadingTicker) {
@@ -1005,22 +1038,18 @@ if (threatScanTab) {
 if (startButton) {
     startButton.addEventListener("click", () => {
         pendingAction = "analyze";
-        if (needsAuthGate("analyze")) {
-            if (isAuthenticated) {
-                showError("You reached your monthly free plan scan limit. Upgrade is required for more scans.");
-                return;
-            }
-            showAuthModal();
-            return;
-        }
         runPendingAction();
     });
 }
 if (fixNowButton) {
-    fixNowButton.addEventListener("click", () => {
+    fixNowButton.addEventListener("click", async () => {
         const payload = new FormData();
         payload.set("event", "rewrite_clicked");
         fetch("/track", { method: "POST", body: payload }).catch(() => null);
+
+        if (isAuthenticated) {
+            await refreshAuthStatus();
+        }
 
         pendingAction = "fix";
         runPendingAction();
@@ -1081,14 +1110,6 @@ if (form) {
     form.addEventListener("submit", async (event) => {
         event.preventDefault();
         pendingAction = "analyze";
-        if (needsAuthGate("analyze")) {
-            if (isAuthenticated) {
-                showError("You reached your monthly free plan scan limit. Upgrade is required for more scans.");
-                return;
-            }
-            showAuthModal();
-            return;
-        }
         runPendingAction();
     });
 }
