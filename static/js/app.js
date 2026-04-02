@@ -28,7 +28,9 @@ const statusRiskCardNode = document.getElementById("status-risk-card");
 const statusPrimaryIssueNode = document.getElementById("status-primary-issue");
 const statusConfidenceNode = document.getElementById("status-confidence");
 const statusInfraNode = document.getElementById("status-infra");
+const riskStripNode = document.getElementById("risk-strip");
 const decisionProblemNode = document.getElementById("decision-problem");
+const decisionSignalNode = document.getElementById("decision-signal");
 const decisionConfidenceNode = document.getElementById("decision-confidence");
 const predictedFailureNode = document.getElementById("predicted-failure");
 const decisionWhyNode = document.getElementById("decision-why");
@@ -722,7 +724,7 @@ function renderBreakdown(summary) {
 }
 
 function renderDecisionEngine(summary, signals, findings) {
-    if (!decisionProblemNode || !decisionConfidenceNode || !predictedFailureNode || !decisionWhyNode || !decisionFixFirstNode || !decisionConsequenceNode) {
+    if (!decisionProblemNode || !decisionSignalNode || !decisionConfidenceNode || !predictedFailureNode || !decisionWhyNode || !decisionFixFirstNode || !decisionConsequenceNode || !riskStripNode) {
         return;
     }
 
@@ -734,12 +736,26 @@ function renderDecisionEngine(summary, signals, findings) {
     const infraWeak = !(spf === "found" && dkim === "found" && dmarc === "found");
 
     let problem = "Problem: Moderate risk";
+    let strip = "⚠️ REVIEW REQUIRED — MEDIUM RISK";
+    let stripClass = "risk-strip risk-strip-medium";
     if (band === "High Spam-Risk Signals" || band === "High Risk") {
-        problem = "🚨 Problem: Likely Spam (Deliverability Issue)";
+        problem = "🚨 LIKELY SPAM — HIGH RISK";
+        strip = "🚨 HIGH RISK — FIX THIS BEFORE YOU SEND";
+        stripClass = "risk-strip risk-strip-high";
     } else if (band === "Content Safe") {
-        problem = "✅ Problem: Low immediate risk";
+        problem = "✅ LOW IMMEDIATE RISK";
+        strip = "✅ LOW RISK — SAFE TO SEND AFTER QUICK REVIEW";
+        stripClass = "risk-strip risk-strip-low";
     }
     decisionProblemNode.textContent = problem;
+    riskStripNode.textContent = strip;
+    riskStripNode.className = stripClass;
+
+    let signalLine = "⚠️ This email will likely land in spam if sent now.";
+    if (!(band === "High Spam-Risk Signals" || band === "High Risk")) {
+        signalLine = "📉 Repeated sends without fixes can damage your domain reputation.";
+    }
+    decisionSignalNode.textContent = signalLine;
 
     decisionConfidenceNode.textContent = `Confidence: ${confidence.charAt(0).toUpperCase()}${confidence.slice(1)}`;
 
@@ -772,12 +788,12 @@ function renderDecisionEngine(summary, signals, findings) {
     decisionConsequenceNode.innerHTML = "";
     const consequences = (band === "High Spam-Risk Signals" || band === "High Risk")
         ? [
-            "High chance of spam placement if sent unchanged.",
-            "Domain reputation can degrade after repeated sends.",
+            "⚠️ This email will likely land in spam if sent now.",
+            "📉 Repeated sends can damage your domain reputation.",
         ]
         : [
-            "This can still underperform if key issues are ignored.",
-            "Reply rates may stay low without structural fixes.",
+            "⚠️ This can still underperform if key issues are ignored.",
+            "📉 Repeated sends can erode trust and placement over time.",
         ];
     consequences.forEach((line) => {
         const li = document.createElement("li");
@@ -950,7 +966,7 @@ async function showFixTransformation() {
     }
 
     fixNowButton.disabled = false;
-    fixNowButton.textContent = "Fix Issues";
+    fixNowButton.textContent = "🟢 FIX THIS NOW";
 }
 
 async function runAnalyze() {
@@ -1026,6 +1042,7 @@ async function runAnalyze() {
             analysis_mode: mode,
         });
 
+        renderStatus(summary, signals, findings);
         renderDecisionEngine(summary, signals, findings);
         renderBreakdown(summary);
 

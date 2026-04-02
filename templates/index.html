@@ -107,8 +107,8 @@ Subject: Quick question
 Hi John,
 I noticed your recent post and had one short idea to improve reply rates."></textarea>
 
-            <details class="secondary-options">
-              <summary>Advanced options</summary>
+            <details class="secondary-options settings-block">
+              <summary>⚙ Settings (optional)</summary>
               <div class="inline-fields" style="margin-top: 8px;">
                 <div>
                   <label for="domain">Domain (optional)</label>
@@ -146,11 +146,29 @@ I noticed your recent post and had one short idea to improve reply rates."></tex
 
         <!-- decision-engine-v2 -->
         <section id="result" class="dashboard-grid hidden">
-          <section class="card" id="decision-block">
+          <section class="status-grid" id="status-overview">
+            <article id="status-risk-card" class="status-card status-card-risk status-card-primary warning-bg">
+              <p class="status-label">Risk Status</p>
+              <p id="status-risk-band" class="status-value warning">Needs Review</p>
+            </article>
+            <article class="status-card status-card-issue">
+              <p class="status-label">Primary Issue</p>
+              <p id="status-primary-issue" class="status-value pending">Run scan to detect issue</p>
+            </article>
+            <article class="status-card status-card-confidence">
+              <p class="status-label">Confidence</p>
+              <p id="status-confidence" class="status-value pending">Awaiting analysis</p>
+              <p id="status-infra" class="micro">Infrastructure: Not checked</p>
+            </article>
+          </section>
+
+          <section class="card decision-alert" id="decision-block">
             <div id="risk-strip" class="risk-strip risk-strip-neutral">⚠️ ANALYSIS PENDING — RUN SCAN</div>
-            <p class="workflow-step">Decision Engine</p>
-            <h3 id="decision-problem" class="main-issue">Problem: Awaiting analysis</h3>
-            <p id="decision-signal" class="micro">Multiple signals are evaluated to determine what to fix first.</p>
+            <p class="workflow-step">Immediate Risk Alert</p>
+            <h3 id="decision-problem" class="main-issue">⚠️ Analysis pending — run scan now</h3>
+            <p id="decision-signal" class="decision-signal">Multiple signals are evaluated to determine what to fix first.</p>
+            <p id="decision-confidence" class="micro">Confidence: pending</p>
+            <p id="predicted-failure" class="micro">Predicted failure type: pending</p>
 
             <div class="rewrite-proof" style="margin-top: 8px;">
               <p class="rewrite-proof-title">Why this is happening:</p>
@@ -173,13 +191,14 @@ I noticed your recent post and had one short idea to improve reply rates."></tex
               </ul>
             </div>
 
-            <button id="risk-fix-now" type="button" class="btn-primary" style="margin-top: 10px;">Fix This Email Automatically</button>
+            <button id="risk-fix-now" type="button" class="btn-primary urgency-cta" style="margin-top: 10px;">🟢 FIX THIS NOW</button>
             <p id="trust-hook" class="trust-hook">Based on patterns commonly flagged by Gmail and Outlook filters.</p>
           </section>
 
-          <section class="action-panel card">
-            <details class="secondary-options">
-              <summary>Advanced rewrite mode (optional)</summary>
+          <section class="action-panel card action-zone">
+            <p class="action-zone-preview">✅ Rewrite preview: spam pressure is reduced before send</p>
+            <details class="secondary-options settings-block">
+              <summary>⚙ Rewrite Settings (optional)</summary>
               <div class="inline-fields rewrite-controls" style="margin-top: 8px;">
                 <div>
                   <label for="rewrite-style">Rewrite Style</label>
@@ -191,7 +210,7 @@ I noticed your recent post and had one short idea to improve reply rates."></tex
                 </div>
               </div>
             </details>
-            <button id="fix-now" type="button" class="btn-primary" style="width: 100%; margin-top: 10px; margin-bottom: 1rem;">Fix Issues</button>
+            <button id="fix-now" type="button" class="btn-primary urgency-cta" style="width: 100%; margin-top: 10px; margin-bottom: 1rem;">🟢 FIX THIS NOW</button>
             <div style="font-size: 0.9rem; color: #8b94a5; line-height: 1.5;">
               <strong>Recommended fix applied automatically</strong> based on detected risk profile.
             </div>
@@ -227,13 +246,13 @@ I noticed your recent post and had one short idea to improve reply rates."></tex
               <span class="tag">Simplified structure</span>
             </div>
             <div class="rewrite-grid">
-              <article>
-                <p class="rewrite-label">Before</p>
-                <pre id="before-email" class="rewrite-box">-</pre>
+              <article class="rewrite-side-risk">
+                <p class="rewrite-label">🔴 Your Current Email (Risk)</p>
+                <pre id="before-email" class="rewrite-box rewrite-box-risk">-</pre>
               </article>
-              <article>
-                <p class="rewrite-label">After</p>
-                <pre id="after-email" class="rewrite-box">-</pre>
+              <article class="rewrite-side-safe">
+                <p class="rewrite-label">🟢 Optimized Version (Safer)</p>
+                <pre id="after-email" class="rewrite-box rewrite-box-safe">-</pre>
               </article>
             </div>
             <p id="rewrite-trust-note" class="micro">Based on pattern shifts commonly flagged by Gmail and Outlook filters.</p>
