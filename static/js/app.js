@@ -28,9 +28,9 @@ const statusRiskCardNode = document.getElementById("status-risk-card");
 const statusPrimaryIssueNode = document.getElementById("status-primary-issue");
 const statusConfidenceNode = document.getElementById("status-confidence");
 const statusInfraNode = document.getElementById("status-infra");
-const riskStripNode = document.getElementById("risk-strip");
 const decisionProblemNode = document.getElementById("decision-problem");
-const decisionSignalNode = document.getElementById("decision-signal");
+const decisionConfidenceNode = document.getElementById("decision-confidence");
+const predictedFailureNode = document.getElementById("predicted-failure");
 const decisionWhyNode = document.getElementById("decision-why");
 const decisionFixFirstNode = document.getElementById("decision-fix-first");
 const decisionConsequenceNode = document.getElementById("decision-consequence");
@@ -101,6 +101,8 @@ let userScansLimit = 50;
 let currentUserName = "";
 let currentUserEmail = "";
 let currentUserAvatar = "";
+let emailPastedTracked = false;
+let advancedOpenedTracked = false;
 
 const errorBanner = document.createElement("div");
 errorBanner.id = "error-banner";
@@ -111,6 +113,14 @@ function showError(message) {
     errorBanner.textContent = message;
     errorBanner.classList.remove("hidden");
     setTimeout(() => errorBanner.classList.add("hidden"), 3800);
+}
+
+function trackEvent(eventName, params) {
+    if (typeof window.gtag !== "function") {
+        return;
+    }
+    const safeParams = params && typeof params === "object" ? params : {};
+    window.gtag("event", eventName, safeParams);
 }
 
 function sleep(ms) {
@@ -712,39 +722,34 @@ function renderBreakdown(summary) {
 }
 
 function renderDecisionEngine(summary, signals, findings) {
-    if (!decisionProblemNode || !decisionSignalNode || !decisionWhyNode || !decisionFixFirstNode || !decisionConsequenceNode || !riskStripNode) {
+    if (!decisionProblemNode || !decisionConfidenceNode || !predictedFailureNode || !decisionWhyNode || !decisionFixFirstNode || !decisionConsequenceNode) {
         return;
     }
 
     const band = String(summary.risk_band || "Needs Review");
+    const confidence = String(summary.deliverability_confidence || "medium");
     const spf = String(signals.spf_status || "unknown");
     const dkim = String(signals.dkim_status || "unknown");
     const dmarc = String(signals.dmarc_status || "unknown");
     const infraWeak = !(spf === "found" && dkim === "found" && dmarc === "found");
 
     let problem = "Problem: Moderate risk";
-    let strip = "⚠️ MEDIUM RISK — REVIEW BEFORE SENDING";
-    let stripClass = "risk-strip risk-strip-medium";
     if (band === "High Spam-Risk Signals" || band === "High Risk") {
         problem = "🚨 Problem: Likely Spam (Deliverability Issue)";
-        strip = "🚨 HIGH RISK — WILL LIKELY GO TO SPAM";
-        stripClass = "risk-strip risk-strip-high";
     } else if (band === "Content Safe") {
         problem = "✅ Problem: Low immediate risk";
-        strip = "✅ LOW RISK — SAFE TO SEND WITH MINOR REVIEW";
-        stripClass = "risk-strip risk-strip-low";
     }
     decisionProblemNode.textContent = problem;
-    riskStripNode.textContent = strip;
-    riskStripNode.className = stripClass;
 
-    let signalLine = "Multiple spam signals detected — fix order below is prioritized by impact.";
+    decisionConfidenceNode.textContent = `Confidence: ${confidence.charAt(0).toUpperCase()}${confidence.slice(1)}`;
+
+    let predictedFailure = "Predicted failure type: Mixed issue";
     if (infraWeak || band.includes("High")) {
-        signalLine = "Multiple spam signals detected, including technical/placement risk.";
+        predictedFailure = "Predicted failure type: Deliverability";
     } else if (String(summary.primary_issue || "").toLowerCase().includes("cta") || String(summary.primary_issue || "").toLowerCase().includes("personal")) {
-        signalLine = "Message-level risk signals detected (copy/targeting pressure).";
+        predictedFailure = "Predicted failure type: Copy/Targeting";
     }
-    decisionSignalNode.textContent = signalLine;
+    predictedFailureNode.textContent = predictedFailure;
 
     const nonMeta = (findings || []).filter((f) => !String(f.title || "").toLowerCase().includes("analysis mode"));
     decisionWhyNode.innerHTML = "";
@@ -767,8 +772,8 @@ function renderDecisionEngine(summary, signals, findings) {
     decisionConsequenceNode.innerHTML = "";
     const consequences = (band === "High Spam-Risk Signals" || band === "High Risk")
         ? [
-            "High chance this lands in spam if sent unchanged.",
-            "Future campaign performance will degrade as domain reputation drops.",
+            "High chance of spam placement if sent unchanged.",
+            "Domain reputation can degrade after repeated sends.",
         ]
         : [
             "This can still underperform if key issues are ignored.",
@@ -801,6 +806,10 @@ async function showFixTransformation() {
 
     fixNowButton.disabled = true;
     fixNowButton.textContent = "Fixing...";
+    trackEvent("fix_clicked", {
+        source: "fix_issues_button",
+        rewrite_style: rewriteStyleInput ? rewriteStyleInput.value : "balanced",
+    });
 
     try {
         const payload = new FormData();
@@ -960,6 +969,11 @@ async function runAnalyze() {
     const domainText = domainInput ? domainInput.value.trim() : "";
     const mode = analysisModeInput ? analysisModeInput.value : "content";
 
+    trackEvent("analyze_clicked", {
+        analysis_mode: mode,
+        has_domain: Boolean(domainText),
+    });
+
     if (rawText.length < 20) {
         showError("Paste the full email draft before scanning.");
         return;
@@ -1006,6 +1020,11 @@ async function runAnalyze() {
 
         latestSummary = summary;
         latestFindings = findings;
+
+        trackEvent("result_viewed", {
+            risk: String(summary.risk_band || "unknown"),
+            analysis_mode: mode,
+        });
 
         renderDecisionEngine(summary, signals, findings);
         renderBreakdown(summary);
@@ -1056,6 +1075,7 @@ function useFixedVersion() {
     const text = String(afterEmailNode.textContent || rawEmailInput.value || "");
     navigator.clipboard.writeText(text).then(() => {
         rawEmailInput.value = text;
+        trackEvent("copy_clicked", { source: "fixed_email" });
         showError("Copied fixed email. You can paste directly into your sender.");
     }).catch(() => {
         rawEmailInput.value = text;
@@ -1087,6 +1107,7 @@ function openInGmail() {
     }
 
     const composeUrl = `https://mail.google.com/mail/?view=cm&fs=1&body=${encodeURIComponent(bodyText)}`;
+    trackEvent("gmail_open_clicked", { source: "fix_output" });
     window.open(composeUrl, "_blank", "noopener");
 }
 
@@ -1113,6 +1134,11 @@ async function sendFeedback(outcome) {
         }
         const data = await response.json();
         latestLearningProfile = data.learning_profile || latestLearningProfile;
+        trackEvent("feedback_given", {
+            outcome: String(outcome || "unknown"),
+            from_risk_band: latestRewriteContext.from_risk_band || "unknown",
+            to_risk_band: latestRewriteContext.to_risk_band || "unknown",
+        });
         const samples = latestLearningProfile ? Number(latestLearningProfile.sample_size || 0) : 0;
         showError(`Feedback saved. System learned from this outcome (${samples} total).`);
     } catch (error) {
@@ -1125,6 +1151,10 @@ async function runCampaignDiagnosis() {
     const replyRate = Number(metricReplyRateInput && metricReplyRateInput.value ? metricReplyRateInput.value : 0);
     const bounceRate = Number(metricBounceRateInput && metricBounceRateInput.value ? metricBounceRateInput.value : 0);
     const sentCount = Number(metricSentCountInput && metricSentCountInput.value ? metricSentCountInput.value : 0);
+
+    trackEvent("campaign_debug_used", {
+        has_metrics: openRate > 0 || replyRate > 0 || bounceRate > 0 || sentCount > 0,
+    });
 
     const payload = new FormData();
     payload.set("open_rate", String(openRate));
@@ -1142,6 +1172,9 @@ async function runCampaignDiagnosis() {
     }
 
     const data = await response.json();
+    trackEvent("campaign_diagnosed", {
+        type: String(data.diagnosis || "unknown").toLowerCase().replace(/\s+/g, "_"),
+    });
     if (!diagnosisOutput || !diagnosisPrimaryNode || !diagnosisConfidenceNode || !diagnosisWhyNode || !diagnosisActionsNode) {
         return;
     }
@@ -1200,6 +1233,7 @@ if (fixNowButton) {
 }
 if (riskFixNowButton) {
     riskFixNowButton.addEventListener("click", () => {
+        trackEvent("fix_clicked", { source: "risk_fix_now" });
         pendingAction = "fix";
         runPendingAction();
     });
@@ -1280,6 +1314,29 @@ if (form) {
         runPendingAction();
     });
 }
+
+if (rawEmailInput) {
+    rawEmailInput.addEventListener("input", () => {
+        const value = String(rawEmailInput.value || "").trim();
+        if (!emailPastedTracked && value.length >= 20) {
+            emailPastedTracked = true;
+            trackEvent("email_pasted", {
+                length_bucket: value.length >= 300 ? "300_plus" : value.length >= 120 ? "120_299" : "20_119",
+            });
+        }
+    });
+}
+
+document.querySelectorAll("details.secondary-options, details.advanced-block").forEach((detailsNode) => {
+    detailsNode.addEventListener("toggle", () => {
+        if (detailsNode.open && !advancedOpenedTracked) {
+            advancedOpenedTracked = true;
+            trackEvent("advanced_opened", {
+                section: detailsNode.classList.contains("advanced-block") ? "why_flagged" : "scan_options",
+            });
+        }
+    });
+});
 
 setIdleState();
 activateTab("dashboard");
