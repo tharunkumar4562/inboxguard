@@ -33,6 +33,13 @@
     --danger: #ef4444;
     --warning: #f59e0b;
     --safe: #10b981;
+    --risk-bg: #2a0f12;
+    --risk-border: #ff4d4f;
+    --risk-text: #ff6b6b;
+    --warn-bg: #2a2110;
+    --warn-text: #f5c542;
+    --success-bg: #0f2a1a;
+    --success-text: #2ecc71;
 }
 
 * {
@@ -528,8 +535,12 @@ select {
 
 .status-grid {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 10px;
+}
+
+.status-grid-triad {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .status-card {
@@ -537,20 +548,6 @@ select {
     border-radius: 10px;
     background: #0f1a2e;
     padding: 12px;
-}
-
-.status-card-risk {
-    box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.2), 0 8px 24px rgba(127, 29, 29, 0.35);
-}
-
-.status-card-issue {
-    border-color: #78350f;
-    background: linear-gradient(140deg, #261f14 0%, #121b2f 100%);
-}
-
-.status-card-confidence {
-    border-color: #334155;
-    background: linear-gradient(140deg, #111827 0%, #0f1a2e 100%);
 }
 
 .status-card-primary {
@@ -604,50 +601,59 @@ select {
 }
 
 .risk-strip {
-    border-radius: 10px;
-    padding: 10px 12px;
-    font-size: 0.95rem;
-    font-weight: 800;
-    letter-spacing: 0.03em;
+    border-radius: 12px;
+    padding: 12px 14px;
     margin-bottom: 10px;
     border: 1px solid transparent;
 }
 
+.risk-strip-title {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 800;
+    letter-spacing: 0.03em;
+}
+
+.risk-strip-body {
+    margin: 4px 0 0;
+    font-size: 0.9rem;
+    color: #e2e8f0;
+}
+
 .risk-strip-high {
-    background: linear-gradient(135deg, #4b0f16 0%, #1f0f1c 100%);
-    border-color: #ef4444;
-    color: #fee2e2;
-    box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.2), 0 10px 24px rgba(127, 29, 29, 0.4);
+    background: var(--risk-bg);
+    border-color: var(--risk-border);
+}
+
+.risk-strip-high .risk-strip-title {
+    color: var(--risk-text);
 }
 
 .risk-strip-medium {
-    background: linear-gradient(135deg, #3f2a11 0%, #1f2433 100%);
-    border-color: #f59e0b;
-    color: #fef3c7;
+    background: var(--warn-bg);
+    border-color: #b98a2f;
+}
+
+.risk-strip-medium .risk-strip-title {
+    color: var(--warn-text);
 }
 
 .risk-strip-low {
-    background: linear-gradient(135deg, #0f3a28 0%, #132a23 100%);
-    border-color: #10b981;
-    color: #d1fae5;
+    background: var(--success-bg);
+    border-color: #1e7f4b;
+}
+
+.risk-strip-low .risk-strip-title {
+    color: var(--success-text);
 }
 
 .risk-strip-neutral {
-    background: #1f2937;
+    background: #1a2437;
     border-color: #334155;
-    color: #cbd5e1;
 }
 
-.decision-alert {
-    border-color: #b91c1c;
-    background: linear-gradient(145deg, #2d1218 0%, #1a1f33 65%, #122033 100%);
-}
-
-.decision-signal {
-    margin-top: 8px;
-    color: #fef2f2;
-    font-weight: 600;
-    font-size: 0.96rem;
+.risk-strip-neutral .risk-strip-title {
+    color: #e2e8f0;
 }
 
 .card-critical {
@@ -719,32 +725,6 @@ select {
 .action-panel h3 {
     margin: 0 0 10px;
     font-size: 1rem;
-}
-
-.action-zone {
-    border-color: #14532d;
-    background: linear-gradient(145deg, #0f2a20 0%, #13263b 100%);
-}
-
-.action-zone-preview {
-    margin: 0 0 10px;
-    padding: 8px 10px;
-    border-radius: 8px;
-    border: 1px solid #14532d;
-    background: rgba(16, 185, 129, 0.12);
-    color: #d1fae5;
-    font-size: 0.86rem;
-    font-weight: 700;
-}
-
-.urgency-cta {
-    font-size: 1.08rem;
-    font-weight: 800;
-    letter-spacing: 0.02em;
-}
-
-.settings-block summary {
-    color: #bfdbfe;
 }
 
 .rewrite-controls {
@@ -865,11 +845,10 @@ select {
 
 .rewrite-label {
     margin: 0 0 6px;
-    color: #e2e8f0;
+    color: var(--text-secondary);
     font-size: 0.82rem;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    font-weight: 700;
 }
 
 .rewrite-box {
@@ -883,16 +862,6 @@ select {
     overflow: auto;
     white-space: pre-wrap;
     font-size: 0.88rem;
-}
-
-.rewrite-box-risk {
-    border-color: rgba(239, 68, 68, 0.45);
-    background: linear-gradient(135deg, rgba(127, 29, 29, 0.28) 0%, rgba(15, 23, 42, 0.9) 100%);
-}
-
-.rewrite-box-safe {
-    border-color: rgba(16, 185, 129, 0.4);
-    background: linear-gradient(135deg, rgba(6, 95, 70, 0.28) 0%, rgba(15, 23, 42, 0.9) 100%);
 }
 
 .workflow-step {

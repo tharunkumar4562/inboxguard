@@ -27,12 +27,11 @@ const statusRiskBandNode = document.getElementById("status-risk-band");
 const statusRiskCardNode = document.getElementById("status-risk-card");
 const statusPrimaryIssueNode = document.getElementById("status-primary-issue");
 const statusConfidenceNode = document.getElementById("status-confidence");
-const statusInfraNode = document.getElementById("status-infra");
 const riskStripNode = document.getElementById("risk-strip");
+const riskStripTitleNode = document.getElementById("risk-strip-title");
+const riskStripBodyNode = document.getElementById("risk-strip-body");
 const decisionProblemNode = document.getElementById("decision-problem");
 const decisionSignalNode = document.getElementById("decision-signal");
-const decisionConfidenceNode = document.getElementById("decision-confidence");
-const predictedFailureNode = document.getElementById("predicted-failure");
 const decisionWhyNode = document.getElementById("decision-why");
 const decisionFixFirstNode = document.getElementById("decision-fix-first");
 const decisionConsequenceNode = document.getElementById("decision-consequence");
@@ -477,7 +476,7 @@ function primaryIssue(summary, findings) {
 }
 
 function renderStatus(summary, signals, findings) {
-    if (!statusRiskBandNode || !statusPrimaryIssueNode || !statusConfidenceNode || !statusInfraNode) {
+    if (!statusRiskBandNode || !statusPrimaryIssueNode || !statusConfidenceNode) {
         return;
     }
 
@@ -495,12 +494,8 @@ function renderStatus(summary, signals, findings) {
 
     const confidence = String(summary.deliverability_confidence || "medium");
     const mode = String(summary.analysis_mode || "content");
-    const spf = String(signals.spf_status || "unknown");
-    const dkim = String(signals.dkim_status || "unknown");
-    const dmarc = String(signals.dmarc_status || "unknown");
-    const infraHealthy = spf === "found" && dkim === "found" && dmarc === "found";
 
-    if (band === "Content Safe" && (confidence === "low" || (mode === "full" && !infraHealthy))) {
+    if (band === "Content Safe" && confidence === "low") {
         label = "Low Risk (Incomplete Check)";
         cls = "warning";
     }
@@ -525,12 +520,6 @@ function renderStatus(summary, signals, findings) {
         ? "based on content + technical signals"
         : "based on content-only signals";
     statusConfidenceNode.textContent = `${confidence.charAt(0).toUpperCase()}${confidence.slice(1)} confidence (${confidenceBasis})`;
-
-    if (mode === "content") {
-        statusInfraNode.textContent = "Not Checked";
-    } else {
-        statusInfraNode.textContent = infraHealthy ? "Healthy" : "Needs Attention";
-    }
 }
 
 function renderBiggestRisk(summary, findings) {
@@ -724,48 +713,44 @@ function renderBreakdown(summary) {
 }
 
 function renderDecisionEngine(summary, signals, findings) {
-    if (!decisionProblemNode || !decisionSignalNode || !decisionConfidenceNode || !predictedFailureNode || !decisionWhyNode || !decisionFixFirstNode || !decisionConsequenceNode || !riskStripNode) {
+    if (!decisionProblemNode || !decisionSignalNode || !decisionWhyNode || !decisionFixFirstNode || !decisionConsequenceNode || !riskStripNode || !riskStripTitleNode || !riskStripBodyNode) {
         return;
     }
 
     const band = String(summary.risk_band || "Needs Review");
-    const confidence = String(summary.deliverability_confidence || "medium");
     const spf = String(signals.spf_status || "unknown");
     const dkim = String(signals.dkim_status || "unknown");
     const dmarc = String(signals.dmarc_status || "unknown");
     const infraWeak = !(spf === "found" && dkim === "found" && dmarc === "found");
 
-    let problem = "Problem: Moderate risk";
-    let strip = "⚠️ REVIEW REQUIRED — MEDIUM RISK";
+    let problem = "Decision: Fix before sending";
+    let signalLine = "Root-cause evidence below is prioritized by inbox risk.";
+    let stripTitle = "AT RISK";
+    let stripBody = "This draft can underperform or miss inbox placement without fixes.";
     let stripClass = "risk-strip risk-strip-medium";
     if (band === "High Spam-Risk Signals" || band === "High Risk") {
-        problem = "🚨 LIKELY SPAM — HIGH RISK";
-        strip = "🚨 HIGH RISK — FIX THIS BEFORE YOU SEND";
+        problem = "Decision: Block send and fix now";
+        signalLine = "High-confidence spam/failure pattern detected.";
+        stripTitle = "LIKELY SPAM";
+        stripBody = "This email will likely land in spam if sent now.";
         stripClass = "risk-strip risk-strip-high";
     } else if (band === "Content Safe") {
-        problem = "✅ LOW IMMEDIATE RISK";
-        strip = "✅ LOW RISK — SAFE TO SEND AFTER QUICK REVIEW";
+        problem = "Decision: Safe to send with minor review";
+        signalLine = "Low immediate risk, but review for stronger reply performance.";
+        stripTitle = "LOW RISK";
+        stripBody = "Delivery risk is low based on current detected signals.";
         stripClass = "risk-strip risk-strip-low";
     }
+
+    if (infraWeak && (band === "High Spam-Risk Signals" || band === "High Risk")) {
+        stripBody = "This email is likely to be filtered and technical trust signals are weak.";
+    }
+
     decisionProblemNode.textContent = problem;
-    riskStripNode.textContent = strip;
-    riskStripNode.className = stripClass;
-
-    let signalLine = "⚠️ This email will likely land in spam if sent now.";
-    if (!(band === "High Spam-Risk Signals" || band === "High Risk")) {
-        signalLine = "📉 Repeated sends without fixes can damage your domain reputation.";
-    }
     decisionSignalNode.textContent = signalLine;
-
-    decisionConfidenceNode.textContent = `Confidence: ${confidence.charAt(0).toUpperCase()}${confidence.slice(1)}`;
-
-    let predictedFailure = "Predicted failure type: Mixed issue";
-    if (infraWeak || band.includes("High")) {
-        predictedFailure = "Predicted failure type: Deliverability";
-    } else if (String(summary.primary_issue || "").toLowerCase().includes("cta") || String(summary.primary_issue || "").toLowerCase().includes("personal")) {
-        predictedFailure = "Predicted failure type: Copy/Targeting";
-    }
-    predictedFailureNode.textContent = predictedFailure;
+    riskStripNode.className = stripClass;
+    riskStripTitleNode.textContent = stripTitle;
+    riskStripBodyNode.textContent = stripBody;
 
     const nonMeta = (findings || []).filter((f) => !String(f.title || "").toLowerCase().includes("analysis mode"));
     decisionWhyNode.innerHTML = "";
@@ -788,12 +773,12 @@ function renderDecisionEngine(summary, signals, findings) {
     decisionConsequenceNode.innerHTML = "";
     const consequences = (band === "High Spam-Risk Signals" || band === "High Risk")
         ? [
-            "⚠️ This email will likely land in spam if sent now.",
-            "📉 Repeated sends can damage your domain reputation.",
+            "High chance of spam placement if sent unchanged.",
+            "Domain reputation can degrade after repeated sends.",
         ]
         : [
-            "⚠️ This can still underperform if key issues are ignored.",
-            "📉 Repeated sends can erode trust and placement over time.",
+            "This can still underperform if key issues are ignored.",
+            "Reply rates may stay low without structural fixes.",
         ];
     consequences.forEach((line) => {
         const li = document.createElement("li");
@@ -966,7 +951,7 @@ async function showFixTransformation() {
     }
 
     fixNowButton.disabled = false;
-    fixNowButton.textContent = "🟢 FIX THIS NOW";
+    fixNowButton.textContent = "Fix Issues";
 }
 
 async function runAnalyze() {
