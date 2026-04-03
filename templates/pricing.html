@@ -65,6 +65,8 @@
             <li>Batch testing and comparisons</li>
             <li>Domain reputation tracking</li>
             <li>Campaign failure debugging</li>
+            <li>API key access and usage metering</li>
+            <li>Team roles (owner/admin/member/viewer)</li>
           </ul>
 
           <div class="mt-6 rounded-2xl border border-slate-700 bg-slate-950/50 p-4">
@@ -82,6 +84,13 @@
           <p class="mt-2 text-sm text-slate-400">Billed locally at checkout.</p>
 
           <div class="mt-6 rounded-2xl border border-slate-700 bg-slate-950/50 p-4">
+            <label for="plan-type" class="text-sm text-slate-300">Choose plan</label>
+            <select id="plan-type" class="mt-2 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-slate-100">
+              <option value="monthly">Monthly Pro ({{ plans.monthly.display_price }}/month)</option>
+              <option value="annual">Annual Pro ({{ plans.annual.display_price }}/year)</option>
+              <option value="trial">Trial Pro ({{ trial_days }} days)</option>
+              <option value="usage">Usage-Based ({{ plans.usage.display_price }})</option>
+            </select>
             {% if authenticated %}
             <p class="text-sm text-slate-300">Signed in as <strong>{{ user_email }}</strong></p>
             <button id="pay-btn" type="button" class="btn-primary w-full mt-4">Unlock Pre-Send Confidence</button>

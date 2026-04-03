@@ -10,10 +10,11 @@ import hashlib
 import secrets
 import sqlite3
 from typing import Any, Optional
+from uuid import uuid4
 
 import httpx
 
-from fastapi import FastAPI, Form, Request, HTTPException, Header
+from fastapi import FastAPI, Form, Request, HTTPException, Header, BackgroundTasks
 from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse, Response, JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -52,9 +53,40 @@ RAZORPAY_WEBHOOK_SECRET = os.getenv("INBOXGUARD_RAZORPAY_WEBHOOK_SECRET", os.get
 RAZORPAY_AMOUNT_INR = int(os.getenv("INBOXGUARD_RAZORPAY_AMOUNT_INR", "1200"))
 RAZORPAY_DISPLAY_PRICE_USD = os.getenv("INBOXGUARD_RAZORPAY_DISPLAY_PRICE_USD", "$12").strip()
 RAZORPAY_PLAN_ID = os.getenv("INBOXGUARD_RAZORPAY_PLAN_ID", os.getenv("RAZORPAY_PLAN_ID", "")).strip()
+RAZORPAY_ANNUAL_PLAN_ID = os.getenv("INBOXGUARD_RAZORPAY_ANNUAL_PLAN_ID", os.getenv("RAZORPAY_ANNUAL_PLAN_ID", "")).strip()
+RAZORPAY_TRIAL_PLAN_ID = os.getenv("INBOXGUARD_RAZORPAY_TRIAL_PLAN_ID", os.getenv("RAZORPAY_TRIAL_PLAN_ID", "")).strip()
+TRIAL_DAYS = int(os.getenv("INBOXGUARD_TRIAL_DAYS", "7"))
 PAST_DUE_GRACE_DAYS = int(os.getenv("INBOXGUARD_PAST_DUE_GRACE_DAYS", "3"))
 GOOGLE_VERIFICATION_FILE = "googleab4b33a28d8dfb88.html"
 AUTH_DB_READY = False
+BLACKLISTED_DOMAINS = {
+    "tempmail.com",
+    "mailinator.com",
+    "10minutemail.com",
+    "guerrillamail.com",
+    "yopmail.com",
+}
+ASYNC_ANALYSIS_JOBS: dict[str, dict[str, Any]] = {}
+BLOG_POSTS = {
+    "cold-email-spam-checklist": {
+        "title": "Cold Email Spam Checklist Before You Send",
+        "summary": "A short checklist to catch spam-risk patterns before launch.",
+        "body": [
+            "Start with one message, one CTA, and one promise.",
+            "Remove pressure phrases and unnecessary urgency.",
+            "Confirm SPF, DKIM, and DMARC before scaling volume.",
+        ],
+    },
+    "improve-reply-rate-without-spam-signals": {
+        "title": "Improve Reply Rate Without Triggering Spam Filters",
+        "summary": "How to lift replies while staying inbox-safe.",
+        "body": [
+            "Lead with relevance, not hype.",
+            "Use specific personalization in the first line.",
+            "Keep links minimal and avoid promo-heavy structure.",
+        ],
+    },
+}
 LONG_TAIL_PAGES = [
     {
         "slug": "fix-godaddy-spam-issues",
@@ -202,6 +234,75 @@ def _ensure_auth_db() -> None:
                 from_risk_band TEXT,
                 to_risk_band TEXT,
                 rewrite_style TEXT,
+                created_at TEXT NOT NULL,
+                FOREIGN KEY(user_id) REFERENCES users(id)
+            )
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS api_keys (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                key_hash TEXT NOT NULL,
+                key_hint TEXT NOT NULL,
+                name TEXT,
+                status TEXT NOT NULL DEFAULT 'active',
+                created_at TEXT NOT NULL,
+                last_used_at TEXT,
+                FOREIGN KEY(user_id) REFERENCES users(id)
+            )
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS teams (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                owner_user_id INTEGER NOT NULL,
+                name TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                FOREIGN KEY(owner_user_id) REFERENCES users(id)
+            )
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS team_members (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                team_id INTEGER NOT NULL,
+                user_id INTEGER NOT NULL,
+                role TEXT NOT NULL,
+                joined_at TEXT NOT NULL,
+                UNIQUE(team_id, user_id),
+                FOREIGN KEY(team_id) REFERENCES teams(id),
+                FOREIGN KEY(user_id) REFERENCES users(id)
+            )
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS async_jobs (
+                id TEXT PRIMARY KEY,
+                user_id INTEGER,
+                status TEXT NOT NULL,
+                result_json TEXT,
+                error_message TEXT,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                FOREIGN KEY(user_id) REFERENCES users(id)
+            )
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS seed_tests (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER,
+                campaign_name TEXT NOT NULL,
+                provider TEXT NOT NULL,
+                inbox_count INTEGER NOT NULL DEFAULT 0,
+                spam_count INTEGER NOT NULL DEFAULT 0,
+                notes TEXT,
                 created_at TEXT NOT NULL,
                 FOREIGN KEY(user_id) REFERENCES users(id)
             )
@@ -712,6 +813,287 @@ def _recent_saved_fixes(user_id: int, limit: int = 8) -> list[dict]:
         conn.close()
 
 
+def _is_email_like(value: str) -> bool:
+    text = (value or "").strip()
+    return bool(text and "@" in text and "." in text.split("@", 1)[-1])
+
+
+def _plan_catalog() -> dict[str, dict[str, Any]]:
+    return {
+        "monthly": {
+            "label": "Monthly Pro",
+            "display_price": RAZORPAY_DISPLAY_PRICE_USD,
+            "plan_id": RAZORPAY_PLAN_ID,
+            "trial_days": 0,
+        },
+        "annual": {
+            "label": "Annual Pro",
+            "display_price": "$99",
+            "plan_id": RAZORPAY_ANNUAL_PLAN_ID,
+            "trial_days": 0,
+        },
+        "trial": {
+            "label": "Trial Pro",
+            "display_price": "$0 now",
+            "plan_id": RAZORPAY_TRIAL_PLAN_ID or RAZORPAY_PLAN_ID,
+            "trial_days": max(0, TRIAL_DAYS),
+        },
+        "usage": {
+            "label": "Usage-Based",
+            "display_price": "$0.02 / scan",
+            "plan_id": "",
+            "trial_days": 0,
+        },
+    }
+
+
+def _create_api_key(user_id: int, key_name: str) -> str:
+    _ensure_auth_db_ready()
+    raw = f"ig_{secrets.token_urlsafe(32)}"
+    digest = hashlib.sha256(raw.encode("utf-8")).hexdigest()
+    hint = f"...{raw[-6:]}"
+    conn = _auth_db_conn()
+    try:
+        conn.execute(
+            "INSERT INTO api_keys(user_id, key_hash, key_hint, name, status, created_at) VALUES (?, ?, ?, ?, 'active', ?)",
+            (user_id, digest, hint, (key_name or "Primary key")[:80], _now_iso()),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+    return raw
+
+
+def _list_api_keys(user_id: int) -> list[dict[str, Any]]:
+    _ensure_auth_db_ready()
+    conn = _auth_db_conn()
+    try:
+        rows = conn.execute(
+            "SELECT id, key_hint, name, status, created_at, last_used_at FROM api_keys WHERE user_id=? ORDER BY id DESC",
+            (user_id,),
+        ).fetchall()
+    finally:
+        conn.close()
+
+    return [
+        {
+            "id": int(row["id"]),
+            "key_hint": str(row["key_hint"] or ""),
+            "name": str(row["name"] or "Primary key"),
+            "status": str(row["status"] or "active"),
+            "created_at": str(row["created_at"] or ""),
+            "last_used_at": str(row["last_used_at"] or ""),
+        }
+        for row in rows
+    ]
+
+
+def _revoke_api_key(user_id: int, key_id: int) -> bool:
+    _ensure_auth_db_ready()
+    conn = _auth_db_conn()
+    try:
+        result = conn.execute(
+            "UPDATE api_keys SET status='revoked' WHERE user_id=? AND id=?",
+            (user_id, key_id),
+        )
+        conn.commit()
+        return int(result.rowcount or 0) > 0
+    finally:
+        conn.close()
+
+
+def _authenticate_api_key(x_api_key: str) -> Optional[dict[str, Any]]:
+    if not x_api_key:
+        return None
+    digest = hashlib.sha256(x_api_key.encode("utf-8")).hexdigest()
+    _ensure_auth_db_ready()
+    conn = _auth_db_conn()
+    try:
+        row = conn.execute(
+            "SELECT id, user_id, status FROM api_keys WHERE key_hash=? LIMIT 1",
+            (digest,),
+        ).fetchone()
+        if not row or str(row["status"] or "") != "active":
+            return None
+        conn.execute("UPDATE api_keys SET last_used_at=? WHERE id=?", (_now_iso(), int(row["id"])))
+        conn.commit()
+        return {"api_key_id": int(row["id"]), "user_id": int(row["user_id"])}
+    finally:
+        conn.close()
+
+
+def _create_team(owner_user_id: int, name: str) -> int:
+    _ensure_auth_db_ready()
+    conn = _auth_db_conn()
+    now = _now_iso()
+    try:
+        cur = conn.execute(
+            "INSERT INTO teams(owner_user_id, name, created_at) VALUES (?, ?, ?)",
+            (owner_user_id, (name or "My Team")[:120], now),
+        )
+        team_id = int(cur.lastrowid or 0)
+        conn.execute(
+            "INSERT OR IGNORE INTO team_members(team_id, user_id, role, joined_at) VALUES (?, ?, ?, ?)",
+            (team_id, owner_user_id, "owner", now),
+        )
+        conn.commit()
+        return team_id
+    finally:
+        conn.close()
+
+
+def _add_team_member(team_id: int, user_id: int, role: str) -> None:
+    _ensure_auth_db_ready()
+    conn = _auth_db_conn()
+    try:
+        conn.execute(
+            "INSERT OR REPLACE INTO team_members(team_id, user_id, role, joined_at) VALUES (?, ?, ?, ?)",
+            (team_id, user_id, (role or "member")[:24], _now_iso()),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def _teams_for_user(user_id: int) -> list[dict[str, Any]]:
+    _ensure_auth_db_ready()
+    conn = _auth_db_conn()
+    try:
+        rows = conn.execute(
+            """
+            SELECT t.id, t.name, tm.role, t.created_at
+            FROM teams t
+            JOIN team_members tm ON tm.team_id=t.id
+            WHERE tm.user_id=?
+            ORDER BY t.id DESC
+            """,
+            (user_id,),
+        ).fetchall()
+    finally:
+        conn.close()
+    return [
+        {
+            "team_id": int(row["id"]),
+            "name": str(row["name"] or "Team"),
+            "role": str(row["role"] or "member"),
+            "created_at": str(row["created_at"] or ""),
+        }
+        for row in rows
+    ]
+
+
+def _record_async_job(job_id: str, user_id: Optional[int], status: str, result_json: str = "", error_message: str = "") -> None:
+    _ensure_auth_db_ready()
+    now = _now_iso()
+    conn = _auth_db_conn()
+    try:
+        conn.execute(
+            """
+            INSERT INTO async_jobs(id, user_id, status, result_json, error_message, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(id) DO UPDATE SET
+                status=excluded.status,
+                result_json=excluded.result_json,
+                error_message=excluded.error_message,
+                updated_at=excluded.updated_at
+            """,
+            (job_id, user_id, status, result_json, error_message, now, now),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def _get_async_job(job_id: str) -> Optional[dict[str, Any]]:
+    if not job_id:
+        return None
+    if job_id in ASYNC_ANALYSIS_JOBS:
+        return ASYNC_ANALYSIS_JOBS[job_id]
+    _ensure_auth_db_ready()
+    conn = _auth_db_conn()
+    try:
+        row = conn.execute(
+            "SELECT id, user_id, status, result_json, error_message, created_at, updated_at FROM async_jobs WHERE id=?",
+            (job_id,),
+        ).fetchone()
+    finally:
+        conn.close()
+    if not row:
+        return None
+    result_json = str(row["result_json"] or "")
+    payload: dict[str, Any] = {}
+    if result_json:
+        try:
+            payload = json.loads(result_json)
+        except json.JSONDecodeError:
+            payload = {}
+    return {
+        "id": str(row["id"]),
+        "user_id": int(row["user_id"]) if row["user_id"] is not None else None,
+        "status": str(row["status"] or "queued"),
+        "result": payload,
+        "error": str(row["error_message"] or ""),
+        "created_at": str(row["created_at"] or ""),
+        "updated_at": str(row["updated_at"] or ""),
+    }
+
+
+def _save_seed_test(user_id: Optional[int], campaign_name: str, provider: str, inbox_count: int, spam_count: int, notes: str) -> None:
+    _ensure_auth_db_ready()
+    conn = _auth_db_conn()
+    try:
+        conn.execute(
+            "INSERT INTO seed_tests(user_id, campaign_name, provider, inbox_count, spam_count, notes, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (user_id, (campaign_name or "Campaign")[:120], (provider or "gmail")[:40], max(0, inbox_count), max(0, spam_count), (notes or "")[:500], _now_iso()),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def _recent_seed_tests(user_id: Optional[int], limit: int = 10) -> list[dict[str, Any]]:
+    _ensure_auth_db_ready()
+    conn = _auth_db_conn()
+    try:
+        if user_id is None:
+            rows = conn.execute(
+                "SELECT campaign_name, provider, inbox_count, spam_count, notes, created_at FROM seed_tests ORDER BY id DESC LIMIT ?",
+                (limit,),
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                "SELECT campaign_name, provider, inbox_count, spam_count, notes, created_at FROM seed_tests WHERE user_id=? ORDER BY id DESC LIMIT ?",
+                (user_id, limit),
+            ).fetchall()
+    finally:
+        conn.close()
+
+    return [
+        {
+            "campaign_name": str(row["campaign_name"] or "Campaign"),
+            "provider": str(row["provider"] or "gmail"),
+            "inbox_count": int(row["inbox_count"] or 0),
+            "spam_count": int(row["spam_count"] or 0),
+            "notes": str(row["notes"] or ""),
+            "created_at": str(row["created_at"] or ""),
+        }
+        for row in rows
+    ]
+
+
+def _blacklist_check(domain: str) -> dict[str, Any]:
+    clean = (domain or "").strip().lower()
+    if not clean:
+        return {"domain": "", "listed": False, "risk": "unknown", "details": "No domain provided."}
+    listed = clean in BLACKLISTED_DOMAINS
+    return {
+        "domain": clean,
+        "listed": listed,
+        "risk": "high" if listed else "low",
+        "details": "Domain matched known risky disposable/abuse sender patterns." if listed else "No direct match found in the internal risk list.",
+    }
+
+
 def _user_streak_days(user_id: int) -> int:
     _ensure_auth_db_ready()
     conn = _auth_db_conn()
@@ -956,6 +1338,7 @@ def access_page(request: Request):
 def pricing_page(request: Request):
     user = _get_session_user(request)
     authenticated = bool(user)
+    plans = _plan_catalog()
     return render_template_safe(
         request,
         "pricing.html",
@@ -972,28 +1355,51 @@ def pricing_page(request: Request):
             "charge_currency": "INR",
             "charge_amount_inr": RAZORPAY_AMOUNT_INR,
             "subscription_ready": bool(RAZORPAY_KEY and RAZORPAY_SECRET and RAZORPAY_PLAN_ID),
+            "plans": plans,
+            "trial_days": TRIAL_DAYS,
         },
     )
 
 
 @app.post("/create-subscription")
-async def create_subscription(request: Request):
+async def create_subscription(request: Request, plan: str = Form("monthly")):
     user = _get_session_user(request)
     if not user:
         return JSONResponse(status_code=401, content={"ok": False, "detail": "Not authenticated"})
 
-    if not RAZORPAY_KEY or not RAZORPAY_SECRET or not RAZORPAY_PLAN_ID:
+    plans = _plan_catalog()
+    selected_plan = str(plan or "monthly").strip().lower()
+    if selected_plan not in plans:
+        selected_plan = "monthly"
+    plan_data = plans[selected_plan]
+    plan_id = str(plan_data.get("plan_id") or "").strip()
+
+    if selected_plan == "usage":
+        return JSONResponse(
+            status_code=200,
+            content={
+                "success": True,
+                "usage_mode": True,
+                "message": "Usage-based plan enabled. API usage billing will apply per scan.",
+            },
+        )
+
+    if not RAZORPAY_KEY or not RAZORPAY_SECRET or not plan_id:
         return JSONResponse(status_code=503, content={"success": False, "detail": "Subscription not configured"})
 
     subscription_payload = {
-        "plan_id": RAZORPAY_PLAN_ID,
+        "plan_id": plan_id,
         "customer_notify": 1,
         "total_count": 12,
         "notes": {
             "user_id": str(user["id"]),
             "email": user["email"],
+            "plan": selected_plan,
         },
     }
+    trial_days = int(plan_data.get("trial_days") or 0)
+    if trial_days > 0:
+        subscription_payload["start_at"] = int((datetime.now(timezone.utc) + timedelta(days=trial_days)).timestamp())
 
     try:
         async with httpx.AsyncClient(timeout=20.0) as client:
@@ -1029,6 +1435,7 @@ async def create_subscription(request: Request):
             "email": user["email"],
             "provider": "razorpay",
             "type": "subscription",
+            "plan": selected_plan,
         },
     )
     return JSONResponse(
@@ -1039,8 +1446,9 @@ async def create_subscription(request: Request):
             "key": RAZORPAY_KEY,
             "amount": int(RAZORPAY_AMOUNT_INR) * 100,
             "currency": "INR",
-            "display_price": RAZORPAY_DISPLAY_PRICE_USD,
+            "display_price": str(plan_data.get("display_price") or RAZORPAY_DISPLAY_PRICE_USD),
             "charge_currency": "INR",
+            "plan": selected_plan,
         },
     )
 
@@ -1439,6 +1847,176 @@ def reports_csv(request: Request):
     return results_csv(request)
 
 
+@app.get("/plans")
+def billing_plans():
+    return {"ok": True, "plans": _plan_catalog(), "trial_days": TRIAL_DAYS}
+
+
+@app.post("/blacklist-check")
+def blacklist_check(domain: str = Form("")):
+    return {"ok": True, **_blacklist_check(domain)}
+
+
+@app.post("/seed-tests")
+def create_seed_test(
+    request: Request,
+    campaign_name: str = Form(""),
+    provider: str = Form("gmail"),
+    inbox_count: int = Form(0),
+    spam_count: int = Form(0),
+    notes: str = Form(""),
+):
+    user = _get_session_user(request)
+    _save_seed_test(int(user["id"]) if user else None, campaign_name, provider, inbox_count, spam_count, notes)
+    return {"ok": True}
+
+
+@app.get("/seed-tests")
+def list_seed_tests(request: Request):
+    user = _get_session_user(request)
+    items = _recent_seed_tests(int(user["id"]) if user else None, limit=12)
+    return {"ok": True, "items": items}
+
+
+@app.get("/seed-inbox", response_class=HTMLResponse)
+def seed_inbox_page(request: Request):
+    return _render_info_page(
+        request,
+        page_title="Seed Inbox Testing | InboxGuard",
+        meta_description="Track manual seed inbox test outcomes across providers.",
+        canonical_path="/seed-inbox",
+        headline="Seed inbox testing workflow",
+        intro="Log inbox and spam outcomes from your seed accounts to detect placement drift before full rollout.",
+        sections=[
+            _page_section("How to use", "Send a small controlled batch to seed accounts, then record inbox vs spam results per provider.", ["Start with 20-50 sends", "Capture Gmail/Outlook/Yahoo results", "Compare against previous runs"]),
+            _page_section("Current status", "This workflow currently captures and tracks outcomes you submit. Automated mailbox polling can be connected later.", ["Manual input active", "History available via API", "Built for pre-launch checks"]),
+        ],
+    )
+
+
+@app.post("/api-keys")
+def create_api_key(request: Request, name: str = Form("Primary key")):
+    user = _get_session_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="AUTH_REQUIRED")
+    key = _create_api_key(int(user["id"]), name)
+    return {"ok": True, "api_key": key, "warning": "Store this key now. It will not be shown again."}
+
+
+@app.get("/api-keys")
+def list_api_keys(request: Request):
+    user = _get_session_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="AUTH_REQUIRED")
+    return {"ok": True, "items": _list_api_keys(int(user["id"]))}
+
+
+@app.post("/api-keys/revoke")
+def revoke_api_key(request: Request, key_id: int = Form(0)):
+    user = _get_session_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="AUTH_REQUIRED")
+    if not _revoke_api_key(int(user["id"]), int(key_id)):
+        raise HTTPException(status_code=404, detail="API key not found")
+    return {"ok": True}
+
+
+@app.post("/api/analyze")
+def analyze_via_api(
+    request: Request,
+    x_api_key: str | None = Header(default=None, alias="X-API-Key"),
+    email: str = Form(""),
+    domain: str = Form(""),
+    raw_email: str = Form(""),
+    manual_subject: str = Form(""),
+    manual_body: str = Form(""),
+    analysis_mode: str = Form("content"),
+):
+    auth = _authenticate_api_key(str(x_api_key or ""))
+    if not auth:
+        raise HTTPException(status_code=401, detail="INVALID_API_KEY")
+    return _run_analysis_request(
+        request,
+        email=email,
+        domain=domain,
+        raw_email=raw_email,
+        manual_subject=manual_subject,
+        manual_body=manual_body,
+        analysis_mode=analysis_mode,
+        api_user_id=int(auth["user_id"]),
+    )
+
+
+@app.post("/teams")
+def create_team(request: Request, name: str = Form("My Team")):
+    user = _get_session_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="AUTH_REQUIRED")
+    team_id = _create_team(int(user["id"]), name)
+    return {"ok": True, "team_id": team_id}
+
+
+@app.post("/teams/member")
+def add_team_member(request: Request, team_id: int = Form(0), email: str = Form(""), role: str = Form("member")):
+    user = _get_session_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="AUTH_REQUIRED")
+    row = _get_user_by_email((email or "").strip().lower())
+    if not row:
+        raise HTTPException(status_code=404, detail="User not found")
+    safe_role = str(role or "member").strip().lower()
+    if safe_role not in {"owner", "admin", "member", "viewer"}:
+        safe_role = "member"
+    _add_team_member(int(team_id), int(row["id"]), safe_role)
+    return {"ok": True}
+
+
+@app.get("/teams")
+def list_teams(request: Request):
+    user = _get_session_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="AUTH_REQUIRED")
+    return {"ok": True, "items": _teams_for_user(int(user["id"]))}
+
+
+@app.get("/blog", response_class=HTMLResponse)
+def blog_page(request: Request):
+    sections = []
+    for slug, post in BLOG_POSTS.items():
+        sections.append(
+            _page_section(
+                post["title"],
+                post["summary"],
+                [f"Read: {SITE_URL}/blog/{slug}"],
+            )
+        )
+    return _render_info_page(
+        request,
+        page_title="InboxGuard Blog",
+        meta_description="Deliverability guides and spam-prevention playbooks.",
+        canonical_path="/blog",
+        headline="InboxGuard deliverability blog",
+        intro="Practical guides for safer email sends and stronger reply outcomes.",
+        sections=sections,
+    )
+
+
+@app.get("/blog/{slug}", response_class=HTMLResponse)
+def blog_post_page(request: Request, slug: str):
+    post = BLOG_POSTS.get(slug)
+    if not post:
+        raise HTTPException(status_code=404, detail="Post not found")
+    return _render_info_page(
+        request,
+        page_title=f"{post['title']} | InboxGuard",
+        meta_description=post["summary"],
+        canonical_path=f"/blog/{slug}",
+        headline=post["title"],
+        intro=post["summary"],
+        sections=[_page_section("Key points", "Use this checklist before your next send.", list(post["body"]))],
+    )
+
+
 @app.post("/lead-capture")
 def lead_capture(request: Request, email: str = Form(""), source: str = Form("capture_gate")):
     clean_email = (email or "").strip().lower()
@@ -1630,7 +2208,21 @@ def robots_txt():
 @app.get("/sitemap.xml")
 def sitemap_xml():
     today = date.today().isoformat()
-    urls = [f"{SITE_URL}/"] + [f"{SITE_URL}/p/{item['slug']}" for item in LONG_TAIL_PAGES]
+    urls = [
+        f"{SITE_URL}/",
+        f"{SITE_URL}/pricing",
+        f"{SITE_URL}/about",
+        f"{SITE_URL}/privacy",
+        f"{SITE_URL}/terms",
+        f"{SITE_URL}/inbox-tips",
+        f"{SITE_URL}/results",
+        f"{SITE_URL}/reports",
+        f"{SITE_URL}/saved-fixes",
+        f"{SITE_URL}/seed-inbox",
+        f"{SITE_URL}/blog",
+    ]
+    urls.extend([f"{SITE_URL}/blog/{slug}" for slug in BLOG_POSTS.keys()])
+    urls.extend([f"{SITE_URL}/p/{item['slug']}" for item in LONG_TAIL_PAGES])
 
     body = [
         '<?xml version="1.0" encoding="UTF-8"?>',
@@ -1643,16 +2235,17 @@ def sitemap_xml():
     return Response(content="\n".join(body), media_type="application/xml")
 
 
-@app.post("/analyze")
-def analyze(
+def _run_analysis_request(
     request: Request,
-    email: str = Form(""),
-    domain: str = Form(""),
-    raw_email: str = Form(""),
-    manual_subject: str = Form(""),
-    manual_body: str = Form(""),
-    analysis_mode: str = Form("content"),
-):
+    *,
+    email: str,
+    domain: str,
+    raw_email: str,
+    manual_subject: str,
+    manual_body: str,
+    analysis_mode: str,
+    api_user_id: Optional[int] = None,
+) -> dict[str, Any]:
     """
     Single Source of Truth enforcement:
     - If raw_email is provided and substantial (>20 chars), use ONLY raw_email
@@ -1665,17 +2258,14 @@ def analyze(
     manual_subject_text = manual_subject.strip()
     manual_body_text = manual_body.strip()
 
-    # Determine which source to use
     use_raw = len(raw_text) > 20
 
     if use_raw:
-        # ONLY use raw_email, ignore manual fields
         parsed_email = build_email_from_raw(raw_text, fallback_email="")
         parsed_domain = extract_domain_from_text(raw_text) or ""
         parsed_subject = ""
         parsed_body = ""
     else:
-        # ONLY use manual fields
         parsed_subject = manual_subject_text or email_text
         parsed_body = manual_body_text
         if parsed_subject and parsed_body:
@@ -1684,7 +2274,6 @@ def analyze(
             parsed_email = email_text or parsed_body or ""
         parsed_domain = domain_text or ""
 
-    # Guarantee fallback: ensure we have something to analyze
     if not parsed_email:
         parsed_email = f"To: {parsed_domain}\n\nNo content provided"
 
@@ -1693,10 +2282,13 @@ def analyze(
         mode = "content"
 
     user = _get_session_user(request)
+    if api_user_id is not None:
+        user = {"id": api_user_id, "pro": True, "status": "active"}
+
     if user:
         if not bool(user.get("pro", False)) or str(user.get("status", "inactive")).lower() != "active":
             raise HTTPException(status_code=402, detail="SUBSCRIPTION_REQUIRED")
-        usage = _get_usage(user["id"])
+        usage = _get_usage(int(user["id"]))
         if usage["scans_used"] >= FREE_USER_SCAN_LIMIT:
             raise HTTPException(status_code=402, detail="FREE_PLAN_LIMIT_REACHED")
     else:
@@ -1716,7 +2308,7 @@ def analyze(
     )
     result["learning_profile"] = get_learning_profile()
     if user:
-        user_scans = _increment_user_scan(user["id"])
+        user_scans = _increment_user_scan(int(user["id"]))
         result["usage"] = {
             "authenticated": True,
             "user_scans_used": user_scans,
@@ -1732,6 +2324,109 @@ def analyze(
     return result
 
 
+def _execute_async_analysis(job_id: str, request: Request, payload: dict[str, str], api_user_id: Optional[int] = None) -> None:
+    try:
+        result = _run_analysis_request(
+            request,
+            email=payload.get("email", ""),
+            domain=payload.get("domain", ""),
+            raw_email=payload.get("raw_email", ""),
+            manual_subject=payload.get("manual_subject", ""),
+            manual_body=payload.get("manual_body", ""),
+            analysis_mode=payload.get("analysis_mode", "content"),
+            api_user_id=api_user_id,
+        )
+        ASYNC_ANALYSIS_JOBS[job_id] = {
+            "id": job_id,
+            "status": "completed",
+            "result": result,
+            "error": "",
+            "updated_at": _now_iso(),
+        }
+        _record_async_job(job_id, api_user_id, "completed", result_json=json.dumps(result), error_message="")
+    except HTTPException as error:
+        ASYNC_ANALYSIS_JOBS[job_id] = {
+            "id": job_id,
+            "status": "failed",
+            "result": {},
+            "error": str(error.detail),
+            "updated_at": _now_iso(),
+        }
+        _record_async_job(job_id, api_user_id, "failed", result_json="", error_message=str(error.detail))
+    except Exception as error:
+        logger.exception("Async analysis failed for job=%s", job_id)
+        ASYNC_ANALYSIS_JOBS[job_id] = {
+            "id": job_id,
+            "status": "failed",
+            "result": {},
+            "error": str(error),
+            "updated_at": _now_iso(),
+        }
+        _record_async_job(job_id, api_user_id, "failed", result_json="", error_message=str(error))
+
+
+@app.post("/analyze")
+def analyze(
+    request: Request,
+    email: str = Form(""),
+    domain: str = Form(""),
+    raw_email: str = Form(""),
+    manual_subject: str = Form(""),
+    manual_body: str = Form(""),
+    analysis_mode: str = Form("content"),
+):
+    return _run_analysis_request(
+        request,
+        email=email,
+        domain=domain,
+        raw_email=raw_email,
+        manual_subject=manual_subject,
+        manual_body=manual_body,
+        analysis_mode=analysis_mode,
+    )
+
+
+@app.post("/analyze-async")
+def analyze_async(
+    request: Request,
+    background_tasks: BackgroundTasks,
+    email: str = Form(""),
+    domain: str = Form(""),
+    raw_email: str = Form(""),
+    manual_subject: str = Form(""),
+    manual_body: str = Form(""),
+    analysis_mode: str = Form("content"),
+):
+    user = _get_session_user(request)
+    job_id = str(uuid4())
+    ASYNC_ANALYSIS_JOBS[job_id] = {
+        "id": job_id,
+        "status": "queued",
+        "result": {},
+        "error": "",
+        "updated_at": _now_iso(),
+    }
+    _record_async_job(job_id, int(user["id"]) if user else None, "queued")
+    payload = {
+        "email": email,
+        "domain": domain,
+        "raw_email": raw_email,
+        "manual_subject": manual_subject,
+        "manual_body": manual_body,
+        "analysis_mode": analysis_mode,
+    }
+    background_tasks.add_task(_execute_async_analysis, job_id, request, payload, None)
+    return {"ok": True, "job_id": job_id, "status": "queued"}
+
+
+@app.get("/analyze-jobs/{job_id}")
+def analyze_job_status(job_id: str):
+    payload = _get_async_job(job_id)
+    if not payload:
+        raise HTTPException(status_code=404, detail="Job not found")
+    return {"ok": True, **payload}
+
+
 @app.post("/diagnose-campaign")
 def diagnose_campaign(
     open_rate: float = Form(0.0),
@@ -1743,6 +2438,7 @@ def diagnose_campaign(
     r = max(0.0, min(100.0, float(reply_rate or 0.0)))
     b = max(0.0, min(100.0, float(bounce_rate or 0.0)))
     sent = max(0, int(sent_count or 0))
+    severity_score = 0
 
     diagnosis = "Mixed issue"
     confidence = "medium"
@@ -1756,6 +2452,7 @@ def diagnose_campaign(
     if b >= 5.0:
         diagnosis = "List quality / deliverability issue"
         confidence = "high"
+        severity_score = 90
         why = "Bounce rate is elevated, which usually indicates invalid contacts or sender trust issues."
         actions = [
             "Clean the list immediately: remove invalid and risky addresses.",
@@ -1765,6 +2462,7 @@ def diagnose_campaign(
     elif o < 30.0:
         diagnosis = "Deliverability issue"
         confidence = "high"
+        severity_score = 82
         why = "Low open rate usually indicates inbox placement problems rather than copy quality."
         actions = [
             "Check SPF, DKIM, and DMARC alignment first.",
@@ -1774,6 +2472,7 @@ def diagnose_campaign(
     elif o >= 40.0 and r < 2.0:
         diagnosis = "Copy / targeting issue"
         confidence = "high"
+        severity_score = 68
         why = "Healthy opens but weak replies suggest the message or audience fit is off."
         actions = [
             "Rewrite first two lines for relevance to recipient context.",
@@ -1783,6 +2482,7 @@ def diagnose_campaign(
     elif o >= 30.0 and o < 40.0 and r < 2.0:
         diagnosis = "Mixed deliverability + copy issue"
         confidence = "medium"
+        severity_score = 74
         why = "Both opens and replies are under target, suggesting placement and message friction together."
         actions = [
             "Fix technical/authentication baseline first.",
@@ -1790,12 +2490,26 @@ def diagnose_campaign(
             "Compare control vs rewritten variant on equal audience slices.",
         ]
 
+    if sent > 0 and sent < 100:
+        actions.append("Sample size is small; validate with a larger controlled batch before major changes.")
+    if sent >= 1000 and o < 35:
+        actions.append("High volume with weak opens: pause scale-up until placement stabilizes.")
+
+    if severity_score == 0:
+        severity_score = 50 if r < 2 else 35
+
     return {
         "ok": True,
         "diagnosis": diagnosis,
         "confidence": confidence,
         "why": why,
         "actions": actions,
+        "severity_score": severity_score,
+        "benchmarks": {
+            "open_rate_target_min": 35.0,
+            "reply_rate_target_min": 2.0,
+            "bounce_rate_target_max": 3.0,
+        },
         "inputs": {
             "open_rate": o,
             "reply_rate": r,

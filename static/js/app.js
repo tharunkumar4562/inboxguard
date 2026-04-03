@@ -25,6 +25,7 @@ const rawEmailInput = document.getElementById("raw-email");
 const domainInput = document.getElementById("domain");
 const analysisModeInput = document.getElementById("analysis-mode");
 const submitButton = document.getElementById("run-check");
+const submitAsyncButton = document.getElementById("run-check-async");
 const loadingPanel = document.getElementById("result-loading");
 const loadingStep = document.getElementById("loading-step");
 
@@ -69,6 +70,7 @@ const subjectChangeNode = document.getElementById("subject-change");
 const rewriteChangesNode = document.getElementById("rewrite-changes");
 const rewriteTrustNoteNode = document.getElementById("rewrite-trust-note");
 const rewriteLimitationsNode = document.getElementById("rewrite-limitations");
+const rewriteDiffNode = document.getElementById("rewrite-diff");
 const fixOutput = document.getElementById("fix-output");
 const saveFixButton = document.getElementById("save-fix");
 const beforeEmailNode = document.getElementById("before-email");
@@ -90,6 +92,15 @@ const diagnosisPrimaryNode = document.getElementById("diagnosis-primary");
 const diagnosisConfidenceNode = document.getElementById("diagnosis-confidence");
 const diagnosisWhyNode = document.getElementById("diagnosis-why");
 const diagnosisActionsNode = document.getElementById("diagnosis-actions");
+const blacklistDomainInput = document.getElementById("blacklist-domain");
+const runBlacklistCheckButton = document.getElementById("run-blacklist-check");
+const blacklistResultNode = document.getElementById("blacklist-result");
+const seedCampaignInput = document.getElementById("seed-campaign");
+const seedProviderInput = document.getElementById("seed-provider");
+const seedInboxCountInput = document.getElementById("seed-inbox-count");
+const seedSpamCountInput = document.getElementById("seed-spam-count");
+const saveSeedTestButton = document.getElementById("save-seed-test");
+const seedTestListNode = document.getElementById("seed-test-list");
 
 const loadSteps = [
     "Checking content signals...",
@@ -141,6 +152,49 @@ function trackEvent(eventName, params) {
 
 function sleep(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function escapeHtml(value) {
+    return String(value || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/\"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+}
+
+function highlightSpamSignals(text) {
+    const patterns = [
+        /\blast\s+chance\b/gi,
+        /\bregister\s+now\b/gi,
+        /\bapply\s+now\b/gi,
+        /\blimited\s+time\b/gi,
+        /\bonly\s+\d+\s*(day|days|hour|hours|left)\b/gi,
+        /\bact\s+now\b/gi,
+        /\burgent\b/gi,
+    ];
+    let html = escapeHtml(text);
+    patterns.forEach((regex) => {
+        html = html.replace(regex, (match) => `<mark class="spam-highlight">${match}</mark>`);
+    });
+    return html;
+}
+
+function buildRewriteDiff(beforeText, afterText) {
+    const beforeLines = String(beforeText || "").split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+    const afterLines = String(afterText || "").split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+    const beforeSet = new Set(beforeLines);
+    const afterSet = new Set(afterLines);
+    const removed = beforeLines.filter((line) => !afterSet.has(line)).slice(0, 3);
+    const added = afterLines.filter((line) => !beforeSet.has(line)).slice(0, 3);
+
+    const rows = [];
+    removed.forEach((line) => rows.push({ type: "Removed", text: line }));
+    added.forEach((line) => rows.push({ type: "Added", text: line }));
+    if (!rows.length) {
+        rows.push({ type: "Updated", text: "Tone and structure adjusted with minor line edits." });
+    }
+    return rows;
 }
 
 function setTabFeedback(message) {
@@ -1066,8 +1120,10 @@ async function showFixTransformation() {
             return parts.join("\n\n");
         };
 
-        beforeEmailNode.textContent = formatEmailBlock(originalSubject, originalBody);
-        afterEmailNode.textContent = formatEmailBlock(rewrittenSubject, rewrittenBody);
+        const beforeBlock = formatEmailBlock(originalSubject, originalBody);
+        const afterBlock = formatEmailBlock(rewrittenSubject, rewrittenBody);
+        beforeEmailNode.innerHTML = highlightSpamSignals(beforeBlock);
+        afterEmailNode.innerHTML = escapeHtml(afterBlock);
 
         latestRewriteContext = {
             original_subject: originalSubject,
@@ -1141,6 +1197,16 @@ async function showFixTransformation() {
                     rewriteChangesNode.appendChild(li);
                 });
             }
+        }
+
+        if (rewriteDiffNode) {
+            const diffRows = buildRewriteDiff(beforeBlock, afterBlock);
+            rewriteDiffNode.innerHTML = "";
+            diffRows.forEach((row) => {
+                const li = document.createElement("li");
+                li.textContent = `${row.type}: ${row.text}`;
+                rewriteDiffNode.appendChild(li);
+            });
         }
 
         if (rewriteTrustNoteNode) {
@@ -1413,8 +1479,9 @@ async function runCampaignDiagnosis() {
         return;
     }
 
+    const severity = Number(data.severity_score || 0);
     diagnosisPrimaryNode.textContent = `Diagnosis: ${String(data.diagnosis || "Mixed issue")}`;
-    diagnosisConfidenceNode.textContent = `Confidence: ${String(data.confidence || "medium").toUpperCase()}`;
+    diagnosisConfidenceNode.textContent = `Confidence: ${String(data.confidence || "medium").toUpperCase()} | Severity: ${severity}/100`;
     diagnosisWhyNode.textContent = String(data.why || "No diagnosis details available.");
 
     diagnosisActionsNode.innerHTML = "";
@@ -1433,6 +1500,144 @@ async function runCampaignDiagnosis() {
 
     diagnosisOutput.classList.remove("hidden");
     diagnosisOutput.scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
+async function runBlacklistCheck() {
+    const domain = blacklistDomainInput ? String(blacklistDomainInput.value || "").trim() : "";
+    if (!domain) {
+        showError("Enter a domain first.");
+        return;
+    }
+    const payload = new FormData();
+    payload.set("domain", domain);
+    const response = await fetch("/blacklist-check", { method: "POST", body: payload });
+    if (!response.ok) {
+        throw new Error("Could not run blacklist check.");
+    }
+    const data = await response.json();
+    if (blacklistResultNode) {
+        blacklistResultNode.textContent = data.listed
+            ? `High risk: ${data.domain} appears in risk list. ${data.details}`
+            : `Low risk: ${data.domain} is not in current risk list. ${data.details}`;
+    }
+}
+
+async function refreshSeedTests() {
+    if (!seedTestListNode) {
+        return;
+    }
+    const response = await fetch("/seed-tests", { method: "GET" });
+    if (!response.ok) {
+        return;
+    }
+    const data = await response.json();
+    const items = Array.isArray(data.items) ? data.items : [];
+    seedTestListNode.innerHTML = "";
+    if (!items.length) {
+        const li = document.createElement("li");
+        li.textContent = "No seed tests logged yet.";
+        seedTestListNode.appendChild(li);
+        return;
+    }
+    items.slice(0, 5).forEach((item) => {
+        const li = document.createElement("li");
+        li.textContent = `${String(item.campaign_name || "Campaign")} | ${String(item.provider || "provider")} | Inbox ${Number(item.inbox_count || 0)} / Spam ${Number(item.spam_count || 0)}`;
+        seedTestListNode.appendChild(li);
+    });
+}
+
+async function saveSeedTest() {
+    const campaign = seedCampaignInput ? String(seedCampaignInput.value || "").trim() : "";
+    const provider = seedProviderInput ? String(seedProviderInput.value || "gmail") : "gmail";
+    const inboxCount = Number(seedInboxCountInput && seedInboxCountInput.value ? seedInboxCountInput.value : 0);
+    const spamCount = Number(seedSpamCountInput && seedSpamCountInput.value ? seedSpamCountInput.value : 0);
+    if (!campaign) {
+        showError("Add a campaign name before saving.");
+        return;
+    }
+
+    const payload = new FormData();
+    payload.set("campaign_name", campaign);
+    payload.set("provider", provider);
+    payload.set("inbox_count", String(inboxCount));
+    payload.set("spam_count", String(spamCount));
+    payload.set("notes", "Logged from dashboard");
+
+    const response = await fetch("/seed-tests", { method: "POST", body: payload });
+    if (!response.ok) {
+        throw new Error("Could not save seed test.");
+    }
+    showError("Seed test saved.");
+    await refreshSeedTests();
+}
+
+async function runAnalyzeAsync() {
+    await refreshAuthStatus();
+
+    const rawText = rawEmailInput ? rawEmailInput.value.trim() : "";
+    if (rawText.length < 20) {
+        showError("Paste the full email draft before scanning.");
+        return;
+    }
+
+    const payload = new FormData();
+    payload.set("raw_email", rawText);
+    if (domainInput && domainInput.value.trim()) {
+        payload.set("domain", domainInput.value.trim());
+    }
+    payload.set("analysis_mode", analysisModeInput ? analysisModeInput.value : "content");
+
+    if (submitAsyncButton) {
+        submitAsyncButton.disabled = true;
+        submitAsyncButton.textContent = "Queued...";
+    }
+
+    const response = await fetch("/analyze-async", { method: "POST", body: payload });
+    if (!response.ok) {
+        if (submitAsyncButton) {
+            submitAsyncButton.disabled = false;
+            submitAsyncButton.textContent = "Analyze In Background";
+        }
+        throw new Error("Could not queue async scan.");
+    }
+
+    const data = await response.json();
+    const jobId = String(data.job_id || "");
+    showError("Background scan started. Results will appear automatically.");
+
+    for (let i = 0; i < 20; i += 1) {
+        await sleep(1200);
+        const poll = await fetch(`/analyze-jobs/${jobId}`, { method: "GET" });
+        if (!poll.ok) {
+            continue;
+        }
+        const job = await poll.json();
+        if (job.status === "completed" && job.result) {
+            const summary = job.result.summary || {};
+            const signals = job.result.signals || {};
+            const findings = job.result.partial_findings || summary.findings || [];
+            latestSummary = summary;
+            latestFindings = findings;
+            hasScanResult = true;
+            renderStatus(summary, signals, findings);
+            renderDecisionEngine(summary, signals, findings);
+            renderBreakdown(summary);
+            setResultState();
+            if (resultSection) {
+                resultSection.scrollIntoView({ behavior: "smooth", block: "start" });
+            }
+            break;
+        }
+        if (job.status === "failed") {
+            showError(String(job.error || "Async scan failed."));
+            break;
+        }
+    }
+
+    if (submitAsyncButton) {
+        submitAsyncButton.disabled = false;
+        submitAsyncButton.textContent = "Analyze In Background";
+    }
 }
 
 // ===== RAZORPAY PAYMENT INTEGRATION =====
@@ -1497,11 +1702,20 @@ async function startPayment() {
             return;
         }
 
-        const response = await fetch("/create-subscription", { method: "POST" });
+        const planInput = document.getElementById("plan-type");
+        const payload = new FormData();
+        payload.set("plan", planInput ? String(planInput.value || "monthly") : "monthly");
+        const response = await fetch("/create-subscription", { method: "POST", body: payload });
         const data = await response.json().catch(() => ({}));
 
         if (!response.ok || !data.success) {
             showError(data.detail || "Payment system not configured. Please try again later.");
+            return;
+        }
+
+        if (data.usage_mode) {
+            showError("Usage-based plan enabled. API billing will apply per scan.");
+            closePricingModal();
             return;
         }
 
@@ -1630,6 +1844,27 @@ if (dashboardTab) {
             });
         });
     }
+    if (submitAsyncButton) {
+        submitAsyncButton.addEventListener("click", () => {
+            runAnalyzeAsync().catch((error) => {
+                showError(error && error.message ? error.message : "Could not queue async scan.");
+            });
+        });
+    }
+    if (runBlacklistCheckButton) {
+        runBlacklistCheckButton.addEventListener("click", () => {
+            runBlacklistCheck().catch((error) => {
+                showError(error && error.message ? error.message : "Could not check domain risk.");
+            });
+        });
+    }
+    if (saveSeedTestButton) {
+        saveSeedTestButton.addEventListener("click", () => {
+            saveSeedTest().catch((error) => {
+                showError(error && error.message ? error.message : "Could not save seed test.");
+            });
+        });
+    }
     if (leadCaptureContinueButton) {
         leadCaptureContinueButton.addEventListener("click", () => {
             continueWithLeadCapture().catch((error) => {
@@ -1748,4 +1983,5 @@ activateTab("dashboard");
 refreshAuthStatus().then(() => {
     resumePendingAfterAuthIfNeeded();
     openAuthModalFromQueryIfNeeded();
+    refreshSeedTests().catch(() => null);
 });

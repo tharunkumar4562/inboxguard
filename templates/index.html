@@ -151,6 +151,7 @@ I noticed your recent post and had one short idea to improve reply rates."></tex
             </details>
 
             <button type="submit" id="run-check" class="btn-danger">Analyze Email</button>
+            <button type="button" id="run-check-async" class="btn-secondary" style="margin-top:8px;">Analyze In Background</button>
             <p class="micro">Free: analyze + fix one email. No signup.</p>
             <p class="micro">Upgrade for batch scans, history, and domain tracking.</p>
 
@@ -289,13 +290,19 @@ I noticed your recent post and had one short idea to improve reply rates."></tex
             </div>
             <div class="rewrite-grid">
               <article>
-                <p class="rewrite-label">Before</p>
+                <p class="rewrite-label">Before (spam-risk highlighted)</p>
                 <pre id="before-email" class="rewrite-box">-</pre>
               </article>
               <article>
                 <p class="rewrite-label">After</p>
                 <pre id="after-email" class="rewrite-box">-</pre>
               </article>
+            </div>
+            <div class="rewrite-proof" style="margin-top:8px;">
+              <p class="rewrite-proof-title">Diff summary:</p>
+              <ul id="rewrite-diff" class="compact-list">
+                <li>Generate a fix to view exact line-by-line changes.</li>
+              </ul>
             </div>
             <p id="rewrite-trust-note" class="micro">Based on pattern shifts commonly flagged by Gmail and Outlook filters.</p>
             <ul id="rewrite-limitations" class="compact-list" style="margin-top: 8px;">
@@ -362,10 +369,67 @@ I noticed your recent post and had one short idea to improve reply rates."></tex
           </div>
         </section>
 
+        <section class="card" id="blacklist-checker" style="margin-top: 12px;">
+          <h3>Domain Blacklist Checker</h3>
+          <p class="micro">Quickly check if your sender domain appears in a known risky list.</p>
+          <div class="inline-fields" style="margin-top: 8px;">
+            <div>
+              <label for="blacklist-domain">Domain</label>
+              <input id="blacklist-domain" type="text" placeholder="yourdomain.com" />
+            </div>
+          </div>
+          <button id="run-blacklist-check" type="button" class="btn-secondary" style="margin-top: 10px;">Check Domain Risk</button>
+          <p id="blacklist-result" class="micro" style="margin-top: 8px;">No check yet.</p>
+        </section>
+
+        <section class="card" id="seed-inbox-tracker" style="margin-top: 12px;">
+          <h3>Seed Inbox Testing</h3>
+          <p class="micro">Log seed account outcomes per provider to catch placement drift before full rollout.</p>
+          <div class="inline-fields" style="margin-top: 8px;">
+            <div>
+              <label for="seed-campaign">Campaign</label>
+              <input id="seed-campaign" type="text" placeholder="April cold outreach batch" />
+            </div>
+            <div>
+              <label for="seed-provider">Provider</label>
+              <select id="seed-provider">
+                <option value="gmail">Gmail</option>
+                <option value="outlook">Outlook</option>
+                <option value="yahoo">Yahoo</option>
+              </select>
+            </div>
+          </div>
+          <div class="inline-fields" style="margin-top: 8px;">
+            <div>
+              <label for="seed-inbox-count">Inbox Count</label>
+              <input id="seed-inbox-count" type="number" min="0" step="1" placeholder="e.g. 17" />
+            </div>
+            <div>
+              <label for="seed-spam-count">Spam Count</label>
+              <input id="seed-spam-count" type="number" min="0" step="1" placeholder="e.g. 3" />
+            </div>
+          </div>
+          <button id="save-seed-test" type="button" class="btn-secondary" style="margin-top: 10px;">Save Seed Result</button>
+          <ul id="seed-test-list" class="compact-list" style="margin-top: 8px;">
+            <li>No seed tests logged yet.</li>
+          </ul>
+        </section>
+
+        <section class="card" id="trust-social-proof" style="margin-top: 12px;">
+          <h3>Trusted by teams who send before sunrise</h3>
+          <p class="micro">"InboxGuard caught what our QA missed and saved a full campaign run."</p>
+          <p class="micro">- Founder, B2B outbound team (38K contacts/month)</p>
+          <p class="micro">"We now run every campaign through it before touching volume."</p>
+          <p class="micro">- Growth lead, SaaS sales motion</p>
+          <p class="micro" style="margin-top: 10px;">Read deliverability guides on <a href="/blog" class="link-action">the InboxGuard blog</a>.</p>
+        </section>
+
         <div style="margin-top: 14px; display: flex; flex-wrap: wrap; gap: 12px; color: #94a3b8; font-size: 0.92rem;">
           <a href="/about" class="link-action">About</a>
           <a href="/privacy" class="link-action">Privacy</a>
           <a href="/terms" class="link-action">Terms</a>
+          <a href="/seed-inbox" class="link-action">Seed Inbox</a>
+          <a href="/blog" class="link-action">Blog</a>
         </div>
       </main>
     </div>
