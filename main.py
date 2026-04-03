@@ -590,13 +590,33 @@ def home(request: Request):
 
 
 @app.get("/login", response_class=HTMLResponse)
-def login_page(request: Request):
-    return RedirectResponse(url="/?auth=1", status_code=303)
+def login_page(request: Request, next: str = "/profile"):
+    return render_template_safe(
+        request,
+        "login.html",
+        {
+            "page_title": "Login | InboxGuard",
+            "meta_description": "Sign in to InboxGuard to keep scanning, save results, and view usage history.",
+            "canonical_url": f"{SITE_URL}/login",
+            "google_enabled": _google_client() is not None,
+            "next_path": next or "/profile",
+        },
+    )
 
 
 @app.get("/access", response_class=HTMLResponse)
-def access_page(request: Request):
-    return RedirectResponse(url="/?auth=1", status_code=303)
+def access_page(request: Request, next: str = "/profile"):
+    return render_template_safe(
+        request,
+        "login.html",
+        {
+            "page_title": "Get Access | InboxGuard",
+            "meta_description": "Create an account or sign in to keep scanning and save usage history.",
+            "canonical_url": f"{SITE_URL}/access",
+            "google_enabled": _google_client() is not None,
+            "next_path": next or "/profile",
+        },
+    )
 
 
 @app.get("/auth/status")
