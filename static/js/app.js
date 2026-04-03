@@ -108,6 +108,7 @@ let userScansLimit = 50;
 let currentUserName = "";
 let currentUserEmail = "";
 let currentUserAvatar = "";
+let currentUserStatus = "inactive";
 let emailPastedTracked = false;
 let advancedOpenedTracked = false;
 let pendingAuthRedirectPath = "";
@@ -218,10 +219,12 @@ async function refreshAuthStatus() {
         anonymousScansLimit = Number(data && data.anonymous_scans_limit ? data.anonymous_scans_limit : 3);
         userScansUsed = Number(data && data.user_scans_used ? data.user_scans_used : 0);
         userScansLimit = Number(data && data.user_scans_limit ? data.user_scans_limit : 50);
+        currentUserStatus = String(data && data.status ? data.status : "inactive").toLowerCase();
 
         // Set window-level user state for Razorpay
         window.currentUser = isAuthenticated;
         window.userIsPro = Boolean(data && data.pro);
+        window.userStatus = currentUserStatus;
         window.currentUserEmail = currentUserEmail;
         window.currentUserName = currentUserName;
 
@@ -1103,6 +1106,10 @@ async function runAnalyze() {
                 showAuthModal();
                 throw new Error("Sign in to continue scanning.");
             }
+            if (code === "SUBSCRIPTION_REQUIRED") {
+                showPaywall();
+                throw new Error("Active subscription required. Upgrade to continue scanning.");
+            }
             if (code === "FREE_PLAN_LIMIT_REACHED") {
                 throw new Error("You reached your monthly free plan scan limit. Upgrade is required for more scans.");
             }
@@ -1333,16 +1340,26 @@ function canUserScan() {
         return true;
     }
 
-    if (window.userIsPro) {
+    const status = String(window.userStatus || currentUserStatus || "inactive").toLowerCase();
+    const hasAccess = Boolean(window.userIsPro) && status === "active";
+    if (hasAccess) {
         return true;
     }
 
+    if (status === "past_due") {
+        showError("Payment failed. Update your payment method to keep access.");
+    }
+
+    showPaywall();
+    return false;
+
+    /*
+    Legacy free-scan gate retained intentionally for potential future re-enable:
     if (userScansUsed >= 1) {
         showPaywall();
         return false;
     }
-
-    return true;
+    */
 }
 
 function showPaywall() {
@@ -1354,7 +1371,7 @@ function showPaywall() {
 
 async function startPayment() {
     try {
-        const response = await fetch("/create-order", { method: "POST" });
+        const response = await fetch("/create-subscription", { method: "POST" });
         const data = await response.json().catch(() => ({}));
 
         if (!response.ok || !data.success) {
@@ -1371,7 +1388,7 @@ async function startPayment() {
             key: data.key,
             amount: data.amount,
             currency: data.currency || "INR",
-            order_id: data.order_id,
+            subscription_id: data.subscription_id,
             name: "InboxGuard",
             description: `${data.display_price || "$12"} / month`,
             prefill: {
@@ -1380,7 +1397,7 @@ async function startPayment() {
             },
             handler: function () {
                 closePricingModal();
-                showError("Payment received. Unlocking access...");
+                showError("Subscription started. Processing payment and unlocking access...");
                 setTimeout(() => {
                     window.location.reload();
                 }, 5000);

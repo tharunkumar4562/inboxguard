@@ -51,6 +51,8 @@ RAZORPAY_SECRET = os.getenv("INBOXGUARD_RAZORPAY_SECRET", os.getenv("RAZORPAY_SE
 RAZORPAY_WEBHOOK_SECRET = os.getenv("INBOXGUARD_RAZORPAY_WEBHOOK_SECRET", os.getenv("RAZORPAY_WEBHOOK_SECRET", "")).strip()
 RAZORPAY_AMOUNT_INR = int(os.getenv("INBOXGUARD_RAZORPAY_AMOUNT_INR", "1200"))
 RAZORPAY_DISPLAY_PRICE_USD = os.getenv("INBOXGUARD_RAZORPAY_DISPLAY_PRICE_USD", "$12").strip()
+RAZORPAY_PLAN_ID = os.getenv("INBOXGUARD_RAZORPAY_PLAN_ID", os.getenv("RAZORPAY_PLAN_ID", "")).strip()
+PAST_DUE_GRACE_DAYS = int(os.getenv("INBOXGUARD_PAST_DUE_GRACE_DAYS", "3"))
 GOOGLE_VERIFICATION_FILE = "googleab4b33a28d8dfb88.html"
 AUTH_DB_READY = False
 LONG_TAIL_PAGES = [
@@ -161,6 +163,21 @@ def _ensure_auth_db() -> None:
             )
             """
         )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS payments (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                subscription_id TEXT,
+                payment_id TEXT,
+                invoice_id TEXT,
+                amount INTEGER NOT NULL DEFAULT 0,
+                status TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                FOREIGN KEY(user_id) REFERENCES users(id)
+            )
+            """
+        )
         conn.commit()
     finally:
         conn.close()
@@ -172,6 +189,7 @@ def _ensure_auth_db_ready() -> None:
         return
     _ensure_auth_db()
     _ensure_user_pro_column()
+    _ensure_user_subscription_columns()
     AUTH_DB_READY = True
 
 
@@ -186,6 +204,28 @@ def _ensure_user_pro_column(conn: Optional[sqlite3.Connection] = None) -> None:
         if "pro" not in column_names:
             conn.execute("ALTER TABLE users ADD COLUMN pro INTEGER NOT NULL DEFAULT 0")
             conn.commit()
+    finally:
+        if close_conn:
+            conn.close()
+
+
+def _ensure_user_subscription_columns(conn: Optional[sqlite3.Connection] = None) -> None:
+    close_conn = False
+    if conn is None:
+        conn = _auth_db_conn()
+        close_conn = True
+    try:
+        columns = conn.execute("PRAGMA table_info(users)").fetchall()
+        column_names = {str(column[1]) for column in columns}
+        if "subscription_id" not in column_names:
+            conn.execute("ALTER TABLE users ADD COLUMN subscription_id TEXT")
+        if "status" not in column_names:
+            conn.execute("ALTER TABLE users ADD COLUMN status TEXT NOT NULL DEFAULT 'inactive'")
+        if "status_updated_at" not in column_names:
+            conn.execute("ALTER TABLE users ADD COLUMN status_updated_at TEXT")
+        if "past_due_since" not in column_names:
+            conn.execute("ALTER TABLE users ADD COLUMN past_due_since TEXT")
+        conn.commit()
     finally:
         if close_conn:
             conn.close()
@@ -278,6 +318,131 @@ def _get_user_by_id(user_id: int):
     conn = _auth_db_conn()
     try:
         return conn.execute("SELECT * FROM users WHERE id=?", (user_id,)).fetchone()
+    finally:
+        conn.close()
+
+
+def _get_user_id_by_subscription_id(subscription_id: str) -> int:
+    if not subscription_id:
+        return 0
+    _ensure_auth_db_ready()
+    conn = _auth_db_conn()
+    try:
+        row = conn.execute("SELECT id FROM users WHERE subscription_id=?", (subscription_id,)).fetchone()
+        return int(row["id"]) if row else 0
+    finally:
+        conn.close()
+
+
+def _safe_parse_iso(iso_value: str) -> Optional[datetime]:
+    if not iso_value:
+        return None
+    value = str(iso_value).strip()
+    if not value:
+        return None
+    try:
+        if value.endswith("Z"):
+            value = value[:-1] + "+00:00"
+        return datetime.fromisoformat(value)
+    except ValueError:
+        return None
+
+
+def _enforce_past_due_grace_period(user_id: int) -> None:
+    _ensure_auth_db_ready()
+    conn = _auth_db_conn()
+    try:
+        row = conn.execute("SELECT status, past_due_since, pro FROM users WHERE id=?", (user_id,)).fetchone()
+        if not row:
+            return
+        status = str(row["status"] or "inactive").strip().lower()
+        if status != "past_due":
+            return
+        past_due_since = _safe_parse_iso(str(row["past_due_since"] or ""))
+        if not past_due_since:
+            return
+        elapsed = datetime.now(timezone.utc) - past_due_since
+        if elapsed >= timedelta(days=PAST_DUE_GRACE_DAYS):
+            now = _now_iso()
+            conn.execute(
+                "UPDATE users SET pro=0, status='cancelled', status_updated_at=? WHERE id=?",
+                (now, user_id),
+            )
+            conn.commit()
+    finally:
+        conn.close()
+
+
+def _set_user_subscription_state(
+    user_id: int,
+    *,
+    pro: Optional[bool] = None,
+    status: Optional[str] = None,
+    subscription_id: Optional[str] = None,
+    past_due_since: Optional[str] = None,
+) -> None:
+    _ensure_auth_db_ready()
+    conn = _auth_db_conn()
+    try:
+        _ensure_user_pro_column(conn)
+        _ensure_user_subscription_columns(conn)
+
+        updates: list[str] = []
+        params: list[Any] = []
+
+        if pro is not None:
+            updates.append("pro=?")
+            params.append(1 if pro else 0)
+        if status is not None:
+            updates.append("status=?")
+            params.append(status)
+            updates.append("status_updated_at=?")
+            params.append(_now_iso())
+        if subscription_id is not None:
+            updates.append("subscription_id=?")
+            params.append(subscription_id)
+        if past_due_since is not None:
+            updates.append("past_due_since=?")
+            params.append(past_due_since)
+
+        if not updates:
+            return
+
+        params.append(user_id)
+        conn.execute(f"UPDATE users SET {', '.join(updates)} WHERE id=?", tuple(params))
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def _record_payment(
+    *,
+    user_id: int,
+    amount: int,
+    status: str,
+    subscription_id: str = "",
+    payment_id: str = "",
+    invoice_id: str = "",
+) -> None:
+    _ensure_auth_db_ready()
+    conn = _auth_db_conn()
+    try:
+        conn.execute(
+            """
+            INSERT INTO payments(user_id, subscription_id, payment_id, invoice_id, amount, status, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                user_id,
+                subscription_id,
+                payment_id,
+                invoice_id,
+                int(amount),
+                status,
+                _now_iso(),
+            ),
+        )
+        conn.commit()
     finally:
         conn.close()
 
@@ -497,6 +662,7 @@ def _get_session_user(request: Request):
     email = str(request.session.get("user_email", "")).strip().lower()
     if user_id <= 0 or not email:
         return None
+    _enforce_past_due_grace_period(user_id)
     db_user = _get_user_by_id(user_id)
     if not db_user:
         return None
@@ -506,6 +672,8 @@ def _get_session_user(request: Request):
         "name": str(request.session.get("user_name", "")).strip(),
         "picture": str(request.session.get("user_picture", "")).strip(),
         "pro": bool(db_user["pro"] if "pro" in db_user.keys() else 0),
+        "status": str(db_user["status"] if "status" in db_user.keys() and db_user["status"] else "inactive"),
+        "subscription_id": str(db_user["subscription_id"] if "subscription_id" in db_user.keys() and db_user["subscription_id"] else ""),
     }
 
 
@@ -542,6 +710,8 @@ def _auth_status_payload(request: Request) -> dict:
         "user_scans_limit": FREE_USER_SCAN_LIMIT,
         "google_enabled": GOOGLE_AUTH_CONFIGURED,
         "pro": False,
+        "status": "inactive",
+        "subscription_id": "",
     }
     if user:
         usage = _get_usage(user["id"])
@@ -553,6 +723,8 @@ def _auth_status_payload(request: Request) -> dict:
                 "rewrite_clicked": usage["rewrite_clicked"],
                 "last_active": usage["last_active"],
                 "pro": is_pro,
+                "status": str(user.get("status", "inactive")),
+                "subscription_id": str(user.get("subscription_id", "")),
             }
         )
     return payload
@@ -671,24 +843,24 @@ def pricing_page(request: Request):
             "display_price_usd": RAZORPAY_DISPLAY_PRICE_USD,
             "charge_currency": "INR",
             "charge_amount_inr": RAZORPAY_AMOUNT_INR,
+            "subscription_ready": bool(RAZORPAY_KEY and RAZORPAY_SECRET and RAZORPAY_PLAN_ID),
         },
     )
 
 
-@app.post("/create-order")
-async def create_order(request: Request):
+@app.post("/create-subscription")
+async def create_subscription(request: Request):
     user = _get_session_user(request)
     if not user:
         return JSONResponse(status_code=401, content={"ok": False, "detail": "Not authenticated"})
 
-    if not RAZORPAY_KEY or not RAZORPAY_SECRET:
-        return JSONResponse(status_code=503, content={"success": False, "detail": "Payment not configured"})
+    if not RAZORPAY_KEY or not RAZORPAY_SECRET or not RAZORPAY_PLAN_ID:
+        return JSONResponse(status_code=503, content={"success": False, "detail": "Subscription not configured"})
 
-    amount_paise = int(RAZORPAY_AMOUNT_INR) * 100
-    order_payload = {
-        "amount": amount_paise,
-        "currency": "INR",
-        "payment_capture": 1,
+    subscription_payload = {
+        "plan_id": RAZORPAY_PLAN_ID,
+        "customer_notify": 1,
+        "total_count": 12,
         "notes": {
             "user_id": str(user["id"]),
             "email": user["email"],
@@ -698,36 +870,56 @@ async def create_order(request: Request):
     try:
         async with httpx.AsyncClient(timeout=20.0) as client:
             response = await client.post(
-                "https://api.razorpay.com/v1/orders",
+                "https://api.razorpay.com/v1/subscriptions",
                 auth=(RAZORPAY_KEY, RAZORPAY_SECRET),
-                json=order_payload,
+                json=subscription_payload,
             )
     except httpx.HTTPError as error:
-        logger.exception("Razorpay order creation failed: %s", error)
-        return JSONResponse(status_code=502, content={"success": False, "detail": "Could not create order"})
+        logger.exception("Razorpay subscription creation failed: %s", error)
+        return JSONResponse(status_code=502, content={"success": False, "detail": "Could not create subscription"})
 
     if response.status_code >= 400:
-        logger.warning("Razorpay order creation failed: status=%s body=%s", response.status_code, response.text)
-        return JSONResponse(status_code=502, content={"success": False, "detail": "Could not create order"})
+        logger.warning("Razorpay subscription creation failed: status=%s body=%s", response.status_code, response.text)
+        return JSONResponse(status_code=502, content={"success": False, "detail": "Could not create subscription"})
 
     data = response.json()
-    order_id = str(data.get("id", "")).strip()
-    if not order_id:
-        return JSONResponse(status_code=502, content={"success": False, "detail": "Could not create order"})
+    subscription_id = str(data.get("id", "")).strip()
+    if not subscription_id:
+        return JSONResponse(status_code=502, content={"success": False, "detail": "Could not create subscription"})
 
-    track_event("checkout_started", {"user_id": str(user["id"]), "email": user["email"], "provider": "razorpay"})
+    _set_user_subscription_state(
+        user["id"],
+        pro=False,
+        status="pending",
+        subscription_id=subscription_id,
+    )
+
+    track_event(
+        "checkout_started",
+        {
+            "user_id": str(user["id"]),
+            "email": user["email"],
+            "provider": "razorpay",
+            "type": "subscription",
+        },
+    )
     return JSONResponse(
         status_code=200,
         content={
             "success": True,
-            "order_id": order_id,
+            "subscription_id": subscription_id,
             "key": RAZORPAY_KEY,
-            "amount": amount_paise,
+            "amount": int(RAZORPAY_AMOUNT_INR) * 100,
             "currency": "INR",
             "display_price": RAZORPAY_DISPLAY_PRICE_USD,
             "charge_currency": "INR",
         },
     )
+
+
+@app.post("/create-order")
+async def create_order_backcompat(request: Request):
+    return await create_subscription(request)
 
 
 @app.post("/razorpay-webhook")
@@ -749,22 +941,84 @@ async def razorpay_webhook(request: Request, x_razorpay_signature: str | None = 
     except json.JSONDecodeError:
         return JSONResponse(status_code=400, content={"status": "invalid_json"})
 
-    if str(payload.get("event", "")).strip() != "payment.captured":
-        return JSONResponse(status_code=200, content={"status": "ignored"})
+    event = str(payload.get("event", "")).strip().lower()
 
-    entity = (payload.get("payload", {}) or {}).get("payment", {}).get("entity", {}) or {}
-    notes = entity.get("notes", {}) or {}
-    user_id = int(notes.get("user_id", 0) or 0)
-    if user_id > 0:
-        _set_user_pro(user_id)
-        track_event(
-            "pro_activated",
-            {
-                "user_id": str(user_id),
-                "payment_id": str(entity.get("id", "")),
-                "provider": "razorpay",
-            },
-        )
+    def _extract_user_id(notes: dict) -> int:
+        return int((notes or {}).get("user_id", 0) or 0)
+
+    if event == "subscription.activated":
+        sub = (payload.get("payload", {}) or {}).get("subscription", {}).get("entity", {}) or {}
+        notes = sub.get("notes", {}) or {}
+        sub_id = str(sub.get("id", "") or "")
+        user_id = _extract_user_id(notes) or _get_user_id_by_subscription_id(sub_id)
+        if user_id > 0:
+            _set_user_subscription_state(
+                user_id,
+                pro=True,
+                status="active",
+                subscription_id=sub_id,
+                past_due_since="",
+            )
+            track_event("pro_activated", {"user_id": str(user_id), "provider": "razorpay", "subscription_id": sub_id})
+
+    elif event == "invoice.paid":
+        invoice = (payload.get("payload", {}) or {}).get("invoice", {}).get("entity", {}) or {}
+        notes = invoice.get("notes", {}) or {}
+        subscription_id = str(invoice.get("subscription_id", "") or "")
+        user_id = _extract_user_id(notes) or _get_user_id_by_subscription_id(subscription_id)
+        if user_id > 0:
+            _set_user_subscription_state(
+                user_id,
+                pro=True,
+                status="active",
+                past_due_since="",
+                subscription_id=subscription_id,
+            )
+            _record_payment(
+                user_id=user_id,
+                amount=int(invoice.get("amount", 0) or 0),
+                status="paid",
+                subscription_id=subscription_id,
+                payment_id=str(invoice.get("payment_id", "") or ""),
+                invoice_id=str(invoice.get("id", "") or ""),
+            )
+
+    elif event == "invoice.payment_failed":
+        invoice = (payload.get("payload", {}) or {}).get("invoice", {}).get("entity", {}) or {}
+        notes = invoice.get("notes", {}) or {}
+        subscription_id = str(invoice.get("subscription_id", "") or "")
+        user_id = _extract_user_id(notes) or _get_user_id_by_subscription_id(subscription_id)
+        if user_id > 0:
+            _set_user_subscription_state(
+                user_id,
+                status="past_due",
+                past_due_since=_now_iso(),
+                subscription_id=subscription_id,
+            )
+            _record_payment(
+                user_id=user_id,
+                amount=int(invoice.get("amount", 0) or 0),
+                status="failed",
+                subscription_id=subscription_id,
+                payment_id=str(invoice.get("payment_id", "") or ""),
+                invoice_id=str(invoice.get("id", "") or ""),
+            )
+
+    elif event == "subscription.cancelled":
+        sub = (payload.get("payload", {}) or {}).get("subscription", {}).get("entity", {}) or {}
+        notes = sub.get("notes", {}) or {}
+        sub_id = str(sub.get("id", "") or "")
+        user_id = _extract_user_id(notes) or _get_user_id_by_subscription_id(sub_id)
+        if user_id > 0:
+            _set_user_subscription_state(
+                user_id,
+                pro=False,
+                status="cancelled",
+                subscription_id=sub_id,
+            )
+
+    else:
+        return JSONResponse(status_code=200, content={"status": "ignored"})
 
     return JSONResponse(status_code=200, content={"status": "ok"})
 
@@ -1060,6 +1314,8 @@ def analyze(
 
     user = _get_session_user(request)
     if user:
+        if not bool(user.get("pro", False)) or str(user.get("status", "inactive")).lower() != "active":
+            raise HTTPException(status_code=402, detail="SUBSCRIPTION_REQUIRED")
         usage = _get_usage(user["id"])
         if usage["scans_used"] >= FREE_USER_SCAN_LIMIT:
             raise HTTPException(status_code=402, detail="FREE_PLAN_LIMIT_REACHED")
@@ -1490,6 +1746,50 @@ def admin_dashboard(request: Request, token: str = ""):
             "meta_description": "Private InboxGuard metrics dashboard.",
             "metrics": metrics,
         },
+    )
+
+
+@app.get("/admin/revenue")
+def admin_revenue(token: str = ""):
+    _verify_admin_token(token)
+    _ensure_auth_db_ready()
+    conn = _auth_db_conn()
+    try:
+        rows = conn.execute("SELECT amount, status FROM payments").fetchall()
+    finally:
+        conn.close()
+
+    paid_rows = [row for row in rows if str(row["status"] or "").lower() == "paid"]
+    total_revenue_paise = sum(int(row["amount"] or 0) for row in paid_rows)
+    total_revenue_inr = total_revenue_paise / 100.0
+    return JSONResponse(
+        {
+            "total_revenue_paise": total_revenue_paise,
+            "total_revenue_inr": total_revenue_inr,
+            "total_payments": len(paid_rows),
+        }
+    )
+
+
+@app.get("/admin/churn")
+def admin_churn(token: str = ""):
+    _verify_admin_token(token)
+    _ensure_auth_db_ready()
+    conn = _auth_db_conn()
+    try:
+        rows = conn.execute("SELECT status FROM users").fetchall()
+    finally:
+        conn.close()
+
+    total_users = len(rows)
+    cancelled = sum(1 for row in rows if str(row["status"] or "inactive").lower() == "cancelled")
+    churn_rate = (cancelled / total_users) if total_users else 0.0
+    return JSONResponse(
+        {
+            "total_users": total_users,
+            "cancelled_users": cancelled,
+            "churn_rate": churn_rate,
+        }
     )
 
 
