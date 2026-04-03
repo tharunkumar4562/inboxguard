@@ -9,12 +9,17 @@ import hmac
 import hashlib
 import secrets
 import sqlite3
+import csv
+import io
+import imaplib
+import smtplib
 from typing import Any, Optional
 from uuid import uuid4
+from email.message import EmailMessage
 
 import httpx
 
-from fastapi import FastAPI, Form, Request, HTTPException, Header, BackgroundTasks
+from fastapi import FastAPI, Form, Request, HTTPException, Header, BackgroundTasks, UploadFile, File
 from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse, Response, JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -59,6 +64,14 @@ TRIAL_DAYS = int(os.getenv("INBOXGUARD_TRIAL_DAYS", "7"))
 PAST_DUE_GRACE_DAYS = int(os.getenv("INBOXGUARD_PAST_DUE_GRACE_DAYS", "3"))
 GOOGLE_VERIFICATION_FILE = "googleab4b33a28d8dfb88.html"
 AUTH_DB_READY = False
+ASYNC_JOB_MAX_RETRIES = int(os.getenv("INBOXGUARD_ASYNC_MAX_RETRIES", "3"))
+ASYNC_JOB_TIMEOUT_SECONDS = int(os.getenv("INBOXGUARD_ASYNC_TIMEOUT_SECONDS", "25"))
+SEED_SMTP_HOST = os.getenv("INBOXGUARD_SEED_SMTP_HOST", "").strip()
+SEED_SMTP_PORT = int(os.getenv("INBOXGUARD_SEED_SMTP_PORT", "587"))
+SEED_SMTP_USER = os.getenv("INBOXGUARD_SEED_SMTP_USER", "").strip()
+SEED_SMTP_PASS = os.getenv("INBOXGUARD_SEED_SMTP_PASS", "").strip()
+SEED_SMTP_FROM = os.getenv("INBOXGUARD_SEED_SMTP_FROM", "").strip()
+SEED_ACCOUNTS_JSON = os.getenv("INBOXGUARD_SEED_ACCOUNTS_JSON", "").strip()
 BLACKLISTED_DOMAINS = {
     "tempmail.com",
     "mailinator.com",
@@ -67,6 +80,7 @@ BLACKLISTED_DOMAINS = {
     "yopmail.com",
 }
 ASYNC_ANALYSIS_JOBS: dict[str, dict[str, Any]] = {}
+ASYNC_JOB_STORE: dict[str, dict[str, Any]] = {}
 BLOG_POSTS = {
     "cold-email-spam-checklist": {
         "title": "Cold Email Spam Checklist Before You Send",
@@ -303,6 +317,19 @@ def _ensure_auth_db() -> None:
                 inbox_count INTEGER NOT NULL DEFAULT 0,
                 spam_count INTEGER NOT NULL DEFAULT 0,
                 notes TEXT,
+                created_at TEXT NOT NULL,
+                FOREIGN KEY(user_id) REFERENCES users(id)
+            )
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS email_outcomes (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                score INTEGER NOT NULL,
+                outcome TEXT NOT NULL,
+                risk_band TEXT,
                 created_at TEXT NOT NULL,
                 FOREIGN KEY(user_id) REFERENCES users(id)
             )
@@ -982,9 +1009,32 @@ def _teams_for_user(user_id: int) -> list[dict[str, Any]]:
     ]
 
 
-def _record_async_job(job_id: str, user_id: Optional[int], status: str, result_json: str = "", error_message: str = "") -> None:
+def _record_async_job(
+    job_id: str,
+    user_id: Optional[int],
+    status: str,
+    *,
+    queue_name: str = "analysis",
+    retries: int = 0,
+    max_retries: int = ASYNC_JOB_MAX_RETRIES,
+    timeout_seconds: int = ASYNC_JOB_TIMEOUT_SECONDS,
+    result_json: str = "",
+    error_message: str = "",
+) -> None:
     _ensure_auth_db_ready()
     now = _now_iso()
+    wrapped = {
+        "queue_name": queue_name,
+        "retries": int(retries),
+        "max_retries": int(max_retries),
+        "timeout_seconds": int(timeout_seconds),
+        "result": {},
+    }
+    if result_json:
+        try:
+            wrapped["result"] = json.loads(result_json)
+        except json.JSONDecodeError:
+            wrapped["result"] = {}
     conn = _auth_db_conn()
     try:
         conn.execute(
@@ -997,7 +1047,7 @@ def _record_async_job(job_id: str, user_id: Optional[int], status: str, result_j
                 error_message=excluded.error_message,
                 updated_at=excluded.updated_at
             """,
-            (job_id, user_id, status, result_json, error_message, now, now),
+            (job_id, user_id, status, json.dumps(wrapped), error_message, now, now),
         )
         conn.commit()
     finally:
@@ -1007,8 +1057,8 @@ def _record_async_job(job_id: str, user_id: Optional[int], status: str, result_j
 def _get_async_job(job_id: str) -> Optional[dict[str, Any]]:
     if not job_id:
         return None
-    if job_id in ASYNC_ANALYSIS_JOBS:
-        return ASYNC_ANALYSIS_JOBS[job_id]
+    if job_id in ASYNC_JOB_STORE:
+        return ASYNC_JOB_STORE[job_id]
     _ensure_auth_db_ready()
     conn = _auth_db_conn()
     try:
@@ -1021,17 +1071,21 @@ def _get_async_job(job_id: str) -> Optional[dict[str, Any]]:
     if not row:
         return None
     result_json = str(row["result_json"] or "")
-    payload: dict[str, Any] = {}
+    payload: dict[str, Any] = {"result": {}}
     if result_json:
         try:
             payload = json.loads(result_json)
         except json.JSONDecodeError:
-            payload = {}
+            payload = {"result": {}}
     return {
         "id": str(row["id"]),
         "user_id": int(row["user_id"]) if row["user_id"] is not None else None,
         "status": str(row["status"] or "queued"),
-        "result": payload,
+        "queue_name": str(payload.get("queue_name", "analysis")),
+        "retries": int(payload.get("retries", 0)),
+        "max_retries": int(payload.get("max_retries", ASYNC_JOB_MAX_RETRIES)),
+        "timeout_seconds": int(payload.get("timeout_seconds", ASYNC_JOB_TIMEOUT_SECONDS)),
+        "result": payload.get("result", {}),
         "error": str(row["error_message"] or ""),
         "created_at": str(row["created_at"] or ""),
         "updated_at": str(row["updated_at"] or ""),
@@ -1092,6 +1146,203 @@ def _blacklist_check(domain: str) -> dict[str, Any]:
         "risk": "high" if listed else "low",
         "details": "Domain matched known risky disposable/abuse sender patterns." if listed else "No direct match found in the internal risk list.",
     }
+
+
+def _seed_accounts() -> list[dict[str, Any]]:
+    if not SEED_ACCOUNTS_JSON:
+        return []
+    try:
+        rows = json.loads(SEED_ACCOUNTS_JSON)
+        if not isinstance(rows, list):
+            return []
+        out: list[dict[str, Any]] = []
+        for item in rows:
+            if not isinstance(item, dict):
+                continue
+            out.append(
+                {
+                    "provider": str(item.get("provider", "unknown")).lower(),
+                    "email": str(item.get("email", "")).strip(),
+                    "password": str(item.get("password", "")).strip(),
+                    "imap_host": str(item.get("imap_host", "")).strip(),
+                    "imap_port": int(item.get("imap_port", 993) or 993),
+                }
+            )
+        return out
+    except Exception:
+        logger.exception("Could not parse INBOXGUARD_SEED_ACCOUNTS_JSON")
+        return []
+
+
+def _imap_box_for_provider(provider: str) -> str:
+    low = str(provider or "").lower()
+    if "gmail" in low:
+        return '"[Gmail]/Spam"'
+    if "outlook" in low:
+        return "Junk"
+    if "yahoo" in low:
+        return "Bulk"
+    return "INBOX"
+
+
+def _classify_seed_result(in_inbox: bool, in_spam: bool, provider: str) -> str:
+    if in_inbox and not in_spam:
+        return "inbox"
+    if in_spam:
+        return "spam"
+    if "gmail" in str(provider).lower() and not in_inbox:
+        return "promotions"
+    return "unknown"
+
+
+def _search_mailbox(mail: imaplib.IMAP4_SSL, box: str, subject_token: str) -> bool:
+    try:
+        status, _ = mail.select(box)
+        if status != "OK":
+            return False
+        status, data = mail.search(None, '(SUBJECT "' + subject_token.replace('"', "")[:60] + '")')
+        if status != "OK" or not data:
+            return False
+        ids = data[0].split()
+        return bool(ids)
+    except Exception:
+        return False
+
+
+def _send_seed_probe(subject_token: str, body_text: str, recipients: list[str]) -> bool:
+    if not (SEED_SMTP_HOST and SEED_SMTP_USER and SEED_SMTP_PASS and SEED_SMTP_FROM):
+        return False
+    if not recipients:
+        return False
+    msg = EmailMessage()
+    msg["From"] = SEED_SMTP_FROM
+    msg["To"] = ", ".join(recipients)
+    msg["Subject"] = f"[IG-SEED] {subject_token}"
+    msg.set_content(body_text[:3000] or "InboxGuard seed test probe")
+    try:
+        with smtplib.SMTP(SEED_SMTP_HOST, SEED_SMTP_PORT, timeout=20) as server:
+            server.starttls()
+            server.login(SEED_SMTP_USER, SEED_SMTP_PASS)
+            server.send_message(msg)
+        return True
+    except Exception:
+        logger.exception("Seed probe SMTP send failed")
+        return False
+
+
+def _run_seed_test(subject_token: str, body_text: str) -> dict[str, str]:
+    accounts = _seed_accounts()
+    if not accounts:
+        raise HTTPException(status_code=503, detail="Seed accounts are not configured")
+
+    _send_seed_probe(subject_token, body_text, [a["email"] for a in accounts if a.get("email")])
+
+    results: dict[str, str] = {}
+    for account in accounts:
+        provider = str(account.get("provider", "unknown")).lower()
+        email = str(account.get("email", "")).strip()
+        password = str(account.get("password", "")).strip()
+        host = str(account.get("imap_host", "")).strip()
+        port = int(account.get("imap_port", 993) or 993)
+        if not (email and password and host):
+            results[provider] = "unknown"
+            continue
+        try:
+            with imaplib.IMAP4_SSL(host, port) as mail:
+                mail.login(email, password)
+                in_inbox = _search_mailbox(mail, "INBOX", subject_token)
+                in_spam = _search_mailbox(mail, _imap_box_for_provider(provider), subject_token)
+                results[provider] = _classify_seed_result(in_inbox, in_spam, provider)
+        except Exception:
+            logger.exception("Seed IMAP check failed for provider=%s", provider)
+            results[provider] = "unknown"
+    return results
+
+
+def _record_email_outcome(user_id: int, score: int, outcome: str, risk_band: str = "") -> None:
+    _ensure_auth_db_ready()
+    conn = _auth_db_conn()
+    try:
+        conn.execute(
+            "INSERT INTO email_outcomes(user_id, score, outcome, risk_band, created_at) VALUES (?, ?, ?, ?, ?)",
+            (user_id, int(score), (outcome or "not_sure")[:24], (risk_band or "")[:80], _now_iso()),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def _score_outcome_stats(user_id: int) -> dict[str, Any]:
+    _ensure_auth_db_ready()
+    conn = _auth_db_conn()
+    try:
+        rows = conn.execute(
+            "SELECT score, outcome FROM email_outcomes WHERE user_id=? ORDER BY id DESC LIMIT 300",
+            (user_id,),
+        ).fetchall()
+    finally:
+        conn.close()
+
+    if not rows:
+        return {
+            "samples": 0,
+            "inbox_rate": 0.0,
+            "score_bands": [],
+            "benchmark_top_10_score": 85,
+        }
+
+    total = len(rows)
+    inbox_hits = sum(1 for r in rows if str(r["outcome"] or "") == "inbox")
+    bands: dict[str, dict[str, int]] = {
+        "0-49": {"total": 0, "inbox": 0},
+        "50-69": {"total": 0, "inbox": 0},
+        "70-84": {"total": 0, "inbox": 0},
+        "85-100": {"total": 0, "inbox": 0},
+    }
+    for row in rows:
+        score = int(row["score"] or 0)
+        outcome = str(row["outcome"] or "")
+        if score < 50:
+            key = "0-49"
+        elif score < 70:
+            key = "50-69"
+        elif score < 85:
+            key = "70-84"
+        else:
+            key = "85-100"
+        bands[key]["total"] += 1
+        if outcome == "inbox":
+            bands[key]["inbox"] += 1
+
+    band_rows = []
+    for key, item in bands.items():
+        rate = (item["inbox"] / item["total"] * 100.0) if item["total"] else 0.0
+        band_rows.append({"band": key, "samples": item["total"], "inbox_rate": round(rate, 1)})
+
+    return {
+        "samples": total,
+        "inbox_rate": round(inbox_hits / total * 100.0, 1),
+        "score_bands": band_rows,
+        "benchmark_top_10_score": 85,
+    }
+
+
+def _predict_inbox_probability(score: int, stats: Optional[dict[str, Any]] = None) -> float:
+    s = max(0, min(100, int(score or 0)))
+    base = max(5.0, min(95.0, 4 + s * 0.95))
+    if not stats or int(stats.get("samples", 0)) < 10:
+        return round(base, 1)
+    for row in stats.get("score_bands", []):
+        band = str(row.get("band", ""))
+        if band == "0-49" and s < 50:
+            return float(row.get("inbox_rate", base))
+        if band == "50-69" and 50 <= s < 70:
+            return float(row.get("inbox_rate", base))
+        if band == "70-84" and 70 <= s < 85:
+            return float(row.get("inbox_rate", base))
+        if band == "85-100" and s >= 85:
+            return float(row.get("inbox_rate", base))
+    return round(base, 1)
 
 
 def _user_streak_days(user_id: int) -> int:
@@ -1348,6 +1599,7 @@ def pricing_page(request: Request):
             "canonical_url": f"{SITE_URL}/pricing",
             "authenticated": authenticated,
             "user_email": user["email"] if user else "",
+            "user_status": str(user.get("status", "inactive")) if user else "inactive",
             "google_enabled": GOOGLE_AUTH_CONFIGURED,
             "payment_status": request.query_params.get("payment", request.query_params.get("checkout", "")),
             "payment_ready": bool(RAZORPAY_KEY and RAZORPAY_SECRET),
@@ -1578,9 +1830,23 @@ def auth_me(request: Request):
     user = _get_session_user(request)
     if not user:
         raise HTTPException(status_code=401, detail="Not authenticated")
+    stats = _score_outcome_stats(int(user["id"]))
     return {
         "authenticated": True,
-        "profile": _build_user_profile(user),
+        "profile": _build_user_profile(user, include_saved_fixes=True),
+        "outcome_stats": stats,
+    }
+
+
+def _saved_fix_metrics(user_id: int) -> dict[str, Any]:
+    fixes = _recent_saved_fixes(user_id, limit=50)
+    if not fixes:
+        return {"count": 0, "avg_delta": 0.0, "best_delta": 0}
+    deltas = [int(item.get("score_delta", 0)) for item in fixes]
+    return {
+        "count": len(deltas),
+        "avg_delta": round(sum(deltas) / len(deltas), 1),
+        "best_delta": max(deltas),
     }
 
 
@@ -1603,6 +1869,8 @@ def _build_user_profile(user: dict, include_saved_fixes: bool = False) -> dict:
     }
     if include_saved_fixes:
         profile["saved_fixes"] = _recent_saved_fixes(user["id"], limit=8)
+        profile["saved_fix_metrics"] = _saved_fix_metrics(user["id"])
+        profile["outcome_stats"] = _score_outcome_stats(user["id"])
     return profile
 
 
@@ -1857,6 +2125,36 @@ def blacklist_check(domain: str = Form("")):
     return {"ok": True, **_blacklist_check(domain)}
 
 
+@app.post("/seed-run")
+def seed_run(
+    request: Request,
+    campaign_name: str = Form("Seed Campaign"),
+    subject_token: str = Form(""),
+    body_text: str = Form("InboxGuard seed probe"),
+):
+    token = (subject_token or "").strip() or f"IG-{secrets.token_hex(4)}"
+    results = _run_seed_test(token, body_text)
+    inbox_count = sum(1 for value in results.values() if value == "inbox")
+    spam_count = sum(1 for value in results.values() if value == "spam")
+    user = _get_session_user(request)
+    _save_seed_test(
+        int(user["id"]) if user else None,
+        campaign_name,
+        "multi",
+        inbox_count,
+        spam_count,
+        json.dumps(results),
+    )
+    return {
+        "ok": True,
+        "campaign_name": campaign_name,
+        "subject_token": token,
+        "results": results,
+        "inbox_count": inbox_count,
+        "spam_count": spam_count,
+    }
+
+
 @app.post("/seed-tests")
 def create_seed_test(
     request: Request,
@@ -1878,6 +2176,79 @@ def list_seed_tests(request: Request):
     return {"ok": True, "items": items}
 
 
+@app.get("/outcome-stats")
+def outcome_stats(request: Request):
+    user = _get_session_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="AUTH_REQUIRED")
+    return {"ok": True, **_score_outcome_stats(int(user["id"]))}
+
+
+@app.post("/bulk-analyze")
+async def bulk_analyze(
+    request: Request,
+    file: UploadFile = File(...),
+    analysis_mode: str = Form("content"),
+):
+    user = _get_session_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="AUTH_REQUIRED")
+
+    content = await file.read()
+    text = content.decode("utf-8", errors="ignore")
+    reader = csv.DictReader(io.StringIO(text))
+    rows = list(reader)
+    if not rows:
+        raise HTTPException(status_code=400, detail="CSV has no rows")
+
+    results: list[dict[str, Any]] = []
+    max_rows = 100
+    for idx, row in enumerate(rows[:max_rows]):
+        raw_email = str(row.get("raw_email", "") or "")
+        email_text = str(row.get("email", "") or "")
+        domain = str(row.get("domain", "") or "")
+        manual_subject = str(row.get("subject", "") or "")
+        manual_body = str(row.get("body", "") or "")
+        try:
+            payload = _run_analysis_request(
+                request,
+                email=email_text,
+                domain=domain,
+                raw_email=raw_email,
+                manual_subject=manual_subject,
+                manual_body=manual_body,
+                analysis_mode=analysis_mode,
+            )
+            summary = payload.get("summary", {})
+            results.append(
+                {
+                    "row": idx + 1,
+                    "score": int(summary.get("final_score", summary.get("score", 0)) or 0),
+                    "risk_band": str(summary.get("risk_band", "Needs Review")),
+                    "primary_issue": str(summary.get("primary_issue", "")),
+                }
+            )
+        except Exception as error:
+            results.append({"row": idx + 1, "error": str(error)})
+
+    return {"ok": True, "processed": len(results), "max_rows": max_rows, "items": results}
+
+
+@app.post("/cancel-subscription")
+def cancel_subscription(request: Request):
+    user = _get_session_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="AUTH_REQUIRED")
+    _set_user_subscription_state(
+        int(user["id"]),
+        pro=False,
+        status="cancelled",
+        past_due_since="",
+    )
+    track_event("subscription_cancelled", {"user_id": str(user["id"])})
+    return {"ok": True, "status": "cancelled"}
+
+
 @app.get("/seed-inbox", response_class=HTMLResponse)
 def seed_inbox_page(request: Request):
     return _render_info_page(
@@ -1886,10 +2257,10 @@ def seed_inbox_page(request: Request):
         meta_description="Track manual seed inbox test outcomes across providers.",
         canonical_path="/seed-inbox",
         headline="Seed inbox testing workflow",
-        intro="Log inbox and spam outcomes from your seed accounts to detect placement drift before full rollout.",
+        intro="Run a seed probe and classify inbox/spam placement across configured Gmail, Outlook, and Yahoo accounts.",
         sections=[
-            _page_section("How to use", "Send a small controlled batch to seed accounts, then record inbox vs spam results per provider.", ["Start with 20-50 sends", "Capture Gmail/Outlook/Yahoo results", "Compare against previous runs"]),
-            _page_section("Current status", "This workflow currently captures and tracks outcomes you submit. Automated mailbox polling can be connected later.", ["Manual input active", "History available via API", "Built for pre-launch checks"]),
+            _page_section("How to use", "Trigger a seed run with a unique subject token; InboxGuard sends and checks configured seed inboxes.", ["Configure seed accounts in env", "Run seed probe", "Review provider-by-provider placement"]),
+            _page_section("Current status", "Automated seed checks are available when SMTP + IMAP credentials are configured.", ["Manual logging still supported", "History available via API", "Built for pre-launch checks"]),
         ],
     )
 
@@ -2307,7 +2678,17 @@ def _run_analysis_request(
         body_override=parsed_body,
     )
     result["learning_profile"] = get_learning_profile()
+    summary = result.get("summary", {}) if isinstance(result, dict) else {}
+    final_score = int(summary.get("final_score", summary.get("score", 0)) or 0)
     if user:
+        stats = _score_outcome_stats(int(user["id"]))
+        prediction = _predict_inbox_probability(final_score, stats)
+        result["prediction"] = {
+            "inbox_probability": prediction,
+            "likely_outcome": "inbox" if prediction >= 70 else "promotions" if prediction >= 45 else "spam",
+            "benchmark_top_10_score": int(stats.get("benchmark_top_10_score", 85)),
+            "samples": int(stats.get("samples", 0)),
+        }
         user_scans = _increment_user_scan(int(user["id"]))
         result["usage"] = {
             "authenticated": True,
@@ -2315,6 +2696,13 @@ def _run_analysis_request(
             "user_scans_limit": FREE_USER_SCAN_LIMIT,
         }
     else:
+        prediction = _predict_inbox_probability(final_score, None)
+        result["prediction"] = {
+            "inbox_probability": prediction,
+            "likely_outcome": "inbox" if prediction >= 70 else "promotions" if prediction >= 45 else "spam",
+            "benchmark_top_10_score": 85,
+            "samples": 0,
+        }
         anon_scans = _increment_anon_scan(request)
         result["usage"] = {
             "authenticated": False,
@@ -2324,45 +2712,134 @@ def _run_analysis_request(
     return result
 
 
-def _execute_async_analysis(job_id: str, request: Request, payload: dict[str, str], api_user_id: Optional[int] = None) -> None:
-    try:
-        result = _run_analysis_request(
-            request,
-            email=payload.get("email", ""),
-            domain=payload.get("domain", ""),
-            raw_email=payload.get("raw_email", ""),
-            manual_subject=payload.get("manual_subject", ""),
-            manual_body=payload.get("manual_body", ""),
-            analysis_mode=payload.get("analysis_mode", "content"),
-            api_user_id=api_user_id,
-        )
-        ASYNC_ANALYSIS_JOBS[job_id] = {
-            "id": job_id,
-            "status": "completed",
-            "result": result,
-            "error": "",
-            "updated_at": _now_iso(),
-        }
-        _record_async_job(job_id, api_user_id, "completed", result_json=json.dumps(result), error_message="")
-    except HTTPException as error:
-        ASYNC_ANALYSIS_JOBS[job_id] = {
-            "id": job_id,
-            "status": "failed",
-            "result": {},
-            "error": str(error.detail),
-            "updated_at": _now_iso(),
-        }
-        _record_async_job(job_id, api_user_id, "failed", result_json="", error_message=str(error.detail))
-    except Exception as error:
-        logger.exception("Async analysis failed for job=%s", job_id)
-        ASYNC_ANALYSIS_JOBS[job_id] = {
-            "id": job_id,
-            "status": "failed",
-            "result": {},
-            "error": str(error),
-            "updated_at": _now_iso(),
-        }
-        _record_async_job(job_id, api_user_id, "failed", result_json="", error_message=str(error))
+def _set_job_runtime_state(
+    job_id: str,
+    *,
+    queue_name: str,
+    status: str,
+    retries: int,
+    max_retries: int,
+    timeout_seconds: int,
+    result: Optional[dict[str, Any]] = None,
+    error: str = "",
+) -> None:
+    ASYNC_JOB_STORE[job_id] = {
+        "id": job_id,
+        "queue_name": queue_name,
+        "status": status,
+        "retries": retries,
+        "max_retries": max_retries,
+        "timeout_seconds": timeout_seconds,
+        "result": result or {},
+        "error": error,
+        "updated_at": _now_iso(),
+    }
+
+
+def _execute_async_analysis(
+    job_id: str,
+    request: Request,
+    payload: dict[str, str],
+    *,
+    queue_name: str = "analysis",
+    api_user_id: Optional[int] = None,
+    max_retries: int = ASYNC_JOB_MAX_RETRIES,
+    timeout_seconds: int = ASYNC_JOB_TIMEOUT_SECONDS,
+) -> None:
+    retries = 0
+    while retries <= max_retries:
+        started = datetime.now(timezone.utc)
+        try:
+            result = _run_analysis_request(
+                request,
+                email=payload.get("email", ""),
+                domain=payload.get("domain", ""),
+                raw_email=payload.get("raw_email", ""),
+                manual_subject=payload.get("manual_subject", ""),
+                manual_body=payload.get("manual_body", ""),
+                analysis_mode=payload.get("analysis_mode", "content"),
+                api_user_id=api_user_id,
+            )
+            elapsed = (datetime.now(timezone.utc) - started).total_seconds()
+            if elapsed > timeout_seconds:
+                raise TimeoutError(f"Job timed out after {elapsed:.1f}s")
+            _set_job_runtime_state(
+                job_id,
+                queue_name=queue_name,
+                status="completed",
+                retries=retries,
+                max_retries=max_retries,
+                timeout_seconds=timeout_seconds,
+                result=result,
+            )
+            _record_async_job(
+                job_id,
+                api_user_id,
+                "completed",
+                queue_name=queue_name,
+                retries=retries,
+                max_retries=max_retries,
+                timeout_seconds=timeout_seconds,
+                result_json=json.dumps(result),
+                error_message="",
+            )
+            return
+        except HTTPException as error:
+            _set_job_runtime_state(
+                job_id,
+                queue_name=queue_name,
+                status="failed",
+                retries=retries,
+                max_retries=max_retries,
+                timeout_seconds=timeout_seconds,
+                error=str(error.detail),
+            )
+            _record_async_job(
+                job_id,
+                api_user_id,
+                "failed",
+                queue_name=queue_name,
+                retries=retries,
+                max_retries=max_retries,
+                timeout_seconds=timeout_seconds,
+                result_json="",
+                error_message=str(error.detail),
+            )
+            return
+        except Exception as error:
+            logger.exception("Async job failed queue=%s job=%s retry=%s", queue_name, job_id, retries)
+            if retries >= max_retries:
+                _set_job_runtime_state(
+                    job_id,
+                    queue_name=queue_name,
+                    status="failed",
+                    retries=retries,
+                    max_retries=max_retries,
+                    timeout_seconds=timeout_seconds,
+                    error=str(error),
+                )
+                _record_async_job(
+                    job_id,
+                    api_user_id,
+                    "failed",
+                    queue_name=queue_name,
+                    retries=retries,
+                    max_retries=max_retries,
+                    timeout_seconds=timeout_seconds,
+                    result_json="",
+                    error_message=str(error),
+                )
+                return
+            retries += 1
+            _set_job_runtime_state(
+                job_id,
+                queue_name=queue_name,
+                status="retrying",
+                retries=retries,
+                max_retries=max_retries,
+                timeout_seconds=timeout_seconds,
+                error=str(error),
+            )
 
 
 @app.post("/analyze")
@@ -2399,14 +2876,23 @@ def analyze_async(
 ):
     user = _get_session_user(request)
     job_id = str(uuid4())
-    ASYNC_ANALYSIS_JOBS[job_id] = {
-        "id": job_id,
-        "status": "queued",
-        "result": {},
-        "error": "",
-        "updated_at": _now_iso(),
-    }
-    _record_async_job(job_id, int(user["id"]) if user else None, "queued")
+    _set_job_runtime_state(
+        job_id,
+        queue_name="analysis",
+        status="queued",
+        retries=0,
+        max_retries=ASYNC_JOB_MAX_RETRIES,
+        timeout_seconds=ASYNC_JOB_TIMEOUT_SECONDS,
+    )
+    _record_async_job(
+        job_id,
+        int(user["id"]) if user else None,
+        "queued",
+        queue_name="analysis",
+        retries=0,
+        max_retries=ASYNC_JOB_MAX_RETRIES,
+        timeout_seconds=ASYNC_JOB_TIMEOUT_SECONDS,
+    )
     payload = {
         "email": email,
         "domain": domain,
@@ -2415,8 +2901,17 @@ def analyze_async(
         "manual_body": manual_body,
         "analysis_mode": analysis_mode,
     }
-    background_tasks.add_task(_execute_async_analysis, job_id, request, payload, None)
-    return {"ok": True, "job_id": job_id, "status": "queued"}
+    background_tasks.add_task(
+        _execute_async_analysis,
+        job_id,
+        request,
+        payload,
+        queue_name="analysis",
+        api_user_id=int(user["id"]) if user else None,
+        max_retries=ASYNC_JOB_MAX_RETRIES,
+        timeout_seconds=ASYNC_JOB_TIMEOUT_SECONDS,
+    )
+    return {"ok": True, "job_id": job_id, "status": "queued", "queue_name": "analysis"}
 
 
 @app.get("/analyze-jobs/{job_id}")
@@ -2425,6 +2920,181 @@ def analyze_job_status(job_id: str):
     if not payload:
         raise HTTPException(status_code=404, detail="Job not found")
     return {"ok": True, **payload}
+
+
+@app.get("/jobs")
+def list_jobs(limit: int = 20):
+    rows = list(ASYNC_JOB_STORE.values())
+    rows.sort(key=lambda r: str(r.get("updated_at", "")), reverse=True)
+    return {"ok": True, "items": rows[: max(1, min(100, int(limit or 20)))]}
+
+
+@app.post("/rewrite-async")
+def rewrite_async(
+    request: Request,
+    background_tasks: BackgroundTasks,
+    raw_email: str = Form(""),
+    domain: str = Form(""),
+    analysis_mode: str = Form("content"),
+    rewrite_style: str = Form("balanced"),
+):
+    user = _get_session_user(request)
+    job_id = str(uuid4())
+    _set_job_runtime_state(
+        job_id,
+        queue_name="rewrite",
+        status="queued",
+        retries=0,
+        max_retries=ASYNC_JOB_MAX_RETRIES,
+        timeout_seconds=ASYNC_JOB_TIMEOUT_SECONDS,
+    )
+    _record_async_job(
+        job_id,
+        int(user["id"]) if user else None,
+        "queued",
+        queue_name="rewrite",
+        retries=0,
+        max_retries=ASYNC_JOB_MAX_RETRIES,
+        timeout_seconds=ASYNC_JOB_TIMEOUT_SECONDS,
+    )
+
+    def _run_rewrite_job() -> None:
+        retries = 0
+        while retries <= ASYNC_JOB_MAX_RETRIES:
+            try:
+                data = rewrite_email(raw_email=raw_email, domain=domain, analysis_mode=analysis_mode, rewrite_style=rewrite_style)
+                _set_job_runtime_state(
+                    job_id,
+                    queue_name="rewrite",
+                    status="completed",
+                    retries=retries,
+                    max_retries=ASYNC_JOB_MAX_RETRIES,
+                    timeout_seconds=ASYNC_JOB_TIMEOUT_SECONDS,
+                    result=data,
+                )
+                _record_async_job(
+                    job_id,
+                    int(user["id"]) if user else None,
+                    "completed",
+                    queue_name="rewrite",
+                    retries=retries,
+                    max_retries=ASYNC_JOB_MAX_RETRIES,
+                    timeout_seconds=ASYNC_JOB_TIMEOUT_SECONDS,
+                    result_json=json.dumps(data),
+                )
+                return
+            except Exception as error:
+                if retries >= ASYNC_JOB_MAX_RETRIES:
+                    _set_job_runtime_state(
+                        job_id,
+                        queue_name="rewrite",
+                        status="failed",
+                        retries=retries,
+                        max_retries=ASYNC_JOB_MAX_RETRIES,
+                        timeout_seconds=ASYNC_JOB_TIMEOUT_SECONDS,
+                        error=str(error),
+                    )
+                    _record_async_job(
+                        job_id,
+                        int(user["id"]) if user else None,
+                        "failed",
+                        queue_name="rewrite",
+                        retries=retries,
+                        max_retries=ASYNC_JOB_MAX_RETRIES,
+                        timeout_seconds=ASYNC_JOB_TIMEOUT_SECONDS,
+                        error_message=str(error),
+                    )
+                    return
+                retries += 1
+
+    background_tasks.add_task(_run_rewrite_job)
+    return {"ok": True, "job_id": job_id, "queue_name": "rewrite"}
+
+
+@app.post("/seed-run-async")
+def seed_run_async(
+    request: Request,
+    background_tasks: BackgroundTasks,
+    campaign_name: str = Form("Seed Campaign"),
+    subject_token: str = Form(""),
+    body_text: str = Form("InboxGuard seed probe"),
+):
+    user = _get_session_user(request)
+    job_id = str(uuid4())
+    token = (subject_token or "").strip() or f"IG-{job_id[:8]}"
+    _set_job_runtime_state(
+        job_id,
+        queue_name="seed",
+        status="queued",
+        retries=0,
+        max_retries=ASYNC_JOB_MAX_RETRIES,
+        timeout_seconds=ASYNC_JOB_TIMEOUT_SECONDS,
+    )
+    _record_async_job(
+        job_id,
+        int(user["id"]) if user else None,
+        "queued",
+        queue_name="seed",
+        retries=0,
+        max_retries=ASYNC_JOB_MAX_RETRIES,
+        timeout_seconds=ASYNC_JOB_TIMEOUT_SECONDS,
+    )
+
+    def _run_seed_job() -> None:
+        retries = 0
+        while retries <= ASYNC_JOB_MAX_RETRIES:
+            try:
+                results = _run_seed_test(token, body_text)
+                inbox_count = sum(1 for value in results.values() if value == "inbox")
+                spam_count = sum(1 for value in results.values() if value == "spam")
+                _save_seed_test(int(user["id"]) if user else None, campaign_name, "multi", inbox_count, spam_count, json.dumps(results))
+                payload = {"campaign_name": campaign_name, "subject_token": token, "results": results}
+                _set_job_runtime_state(
+                    job_id,
+                    queue_name="seed",
+                    status="completed",
+                    retries=retries,
+                    max_retries=ASYNC_JOB_MAX_RETRIES,
+                    timeout_seconds=ASYNC_JOB_TIMEOUT_SECONDS,
+                    result=payload,
+                )
+                _record_async_job(
+                    job_id,
+                    int(user["id"]) if user else None,
+                    "completed",
+                    queue_name="seed",
+                    retries=retries,
+                    max_retries=ASYNC_JOB_MAX_RETRIES,
+                    timeout_seconds=ASYNC_JOB_TIMEOUT_SECONDS,
+                    result_json=json.dumps(payload),
+                )
+                return
+            except Exception as error:
+                if retries >= ASYNC_JOB_MAX_RETRIES:
+                    _set_job_runtime_state(
+                        job_id,
+                        queue_name="seed",
+                        status="failed",
+                        retries=retries,
+                        max_retries=ASYNC_JOB_MAX_RETRIES,
+                        timeout_seconds=ASYNC_JOB_TIMEOUT_SECONDS,
+                        error=str(error),
+                    )
+                    _record_async_job(
+                        job_id,
+                        int(user["id"]) if user else None,
+                        "failed",
+                        queue_name="seed",
+                        retries=retries,
+                        max_retries=ASYNC_JOB_MAX_RETRIES,
+                        timeout_seconds=ASYNC_JOB_TIMEOUT_SECONDS,
+                        error_message=str(error),
+                    )
+                    return
+                retries += 1
+
+    background_tasks.add_task(_run_seed_job)
+    return {"ok": True, "job_id": job_id, "queue_name": "seed", "subject_token": token}
 
 
 @app.post("/diagnose-campaign")
@@ -2763,6 +3433,8 @@ def submit_feedback(
     rewritten_text: str = Form(""),
     from_risk_band: str = Form(""),
     to_risk_band: str = Form(""),
+    from_score: int = Form(0),
+    to_score: int = Form(0),
 ):
     result = record_feedback(
         {
@@ -2786,6 +3458,9 @@ def submit_feedback(
     user = _get_session_user(request)
     if user:
         _record_user_feedback(user["id"], outcome, from_risk_band, to_risk_band)
+        reference_score = int(to_score or from_score or 0)
+        reference_band = to_risk_band or from_risk_band
+        _record_email_outcome(int(user["id"]), reference_score, outcome, reference_band)
 
     return result
 

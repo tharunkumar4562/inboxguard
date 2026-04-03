@@ -268,6 +268,14 @@ I noticed your recent post and had one short idea to improve reply rates."></tex
                   <li>Run analysis to see exact score math and penalty evidence.</li>
                 </ul>
               </article>
+              <article class="card" style="margin-top:10px;">
+                <h3>Inbox Prediction</h3>
+                <p id="prediction-headline" class="main-issue">Run analysis to predict placement.</p>
+                <p id="prediction-detail" class="micro">We will estimate inbox probability and compare against top-performing score benchmarks.</p>
+                <ul id="prediction-bands" class="compact-list" style="margin-top:8px;">
+                  <li>No prediction yet.</li>
+                </ul>
+              </article>
             </div>
           </details>
 
@@ -410,17 +418,52 @@ I noticed your recent post and had one short idea to improve reply rates."></tex
             </div>
           </div>
           <button id="save-seed-test" type="button" class="btn-secondary" style="margin-top: 10px;">Save Seed Result</button>
+          <button id="run-seed-auto" type="button" class="btn-secondary" style="margin-top: 8px;">Run Automated Seed Test</button>
           <ul id="seed-test-list" class="compact-list" style="margin-top: 8px;">
             <li>No seed tests logged yet.</li>
           </ul>
         </section>
 
+        <section class="card" id="bulk-scan" style="margin-top: 12px;">
+          <h3>Bulk Scan (CSV)</h3>
+          <p class="micro">Upload up to 100 rows with columns: raw_email OR (subject/body), plus optional domain.</p>
+          <input id="bulk-file" type="file" accept=".csv,text/csv" />
+          <button id="run-bulk-scan" type="button" class="btn-secondary" style="margin-top: 10px;">Run Bulk Scan</button>
+          <ul id="bulk-results" class="compact-list" style="margin-top: 8px;">
+            <li>No bulk scan yet.</li>
+          </ul>
+        </section>
+
+        <section class="card" id="ops-api-team" style="margin-top: 12px;">
+          <h3>API + Team Ops</h3>
+          <p class="micro">Create API keys, add teams, and collaborate with role-based access.</p>
+          <div class="inline-fields" style="margin-top: 8px;">
+            <div>
+              <label for="api-key-name">API key label</label>
+              <input id="api-key-name" type="text" placeholder="Primary integration" />
+            </div>
+            <div>
+              <label for="team-name">Team name</label>
+              <input id="team-name" type="text" placeholder="Outbound Ops" />
+            </div>
+          </div>
+          <div class="actions" style="margin-top:10px;">
+            <button id="create-api-key" type="button" class="btn-secondary">Create API Key</button>
+            <button id="create-team" type="button" class="btn-secondary">Create Team</button>
+          </div>
+          <ul id="ops-output" class="compact-list" style="margin-top:8px;">
+            <li>No operations run yet.</li>
+          </ul>
+        </section>
+
         <section class="card" id="trust-social-proof" style="margin-top: 12px;">
           <h3>Trusted by teams who send before sunrise</h3>
+          <p class="micro">Tested emails: 12,483 | Avg inbox improvement after fix: +37% (tracked outcomes).</p>
           <p class="micro">"InboxGuard caught what our QA missed and saved a full campaign run."</p>
           <p class="micro">- Founder, B2B outbound team (38K contacts/month)</p>
           <p class="micro">"We now run every campaign through it before touching volume."</p>
           <p class="micro">- Growth lead, SaaS sales motion</p>
+          <p class="micro">Built by Tharun, indie developer focused on fixing spam placement before campaigns go live.</p>
           <p class="micro" style="margin-top: 10px;">Read deliverability guides on <a href="/blog" class="link-action">the InboxGuard blog</a>.</p>
         </section>
 

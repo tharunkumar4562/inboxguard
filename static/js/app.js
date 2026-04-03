@@ -58,6 +58,9 @@ const consequenceListNode = document.getElementById("consequence-list");
 const hurtListNode = document.getElementById("hurt-list");
 const topFixesListNode = document.getElementById("top-fixes-list");
 const scoreBreakdownNode = document.getElementById("score-breakdown");
+const predictionHeadlineNode = document.getElementById("prediction-headline");
+const predictionDetailNode = document.getElementById("prediction-detail");
+const predictionBandsNode = document.getElementById("prediction-bands");
 
 const fixNowButton = document.getElementById("fix-now");
 const rewriteStyleInput = document.getElementById("rewrite-style");
@@ -101,6 +104,15 @@ const seedInboxCountInput = document.getElementById("seed-inbox-count");
 const seedSpamCountInput = document.getElementById("seed-spam-count");
 const saveSeedTestButton = document.getElementById("save-seed-test");
 const seedTestListNode = document.getElementById("seed-test-list");
+const runSeedAutoButton = document.getElementById("run-seed-auto");
+const bulkFileInput = document.getElementById("bulk-file");
+const runBulkScanButton = document.getElementById("run-bulk-scan");
+const bulkResultsNode = document.getElementById("bulk-results");
+const apiKeyNameInput = document.getElementById("api-key-name");
+const createApiKeyButton = document.getElementById("create-api-key");
+const teamNameInput = document.getElementById("team-name");
+const createTeamButton = document.getElementById("create-team");
+const opsOutputNode = document.getElementById("ops-output");
 
 const loadSteps = [
     "Checking content signals...",
@@ -956,6 +968,122 @@ function renderBreakdown(summary) {
     });
 }
 
+function renderPrediction(summary, prediction) {
+    if (!predictionHeadlineNode || !predictionDetailNode || !predictionBandsNode) {
+        return;
+    }
+    const score = Number(summary && (summary.final_score || summary.score || 0));
+    const prob = Number(prediction && prediction.inbox_probability ? prediction.inbox_probability : 0);
+    const likely = String(prediction && prediction.likely_outcome ? prediction.likely_outcome : "unknown");
+    const benchmark = Number(prediction && prediction.benchmark_top_10_score ? prediction.benchmark_top_10_score : 85);
+    const samples = Number(prediction && prediction.samples ? prediction.samples : 0);
+
+    predictionHeadlineNode.textContent = `Will likely land: ${likely.toUpperCase()} (${prob.toFixed(1)}% inbox probability)`;
+    predictionDetailNode.textContent = `Your score: ${score} | Top 10% benchmark: ${benchmark}+ | Learned samples: ${samples}`;
+    predictionBandsNode.innerHTML = "";
+    const rows = [
+        `Score 85+ usually maps to strongest inbox probability.`,
+        `Score 70-84 is often test-batch safe with monitoring.`,
+        `Score below 70 usually needs fixes before scaling.`,
+    ];
+    rows.forEach((line) => {
+        const li = document.createElement("li");
+        li.textContent = line;
+        predictionBandsNode.appendChild(li);
+    });
+}
+
+async function runSeedAuto() {
+    const campaign = seedCampaignInput ? String(seedCampaignInput.value || "").trim() : "";
+    const subjectToken = `IG-${Date.now().toString(36)}`;
+    const payload = new FormData();
+    payload.set("campaign_name", campaign || "Automated Seed Run");
+    payload.set("subject_token", subjectToken);
+    payload.set("body_text", String(rawEmailInput && rawEmailInput.value ? rawEmailInput.value : "InboxGuard seed probe"));
+    const response = await fetch("/seed-run-async", { method: "POST", body: payload });
+    if (!response.ok) {
+        throw new Error("Could not start automated seed test.");
+    }
+    const data = await response.json();
+    showError("Automated seed test queued. Polling result...");
+    for (let i = 0; i < 20; i += 1) {
+        await sleep(1200);
+        const poll = await fetch(`/analyze-jobs/${String(data.job_id || "")}`, { method: "GET" });
+        if (!poll.ok) {
+            continue;
+        }
+        const job = await poll.json();
+        if (job.status === "completed") {
+            showError("Automated seed test completed.");
+            await refreshSeedTests();
+            return;
+        }
+        if (job.status === "failed") {
+            throw new Error(String(job.error || "Seed test failed."));
+        }
+    }
+}
+
+async function runBulkScan() {
+    if (!bulkFileInput || !bulkFileInput.files || !bulkFileInput.files.length) {
+        showError("Select a CSV file first.");
+        return;
+    }
+    const payload = new FormData();
+    payload.set("file", bulkFileInput.files[0]);
+    payload.set("analysis_mode", analysisModeInput ? analysisModeInput.value : "content");
+    const response = await fetch("/bulk-analyze", { method: "POST", body: payload });
+    if (!response.ok) {
+        throw new Error("Bulk scan failed. Sign in and verify CSV format.");
+    }
+    const data = await response.json();
+    if (!bulkResultsNode) {
+        return;
+    }
+    bulkResultsNode.innerHTML = "";
+    const items = Array.isArray(data.items) ? data.items : [];
+    items.slice(0, 8).forEach((item) => {
+        const li = document.createElement("li");
+        if (item.error) {
+            li.textContent = `Row ${item.row}: ${item.error}`;
+        } else {
+            li.textContent = `Row ${item.row}: Score ${item.score} | ${item.risk_band}`;
+        }
+        bulkResultsNode.appendChild(li);
+    });
+}
+
+async function createApiKey() {
+    const payload = new FormData();
+    payload.set("name", apiKeyNameInput ? String(apiKeyNameInput.value || "Primary key") : "Primary key");
+    const response = await fetch("/api-keys", { method: "POST", body: payload });
+    if (!response.ok) {
+        throw new Error("Could not create API key. Sign in first.");
+    }
+    const data = await response.json();
+    if (opsOutputNode) {
+        opsOutputNode.innerHTML = "";
+        const li = document.createElement("li");
+        li.textContent = `API key created: ${String(data.api_key || "")}`;
+        opsOutputNode.appendChild(li);
+    }
+}
+
+async function createTeam() {
+    const payload = new FormData();
+    payload.set("name", teamNameInput ? String(teamNameInput.value || "My Team") : "My Team");
+    const response = await fetch("/teams", { method: "POST", body: payload });
+    if (!response.ok) {
+        throw new Error("Could not create team. Sign in first.");
+    }
+    const data = await response.json();
+    if (opsOutputNode) {
+        const li = document.createElement("li");
+        li.textContent = `Team created with id: ${String(data.team_id || "")}`;
+        opsOutputNode.appendChild(li);
+    }
+}
+
 function renderDecisionEngine(summary, signals, findings) {
     if (!decisionProblemNode || !decisionSignalNode || !decisionScopeNode || !decisionWhyNode || !decisionFixFirstNode || !decisionConsequenceNode || !riskStripNode || !riskStripTitleNode || !riskStripBodyNode || !scaleWarningListNode) {
         return;
@@ -1324,6 +1452,7 @@ async function runAnalyze() {
         renderStatus(summary, signals, findings);
         renderDecisionEngine(summary, signals, findings);
         renderBreakdown(summary);
+        renderPrediction(summary, data.prediction || null);
 
         if (rewriteStyleInput) {
             rewriteStyleInput.value = getRecommendedRewriteStyle();
@@ -1424,6 +1553,8 @@ async function sendFeedback(outcome) {
         payload.set("rewritten_text", latestRewriteContext.rewritten_text || "");
         payload.set("from_risk_band", latestRewriteContext.from_risk_band || "");
         payload.set("to_risk_band", latestRewriteContext.to_risk_band || "");
+        payload.set("from_score", String(latestSummary && (latestSummary.final_score || latestSummary.score || 0) || 0));
+        payload.set("to_score", String((latestSummary && (latestSummary.final_score || latestSummary.score || 0) || 0) + Number(latestRewriteContext.score_delta || 0)));
 
         const response = await fetch("/feedback", {
             method: "POST",
@@ -1622,6 +1753,7 @@ async function runAnalyzeAsync() {
             renderStatus(summary, signals, findings);
             renderDecisionEngine(summary, signals, findings);
             renderBreakdown(summary);
+            renderPrediction(summary, job.result.prediction || null);
             setResultState();
             if (resultSection) {
                 resultSection.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -1752,10 +1884,23 @@ async function startPayment() {
 }
 
 const payButton = document.getElementById("pay-btn");
+const cancelSubscriptionButton = document.getElementById("cancel-subscription");
 if (payButton) {
     payButton.addEventListener("click", (event) => {
         event.preventDefault();
         startPayment();
+    });
+}
+if (cancelSubscriptionButton) {
+    cancelSubscriptionButton.addEventListener("click", async (event) => {
+        event.preventDefault();
+        const response = await fetch("/cancel-subscription", { method: "POST" });
+        if (!response.ok) {
+            showError("Could not cancel subscription.");
+            return;
+        }
+        showError("Subscription cancelled. Access will remain until current period ends.");
+        setTimeout(() => window.location.reload(), 1200);
     });
 }
 
@@ -1862,6 +2007,34 @@ if (dashboardTab) {
         saveSeedTestButton.addEventListener("click", () => {
             saveSeedTest().catch((error) => {
                 showError(error && error.message ? error.message : "Could not save seed test.");
+            });
+        });
+    }
+    if (runSeedAutoButton) {
+        runSeedAutoButton.addEventListener("click", () => {
+            runSeedAuto().catch((error) => {
+                showError(error && error.message ? error.message : "Could not run automated seed test.");
+            });
+        });
+    }
+    if (runBulkScanButton) {
+        runBulkScanButton.addEventListener("click", () => {
+            runBulkScan().catch((error) => {
+                showError(error && error.message ? error.message : "Could not run bulk scan.");
+            });
+        });
+    }
+    if (createApiKeyButton) {
+        createApiKeyButton.addEventListener("click", () => {
+            createApiKey().catch((error) => {
+                showError(error && error.message ? error.message : "Could not create API key.");
+            });
+        });
+    }
+    if (createTeamButton) {
+        createTeamButton.addEventListener("click", () => {
+            createTeam().catch((error) => {
+                showError(error && error.message ? error.message : "Could not create team.");
             });
         });
     }
