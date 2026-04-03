@@ -6,6 +6,7 @@ const tabFeedbackNode = document.getElementById("tab-feedback");
 const dashboardTab = document.getElementById("tab-dashboard");
 const threatScanTab = document.getElementById("tab-threat-scan");
 const startButton = document.getElementById("start-btn");
+const accessButton = document.getElementById("access-btn");
 
 const authModal = document.getElementById("auth-modal");
 const authSignInButton = document.getElementById("auth-signin");
@@ -46,6 +47,7 @@ const biggestRiskImpactNode = document.getElementById("biggest-risk-impact");
 const biggestRiskDescNode = document.getElementById("biggest-risk-desc");
 const trustHookNode = document.getElementById("trust-hook");
 const riskFixNowButton = document.getElementById("risk-fix-now");
+const postFixAccessButton = document.getElementById("post-fix-access");
 
 const consequenceListNode = document.getElementById("consequence-list");
 const hurtListNode = document.getElementById("hurt-list");
@@ -777,7 +779,7 @@ function renderDecisionEngine(summary, signals, findings) {
     const scope = classifyIssueScope(summary, signals, findings);
 
     let problem = "BLOCK THIS EMAIL — Fix Before Sending";
-    let signalLine = "Evidence below is prioritized by inbox risk and send impact.";
+    let signalLine = "Use this verdict before your test batch to avoid preventable filtering.";
     let stripTitle = "DO NOT SEND";
     let stripBody = "This draft is not safe enough to send yet.";
     let stripClass = "risk-strip risk-strip-medium";
@@ -810,9 +812,19 @@ function renderDecisionEngine(summary, signals, findings) {
     decisionWhyNode.innerHTML = "";
     (nonMeta.slice(0, 3).length ? nonMeta.slice(0, 3) : [{ title: "Signals detected", issue: "Multiple risk patterns are present." }]).forEach((item) => {
         const li = document.createElement("li");
-        const title = String(item.title || "risk signal");
-        const issue = String(item.issue || item.impact || "");
-        li.textContent = `${title}: ${issue || "This pattern increases filtering risk."}`;
+        const title = String(item.title || "risk signal").toLowerCase();
+        if (title.includes("broadcast") || title.includes("promo") || title.includes("mass")) {
+            li.textContent = "Detected broadcast-style phrasing (common spam signal).";
+        } else if (title.includes("personal")) {
+            li.textContent = "No recipient-specific personalization found.";
+        } else if (title.includes("urgency") || title.includes("pressure")) {
+            li.textContent = "Urgency language detected (reduces trust signals).";
+        } else if (title.includes("spf") || title.includes("dkim") || title.includes("dmarc")) {
+            li.textContent = "Authentication trust signals are incomplete for this send context.";
+        } else {
+            const issue = String(item.issue || item.impact || "This pattern increases filtering risk.");
+            li.textContent = `Detected ${String(item.title || "risk signal")}: ${issue}`;
+        }
         decisionWhyNode.appendChild(li);
     });
 
@@ -1283,16 +1295,24 @@ if (threatScanTab) {
 }
 if (startButton) {
     startButton.addEventListener("click", () => {
-        pendingAction = "analyze";
-        if (needsAuthGate("analyze")) {
-            if (isAuthenticated) {
-                showError("You reached your monthly free plan scan limit. Upgrade is required for more scans.");
-                return;
-            }
+        if (rawEmailInput) {
+            rawEmailInput.scrollIntoView({ behavior: "smooth", block: "center" });
+            setTimeout(() => rawEmailInput.focus(), 160);
+        }
+        activateTab("threat-scan");
+        trackEvent("start_clicked", { destination: "email_input" });
+    });
+}
+if (accessButton) {
+    accessButton.addEventListener("click", (event) => {
+        event.preventDefault();
+        if (!isAuthenticated) {
             showAuthModal();
+            trackEvent("get_access_clicked", { state: "anon" });
             return;
         }
-        runPendingAction();
+        trackEvent("get_access_clicked", { state: "authenticated" });
+        window.location.href = "/dashboard";
     });
 }
 if (fixNowButton) {
@@ -1310,6 +1330,17 @@ if (riskFixNowButton) {
         trackEvent("fix_clicked", { source: "risk_fix_now" });
         pendingAction = "fix";
         runPendingAction();
+    });
+}
+if (postFixAccessButton) {
+    postFixAccessButton.addEventListener("click", () => {
+        if (!isAuthenticated) {
+            showAuthModal();
+            trackEvent("post_fix_access_clicked", { state: "anon" });
+            return;
+        }
+        trackEvent("post_fix_access_clicked", { state: "authenticated" });
+        window.location.href = "/dashboard";
     });
 }
 if (useFixedButton) {

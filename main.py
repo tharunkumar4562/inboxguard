@@ -581,8 +581,8 @@ def home(request: Request):
         request,
         "index.html",
         {
-            "page_title": "InboxGuard | Pre-send email risk system",
-            "meta_description": "Know if your email will land in inbox or spam before you hit send. Fix risky drafts, protect your domain, and avoid silent campaign failure.",
+            "page_title": "InboxGuard | Your cold email looked fine. Gmail disagreed.",
+            "meta_description": "Find out why emails that look fine still land in spam. Fix risky drafts before you hit send and protect your domain.",
             "canonical_url": f"{SITE_URL}/",
             "focus_query": "why did my email go to spam",
         },
@@ -590,33 +590,13 @@ def home(request: Request):
 
 
 @app.get("/login", response_class=HTMLResponse)
-def login_page(request: Request, next: str = "/profile"):
-    return render_template_safe(
-        request,
-        "login.html",
-        {
-            "page_title": "Login | InboxGuard",
-            "meta_description": "Sign in to InboxGuard to keep scanning, save results, and view usage history.",
-            "canonical_url": f"{SITE_URL}/login",
-            "google_enabled": _google_client() is not None,
-            "next_path": next or "/profile",
-        },
-    )
+def login_page(request: Request):
+    return RedirectResponse(url="/?auth=1", status_code=303)
 
 
 @app.get("/access", response_class=HTMLResponse)
-def access_page(request: Request, next: str = "/profile"):
-    return render_template_safe(
-        request,
-        "login.html",
-        {
-            "page_title": "Get Access | InboxGuard",
-            "meta_description": "Create an account or sign in to keep scanning and save usage history.",
-            "canonical_url": f"{SITE_URL}/access",
-            "google_enabled": _google_client() is not None,
-            "next_path": next or "/profile",
-        },
-    )
+def access_page(request: Request):
+    return RedirectResponse(url="/?auth=1", status_code=303)
 
 
 @app.get("/auth/status")
@@ -684,6 +664,10 @@ def profile_page(request: Request):
             "profile": profile,
         },
     )
+
+@app.get("/dashboard")
+async def dashboard_redirect() -> RedirectResponse:
+    return RedirectResponse(url="/profile", status_code=307)
 
 
 @app.post("/signup")

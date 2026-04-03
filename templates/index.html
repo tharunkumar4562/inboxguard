@@ -84,15 +84,20 @@
         <header class="topbar">
           <h1>InboxGuard</h1>
           <div class="topbar-actions">
-            <button id="start-btn" type="button" class="start-btn">Start</button>
-            <a class="access-link" href="/access">Get Access</a>
+            <button id="start-btn" type="button" class="start-btn">Try with your email</button>
+            <a id="access-btn" class="access-link" href="/access">Get Access</a>
           </div>
         </header>
+
+        <section class="domain-risk-alert">
+          <p class="domain-risk-title">Domain reputation at risk</p>
+          <p class="domain-risk-text">Repeated sends from risky drafts can degrade sender trust across major inbox providers.</p>
+        </section>
+
         <section class="hero-story card">
-          <h2>This email looks fine. It can still get filtered.</h2>
-          <p>InboxGuard predicts whether content, patterns, and sender trust will break before you hit send.</p>
-          <p>Repeated sends like this can damage your domain reputation and quietly kill campaign performance.</p>
-          <p class="hero-note">Run it before your first 20-email test batch.</p>
+          <h2>This email will get filtered. Fix it before you send.</h2>
+          <p>Know if your email will land in inbox before sending across Gmail, Outlook, and other providers.</p>
+          <p class="hero-note">Last check before you hit send.</p>
         </section>
         <p id="tab-feedback" class="tab-feedback">Paste your email, click Analyze Email, and get fixes instantly.</p>
 
@@ -125,7 +130,8 @@ I noticed your recent post and had one short idea to improve reply rates."></tex
             </details>
 
             <button type="submit" id="run-check" class="btn-danger">Analyze Email</button>
-            <p class="micro">Takes 5 seconds • No signup needed for first scans</p>
+            <p class="micro">Free: analyze + fix one email. No signup.</p>
+            <p class="micro">Upgrade for batch scans, history, and domain tracking.</p>
 
             <div id="result-loading" class="loading-panel hidden">
               <p class="loading-title">Analyzing your email...</p>
@@ -273,6 +279,17 @@ I noticed your recent post and had one short idea to improve reply rates."></tex
               <button id="send-gmail" type="button" class="btn-secondary">Open in Gmail</button>
               <button id="edit-manual" type="button" class="btn-secondary">Edit Manually</button>
             </div>
+
+            <div id="post-fix-gate" class="post-fix-gate">
+              <p class="post-fix-title">Want to go beyond one email?</p>
+              <ul class="compact-list">
+                <li>Save fixed emails</li>
+                <li>Track domain reputation trends</li>
+                <li>Run batch scans and compare versions</li>
+              </ul>
+              <button id="post-fix-access" type="button" class="btn-primary decision-cta">Get Access</button>
+            </div>
+
             <div class="feedback-row" style="margin-top: 12px;">
               <p class="micro" style="margin-bottom: 6px;">After sending, where did this land?</p>
               <div class="action-links">
