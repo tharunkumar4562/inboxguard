@@ -1328,10 +1328,6 @@ function closePricingModal() {
 }
 
 function handleGetAccess() {
-    if (!window.currentUser) {
-        openAuthModal();
-        return;
-    }
     openPricingModal();
 }
 
@@ -1371,6 +1367,11 @@ function showPaywall() {
 
 async function startPayment() {
     try {
+        if (!isAuthenticated) {
+            showAuthModal();
+            return;
+        }
+
         const response = await fetch("/create-subscription", { method: "POST" });
         const data = await response.json().catch(() => ({}));
 
