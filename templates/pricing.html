@@ -56,13 +56,13 @@
       <section class="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
         <article class="card" style="padding: 22px;">
           <p class="workflow-step">Pricing</p>
-          <h1 class="mt-2 text-4xl font-bold leading-tight">This email is at risk. Fix it before you send.</h1>
-          <p class="mt-3 text-lg text-slate-300">Sending this as-is can reduce inbox placement and hurt future campaigns.</p>
+          <h1 class="mt-2 text-4xl font-bold leading-tight">Stop guessing. Know before you send.</h1>
+          <p class="mt-3 text-lg text-slate-300">InboxGuard Pro is for people who need more than one scan. It keeps you out of trial-and-error and gives you a repeatable pre-send check.</p>
 
           <ul class="compact-list mt-6">
-            <li>Know if your email is safe before sending</li>
-            <li>Fix hidden risks that only show at scale</li>
-            <li>Stop guessing and start sending with confidence</li>
+            <li>Unlimited scans</li>
+            <li>Saved fix history</li>
+            <li>Batch testing and comparisons</li>
             <li>Domain reputation tracking</li>
             <li>Campaign failure debugging</li>
           </ul>
@@ -79,12 +79,12 @@
             <span class="text-4xl font-bold">{{ display_price_usd }}</span>
             <span class="text-slate-400">/ month</span>
           </div>
-          <p class="mt-2 text-sm text-slate-400">Charged in INR at checkout, with no FX fees.</p>
+          <p class="mt-2 text-sm text-slate-400">Billed locally at checkout.</p>
 
           <div class="mt-6 rounded-2xl border border-slate-700 bg-slate-950/50 p-4">
             {% if authenticated %}
             <p class="text-sm text-slate-300">Signed in as <strong>{{ user_email }}</strong></p>
-            <button id="pay-btn" type="button" class="pay-btn">Fix My Email Before Sending</button>
+            <button id="pay-btn" type="button" class="btn-primary w-full mt-4">Unlock Pre-Send Confidence</button>
             {% if subscription_ready %}
             <p class="mt-3 text-xs text-slate-500">Secure Razorpay checkout will open after you click upgrade.</p>
             {% else %}
@@ -92,7 +92,7 @@
             {% endif %}
             {% else %}
             <p class="text-sm text-slate-300">Sign in to unlock checkout.</p>
-            <button type="button" class="btn-primary w-full mt-4" disabled>Upgrade Now</button>
+            <button type="button" class="btn-primary w-full mt-4" disabled>Unlock Pre-Send Confidence</button>
             <a href="/?auth=1" class="mt-3 inline-flex w-full items-center justify-center rounded-2xl bg-blue-600 px-6 py-3 text-base font-bold text-white shadow-lg shadow-blue-900/40 transition hover:bg-blue-700 no-underline">Sign in to continue</a>
             {% if google_enabled %}
             <a href="/auth/google/login?next=/pricing" class="mt-3 inline-flex w-full items-center justify-center rounded-2xl border border-slate-600 px-6 py-3 text-base font-semibold text-slate-100 transition hover:border-slate-400 no-underline">Continue with Google</a>
@@ -112,7 +112,7 @@
 
           <div class="mt-6 border-t border-slate-800 pt-4">
             <p class="text-sm text-slate-400">Questions before upgrading?</p>
-            <p class="mt-1 text-sm text-slate-200">Fix hidden risks before your next batch instead of finding out after replies drop.</p>
+            <p class="mt-1 text-sm text-slate-200">You can test one email free, then upgrade when you need batch scans, tracking, or saved history.</p>
           </div>
         </article>
       </section>
