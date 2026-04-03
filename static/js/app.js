@@ -13,6 +13,10 @@ const authSignInButton = document.getElementById("auth-signin");
 const authCreateButton = document.getElementById("auth-create");
 const authCloseButton = document.getElementById("auth-close");
 const authEmailInput = document.getElementById("auth-email");
+const emailCaptureModal = document.getElementById("email-capture-modal");
+const emailCaptureInput = document.getElementById("email-capture-email");
+const emailCaptureSubmitButton = document.getElementById("email-capture-submit");
+const emailCaptureCloseButton = document.getElementById("email-capture-close");
 const profileLink = document.getElementById("profile-link");
 const profileAvatar = document.getElementById("profile-avatar");
 const profileInitial = document.getElementById("profile-initial");
@@ -112,6 +116,15 @@ let currentUserStatus = "inactive";
 let emailPastedTracked = false;
 let advancedOpenedTracked = false;
 let pendingAuthRedirectPath = "";
+let pendingEmailCaptureAction = "";
+
+function getLeadEmail() {
+    return String(localStorage.getItem("ig_lead_email") || "").trim().toLowerCase();
+}
+
+function hasLeadEmail() {
+    return getLeadEmail().length > 0;
+}
 
 const errorBanner = document.createElement("div");
 errorBanner.id = "error-banner";
@@ -161,6 +174,28 @@ function hideAuthModal() {
         return;
     }
     authModal.classList.add("hidden");
+}
+
+function showEmailCaptureModal() {
+    if (!emailCaptureModal) {
+        return;
+    }
+
+    if (emailCaptureInput && !emailCaptureInput.value.trim()) {
+        emailCaptureInput.value = getLeadEmail();
+    }
+
+    emailCaptureModal.classList.remove("hidden");
+    if (emailCaptureInput) {
+        setTimeout(() => emailCaptureInput.focus(), 50);
+    }
+}
+
+function hideEmailCaptureModal() {
+    if (!emailCaptureModal) {
+        return;
+    }
+    emailCaptureModal.classList.add("hidden");
 }
 
 function needsAuthGate(action) {
@@ -1060,6 +1095,12 @@ async function showFixTransformation() {
 async function runAnalyze() {
     await refreshAuthStatus();
 
+    if (!isAuthenticated && anonymousScansUsed >= 2 && !hasLeadEmail()) {
+        pendingEmailCaptureAction = "analyze";
+        showEmailCaptureModal();
+        return;
+    }
+
     if (needsAuthGate("analyze")) {
         if (isAuthenticated) {
             showError("You reached your monthly free plan scan limit. Upgrade is required for more scans.");
@@ -1358,6 +1399,29 @@ function canUserScan() {
     */
 }
 
+function captureLeadEmail() {
+    if (!emailCaptureInput) {
+        return;
+    }
+
+    const email = String(emailCaptureInput.value || "").trim().toLowerCase();
+    if (!email || !email.includes("@")) {
+        showError("Enter a valid email to get your full report.");
+        return;
+    }
+
+    localStorage.setItem("ig_lead_email", email);
+    currentUserEmail = email;
+    window.currentUserEmail = email;
+    hideEmailCaptureModal();
+    showError("Email saved. Continue scanning and get your full report.");
+
+    if (pendingEmailCaptureAction === "analyze") {
+        pendingEmailCaptureAction = "";
+        runPendingAction();
+    }
+}
+
 function showPaywall() {
     const paywall = document.getElementById("paywall");
     if (paywall) {
@@ -1506,6 +1570,15 @@ if (dashboardTab) {
     if (authCloseButton) {
         authCloseButton.addEventListener("click", () => handleAuthAction("close"));
     }
+    if (emailCaptureSubmitButton) {
+        emailCaptureSubmitButton.addEventListener("click", () => captureLeadEmail());
+    }
+    if (emailCaptureCloseButton) {
+        emailCaptureCloseButton.addEventListener("click", () => {
+            pendingEmailCaptureAction = "";
+            hideEmailCaptureModal();
+        });
+    }
     if (authModal) {
         authModal.addEventListener("click", (event) => {
             const target = event.target;
@@ -1526,6 +1599,19 @@ if (dashboardTab) {
             }
             if (target.id === "auth-close") {
                 handleAuthAction("close");
+            }
+        });
+    }
+
+    if (emailCaptureModal) {
+        emailCaptureModal.addEventListener("click", (event) => {
+            const target = event.target;
+            if (!(target instanceof HTMLElement)) {
+                return;
+            }
+            if (target.id === "email-capture-modal") {
+                pendingEmailCaptureAction = "";
+                hideEmailCaptureModal();
             }
         });
     }

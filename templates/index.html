@@ -379,6 +379,18 @@ I noticed your recent post and had one short idea to improve reply rates."></tex
       </div>
     </div>
 
+    <div id="email-capture-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="email-capture-title">
+      <div class="modal-card">
+        <h3 id="email-capture-title">Enter your email to get your full report</h3>
+        <p class="micro">You have seen enough to know the tool is useful. Leave your email to keep scanning and unlock the full report.</p>
+        <div style="display:grid; gap:8px; margin-top:6px;">
+          <input id="email-capture-email" type="email" placeholder="you@company.com" style="padding:10px 12px; border-radius:10px; border:1px solid rgba(148,163,184,0.35); background:#07162e; color:#e2e8f0;" />
+          <button id="email-capture-submit" type="button" class="btn-primary" onclick="window.igEmailCaptureSubmit && window.igEmailCaptureSubmit()">Get full report</button>
+        </div>
+        <button id="email-capture-close" type="button" class="link-action" onclick="window.igEmailCaptureClose && window.igEmailCaptureClose()">Skip for now</button>
+      </div>
+    </div>
+
     <script src="/static/js/app.js?v=20260403-2"></script>
   </body>
 </html>
