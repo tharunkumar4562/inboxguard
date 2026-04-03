@@ -27,6 +27,7 @@ const statusRiskBandNode = document.getElementById("status-risk-band");
 const statusRiskCardNode = document.getElementById("status-risk-card");
 const statusPrimaryIssueNode = document.getElementById("status-primary-issue");
 const statusConfidenceNode = document.getElementById("status-confidence");
+const statusConfidenceFillNode = document.getElementById("status-confidence-fill");
 const riskStripNode = document.getElementById("risk-strip");
 const riskStripTitleNode = document.getElementById("risk-strip-title");
 const riskStripBodyNode = document.getElementById("risk-strip-body");
@@ -35,6 +36,7 @@ const decisionSignalNode = document.getElementById("decision-signal");
 const decisionWhyNode = document.getElementById("decision-why");
 const decisionFixFirstNode = document.getElementById("decision-fix-first");
 const decisionConsequenceNode = document.getElementById("decision-consequence");
+const scaleWarningNode = document.getElementById("scale-warning");
 
 const biggestRiskCard = document.getElementById("biggest-risk-card");
 const biggestRiskTitleNode = document.getElementById("biggest-risk-title");
@@ -520,6 +522,20 @@ function renderStatus(summary, signals, findings) {
         ? "based on content + technical signals"
         : "based on content-only signals";
     statusConfidenceNode.textContent = `${confidence.charAt(0).toUpperCase()}${confidence.slice(1)} confidence (${confidenceBasis})`;
+
+    if (statusConfidenceFillNode) {
+        statusConfidenceFillNode.classList.remove("confidence-high", "confidence-medium", "confidence-low");
+        if (confidence === "high") {
+            statusConfidenceFillNode.style.width = "82%";
+            statusConfidenceFillNode.classList.add("confidence-high");
+        } else if (confidence === "medium") {
+            statusConfidenceFillNode.style.width = "56%";
+            statusConfidenceFillNode.classList.add("confidence-medium");
+        } else {
+            statusConfidenceFillNode.style.width = "28%";
+            statusConfidenceFillNode.classList.add("confidence-low");
+        }
+    }
 }
 
 function renderBiggestRisk(summary, findings) {
@@ -723,19 +739,19 @@ function renderDecisionEngine(summary, signals, findings) {
     const dmarc = String(signals.dmarc_status || "unknown");
     const infraWeak = !(spf === "found" && dkim === "found" && dmarc === "found");
 
-    let problem = "Decision: Fix before sending";
-    let signalLine = "Root-cause evidence below is prioritized by inbox risk.";
+    let problem = "BLOCK THIS EMAIL — Fix Before Sending";
+    let signalLine = "Evidence below is prioritized by inbox risk.";
     let stripTitle = "AT RISK";
     let stripBody = "This draft can underperform or miss inbox placement without fixes.";
     let stripClass = "risk-strip risk-strip-medium";
     if (band === "High Spam-Risk Signals" || band === "High Risk") {
-        problem = "Decision: Block send and fix now";
+        problem = "BLOCK THIS EMAIL — Fix Before Sending";
         signalLine = "High-confidence spam/failure pattern detected.";
         stripTitle = "LIKELY SPAM";
         stripBody = "This email will likely land in spam if sent now.";
         stripClass = "risk-strip risk-strip-high";
     } else if (band === "Content Safe") {
-        problem = "Decision: Safe to send with minor review";
+        problem = "SAFE TO SEND — Test Batch Only";
         signalLine = "Low immediate risk, but review for stronger reply performance.";
         stripTitle = "LOW RISK";
         stripBody = "Delivery risk is low based on current detected signals.";
@@ -758,7 +774,7 @@ function renderDecisionEngine(summary, signals, findings) {
         const li = document.createElement("li");
         const title = String(item.title || "risk signal");
         const issue = String(item.issue || item.impact || "");
-        li.textContent = `${title}: ${issue || "This pattern increases filtering risk."}`;
+        li.textContent = `${title}: ${issue || "Detected pattern increases filtering risk."}`;
         decisionWhyNode.appendChild(li);
     });
 
@@ -785,6 +801,32 @@ function renderDecisionEngine(summary, signals, findings) {
         li.textContent = line;
         decisionConsequenceNode.appendChild(li);
     });
+
+    if (scaleWarningNode) {
+        const list = scaleWarningNode.querySelector(".compact-list");
+        if (list) {
+            list.innerHTML = "";
+            const scaleLines = band === "High Spam-Risk Signals" || band === "High Risk"
+                ? [
+                    "High chance of spam placement at 500+ sends.",
+                    "Repeated sends can damage domain reputation.",
+                ]
+                : band === "Content Safe"
+                    ? [
+                        "Likely safe for an initial test batch.",
+                        "Monitor performance when volume increases.",
+                    ]
+                    : [
+                        "Volume will amplify current content risk.",
+                        "Test before scaling beyond a small batch.",
+                    ];
+            scaleLines.forEach((line) => {
+                const li = document.createElement("li");
+                li.textContent = line;
+                list.appendChild(li);
+            });
+        }
+    }
 }
 
 function getRecommendedRewriteStyle() {

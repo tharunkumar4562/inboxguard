@@ -167,11 +167,14 @@ I noticed your recent post and had one short idea to improve reply rates."></tex
               <article class="status-card">
                 <p class="status-label">Confidence</p>
                 <p id="status-confidence" class="status-value pending">Pending</p>
+                <div class="confidence-meter" aria-hidden="true">
+                  <span id="status-confidence-fill" class="confidence-meter-fill confidence-low"></span>
+                </div>
               </article>
             </section>
 
             <div class="rewrite-proof" style="margin-top: 8px;">
-              <p class="rewrite-proof-title">Why this is happening:</p>
+              <p class="rewrite-proof-title">Why this will fail:</p>
               <ul id="decision-why" class="compact-list">
                 <li>Run analysis to see root-cause evidence.</li>
               </ul>
@@ -191,7 +194,15 @@ I noticed your recent post and had one short idea to improve reply rates."></tex
               </ul>
             </div>
 
-            <button id="risk-fix-now" type="button" class="btn-primary" style="margin-top: 10px;">Fix This Email Automatically</button>
+            <div id="scale-warning" class="rewrite-proof scale-warning" style="margin-top: 8px;">
+              <p class="rewrite-proof-title">At scale (500+ sends):</p>
+              <ul class="compact-list">
+                <li>Run analysis to see volume-specific risk.</li>
+              </ul>
+            </div>
+
+            <button id="risk-fix-now" type="button" class="btn-primary primary-action">Make This Safe to Send</button>
+            <p class="micro micro-subtext">Applies safe rewrite patterns used by inbox-placed emails.</p>
             <p id="trust-hook" class="trust-hook">Based on patterns commonly flagged by Gmail and Outlook filters.</p>
           </section>
 
@@ -209,9 +220,8 @@ I noticed your recent post and had one short idea to improve reply rates."></tex
                 </div>
               </div>
             </details>
-            <button id="fix-now" type="button" class="btn-primary" style="width: 100%; margin-top: 10px; margin-bottom: 1rem;">Fix Issues</button>
-            <div style="font-size: 0.9rem; color: #8b94a5; line-height: 1.5;">
-              <strong>Recommended fix applied automatically</strong> based on detected risk profile.
+            <div style="font-size: 0.9rem; color: #8b94a5; line-height: 1.5; margin-top: 10px;">
+              <strong>Recommended fix applies automatically</strong> based on detected risk profile.
             </div>
           </section>
 
