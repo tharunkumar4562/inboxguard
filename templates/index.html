@@ -154,6 +154,7 @@ I noticed your recent post and had one short idea to improve reply rates."></tex
             <p class="workflow-step">Decision Engine</p>
             <h3 id="decision-problem" class="main-issue">Decision: Analyze before sending</h3>
             <p id="decision-signal" class="micro">No decision signal yet. Scan required.</p>
+            <p id="decision-scope" class="decision-scope">Primary issue: waiting for scan</p>
 
             <section class="status-grid status-grid-triad" style="margin-top: 10px;">
               <article id="status-risk-card" class="status-card status-card-primary warning-bg">
@@ -167,14 +168,13 @@ I noticed your recent post and had one short idea to improve reply rates."></tex
               <article class="status-card">
                 <p class="status-label">Confidence</p>
                 <p id="status-confidence" class="status-value pending">Pending</p>
-                <div class="confidence-meter" aria-hidden="true">
-                  <span id="status-confidence-fill" class="confidence-meter-fill confidence-low"></span>
-                </div>
+                <div class="confidence-meter" aria-hidden="true"><span id="confidence-meter-fill"></span></div>
+                <p id="confidence-meter-detail" class="confidence-meter-detail">Confidence is unavailable until analysis runs.</p>
               </article>
             </section>
 
             <div class="rewrite-proof" style="margin-top: 8px;">
-              <p class="rewrite-proof-title">Why this will fail:</p>
+              <p class="rewrite-proof-title">Why this is happening:</p>
               <ul id="decision-why" class="compact-list">
                 <li>Run analysis to see root-cause evidence.</li>
               </ul>
@@ -195,14 +195,14 @@ I noticed your recent post and had one short idea to improve reply rates."></tex
             </div>
 
             <div id="scale-warning" class="rewrite-proof scale-warning" style="margin-top: 8px;">
-              <p class="rewrite-proof-title">At scale (500+ sends):</p>
-              <ul class="compact-list">
-                <li>Run analysis to see volume-specific risk.</li>
+              <p class="rewrite-proof-title">At scale:</p>
+              <ul id="scale-warning-list" class="compact-list">
+                <li>Run analysis to see scale risk.</li>
               </ul>
             </div>
 
-            <button id="risk-fix-now" type="button" class="btn-primary primary-action">Make This Safe to Send</button>
-            <p class="micro micro-subtext">Applies safe rewrite patterns used by inbox-placed emails.</p>
+            <button id="risk-fix-now" type="button" class="btn-primary decision-cta">Make This Safe to Send</button>
+            <p class="decision-cta-subtext">Applies safe rewrite patterns used by inbox-placed emails.</p>
             <p id="trust-hook" class="trust-hook">Based on patterns commonly flagged by Gmail and Outlook filters.</p>
           </section>
 
@@ -221,7 +221,7 @@ I noticed your recent post and had one short idea to improve reply rates."></tex
               </div>
             </details>
             <div style="font-size: 0.9rem; color: #8b94a5; line-height: 1.5; margin-top: 10px;">
-              <strong>Recommended fix applies automatically</strong> based on detected risk profile.
+              <strong>Default mode is automatic.</strong> Advanced rewrite styles stay hidden here to keep the decision view focused.
             </div>
           </section>
 

@@ -27,16 +27,18 @@ const statusRiskBandNode = document.getElementById("status-risk-band");
 const statusRiskCardNode = document.getElementById("status-risk-card");
 const statusPrimaryIssueNode = document.getElementById("status-primary-issue");
 const statusConfidenceNode = document.getElementById("status-confidence");
-const statusConfidenceFillNode = document.getElementById("status-confidence-fill");
+const confidenceMeterFillNode = document.getElementById("confidence-meter-fill");
+const confidenceMeterDetailNode = document.getElementById("confidence-meter-detail");
 const riskStripNode = document.getElementById("risk-strip");
 const riskStripTitleNode = document.getElementById("risk-strip-title");
 const riskStripBodyNode = document.getElementById("risk-strip-body");
 const decisionProblemNode = document.getElementById("decision-problem");
 const decisionSignalNode = document.getElementById("decision-signal");
+const decisionScopeNode = document.getElementById("decision-scope");
 const decisionWhyNode = document.getElementById("decision-why");
 const decisionFixFirstNode = document.getElementById("decision-fix-first");
 const decisionConsequenceNode = document.getElementById("decision-consequence");
-const scaleWarningNode = document.getElementById("scale-warning");
+const scaleWarningListNode = document.getElementById("scale-warning-list");
 
 const biggestRiskCard = document.getElementById("biggest-risk-card");
 const biggestRiskTitleNode = document.getElementById("biggest-risk-title");
@@ -477,6 +479,38 @@ function primaryIssue(summary, findings) {
     return "No critical issue detected";
 }
 
+function confidenceScoreValue(confidence) {
+    const value = String(confidence || "medium").toLowerCase();
+    if (value === "high") {
+        return 88;
+    }
+    if (value === "medium") {
+        return 58;
+    }
+    return 28;
+}
+
+function classifyIssueScope(summary, signals, findings) {
+    const band = String(summary.risk_band || "");
+    const lowerFindings = (findings || []).map((item) => `${item.title || ""} ${item.issue || ""} ${item.impact || ""}`.toLowerCase());
+    const hasContentSignals = lowerFindings.some((text) => /broadcast|mass|personal|cta|urgency|pressure|tone|promo|link|image/.test(text));
+    const spf = String(signals.spf_status || "unknown");
+    const dkim = String(signals.dkim_status || "unknown");
+    const dmarc = String(signals.dmarc_status || "unknown");
+    const infraWeak = !(spf === "found" && dkim === "found" && dmarc === "found");
+
+    if (infraWeak && hasContentSignals) {
+        return "MIXED";
+    }
+    if (infraWeak || band === "High Spam-Risk Signals" || band === "High Risk") {
+        return "INFRA";
+    }
+    if (hasContentSignals) {
+        return "CONTENT";
+    }
+    return "CONTENT";
+}
+
 function renderStatus(summary, signals, findings) {
     if (!statusRiskBandNode || !statusPrimaryIssueNode || !statusConfidenceNode) {
         return;
@@ -495,7 +529,9 @@ function renderStatus(summary, signals, findings) {
     }
 
     const confidence = String(summary.deliverability_confidence || "medium");
+    const confidenceValue = confidenceScoreValue(confidence);
     const mode = String(summary.analysis_mode || "content");
+    const scope = classifyIssueScope(summary, signals, findings);
 
     if (band === "Content Safe" && confidence === "low") {
         label = "Low Risk (Incomplete Check)";
@@ -516,25 +552,25 @@ function renderStatus(summary, signals, findings) {
         }
     }
 
-    statusPrimaryIssueNode.textContent = primaryIssue(summary, findings);
+    statusPrimaryIssueNode.textContent = `${scope}: ${primaryIssue(summary, findings)}`;
 
     const confidenceBasis = String(summary.analysis_mode || "content") === "full"
-        ? "based on content + technical signals"
-        : "based on content-only signals";
-    statusConfidenceNode.textContent = `${confidence.charAt(0).toUpperCase()}${confidence.slice(1)} confidence (${confidenceBasis})`;
+        ? "content + technical signals"
+        : "content-only signals";
+    const confidenceLabel = confidence.charAt(0).toUpperCase() + confidence.slice(1);
+    statusConfidenceNode.textContent = `${confidenceLabel} (${scope === "INFRA" ? "infra-heavy" : scope === "MIXED" ? "mixed" : "content-led"})`;
 
-    if (statusConfidenceFillNode) {
-        statusConfidenceFillNode.classList.remove("confidence-high", "confidence-medium", "confidence-low");
-        if (confidence === "high") {
-            statusConfidenceFillNode.style.width = "82%";
-            statusConfidenceFillNode.classList.add("confidence-high");
-        } else if (confidence === "medium") {
-            statusConfidenceFillNode.style.width = "56%";
-            statusConfidenceFillNode.classList.add("confidence-medium");
-        } else {
-            statusConfidenceFillNode.style.width = "28%";
-            statusConfidenceFillNode.classList.add("confidence-low");
-        }
+    if (confidenceMeterFillNode) {
+        confidenceMeterFillNode.style.width = `${confidenceValue}%`;
+        confidenceMeterFillNode.style.background = confidenceValue >= 80
+            ? "linear-gradient(90deg, #ef4444 0%, #f97316 100%)"
+            : confidenceValue >= 50
+                ? "linear-gradient(90deg, #f59e0b 0%, #facc15 100%)"
+                : "linear-gradient(90deg, #f97316 0%, #f59e0b 100%)";
+    }
+
+    if (confidenceMeterDetailNode) {
+        confidenceMeterDetailNode.textContent = `Confidence is ${confidenceLabel.toLowerCase()} because ${confidenceBasis}.`;
     }
 }
 
@@ -729,7 +765,7 @@ function renderBreakdown(summary) {
 }
 
 function renderDecisionEngine(summary, signals, findings) {
-    if (!decisionProblemNode || !decisionSignalNode || !decisionWhyNode || !decisionFixFirstNode || !decisionConsequenceNode || !riskStripNode || !riskStripTitleNode || !riskStripBodyNode) {
+    if (!decisionProblemNode || !decisionSignalNode || !decisionScopeNode || !decisionWhyNode || !decisionFixFirstNode || !decisionConsequenceNode || !riskStripNode || !riskStripTitleNode || !riskStripBodyNode || !scaleWarningListNode) {
         return;
     }
 
@@ -738,23 +774,24 @@ function renderDecisionEngine(summary, signals, findings) {
     const dkim = String(signals.dkim_status || "unknown");
     const dmarc = String(signals.dmarc_status || "unknown");
     const infraWeak = !(spf === "found" && dkim === "found" && dmarc === "found");
+    const scope = classifyIssueScope(summary, signals, findings);
 
     let problem = "BLOCK THIS EMAIL — Fix Before Sending";
-    let signalLine = "Evidence below is prioritized by inbox risk.";
-    let stripTitle = "AT RISK";
-    let stripBody = "This draft can underperform or miss inbox placement without fixes.";
+    let signalLine = "Evidence below is prioritized by inbox risk and send impact.";
+    let stripTitle = "DO NOT SEND";
+    let stripBody = "This draft is not safe enough to send yet.";
     let stripClass = "risk-strip risk-strip-medium";
     if (band === "High Spam-Risk Signals" || band === "High Risk") {
         problem = "BLOCK THIS EMAIL — Fix Before Sending";
-        signalLine = "High-confidence spam/failure pattern detected.";
+        signalLine = "High-confidence spam pattern detected.";
         stripTitle = "LIKELY SPAM";
         stripBody = "This email will likely land in spam if sent now.";
         stripClass = "risk-strip risk-strip-high";
     } else if (band === "Content Safe") {
-        problem = "SAFE TO SEND — Test Batch Only";
-        signalLine = "Low immediate risk, but review for stronger reply performance.";
-        stripTitle = "LOW RISK";
-        stripBody = "Delivery risk is low based on current detected signals.";
+        problem = "SAFE TO SEND (TEST BATCH)";
+        signalLine = "Low immediate risk. Use this for an initial test batch.";
+        stripTitle = "SAFE TO SEND";
+        stripBody = "This is acceptable for a small test batch.";
         stripClass = "risk-strip risk-strip-low";
     }
 
@@ -764,6 +801,7 @@ function renderDecisionEngine(summary, signals, findings) {
 
     decisionProblemNode.textContent = problem;
     decisionSignalNode.textContent = signalLine;
+    decisionScopeNode.textContent = `Primary issue: ${scope}${scope === "INFRA" ? " - technical trust signals" : scope === "MIXED" ? " - content and infrastructure" : " - content signals"}`;
     riskStripNode.className = stripClass;
     riskStripTitleNode.textContent = stripTitle;
     riskStripBodyNode.textContent = stripBody;
@@ -774,7 +812,7 @@ function renderDecisionEngine(summary, signals, findings) {
         const li = document.createElement("li");
         const title = String(item.title || "risk signal");
         const issue = String(item.issue || item.impact || "");
-        li.textContent = `${title}: ${issue || "Detected pattern increases filtering risk."}`;
+        li.textContent = `${title}: ${issue || "This pattern increases filtering risk."}`;
         decisionWhyNode.appendChild(li);
     });
 
@@ -789,12 +827,12 @@ function renderDecisionEngine(summary, signals, findings) {
     decisionConsequenceNode.innerHTML = "";
     const consequences = (band === "High Spam-Risk Signals" || band === "High Risk")
         ? [
-            "High chance of spam placement if sent unchanged.",
-            "Domain reputation can degrade after repeated sends.",
+            "This looks like bulk promotional email, so Gmail is likely to filter it.",
+            "Repeated sends like this can damage domain reputation.",
         ]
         : [
-            "This can still underperform if key issues are ignored.",
-            "Reply rates may stay low without structural fixes.",
+            "This is likely safe for a small test batch, but scale risk can rise fast.",
+            "If volume increases, keep watching inbox placement and replies.",
         ];
     consequences.forEach((line) => {
         const li = document.createElement("li");
@@ -802,31 +840,23 @@ function renderDecisionEngine(summary, signals, findings) {
         decisionConsequenceNode.appendChild(li);
     });
 
-    if (scaleWarningNode) {
-        const list = scaleWarningNode.querySelector(".compact-list");
-        if (list) {
-            list.innerHTML = "";
-            const scaleLines = band === "High Spam-Risk Signals" || band === "High Risk"
-                ? [
-                    "High chance of spam placement at 500+ sends.",
-                    "Repeated sends can damage domain reputation.",
-                ]
-                : band === "Content Safe"
-                    ? [
-                        "Likely safe for an initial test batch.",
-                        "Monitor performance when volume increases.",
-                    ]
-                    : [
-                        "Volume will amplify current content risk.",
-                        "Test before scaling beyond a small batch.",
-                    ];
-            scaleLines.forEach((line) => {
-                const li = document.createElement("li");
-                li.textContent = line;
-                list.appendChild(li);
-            });
-        }
-    }
+    scaleWarningListNode.innerHTML = "";
+    const scaleLines = (band === "High Spam-Risk Signals" || band === "High Risk")
+        ? [
+            "If you send this to 500+ people, high risk of spam placement.",
+            "Domain reputation risk increases after the first batch.",
+            "Performance will degrade as volume rises.",
+        ]
+        : [
+            "Safe for an initial 20-50 email test batch.",
+            "Re-check before scaling to 500+ sends.",
+            "Monitor inbox placement after the first batch.",
+        ];
+    scaleLines.forEach((line) => {
+        const li = document.createElement("li");
+        li.textContent = line;
+        scaleWarningListNode.appendChild(li);
+    });
 }
 
 function getRecommendedRewriteStyle() {
@@ -1081,7 +1111,7 @@ async function runAnalyze() {
             workflowStateNode.textContent = "Step 1: Scan complete";
         }
         if (workflowTitleNode) {
-            workflowTitleNode.textContent = "Step 2: Fix required";
+            workflowTitleNode.textContent = "Step 2: Make this safe to send";
         }
         if (fixOutput) {
             fixOutput.classList.add("hidden");

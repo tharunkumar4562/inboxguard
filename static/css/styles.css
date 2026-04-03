@@ -57,36 +57,6 @@ body {
     display: none;
 }
 
-.confidence-meter {
-    margin-top: 8px;
-    width: 100%;
-    height: 8px;
-    border-radius: 999px;
-    background: #0c1628;
-    border: 1px solid rgba(148, 163, 184, 0.14);
-    overflow: hidden;
-}
-
-.confidence-meter-fill {
-    display: block;
-    height: 100%;
-    width: 0;
-    border-radius: inherit;
-    transition: width 240ms ease;
-}
-
-.confidence-low {
-    background: linear-gradient(90deg, #f87171, #fb7185);
-}
-
-.confidence-medium {
-    background: linear-gradient(90deg, #f59e0b, #fbbf24);
-}
-
-.confidence-high {
-    background: linear-gradient(90deg, #10b981, #34d399);
-}
-
 .app-shell {
     min-height: 100vh;
     display: grid;
@@ -630,11 +600,21 @@ select {
     color: #cbd5e1;
 }
 
+.decision-scope {
+    margin: 6px 0 0;
+    color: #93c5fd;
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
 .risk-strip {
     border-radius: 12px;
     padding: 12px 14px;
     margin-bottom: 10px;
     border: 1px solid transparent;
+    box-shadow: 0 0 0 rgba(0, 0, 0, 0);
 }
 
 .risk-strip-title {
@@ -653,6 +633,8 @@ select {
 .risk-strip-high {
     background: var(--risk-bg);
     border-color: var(--risk-border);
+    box-shadow: 0 0 0 1px rgba(255, 77, 79, 0.15), 0 0 22px rgba(255, 77, 79, 0.16);
+    animation: pulseRisk 1.8s ease-in-out infinite;
 }
 
 .risk-strip-high .risk-strip-title {
@@ -684,6 +666,76 @@ select {
 
 .risk-strip-neutral .risk-strip-title {
     color: #e2e8f0;
+}
+
+@keyframes pulseRisk {
+
+    0%,
+    100% {
+        transform: translateY(0);
+        box-shadow: 0 0 0 1px rgba(255, 77, 79, 0.15), 0 0 22px rgba(255, 77, 79, 0.12);
+    }
+
+    50% {
+        transform: translateY(-1px);
+        box-shadow: 0 0 0 1px rgba(255, 77, 79, 0.25), 0 0 32px rgba(255, 77, 79, 0.22);
+    }
+}
+
+.confidence-meter {
+    margin-top: 8px;
+    height: 8px;
+    border-radius: 999px;
+    background: #1b2940;
+    overflow: hidden;
+    border: 1px solid rgba(148, 163, 184, 0.18);
+}
+
+.confidence-meter span {
+    display: block;
+    height: 100%;
+    width: 0%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #ef4444 0%, #f59e0b 55%, #22c55e 100%);
+    transition: width 240ms ease, background 240ms ease;
+}
+
+.confidence-meter-detail {
+    margin: 6px 0 0;
+    color: #9ca3af;
+    font-size: 0.8rem;
+}
+
+.scale-warning {
+    border-color: #7c2d12;
+    background: #21160d;
+}
+
+.scale-warning .rewrite-proof-title {
+    color: #f5c542;
+}
+
+.decision-cta {
+    margin-top: 10px;
+    width: 100%;
+    font-size: 1.08rem;
+    padding: 14px 18px;
+    box-shadow: 0 0 0 1px rgba(255, 77, 79, 0.2), 0 10px 30px rgba(255, 77, 79, 0.22);
+}
+
+.decision-cta:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 0 0 1px rgba(255, 77, 79, 0.25), 0 14px 34px rgba(255, 77, 79, 0.28);
+}
+
+.decision-cta-subtext {
+    margin: 6px 0 0;
+    color: #9ca3af;
+    font-size: 0.8rem;
+}
+
+.scale-warning .compact-list li {
+    background: #121b2d;
 }
 
 .card-critical {
@@ -1055,52 +1107,4 @@ select {
     border: 1px solid rgba(16, 185, 129, 0.4);
     border-radius: 10px;
     padding: 8px 10px;
-}
-
-.micro-subtext {
-    margin: 8px 0 0;
-    color: #cbd5e1;
-    font-size: 0.84rem;
-}
-
-.scale-warning .compact-list li {
-    color: #fca5a5;
-}
-
-.primary-action {
-    width: 100%;
-    margin-top: 10px;
-    box-shadow: 0 12px 28px rgba(239, 68, 68, 0.24);
-    position: relative;
-    overflow: hidden;
-}
-
-.primary-action:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 16px 34px rgba(239, 68, 68, 0.32);
-}
-
-.primary-action::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(120deg, transparent 0%, rgba(255, 255, 255, 0.12) 50%, transparent 100%);
-    transform: translateX(-120%);
-    transition: transform 420ms ease;
-}
-
-.primary-action:hover::after {
-    transform: translateX(120%);
-}
-
-@keyframes riskPulse {
-
-    0%,
-    100% {
-        box-shadow: 0 0 0 1px rgba(255, 77, 79, 0.18), 0 0 22px rgba(255, 77, 79, 0.16);
-    }
-
-    50% {
-        box-shadow: 0 0 0 1px rgba(255, 77, 79, 0.28), 0 0 32px rgba(255, 77, 79, 0.24);
-    }
 }
