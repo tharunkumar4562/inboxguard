@@ -458,7 +458,7 @@ I noticed your recent post and had one short idea to improve reply rates."></tex
               <input id="cd-sent" type="number" min="1" step="1" placeholder="e.g. 500" />
             </div>
           </div>
-          <button id="cd-run" type="button" class="btn-danger tool-pane-primary" style="margin-top: 10px;">Diagnose Campaign</button>
+          <button id="cd-run" type="button" class="btn-danger">Diagnose Campaign</button>
 
           <div id="diagnosis-output" class="card hidden" style="margin-top: 12px; background: #0f1d31;">
             <p id="diagnosis-primary" class="main-issue">-</p>
@@ -481,7 +481,7 @@ I noticed your recent post and had one short idea to improve reply rates."></tex
               <label for="blacklist-domain">Domain</label>
               <input id="blacklist-domain" class="input-field" type="text" placeholder="yourdomain.com" />
             </div>
-            <button id="run-blacklist-check" type="button" class="btn-action-primary tool-pane-primary">Check Domain Risk</button>
+            <button id="run-blacklist-check" type="button" class="btn-danger">Check Domain Risk</button>
           </div>
           <p id="blacklist-result" class="micro" style="margin-top: 8px;">No check yet.</p>
         </section>
@@ -516,9 +516,9 @@ I noticed your recent post and had one short idea to improve reply rates."></tex
               <input id="seed-spam-count" type="number" min="0" step="1" placeholder="e.g. 3" />
             </div>
           </div>
-          <button id="save-seed-test" type="button" class="btn-secondary tool-pane-primary" style="margin-top: 10px;">Save Seed Result</button>
-          <button id="run-seed-sync" type="button" class="btn-secondary" style="margin-top: 8px;">Run Instant Seed Probe</button>
-          <button id="run-seed-auto" type="button" class="btn-secondary" style="margin-top: 8px;">Run Automated Seed Test</button>
+          <button id="save-seed-test" type="button" class="btn-primary">Save Seed Result</button>
+          <button id="run-seed-sync" type="button" class="btn-secondary">Run Instant Seed Probe</button>
+          <button id="run-seed-auto" type="button" class="btn-secondary">Run Automated Seed Test</button>
           <ul id="seed-test-list" class="compact-list" style="margin-top: 8px;">
             <li>No seed tests logged yet.</li>
           </ul>
@@ -531,7 +531,7 @@ I noticed your recent post and had one short idea to improve reply rates."></tex
           </div>
           <p class="micro">Upload up to 100 rows with columns: raw_email OR (subject/body), plus optional domain.</p>
           <input id="bulk-file" type="file" accept=".csv,text/csv" />
-          <button id="run-bulk-scan" type="button" class="btn-secondary tool-pane-primary" style="margin-top: 10px;">Run Bulk Scan</button>
+          <button id="run-bulk-scan" type="button" class="btn-primary">Run Bulk Scan</button>
           <ul id="bulk-results" class="compact-list" style="margin-top: 8px;">
             <li>No bulk scan yet.</li>
           </ul>
@@ -554,8 +554,8 @@ I noticed your recent post and had one short idea to improve reply rates."></tex
             </div>
           </div>
           <div class="actions" style="margin-top:10px;">
-            <button id="create-api-key" type="button" class="btn-secondary">Create API Key</button>
-            <button id="list-api-keys" type="button" class="btn-secondary tool-pane-primary">List API Keys</button>
+            <button id="create-api-key" type="button" class="btn-primary">Create API Key</button>
+            <button id="list-api-keys" type="button" class="btn-secondary">List API Keys</button>
             <button id="create-team" type="button" class="btn-secondary">Create Team</button>
             <button id="list-teams" type="button" class="btn-secondary">List Teams</button>
           </div>
@@ -585,7 +585,7 @@ I noticed your recent post and had one short idea to improve reply rates."></tex
             </div>
           </div>
           <div class="actions" style="margin-top:10px;">
-            <button id="revoke-api-key" type="button" class="btn-secondary">Revoke API Key</button>
+            <button id="revoke-api-key" type="button" class="btn-danger">Revoke API Key</button>
             <button id="add-team-member" type="button" class="btn-secondary">Add Team Member</button>
           </div>
           <ul id="api-key-list" class="compact-list" style="margin-top:8px;">
@@ -606,7 +606,7 @@ I noticed your recent post and had one short idea to improve reply rates."></tex
           </div>
           <p class="micro">Monitor feedback outcomes and async queue status from the dashboard.</p>
           <div class="actions" style="margin-top: 10px;">
-            <button id="refresh-outcome-stats" type="button" class="btn-secondary tool-pane-primary">Refresh Outcome Stats</button>
+            <button id="refresh-outcome-stats" type="button" class="btn-primary">Refresh Outcome Stats</button>
             <button id="refresh-jobs" type="button" class="btn-secondary">Refresh Async Jobs</button>
           </div>
           <ul id="outcome-stats-list" class="compact-list" style="margin-top:8px;">
