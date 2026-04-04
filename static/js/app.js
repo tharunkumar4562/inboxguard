@@ -28,6 +28,7 @@ const submitButton = document.getElementById("run-check");
 const submitAsyncButton = document.getElementById("run-check-async");
 const loadingPanel = document.getElementById("result-loading");
 const loadingStep = document.getElementById("loading-step");
+const progressBarNode = document.getElementById("progressBar");
 const loadingStepNodes = [
     document.getElementById("load-step-1"),
     document.getElementById("load-step-2"),
@@ -82,6 +83,11 @@ const rewriteTrustNoteNode = document.getElementById("rewrite-trust-note");
 const rewriteLimitationsNode = document.getElementById("rewrite-limitations");
 const rewriteDiffNode = document.getElementById("rewrite-diff");
 const successBadge = document.getElementById("successBadge");
+const rewardBoxNode = document.getElementById("rewardBox");
+const rewardTextNode = document.getElementById("rewardText");
+const winCounterNode = document.getElementById("winCounter");
+const streakNode = document.getElementById("streak");
+const nextActionNode = document.getElementById("nextAction");
 const fixOutput = document.getElementById("fix-output");
 const saveFixButton = document.getElementById("save-fix");
 const beforeEmailNode = document.getElementById("before-email");
@@ -174,6 +180,9 @@ let pendingAuthRedirectPath = "";
 let leadCaptureEmail = localStorage.getItem("ig_lead_capture_email") || "";
 let leadCaptureSaved = localStorage.getItem("ig_lead_capture_saved") === "1";
 
+const APP_LOOP_WINS_KEY = "ig_wins";
+const APP_LOOP_STREAK_KEY = "ig_streak";
+
 const errorBanner = document.createElement("div");
 errorBanner.id = "error-banner";
 errorBanner.className = "hidden";
@@ -195,6 +204,236 @@ function trackEvent(eventName, params) {
 
 function sleep(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+// Lightweight spring interpolator for physics-like, interruptible motion.
+function spring({ from, to, stiffness = 0.08, damping = 0.8, onUpdate }) {
+    let position = Number(from || 0);
+    let velocity = 0;
+    let cancelled = false;
+
+    function frame() {
+        if (cancelled) {
+            return;
+        }
+        const force = (to - position) * stiffness;
+        velocity = velocity * damping + force;
+        position += velocity;
+
+        onUpdate(position);
+
+        if (Math.abs(velocity) > 0.001 || Math.abs(to - position) > 0.001) {
+            requestAnimationFrame(frame);
+        } else {
+            onUpdate(to);
+        }
+    }
+
+    requestAnimationFrame(frame);
+    return () => {
+        cancelled = true;
+    };
+}
+
+function animateDecision(el) {
+    if (!el) {
+        return;
+    }
+    spring({
+        from: 0.8,
+        to: 1,
+        stiffness: 0.09,
+        damping: 0.79,
+        onUpdate: (scale) => {
+            el.style.transform = `scale(${scale})`;
+            el.style.opacity = String(Math.max(0.2, Math.min(1, scale)));
+        },
+    });
+}
+
+function slideIn(el) {
+    if (!el) {
+        return;
+    }
+    spring({
+        from: 100,
+        to: 0,
+        stiffness: 0.06,
+        damping: 0.75,
+        onUpdate: (val) => {
+            el.style.transform = `translateX(${val}px)`;
+            el.style.opacity = String(1 - Math.min(1, val / 100));
+        },
+    });
+}
+
+function magnetic(el) {
+    if (!el) {
+        return;
+    }
+
+    el.addEventListener("mousemove", (event) => {
+        const rect = el.getBoundingClientRect();
+        const x = (event.clientX - rect.left - rect.width / 2) * 0.16;
+        const y = (event.clientY - rect.top - rect.height / 2) * 0.16;
+        el.style.transform = `translate(${x}px, ${y}px)`;
+    });
+
+    el.addEventListener("mouseleave", () => {
+        el.style.transform = "translate(0px, 0px)";
+    });
+}
+
+function animateProgress(to = 100) {
+    if (!progressBarNode) {
+        return;
+    }
+    spring({
+        from: 0,
+        to,
+        stiffness: 0.05,
+        damping: 0.85,
+        onUpdate: (val) => {
+            progressBarNode.style.width = `${Math.max(0, Math.min(100, val))}%`;
+        },
+    });
+}
+
+function revealText(el, text) {
+    if (!el) {
+        return;
+    }
+    let i = 0;
+    el.innerText = "";
+    el.style.opacity = "1";
+
+    function type() {
+        if (i < text.length) {
+            el.innerText += text[i];
+            i += 1;
+            setTimeout(type, 15);
+        }
+    }
+
+    type();
+}
+
+function transitionColor(el, fromColor, toColor) {
+    if (!el) {
+        return;
+    }
+    let progress = 0;
+    function step() {
+        progress += 0.08;
+        el.style.color = progress > 0.5 ? toColor : fromColor;
+        if (progress < 1) {
+            requestAnimationFrame(step);
+        }
+    }
+    step();
+}
+
+function showOverlaySpring(text) {
+    const overlay = document.getElementById("decisionOverlay");
+    const overlayText = document.getElementById("decisionOverlayText");
+    if (!overlay || !overlayText) {
+        return;
+    }
+
+    overlayText.textContent = text;
+    overlay.classList.remove("hidden");
+    overlay.style.opacity = "0";
+
+    spring({
+        from: 0.7,
+        to: 1,
+        onUpdate: (scale) => {
+            overlay.style.transform = `scale(${scale})`;
+            overlay.style.opacity = String(Math.max(0.2, Math.min(1, scale)));
+        },
+    });
+
+    setTimeout(() => {
+        overlay.style.opacity = "0";
+        setTimeout(() => {
+            overlay.classList.add("hidden");
+            overlay.style.transform = "scale(1)";
+        }, 160);
+    }, 1500);
+}
+
+function highlightDiff(beforeEl, afterEl) {
+    if (!beforeEl || !afterEl) {
+        return;
+    }
+    afterEl.style.background = "rgba(34, 197, 94, 0.1)";
+    afterEl.style.transform = "scale(1.02)";
+    setTimeout(() => {
+        afterEl.style.transform = "scale(1)";
+    }, 300);
+}
+
+function showReward(delta) {
+    if (!rewardBoxNode || !rewardTextNode) {
+        return;
+    }
+    rewardTextNode.textContent = delta > 0
+        ? `Spam risk reduced ↑ (+${delta})`
+        : "Structure improved for better delivery";
+    rewardBoxNode.classList.remove("hidden");
+}
+
+function updateWins() {
+    const wins = Number(localStorage.getItem(APP_LOOP_WINS_KEY) || "0") + 1;
+    localStorage.setItem(APP_LOOP_WINS_KEY, String(wins));
+    if (winCounterNode) {
+        winCounterNode.textContent = `Emails improved: ${wins}`;
+    }
+}
+
+function updateStreak() {
+    const streak = Number(localStorage.getItem(APP_LOOP_STREAK_KEY) || "0") + 1;
+    localStorage.setItem(APP_LOOP_STREAK_KEY, String(streak));
+    if (streakNode) {
+        streakNode.textContent = `🔥 ${streak} improvements in a row`;
+    }
+}
+
+function initializeLoopCounters() {
+    if (winCounterNode) {
+        winCounterNode.textContent = `Emails improved: ${Number(localStorage.getItem(APP_LOOP_WINS_KEY) || "0")}`;
+    }
+    if (streakNode) {
+        streakNode.textContent = `🔥 ${Number(localStorage.getItem(APP_LOOP_STREAK_KEY) || "0")} improvements in a row`;
+    }
+}
+
+function setupNextAction() {
+    if (!nextActionNode || !rawEmailInput) {
+        return;
+    }
+    nextActionNode.addEventListener("click", () => {
+        rawEmailInput.value = "";
+        rawEmailInput.focus();
+        if (rewardBoxNode) {
+            rewardBoxNode.classList.add("hidden");
+        }
+    });
+}
+
+function setupParallax() {
+    const shell = document.querySelector(".app-shell");
+    if (!shell) {
+        return;
+    }
+    document.addEventListener("mousemove", (event) => {
+        const x = (event.clientX / window.innerWidth - 0.5) * 3;
+        const y = (event.clientY / window.innerHeight - 0.5) * 3;
+        shell.style.transform = `translate(${x}px, ${y}px)`;
+    });
+    document.addEventListener("mouseleave", () => {
+        shell.style.transform = "translate(0px, 0px)";
+    });
 }
 
 function escapeHtml(value) {
@@ -639,6 +878,12 @@ function setIdleState() {
     if (successBadge) {
         successBadge.classList.add("hidden");
     }
+    if (rewardBoxNode) {
+        rewardBoxNode.classList.add("hidden");
+    }
+    if (progressBarNode) {
+        progressBarNode.style.width = "0%";
+    }
     if (submitButton) {
         submitButton.disabled = false;
         submitButton.textContent = defaultSubmitLabel;
@@ -662,6 +907,13 @@ function setLoadingState() {
     if (successBadge) {
         successBadge.classList.add("hidden");
     }
+    if (rewardBoxNode) {
+        rewardBoxNode.classList.add("hidden");
+    }
+    if (progressBarNode) {
+        progressBarNode.style.width = "0%";
+    }
+    animateProgress(100);
 }
 
 function setResultState() {
@@ -676,6 +928,9 @@ function setResultState() {
         submitButton.disabled = false;
         submitButton.textContent = defaultSubmitLabel;
     }
+    if (progressBarNode) {
+        progressBarNode.style.width = "100%";
+    }
 }
 
 function startRealtimeScanSteps() {
@@ -684,6 +939,7 @@ function startRealtimeScanSteps() {
     }
 
     let idx = 0;
+    let cancelled = false;
     loadingStep.textContent = loadSteps[idx];
     loadingStepNodes.forEach((node) => {
         if (node) {
@@ -691,7 +947,11 @@ function startRealtimeScanSteps() {
             node.textContent = node.textContent.replace(/\s✓$/, "");
         }
     });
-    return setInterval(() => {
+
+    function runStep() {
+        if (cancelled) {
+            return;
+        }
         const current = loadingStepNodes[idx];
         if (current) {
             current.classList.add("active");
@@ -701,7 +961,15 @@ function startRealtimeScanSteps() {
         }
         idx = (idx + 1) % loadSteps.length;
         loadingStep.textContent = loadSteps[idx];
-    }, 280);
+        setTimeout(runStep, 350 + idx * 100);
+    }
+
+    setTimeout(runStep, 140);
+    return {
+        stop: () => {
+            cancelled = true;
+        },
+    };
 }
 
 function setImpactBadge(node, impact) {
@@ -1390,8 +1658,13 @@ function renderDecisionEngine(summary, signals, findings, prediction) {
     decisionProblemNode.classList.add("decision-pop");
     if (predictionDecision === "DO NOT SEND" || band === "High Spam-Risk Signals" || band === "High Risk") {
         decisionProblemNode.classList.add("pulse-red");
+        transitionColor(decisionProblemNode, "#fca5a5", "#ef4444");
+    } else {
+        transitionColor(decisionProblemNode, "#93c5fd", "#22c55e");
     }
-    decisionSignalNode.textContent = signalLine;
+    animateDecision(decisionProblemNode);
+    showOverlaySpring(stripTitle);
+    revealText(decisionSignalNode, signalLine);
     decisionScopeNode.textContent = `Primary issue: ${scope}${scope === "INFRA" ? " - technical trust signals" : scope === "MIXED" ? " - content and infrastructure" : " - content signals"}`;
     riskStripNode.className = stripClass;
     riskStripTitleNode.textContent = stripTitle;
@@ -1538,6 +1811,8 @@ async function showFixTransformation() {
         void beforeEmailNode.offsetWidth;
         beforeEmailNode.classList.add("split-enter");
         afterEmailNode.classList.add("split-enter");
+        slideIn(afterEmailNode);
+        highlightDiff(beforeEmailNode, afterEmailNode);
         if (successBadge) {
             successBadge.classList.remove("hidden");
         }
@@ -1577,6 +1852,9 @@ async function showFixTransformation() {
             } else {
                 improvementEstimateNode.textContent = "No major risk shift detected. We still simplified structure to reduce bulk-style triggers.";
             }
+            showReward(delta);
+            updateWins();
+            updateStreak();
         }
 
         if (rewriteModeDisplayNode) {
@@ -1721,8 +1999,8 @@ async function runAnalyze() {
         }
 
         const data = await response.json();
-        if (loadingTicker) {
-            clearInterval(loadingTicker);
+        if (loadingTicker && typeof loadingTicker.stop === "function") {
+            loadingTicker.stop();
         }
         const summary = data.summary || {};
         const signals = data.signals || {};
@@ -1781,8 +2059,8 @@ async function runAnalyze() {
             userScansLimit = Number(data.usage.user_scans_limit || userScansLimit);
         }
     } catch (error) {
-        if (loadingTicker) {
-            clearInterval(loadingTicker);
+        if (loadingTicker && typeof loadingTicker.stop === "function") {
+            loadingTicker.stop();
         }
         showError(error && error.message ? error.message : "Scan failed.");
         setIdleState();
@@ -2635,6 +2913,12 @@ if (dashboardTab) {
         });
     });
 }
+
+magnetic(submitButton);
+magnetic(useFixedButton);
+initializeLoopCounters();
+setupNextAction();
+setupParallax();
 
 setIdleState();
 activateTab("dashboard");

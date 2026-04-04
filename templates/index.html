@@ -142,6 +142,8 @@
           <p class="hero-note">Last check before you hit send.</p>
         </section>
         <p id="tab-feedback" class="tab-feedback">Paste your email, click Check Before Sending, and get fixes instantly.</p>
+        <p id="winCounter" class="micro">Emails improved: 0</p>
+        <p id="streak" class="micro">🔥 0 improvements in a row</p>
 
         <section class="scan-panel card">
           <form id="risk-form" class="scan-form">
@@ -185,6 +187,7 @@ I noticed your recent post and had one short idea to improve reply rates."></tex
                 <li id="load-step-4">Scoring risk signals...</li>
               </ul>
               <p class="loading-current"><span class="spinner"></span><span id="loading-step">Initializing scan...</span></p>
+              <div class="progress-track"><div id="progressBar" class="progress-bar"></div></div>
             </div>
           </form>
         </section>
@@ -310,6 +313,9 @@ I noticed your recent post and had one short idea to improve reply rates."></tex
             <h3 id="workflow-title">Improved Draft Generated</h3>
             <p id="rewrite-mode-display" class="micro">Rewrite mode: Balanced (best mix)</p>
             <p id="improvement-estimate" class="improvement-estimate" style="color: #2ecc71; font-weight: 500;">Ready to use</p>
+            <div id="rewardBox" class="hidden reward-box">
+              <div id="rewardText" class="reward-text"></div>
+            </div>
             <div id="subject-change" class="rewrite-proof hidden"></div>
             <div class="rewrite-proof">
               <p class="rewrite-proof-title">What changed:</p>
@@ -333,6 +339,7 @@ I noticed your recent post and had one short idea to improve reply rates."></tex
               </article>
             </div>
             <div id="successBadge" class="hidden text-green-400 text-sm" style="margin-top:10px;">✔ Safer version ready</div>
+            <div class="micro" style="margin-top: 6px;">Different emails produce different results.</div>
             <div class="rewrite-proof" style="margin-top:8px;">
               <p class="rewrite-proof-title">Diff summary:</p>
               <ul id="rewrite-diff" class="compact-list">
@@ -369,6 +376,8 @@ I noticed your recent post and had one short idea to improve reply rates."></tex
               </div>
               <p id="feedback-status" class="micro" style="margin-top: 6px;">Your selection helps improve prediction accuracy.</p>
             </div>
+
+            <div id="nextAction" class="next-action">Try another email →</div>
           </section>
         </section>
 
@@ -590,6 +599,12 @@ I noticed your recent post and had one short idea to improve reply rates."></tex
       </div>
     </div>
 
-    <script src="/static/js/app.js?v=20260404-micro1"></script>
+    <div id="decisionOverlay" class="decision-overlay hidden" role="status" aria-live="polite">
+      <div class="decision-overlay-card">
+        <p id="decisionOverlayText">Decision</p>
+      </div>
+    </div>
+
+    <script src="/static/js/app.js?v=20260404-micro2"></script>
   </body>
 </html>

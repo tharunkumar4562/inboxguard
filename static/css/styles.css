@@ -698,6 +698,22 @@ select {
     font-size: 0.86rem;
 }
 
+.progress-track {
+    margin-top: 10px;
+    width: 100%;
+    height: 4px;
+    border-radius: 999px;
+    background: rgba(148, 163, 184, 0.2);
+    overflow: hidden;
+}
+
+.progress-bar {
+    width: 0;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #2563eb, #60a5fa);
+}
+
 .spinner {
     width: 0.92rem;
     height: 0.92rem;
@@ -1227,6 +1243,60 @@ select {
     color: #4ade80;
     font-size: 0.88rem;
     font-weight: 600;
+}
+
+.reward-box {
+    margin-top: 8px;
+    border-radius: 12px;
+    border: 1px solid rgba(34, 197, 94, 0.45);
+    background: rgba(34, 197, 94, 0.12);
+    padding: 10px 12px;
+}
+
+.reward-text {
+    color: #86efac;
+    font-weight: 700;
+    font-size: 0.92rem;
+}
+
+.next-action {
+    margin-top: 12px;
+    color: #60a5fa;
+    font-weight: 700;
+    font-size: 0.92rem;
+    cursor: pointer;
+    user-select: none;
+}
+
+.next-action:hover {
+    color: #93c5fd;
+}
+
+.decision-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(2, 6, 23, 0.72);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 90;
+}
+
+.decision-overlay-card {
+    border: 1px solid rgba(148, 163, 184, 0.3);
+    border-radius: 16px;
+    background: rgba(15, 23, 42, 0.92);
+    padding: 24px 28px;
+    min-width: 280px;
+    text-align: center;
+}
+
+#decisionOverlayText {
+    margin: 0;
+    color: #e2e8f0;
+    font-size: 1.7rem;
+    font-weight: 800;
+    letter-spacing: 0.03em;
 }
 
 .spam-highlight {
