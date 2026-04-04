@@ -21,7 +21,7 @@ const tabFeedbackNode = document.getElementById("tab-feedback");
 const dashboardTab = document.getElementById("tab-dashboard");
 const threatScanTab = document.getElementById("tab-threat-scan");
 const startButton = document.getElementById("start-btn");
-const accessButton = document.getElementById("access-btn");
+const accessButton = document.getElementById("get-access-btn") || document.getElementById("access-btn");
 const fillExampleButton = document.getElementById("fill-example");
 const tokenCostHintNode = document.getElementById("token-cost-hint");
 const tokenAfterHintNode = document.getElementById("token-after-hint");
@@ -2869,11 +2869,13 @@ async function handleRequestAccess() {
 
 function openPricingModal() {
     const modal = document.getElementById("pricing-modal");
-    if (!modal) {
-        return;
+    if (modal) {
+        modal.style.display = "flex";
+        modal.classList.remove("hidden");
+        document.body.classList.add("modal-open");
+    } else {
+        console.error("Pricing modal not found");
     }
-    modal.classList.remove("hidden");
-    document.body.classList.add("modal-open");
 }
 
 function closePricingModal() {
@@ -2881,6 +2883,7 @@ function closePricingModal() {
     if (!modal) {
         return;
     }
+    modal.style.display = "none";
     modal.classList.add("hidden");
     document.body.classList.remove("modal-open");
 }
@@ -3145,8 +3148,10 @@ function wireUiEvents() {
     }
 
     if (accessButton) {
+        accessButton.dataset.getAccessBound = "1";
         accessButton.addEventListener("click", (event) => {
             event.preventDefault();
+            console.log("Get Access clicked");
             handleGetAccess();
         });
     }
@@ -3340,4 +3345,23 @@ refreshAuthStatus().then(() => {
     }
     refreshJobs().catch(() => null);
     loadUserTokens().catch(() => null);
+});
+
+document.addEventListener("DOMContentLoaded", () => {
+    const btn = document.getElementById("get-access-btn");
+
+    if (!btn) {
+        console.error("Get Access button not found");
+        return;
+    }
+
+    if (btn.dataset.getAccessBound === "1") {
+        return;
+    }
+
+    btn.dataset.getAccessBound = "1";
+    btn.addEventListener("click", () => {
+        console.log("Get Access clicked");
+        openPricingModal();
+    });
 });
