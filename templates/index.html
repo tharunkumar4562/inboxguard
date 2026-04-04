@@ -1,485 +1,116 @@
 <!doctype html>
 <html lang="en">
   <head>
-    <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-WXGNG9TEFK"></script>
     <script>
       window.dataLayer = window.dataLayer || [];
       function gtag(){dataLayer.push(arguments);}
       gtag('js', new Date());
-
       gtag('config', 'G-WXGNG9TEFK');
     </script>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>{{ page_title or "InboxGuard | Fix risky emails before you send" }}</title>
-    <meta name="description" content="{{ meta_description or 'InboxGuard detects deliverability threats before email send.' }}" />
-    <meta name="application-name" content="InboxGuard" />
-    <meta name="robots" content="index,follow,max-image-preview:large" />
-    <link rel="canonical" href="{{ canonical_url or 'https://inboxguard.me/' }}" />
-    <meta property="og:type" content="website" />
-    <meta property="og:site_name" content="InboxGuard" />
-    <meta property="og:title" content="{{ page_title or 'InboxGuard | Fix risky emails before you send' }}" />
-    <meta property="og:description" content="{{ meta_description or 'Find out why emails that look fine still land in spam, then fix them before sending.' }}" />
-    <meta property="og:url" content="{{ canonical_url or 'https://inboxguard.me/' }}" />
-    <meta property="og:image" content="https://inboxguard.me/static/favicon-48.png" />
-    <meta name="twitter:card" content="summary" />
-    <meta name="twitter:title" content="{{ page_title or 'InboxGuard | Fix risky emails before you send' }}" />
-    <meta name="twitter:description" content="{{ meta_description or 'Find out why emails that look fine still land in spam, then fix them before sending.' }}" />
-    <meta name="twitter:image" content="https://inboxguard.me/static/favicon-48.png" />
-    <link rel="icon" href="/static/favicon-48.png" type="image/png" sizes="48x48" />
-    <link rel="icon" href="/static/favicon.svg" type="image/svg+xml" sizes="any" />
-    <link rel="apple-touch-icon" href="/static/favicon-48.png" />
+    <title>{{ page_title or "InboxGuard | Command Center" }}</title>
+    <meta name="description" content="{{ meta_description or 'Command center to check email risk and generate safe rewrites before sending.' }}" />
+    <meta property="og:image" content="https://inboxguard.me/static/logo.svg" />
+    <meta name="twitter:image" content="https://inboxguard.me/static/logo.svg" />
+    <link rel="icon" type="image/svg+xml" href="/static/logo.svg" />
+    <link rel="apple-touch-icon" href="/static/logo.svg" />
+    <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="/static/css/styles.css" />
-    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
-    <script type="application/ld+json">
-      [
-        {
-          "@context": "https://schema.org",
-          "@type": "Organization",
-          "name": "InboxGuard",
-          "url": "https://inboxguard.me",
-          "logo": "https://inboxguard.me/static/favicon-48.png"
-        },
-        {
-          "@context": "https://schema.org",
-          "@type": "WebSite",
-          "name": "InboxGuard",
-          "url": "https://inboxguard.me",
-          "potentialAction": {
-            "@type": "SearchAction",
-            "target": "https://inboxguard.me/?q={search_term_string}",
-            "query-input": "required name=search_term_string"
-          }
-        }
-      ]
-    </script>
   </head>
   <body>
-    <div class="app-shell command-shell">
-      <aside class="sidebar">
-        <div class="brand-wrap">
-          <p class="brand">INBOXGUARD</p>
-          <p class="sub">Command Center</p>
-        </div>
-        <nav>
-          <button id="tab-dashboard" class="nav-item active" type="button">Mission View</button>
-          <button id="tab-threat-scan" class="nav-item" type="button">Paste + Analyze</button>
-          <button class="nav-item" type="button" onclick="window.location.href='/saved-fixes'">Saved Fixes</button>
-          <button class="nav-item" type="button" onclick="window.location.href='/results'">Results</button>
-          <button class="nav-item" type="button" onclick="window.location.href='/reports'">Reports</button>
-        </nav>
-
-        <a id="profile-link" class="profile-link hidden" href="/profile" aria-label="Open profile">
-          <img id="profile-avatar" class="profile-avatar" src="/static/favicon-48.png" alt="Profile avatar" />
-          <span id="profile-initial" class="profile-initial">U</span>
-          <span class="profile-label">Profile</span>
+    <div class="h-screen w-full flex bg-[#0B1220] text-white">
+      <div class="command-panel w-[28%] border-r border-white/10 p-5 flex flex-col gap-4">
+        <a href="/" class="inline-flex items-center gap-2 no-underline text-inherit">
+          <img src="/static/logo.svg" width="28" height="28" alt="InboxGuard" />
+          <span class="text-xl font-semibold text-blue-300">InboxGuard</span>
         </a>
-      </aside>
+        <p class="text-xs text-slate-400">COMMAND CENTER</p>
 
-      <main class="main-area command-main">
-        <header class="topbar command-topbar">
-          <h1>InboxGuard Mission Control</h1>
-          <div class="topbar-actions">
-            <button id="start-btn" type="button" class="start-btn">Focus Input</button>
-            <button id="access-btn" type="button" class="access-link">Unlock Safe Sending</button>
-          </div>
-        </header>
+        <textarea
+          id="emailInput"
+          class="flex-1 bg-[#111827] p-4 rounded-lg border border-white/10 focus:outline-none focus:border-blue-500 resize-none"
+          placeholder="Paste your email (Subject + Body)"
+        ></textarea>
 
-        <p id="tab-feedback" class="tab-feedback">Paste draft, run analysis, review decision, deploy safer rewrite.</p>
-
-        <section class="command-center">
-          <section class="command-panel command-left scan-panel card">
-            <form id="risk-form" class="scan-form">
-              <p class="panel-kicker panel-kicker-blue">Input</p>
-              <label class="input-label" for="raw-email">Email Draft (Subject + Body)</label>
-              <textarea id="raw-email" name="raw_email" rows="10" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Subject: Quick follow-up\n\nHi John,\nI noticed your recent post and had one short idea to improve reply rates."></textarea>
-
-              <details class="secondary-options">
-                <summary>Advanced options</summary>
-                <div class="inline-fields" style="margin-top: 8px;">
-                  <div>
-                    <label for="domain">Domain (optional)</label>
-                    <input id="domain" name="domain" type="text" placeholder="yourdomain.com" autocomplete="off" />
-                  </div>
-                  <div>
-                    <label for="analysis-mode">Scan Mode</label>
-                    <select id="analysis-mode" name="analysis_mode">
-                      <option value="content" selected>Content only</option>
-                      <option value="full">Full (content + SPF/DKIM/DMARC)</option>
-                    </select>
-                  </div>
-                </div>
-              </details>
-
-              <button type="submit" id="run-check" class="btn-danger">Check Before Sending</button>
-              <button type="button" id="run-check-async" class="btn-secondary" style="margin-top:8px;">Analyze In Background</button>
-              <p class="micro">Red = risk, Blue = system confidence, Green = safer action.</p>
-            </form>
-          </section>
-
-          <section class="command-panel command-center-panel card">
-            <p class="panel-kicker panel-kicker-blue">Decision + Analysis</p>
-
-            <section id="idle-note" class="idle-note">
-              <p>No analysis yet. Run scan to reveal risk and placement confidence.</p>
-            </section>
-
-            <div id="result-loading" class="loading-panel hidden command-progress">
-              <p class="loading-title">Analyzing your email...</p>
-              <ul class="loading-steps">
-                <li id="load-step-1" class="cc-step">Checking spam triggers...</li>
-                <li id="load-step-2" class="cc-step">Analyzing structure...</li>
-                <li id="load-step-3" class="cc-step">Evaluating tone...</li>
-                <li id="load-step-4" class="cc-step">Estimating inbox placement...</li>
-              </ul>
-              <p class="loading-current"><span class="spinner"></span><span id="loading-step">Initializing scan...</span></p>
-            </div>
-
-            <section id="result" class="dashboard-grid hidden">
-              <section class="card" id="decision-block">
-                <div id="risk-strip" class="risk-strip risk-strip-neutral">
-                  <p id="risk-strip-title" class="risk-strip-title">SCAN REQUIRED</p>
-                  <p id="risk-strip-body" class="risk-strip-body">Run analysis now to reveal placement risk before sending.</p>
-                </div>
-
-                <div id="reality-strip" class="rewrite-proof" style="margin-top: 8px;">
-                  <p id="reality-strip-title" class="rewrite-proof-title">Reality Check</p>
-                  <p id="reality-strip-body" class="micro">Top campaigns that reliably land in Inbox usually score 85+ with strong trust signals.</p>
-                </div>
-
-                <p class="workflow-step">Decision Engine</p>
-                <h3 id="decision-problem" class="main-issue">Decision: Analyze before sending</h3>
-                <p id="decision-signal" class="micro">No decision signal yet. Scan required.</p>
-                <p id="decision-scope" class="decision-scope">Primary issue: waiting for scan</p>
-
-                <section class="status-grid status-grid-triad" style="margin-top: 10px;">
-                  <article id="status-risk-card" class="status-card status-card-primary warning-bg">
-                    <p class="status-label">Risk Status</p>
-                    <p id="status-risk-band" class="status-value warning">Pending</p>
-                  </article>
-                  <article class="status-card">
-                    <p class="status-label">Primary Issue</p>
-                    <p id="status-primary-issue" class="status-value pending">Scan pending</p>
-                  </article>
-                  <article class="status-card">
-                    <p class="status-label">Confidence</p>
-                    <p id="status-confidence" class="status-value pending">Pending</p>
-                    <div class="confidence-meter" aria-hidden="true"><span id="confidence-meter-fill"></span></div>
-                    <p id="confidence-meter-detail" class="confidence-meter-detail">Confidence is unavailable until analysis runs.</p>
-                  </article>
-                </section>
-
-                <div class="rewrite-proof" style="margin-top: 8px;">
-                  <p class="rewrite-proof-title">Why this is happening:</p>
-                  <ul id="decision-why" class="compact-list">
-                    <li>Run analysis to see root-cause evidence.</li>
-                  </ul>
-                </div>
-
-                <div class="rewrite-proof" style="margin-top: 8px;">
-                  <p class="rewrite-proof-title">Fix this FIRST:</p>
-                  <ul id="decision-fix-first" class="compact-list">
-                    <li>Analyze an email to get prioritized fix order.</li>
-                  </ul>
-                </div>
-
-                <div class="rewrite-proof" style="margin-top: 8px;">
-                  <p class="rewrite-proof-title">If you send this now:</p>
-                  <ul id="decision-consequence" class="compact-list">
-                    <li>Risk and impact summary appears after analysis.</li>
-                  </ul>
-                </div>
-
-                <div id="scale-warning" class="rewrite-proof scale-warning" style="margin-top: 8px;">
-                  <p class="rewrite-proof-title">At scale:</p>
-                  <ul id="scale-warning-list" class="compact-list">
-                    <li>Run analysis to see scale risk.</li>
-                  </ul>
-                </div>
-
-                <button id="risk-fix-now" type="button" class="btn-primary decision-cta">Make This Safe to Send</button>
-                <button id="risk-fix-async" type="button" class="btn-secondary" style="margin-top: 8px;">Generate Safe Rewrite In Background</button>
-                <p id="trust-hook" class="trust-hook">Based on patterns commonly flagged by Gmail and Outlook filters.</p>
-              </section>
-
-              <details class="card advanced-block">
-                <summary>Advanced proof</summary>
-                <div class="advanced-content">
-                  <article class="card">
-                    <h3>Score Breakdown</h3>
-                    <ul id="score-breakdown" class="compact-list">
-                      <li>Run analysis to see exact score math and penalty evidence.</li>
-                    </ul>
-                  </article>
-                  <article class="card" style="margin-top:10px;">
-                    <h3>Inbox Prediction</h3>
-                    <p id="prediction-headline" class="main-issue">Run analysis to predict placement.</p>
-                    <p id="prediction-detail" class="micro">We will estimate inbox probability and compare against top-performing score benchmarks.</p>
-                    <ul id="prediction-bands" class="compact-list" style="margin-top:8px;">
-                      <li>No prediction yet.</li>
-                    </ul>
-                  </article>
-                </div>
-              </details>
-            </section>
-          </section>
-
-          <section class="command-panel command-right card">
-            <p class="panel-kicker panel-kicker-green">Fix / Rewrite</p>
-
-            <details class="secondary-options" open>
-              <summary>Rewrite style controls</summary>
-              <div class="inline-fields rewrite-controls" style="margin-top: 8px;">
-                <div>
-                  <label for="rewrite-style">Rewrite Style</label>
-                  <select id="rewrite-style" name="rewrite_style">
-                    <option value="safe" selected>Safe (best for avoiding spam)</option>
-                    <option value="balanced">Balanced (best for normal outreach)</option>
-                    <option value="aggressive">Aggressive (max replies, slightly riskier)</option>
-                  </select>
-                </div>
-              </div>
-            </details>
-
-            <section id="fix-output" class="cta-panel hidden">
-              <p id="workflow-state" class="workflow-step">Step 2: Fix in progress</p>
-              <h3 id="workflow-title">Improved Draft Generated</h3>
-              <p id="rewrite-mode-display" class="micro">Rewrite mode: Balanced (best mix)</p>
-              <p id="improvement-estimate" class="improvement-estimate">Ready to use</p>
-              <div id="subject-change" class="rewrite-proof hidden"></div>
-
-              <div class="rewrite-proof">
-                <p class="rewrite-proof-title">What changed:</p>
-                <ul id="rewrite-changes" class="compact-list">
-                  <li>Reduced bulk-style patterns and tightened structure.</li>
-                </ul>
-              </div>
-
-              <div class="split-view">
-                <article>
-                  <p class="rewrite-label before">Before</p>
-                  <pre id="before-email" class="rewrite-box rewrite-box-before">-</pre>
-                </article>
-                <article>
-                  <p class="rewrite-label after">After</p>
-                  <pre id="after-email" class="rewrite-box rewrite-box-after">-</pre>
-                </article>
-              </div>
-
-              <div class="rewrite-proof" style="margin-top:8px;">
-                <p class="rewrite-proof-title">Diff summary:</p>
-                <ul id="rewrite-diff" class="compact-list">
-                  <li>Generate a fix to view exact line-by-line changes.</li>
-                </ul>
-              </div>
-
-              <p id="rewrite-trust-note" class="micro">Based on pattern shifts commonly flagged by Gmail and Outlook filters.</p>
-              <ul id="rewrite-limitations" class="compact-list" style="margin-top: 8px;">
-                <li>Final placement still depends on domain reputation, list quality, and send behavior.</li>
-              </ul>
-
-              <div class="actions" style="margin-top: 12px;">
-                <button id="save-fix" type="button" class="btn-secondary">Save Fix</button>
-                <button id="use-fixed" type="button" class="btn-primary">Copy Fixed Email</button>
-                <button id="send-gmail" type="button" class="btn-secondary">Open in Gmail</button>
-                <button id="edit-manual" type="button" class="btn-secondary">Edit Manually</button>
-              </div>
-
-              <div id="post-fix-gate" class="post-fix-gate">
-                <p class="post-fix-title">Safer now. Validate before scaling.</p>
-                <ul class="compact-list">
-                  <li>Run a real inbox test before high volume</li>
-                  <li>Check Gmail, Outlook, Yahoo placement</li>
-                </ul>
-                <button id="post-fix-access" type="button" class="btn-primary decision-cta">Run Real Inbox Test</button>
-              </div>
-
-              <div class="feedback-row" style="margin-top: 12px;">
-                <p class="micro" style="margin-bottom: 6px;">After sending, where did this land?</p>
-                <div class="action-links">
-                  <button id="feedback-inbox" type="button" class="link-action">Inbox</button>
-                  <button id="feedback-spam" type="button" class="link-action">Spam</button>
-                  <button id="feedback-promotions" type="button" class="link-action">Promotions</button>
-                </div>
-                <p id="feedback-status" class="micro" style="margin-top: 6px;">Your selection helps improve prediction accuracy.</p>
-              </div>
-            </section>
-          </section>
-        </section>
-
-        <div id="paywall" class="hidden paywall-section">
-          <h3>You've found your biggest risk. Fixing one email isn't enough.</h3>
-          <p>Unlock Safe Sending to run your next check before the next campaign goes out.</p>
-          <button type="button" onclick="openPricingModal()" class="btn-primary">Unlock Safe Sending</button>
+        <div class="grid gap-2">
+          <label for="analysisMode" class="text-xs text-slate-300">Analysis Mode</label>
+          <select id="analysisMode" class="bg-[#111827] p-2 rounded-lg border border-white/10 focus:outline-none focus:border-blue-500">
+            <option value="content">Content</option>
+            <option value="full" selected>Full</option>
+          </select>
         </div>
 
-        <details class="card" style="margin-top: 12px;">
-          <summary>Operator tools</summary>
-          <section id="campaign-debugger" style="margin-top: 10px;">
-            <h3>Campaign Failure Debugger</h3>
-            <div class="inline-fields" style="margin-top: 10px;">
-              <div><label for="metric-open-rate">Open Rate (%)</label><input id="metric-open-rate" type="number" min="0" max="100" step="0.1" /></div>
-              <div><label for="metric-reply-rate">Reply Rate (%)</label><input id="metric-reply-rate" type="number" min="0" max="100" step="0.1" /></div>
-            </div>
-            <div class="inline-fields" style="margin-top: 8px;">
-              <div><label for="metric-bounce-rate">Bounce Rate (%)</label><input id="metric-bounce-rate" type="number" min="0" max="100" step="0.1" /></div>
-              <div><label for="metric-sent-count">Emails Sent</label><input id="metric-sent-count" type="number" min="1" step="1" /></div>
-            </div>
-            <button id="run-diagnosis" type="button" class="btn-secondary" style="margin-top: 10px;">Diagnose Campaign Failure</button>
-            <div id="diagnosis-output" class="card hidden" style="margin-top: 12px; background: #0f1d31;">
-              <p id="diagnosis-primary" class="main-issue">-</p>
-              <p id="diagnosis-confidence" class="micro">-</p>
-              <p id="diagnosis-why" class="micro">-</p>
-              <ul id="diagnosis-actions" class="compact-list"></ul>
-            </div>
-          </section>
+        <div class="grid gap-2">
+          <label for="rewriteStyle" class="text-xs text-slate-300">Rewrite Style</label>
+          <select id="rewriteStyle" class="bg-[#111827] p-2 rounded-lg border border-white/10 focus:outline-none focus:border-blue-500">
+            <option value="safe">Safe</option>
+            <option value="balanced" selected>Balanced</option>
+            <option value="aggressive">Aggressive</option>
+          </select>
+        </div>
 
-          <section id="blacklist-checker" style="margin-top: 12px;">
-            <h3>Domain Blacklist Checker</h3>
-            <div class="inline-fields" style="margin-top: 8px;">
-              <div><label for="blacklist-domain">Domain</label><input id="blacklist-domain" type="text" placeholder="yourdomain.com" /></div>
-            </div>
-            <button id="run-blacklist-check" type="button" class="btn-secondary" style="margin-top: 10px;">Check Domain Risk</button>
-            <p id="blacklist-result" class="micro" style="margin-top: 8px;">No check yet.</p>
-          </section>
+        <button id="analyzeBtn" class="bg-red-500 hover:bg-red-600 transition-all py-3 rounded-lg font-semibold">
+          Check Before Sending
+        </button>
+      </div>
 
-          <section id="seed-inbox-tracker" style="margin-top: 12px;">
-            <h3>Seed Inbox Testing</h3>
-            <div class="inline-fields" style="margin-top: 8px;">
-              <div><label for="seed-campaign">Campaign</label><input id="seed-campaign" type="text" placeholder="April cold outreach batch" /></div>
-              <div><label for="seed-provider">Provider</label><select id="seed-provider"><option value="gmail">Gmail</option><option value="outlook">Outlook</option><option value="yahoo">Yahoo</option></select></div>
-            </div>
-            <div class="inline-fields" style="margin-top: 8px;">
-              <div><label for="seed-inbox-count">Inbox Count</label><input id="seed-inbox-count" type="number" min="0" step="1" /></div>
-              <div><label for="seed-spam-count">Spam Count</label><input id="seed-spam-count" type="number" min="0" step="1" /></div>
-            </div>
-            <button id="save-seed-test" type="button" class="btn-secondary" style="margin-top: 10px;">Save Seed Result</button>
-            <button id="run-seed-sync" type="button" class="btn-secondary" style="margin-top: 8px;">Run Instant Seed Probe</button>
-            <button id="run-seed-auto" type="button" class="btn-secondary" style="margin-top: 8px;">Run Automated Seed Test</button>
-            <ul id="seed-test-list" class="compact-list" style="margin-top: 8px;"><li>No seed tests logged yet.</li></ul>
-          </section>
+      <div class="command-panel w-[44%] flex flex-col items-center justify-center relative px-6">
+        <div id="analysisSteps" class="hidden flex flex-col gap-3 text-gray-300 w-full max-w-lg">
+          <p class="step opacity-30">Checking spam triggers...</p>
+          <p class="step opacity-30">Analyzing structure...</p>
+          <p class="step opacity-30">Evaluating tone...</p>
+          <p class="step opacity-30">Estimating inbox placement...</p>
+        </div>
 
-          <section id="bulk-scan" style="margin-top: 12px;">
-            <h3>Bulk Scan (CSV)</h3>
-            <input id="bulk-file" type="file" accept=".csv,text/csv" />
-            <button id="run-bulk-scan" type="button" class="btn-secondary" style="margin-top: 10px;">Run Bulk Scan</button>
-            <ul id="bulk-results" class="compact-list" style="margin-top: 8px;"><li>No bulk scan yet.</li></ul>
-          </section>
+        <div id="decisionBlock" class="hidden text-center max-w-2xl">
+          <h1 id="decisionText" class="text-5xl font-bold mb-4"></h1>
+          <p id="decisionSub" class="text-gray-300 text-lg"></p>
+          <p id="primaryIssue" class="mt-4 text-gray-400 text-sm"></p>
+          <div id="learningAdjustments" class="mt-3 text-sm text-yellow-300 text-left max-w-xl mx-auto"></div>
+        </div>
+      </div>
 
-          <section id="ops-api-team" style="margin-top: 12px;">
-            <h3>API + Team Ops</h3>
-            <div class="inline-fields" style="margin-top: 8px;">
-              <div><label for="api-key-name">API key label</label><input id="api-key-name" type="text" placeholder="Primary integration" /></div>
-              <div><label for="team-name">Team name</label><input id="team-name" type="text" placeholder="Outbound Ops" /></div>
-            </div>
-            <div class="actions" style="margin-top:10px;">
-              <button id="create-api-key" type="button" class="btn-secondary">Create API Key</button>
-              <button id="list-api-keys" type="button" class="btn-secondary">List API Keys</button>
-              <button id="create-team" type="button" class="btn-secondary">Create Team</button>
-              <button id="list-teams" type="button" class="btn-secondary">List Teams</button>
-            </div>
-            <div class="inline-fields" style="margin-top: 10px;">
-              <div><label for="revoke-key-id">Revoke API key ID</label><input id="revoke-key-id" type="number" min="1" step="1" /></div>
-              <div><label for="team-member-team-id">Team ID</label><input id="team-member-team-id" type="number" min="1" step="1" /></div>
-            </div>
-            <div class="inline-fields" style="margin-top: 8px;">
-              <div><label for="team-member-email">Member email</label><input id="team-member-email" type="email" /></div>
-              <div><label for="team-member-role">Role</label><select id="team-member-role"><option value="member" selected>member</option><option value="admin">admin</option><option value="viewer">viewer</option><option value="owner">owner</option></select></div>
-            </div>
-            <div class="actions" style="margin-top:10px;">
-              <button id="revoke-api-key" type="button" class="btn-secondary">Revoke API Key</button>
-              <button id="add-team-member" type="button" class="btn-secondary">Add Team Member</button>
-            </div>
-            <ul id="api-key-list" class="compact-list" style="margin-top:8px;"><li>No API keys loaded.</li></ul>
-            <ul id="team-list" class="compact-list" style="margin-top:8px;"><li>No teams loaded.</li></ul>
-            <ul id="ops-output" class="compact-list" style="margin-top:8px;"><li>No operations run yet.</li></ul>
-          </section>
+      <div class="command-panel w-[28%] border-l border-white/10 p-5 flex flex-col gap-4">
+        <h2 class="text-lg font-semibold text-green-300">Safer Version</h2>
 
-          <section id="operator-insights" style="margin-top: 12px;">
-            <h3>Operator Insights</h3>
-            <div class="actions" style="margin-top: 10px;">
-              <button id="refresh-outcome-stats" type="button" class="btn-secondary">Refresh Outcome Stats</button>
-              <button id="refresh-jobs" type="button" class="btn-secondary">Refresh Async Jobs</button>
-            </div>
-            <ul id="outcome-stats-list" class="compact-list" style="margin-top:8px;"><li>No outcome stats loaded.</li></ul>
-            <ul id="job-list" class="compact-list" style="margin-top:8px;"><li>No async jobs loaded.</li></ul>
-          </section>
-        </details>
-      </main>
-    </div>
-
-    <div id="pricing-modal" class="modal hidden">
-      <div class="modal-content">
-        <button class="modal-close" onclick="closePricingModal()">×</button>
-        <h2>Stop guessing before you send</h2>
-        <p class="pricing-note">Most emails do not fail because of infra. They fail because of small mistakes that show up at scale.</p>
-        <p class="price">$12 / month</p>
-        <ul class="pricing-features">
-          <li>Avoid spam triggers before they burn your domain</li>
-          <li>Know if it is content or infra before testing</li>
-          <li>Stop wasting batches guessing what broke</li>
-        </ul>
-        <div class="inline-fields" style="margin-top:8px;">
+        <div class="flex flex-col gap-3 flex-1">
           <div>
-            <label for="access-request-email" class="pricing-note" style="display:block; margin-bottom:4px;">Need enterprise or custom plan?</label>
-            <input id="access-request-email" type="email" placeholder="you@company.com" class="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-slate-100" />
+            <p class="text-xs text-red-400 mb-1">BEFORE</p>
+            <div id="beforeBox" class="bg-red-500/10 p-3 rounded text-sm h-40 overflow-auto border border-red-500/20"></div>
+          </div>
+
+          <div>
+            <p class="text-xs text-green-400 mb-1">AFTER</p>
+            <div id="afterBox" class="bg-green-500/10 p-3 rounded text-sm h-40 overflow-auto border border-green-500/20"></div>
+            <div id="changeTags" class="flex flex-wrap gap-2 mt-2"></div>
           </div>
         </div>
-        <label for="inline-plan-type" class="pricing-note" style="display:block; margin-top:8px;">Choose plan</label>
-        <select id="inline-plan-type" class="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-slate-100" style="margin-top:6px;">
-          <option value="monthly">Monthly Pro</option>
-          <option value="annual">Annual Pro</option>
-          <option value="trial">Trial Pro</option>
-          <option value="usage">Usage-Based</option>
-        </select>
-        <button id="refresh-plans" type="button" class="secondary-btn" style="margin-top:8px;">Refresh Plans</button>
-        <ul id="plans-output" class="compact-list" style="margin-top:8px;"><li>Plan details load from server when requested.</li></ul>
-        <button id="pay-btn" type="button" class="primary-btn">Unlock Safe Sending</button>
-        <button id="request-access" type="button" class="secondary-btn">Request Access</button>
-        <button onclick="closePricingModal()" class="secondary-btn">Cancel</button>
-      </div>
-    </div>
 
-    <div id="fullscreen-decision" class="fullscreen-decision hidden" aria-hidden="true">
-      <div class="fullscreen-decision-card">
-        <p class="fullscreen-label">Decision</p>
-        <h2 id="fs-decision">TEST FIRST</h2>
-        <p id="fs-sub">Analyzing result...</p>
-      </div>
-    </div>
-
-    <div id="lead-capture-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="lead-capture-title">
-      <div class="modal-card">
-        <h3 id="lead-capture-title">Get your next scan unlocked</h3>
-        <p class="micro">Before the second scan, tell us where to send saved fixes and follow-up tips.</p>
-        <div style="display:grid; gap:8px; margin-top:6px;">
-          <input id="lead-capture-email" type="email" placeholder="you@company.com" style="padding:10px 12px; border-radius:10px; border:1px solid rgba(148,163,184,0.35); background:#07162e; color:#e2e8f0;" />
-          <button id="lead-capture-continue" type="button" class="btn-primary">Continue to scan</button>
+        <div class="flex gap-2 mt-1">
+          <button id="feedbackInbox" class="bg-green-500 px-3 py-1 rounded text-sm">Inbox</button>
+          <button id="feedbackSpam" class="bg-red-500 px-3 py-1 rounded text-sm">Spam</button>
+          <button id="feedbackNotSure" class="bg-slate-500 px-3 py-1 rounded text-sm">Not Sure</button>
         </div>
-        <button id="lead-capture-close" type="button" class="link-action" onclick="window.igLeadCaptureClose && window.igLeadCaptureClose()">Not now</button>
+        <p id="feedbackState" class="text-xs text-slate-400"></p>
+
+        <button id="useRewrite" class="bg-green-500 hover:bg-green-600 py-3 rounded-lg font-semibold hidden">
+          Send Safer Version
+        </button>
       </div>
     </div>
 
-    <div id="auth-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="auth-modal-title">
-      <div class="modal-card">
-        <h3 id="auth-modal-title">Continue your scans</h3>
-        <p class="micro">You've used your free scans. Continue where you left off.</p>
-        <div class="modal-actions">
-          <button id="auth-signin" type="button" class="btn-primary" onclick="window.igAuthSignIn && window.igAuthSignIn()">Continue with Google</button>
-        </div>
-        <p class="micro" style="margin-top: 10px;">or continue with email</p>
-        <div style="display:grid; gap:8px; margin-top:6px;">
-          <input id="auth-email" type="email" placeholder="you@company.com" style="padding:10px 12px; border-radius:10px; border:1px solid rgba(148,163,184,0.35); background:#07162e; color:#e2e8f0;" />
-          <button id="auth-create" type="button" class="btn-secondary" onclick="window.igAuthCreate && window.igAuthCreate()">Continue with Email</button>
-        </div>
-        <button id="auth-close" type="button" class="link-action" onclick="window.igAuthClose && window.igAuthClose()">Not now</button>
+    <div id="fullscreenDecision" class="hidden fixed inset-0 bg-black/90 flex items-center justify-center z-50">
+      <div class="text-center px-6">
+        <h1 id="fsDecision" class="text-6xl font-bold mb-4"></h1>
+        <p id="fsSub" class="text-gray-300 text-xl"></p>
       </div>
     </div>
 
-    <script src="/static/js/app.js?v=20260404-ux1"></script>
+    <script src="/static/js/app.js?v=20260404-cc2"></script>
   </body>
 </html>

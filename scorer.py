@@ -1,4 +1,11 @@
-from typing import Dict, List, Optional
+import json
+import re
+from pathlib import Path
+from typing import Any, Dict, List, Optional
+
+
+BASE_DIR = Path(__file__).resolve().parent
+MODEL_FILE = BASE_DIR / "data" / "rewrite_model.json"
 
 
 # Penalty-first model: start at 100 and subtract risk.
@@ -55,6 +62,104 @@ def _severity_for_points(points: int) -> str:
     if points >= 12:
         return "medium"
     return "low"
+
+
+def _load_learning_model() -> Dict[str, Any]:
+    if not MODEL_FILE.exists():
+        return {}
+    try:
+        payload = json.loads(MODEL_FILE.read_text(encoding="utf-8"))
+        if isinstance(payload, dict):
+            return payload
+    except Exception:
+        return {}
+    return {}
+
+
+def _extract_patterns(text: str) -> List[str]:
+    body = str(text or "")
+    low = body.lower()
+    patterns: List[str] = []
+    if "http://" in low or "https://" in low or "www." in low:
+        patterns.append("has_links")
+    if len(body.split()) < 60:
+        patterns.append("short_length")
+    if any(term in low for term in ("apply now", "click here", "book a demo", "schedule a call", "register now")):
+        patterns.append("aggressive_cta")
+    if "?" in body:
+        patterns.append("has_question")
+    if body.count("!") >= 3:
+        patterns.append("high_exclamation")
+    return patterns
+
+
+def apply_learning_weights(text: str, score: int) -> tuple[int, List[Dict[str, Any]]]:
+    model = _load_learning_model()
+    sample_size = int(model.get("sample_size", model.get("total_feedback", 0)) or 0)
+    if sample_size < 20:
+        return score, []
+
+    pattern_stats = model.get("patterns", {})
+    if not isinstance(pattern_stats, dict):
+        return score, []
+
+    adjusted = int(score)
+    adjustments: List[Dict[str, Any]] = []
+
+    for pattern in _extract_patterns(text):
+        stats = pattern_stats.get(pattern)
+        if not isinstance(stats, dict):
+            continue
+        impact = int(stats.get("weight", 0) or 0)
+        success = int(stats.get("success", 0) or 0)
+        fail = int(stats.get("fail", 0) or 0)
+        total = success + fail
+        if total < 5:
+            continue
+
+        adjusted += impact
+        reason = (
+            "Based on past outcomes, this pattern improved inbox placement."
+            if impact > 0
+            else "Based on past outcomes, this pattern often led to spam filtering."
+        )
+        adjustments.append(
+            {
+                "pattern": pattern,
+                "impact": impact,
+                "reason": reason,
+                "success": success,
+                "fail": fail,
+            }
+        )
+
+    return _clamp_score(adjusted), adjustments
+
+
+def adjust_probability_from_learning(text: str, probability: float) -> int:
+    model = _load_learning_model()
+    sample_size = int(model.get("sample_size", model.get("total_feedback", 0)) or 0)
+    if sample_size < 20:
+        return max(0, min(100, int(probability)))
+
+    pattern_stats = model.get("patterns", {})
+    if not isinstance(pattern_stats, dict):
+        return max(0, min(100, int(probability)))
+
+    adjusted = int(probability)
+    for pattern in _extract_patterns(text):
+        stats = pattern_stats.get(pattern)
+        if not isinstance(stats, dict):
+            continue
+        success = int(stats.get("success", 0) or 0)
+        fail = int(stats.get("fail", 0) or 0)
+        total = success + fail
+        if total <= 0:
+            continue
+        fail_rate = fail / total
+        adjusted -= int(round(fail_rate * 10))
+
+    return max(0, min(100, adjusted))
 
 
 def score_risk(signals: Dict) -> Dict:
@@ -531,7 +636,9 @@ def score_risk(signals: Dict) -> Dict:
     baseline_score = 100 if full_mode else 92
     total_penalty = content_penalty_points + infra_penalty_points
     content_score = _clamp_score(baseline_score - content_penalty_points)
-    final_score = _clamp_score(baseline_score - total_penalty)
+    raw_score = _clamp_score(baseline_score - total_penalty)
+    learning_score, learning_adjustments = apply_learning_weights(str(signals.get("email_source", "")), raw_score)
+    final_score = learning_score
 
     # Risk band (diagnostic, not inbox prediction).
     if final_score >= 80:
@@ -671,6 +778,9 @@ def score_risk(signals: Dict) -> Dict:
         "content_score": content_score,
         "infra_impact": -infra_penalty_points,
         "final_score": final_score,
+        "base_score": raw_score,
+        "learning_adjustments": learning_adjustments,
+        "learning_delta": final_score - raw_score,
         "deliverability_confidence": deliverability_confidence,
         "confidence_note": confidence_note,
         "top_fixes": top_fixes,

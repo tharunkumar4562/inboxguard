@@ -28,22 +28,29 @@ BLOCKED_REWRITE_PHRASES = [
     "click here",
 ]
 
+PATTERN_KEYS = (
+    "has_links",
+    "short_length",
+    "aggressive_cta",
+    "has_question",
+    "high_exclamation",
+)
+
 
 def _default_model() -> Dict:
     return {
-        "total_feedback": 0,
+        "sample_size": 0,
+        "success_rate": 0.0,
         "inbox": 0,
         "spam": 0,
         "not_sure": 0,
+        "patterns": {},
         "updated_at": "",
     }
 
 
 def _default_feedback_payload() -> Dict:
-    return {
-        "events": [],
-        "updated_at": "",
-    }
+    return {"events": [], "updated_at": ""}
 
 
 def _ensure_file(path: Path, payload: Dict) -> None:
@@ -66,17 +73,168 @@ def _read_json(path: Path, fallback: Dict) -> Dict:
     return dict(fallback)
 
 
+def _read_feedback_events() -> list[Dict[str, Any]]:
+    _ensure_file(FEEDBACK_FILE, _default_feedback_payload())
+    try:
+        data = json.loads(FEEDBACK_FILE.read_text(encoding="utf-8"))
+    except Exception:
+        return []
+
+    if isinstance(data, list):
+        return [row for row in data if isinstance(row, dict)]
+    if isinstance(data, dict):
+        events = data.get("events", [])
+        if isinstance(events, list):
+            return [row for row in events if isinstance(row, dict)]
+    return []
+
+
+def _write_feedback_events(events: list[Dict[str, Any]]) -> None:
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    FEEDBACK_FILE.write_text(json.dumps(events, indent=2), encoding="utf-8")
+
+
 def _write_json(path: Path, payload: Dict) -> None:
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     payload["updated_at"] = datetime.now(timezone.utc).isoformat()
     path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
 
+def _migrate_model_schema(model: Dict[str, Any]) -> Dict[str, Any]:
+    migrated = dict(_default_model())
+    migrated.update(model if isinstance(model, dict) else {})
+
+    total_feedback = int(migrated.get("total_feedback", 0) or 0)
+    sample_size = int(migrated.get("sample_size", 0) or 0)
+    if sample_size <= 0 and total_feedback > 0:
+        sample_size = total_feedback
+
+    inbox = int(migrated.get("inbox", 0) or 0)
+    spam = int(migrated.get("spam", 0) or 0)
+    not_sure = int(migrated.get("not_sure", 0) or 0)
+    counted = inbox + spam + not_sure
+    if sample_size < counted:
+        sample_size = counted
+
+    migrated["sample_size"] = sample_size
+    if sample_size > 0:
+        migrated["success_rate"] = round(inbox / sample_size, 4)
+    else:
+        migrated["success_rate"] = 0.0
+
+    patterns = migrated.get("patterns")
+    if not isinstance(patterns, dict):
+        patterns = {}
+
+    cleaned_patterns: Dict[str, Dict[str, int]] = {}
+    for key, value in patterns.items():
+        if not isinstance(key, str) or not isinstance(value, dict):
+            continue
+        success = int(value.get("success", 0) or 0)
+        fail = int(value.get("fail", 0) or 0)
+        weight = int(value.get("weight", 0) or 0)
+        cleaned_patterns[key] = {"success": success, "fail": fail, "weight": weight}
+
+    migrated["patterns"] = cleaned_patterns
+    migrated.pop("total_feedback", None)
+    return migrated
+
+
+def extract_patterns(text: str) -> List[str]:
+    body = str(text or "")
+    low = body.lower()
+    tokens: List[str] = []
+
+    if "http://" in low or "https://" in low or "www." in low:
+        tokens.append("has_links")
+    if len(body.split()) < 60:
+        tokens.append("short_length")
+    if any(term in low for term in ("apply now", "click here", "book a demo", "schedule a call", "register now")):
+        tokens.append("aggressive_cta")
+    if "?" in body:
+        tokens.append("has_question")
+    if body.count("!") >= 3:
+        tokens.append("high_exclamation")
+
+    return tokens
+
+
+def update_learning_model(event: Dict[str, Any]) -> Dict[str, Any]:
+    with _LOCK:
+        model = _migrate_model_schema(_read_json(MODEL_FILE, _default_model()))
+
+        outcome = str(event.get("outcome", "not_sure")).strip().lower()
+        success = 1 if outcome == "inbox" else 0
+
+        model["sample_size"] = int(model.get("sample_size", 0)) + 1
+        model["inbox"] = int(model.get("inbox", 0)) + (1 if outcome == "inbox" else 0)
+        model["spam"] = int(model.get("spam", 0)) + (1 if outcome == "spam" else 0)
+        model["not_sure"] = int(model.get("not_sure", 0)) + (1 if outcome == "not_sure" else 0)
+
+        total = int(model.get("sample_size", 0))
+        prev_success = float(model.get("success_rate", 0.0)) * max(0, total - 1)
+        model["success_rate"] = round((prev_success + success) / max(1, total), 4)
+
+        patterns: Dict[str, Dict[str, int]] = dict(model.get("patterns", {}))
+        seen = set(extract_patterns(str(event.get("rewrite", ""))))
+        for pattern in seen:
+            item = patterns.get(pattern, {"success": 0, "fail": 0, "weight": 0})
+            if success:
+                item["success"] = int(item.get("success", 0)) + 1
+            elif outcome == "spam":
+                item["fail"] = int(item.get("fail", 0)) + 1
+            else:
+                # Keep not_sure as a weak fail signal so the model can move gradually.
+                item["fail"] = int(item.get("fail", 0)) + 1
+
+            seen_total = int(item.get("success", 0)) + int(item.get("fail", 0))
+            if seen_total >= 5:
+                success_rate = int(item.get("success", 0)) / max(1, seen_total)
+                item["weight"] = int(round((success_rate - 0.5) * 40))
+            else:
+                item["weight"] = int(item.get("weight", 0))
+            patterns[pattern] = item
+
+        model["patterns"] = patterns
+        _write_json(MODEL_FILE, model)
+
+    return model
+
+
+def apply_learning_bias(rewrite: str) -> str:
+    model = _migrate_model_schema(_read_json(MODEL_FILE, _default_model()))
+    if int(model.get("sample_size", 0)) < 20:
+        return rewrite
+
+    patterns = model.get("patterns", {})
+    if not isinstance(patterns, dict):
+        return rewrite
+
+    pattern_hits = extract_patterns(rewrite)
+    risk_score = 0.0
+    for pattern in pattern_hits:
+        stats = patterns.get(pattern)
+        if not isinstance(stats, dict):
+            continue
+        success = int(stats.get("success", 0) or 0)
+        fail = int(stats.get("fail", 0) or 0)
+        total = success + fail
+        if total > 0:
+            risk_score += fail / total
+
+    adjusted = rewrite
+    if risk_score > 1.0:
+        adjusted = re.sub(r"(?i)\bclick\s+here\b", "", adjusted)
+        adjusted = re.sub(r"\s{2,}", " ", adjusted)
+        adjusted = _shorten_text(adjusted, "high")
+    return adjusted.strip()
+
+
 def get_learning_profile() -> Dict:
     with _LOCK:
-        model = _read_json(MODEL_FILE, _default_model())
+        model = _migrate_model_schema(_read_json(MODEL_FILE, _default_model()))
 
-    total = int(model.get("total_feedback", 0))
+    total = int(model.get("sample_size", 0))
     inbox = int(model.get("inbox", 0))
     spam = int(model.get("spam", 0))
     not_sure = int(model.get("not_sure", 0))
@@ -90,7 +248,7 @@ def get_learning_profile() -> Dict:
             "personalization_priority": "high",
         }
 
-    inbox_rate = round(inbox / total, 3)
+    inbox_rate = round(float(model.get("success_rate", 0.0) or 0.0), 3)
 
     shorten_aggressiveness = "medium"
     question_hook_strength = "medium"
@@ -109,6 +267,7 @@ def get_learning_profile() -> Dict:
         "question_hook_strength": question_hook_strength,
         "personalization_priority": "high",
         "not_sure": not_sure,
+        "pattern_weights": model.get("patterns", {}),
     }
 
 
@@ -117,27 +276,30 @@ def record_feedback(event: Dict) -> Dict:
     if outcome not in {"inbox", "spam", "not_sure"}:
         outcome = "not_sure"
 
+    original_text = str(event.get("original_text", ""))
+    rewritten_text = str(event.get("rewritten_text", ""))
+
     stored = {
-        "time": datetime.now(timezone.utc).isoformat(),
+        "timestamp": int(datetime.now(timezone.utc).timestamp()),
+        "original": original_text,
+        "rewrite": rewritten_text,
+        "decision": str(event.get("decision", ""))[:60],
         "outcome": outcome,
+        "style": str(event.get("rewrite_style", event.get("style", "balanced")))[:24].lower(),
         "from_risk_band": str(event.get("from_risk_band", ""))[:60],
         "to_risk_band": str(event.get("to_risk_band", ""))[:60],
-        "original_len": len(str(event.get("original_text", ""))),
-        "rewritten_len": len(str(event.get("rewritten_text", ""))),
+        "original_len": len(original_text),
+        "rewritten_len": len(rewritten_text),
     }
 
     with _LOCK:
-        feedback_data = _read_json(FEEDBACK_FILE, _default_feedback_payload())
-        events = feedback_data.setdefault("events", [])
+        events = _read_feedback_events()
         events.append(stored)
         if len(events) > 2000:
             del events[:-2000]
-        _write_json(FEEDBACK_FILE, feedback_data)
+        _write_feedback_events(events)
 
-        model = _read_json(MODEL_FILE, _default_model())
-        model["total_feedback"] = int(model.get("total_feedback", 0)) + 1
-        model[outcome] = int(model.get(outcome, 0)) + 1
-        _write_json(MODEL_FILE, model)
+    update_learning_model(stored)
 
     return {
         "ok": True,

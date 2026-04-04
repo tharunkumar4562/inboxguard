@@ -30,6 +30,7 @@ from authlib.integrations.starlette_client import OAuth
 from analyzer import analyze_email
 from analytics import get_dashboard_data, track_event
 from correction_engine import (
+    apply_learning_bias,
     build_style_variants_with_guard,
     enforce_rewrite_constraints,
     extract_rewrite_intent,
@@ -38,6 +39,7 @@ from correction_engine import (
     record_feedback,
     rewrite_email_text,
 )
+from scorer import adjust_probability_from_learning
 from utils import build_email_from_raw, extract_domain_from_text
 
 app = FastAPI(title="InboxGuard")
@@ -2700,6 +2702,7 @@ def _run_analysis_request(
     if user:
         stats = _score_outcome_stats(int(user["id"]))
         prediction = _predict_inbox_probability(final_score, stats)
+        prediction = adjust_probability_from_learning(parsed_email, float(prediction))
         decision = _decision_from_inbox_probability(prediction)
         benchmark_score = int(stats.get("benchmark_top_10_score", 85))
         result["prediction"] = {
@@ -2722,6 +2725,7 @@ def _run_analysis_request(
         }
     else:
         prediction = _predict_inbox_probability(final_score, None)
+        prediction = adjust_probability_from_learning(parsed_email, float(prediction))
         decision = _decision_from_inbox_probability(prediction)
         result["prediction"] = {
             "inbox_probability": prediction,
@@ -3399,6 +3403,8 @@ def rewrite_email(
             constraint_valid = bool(constraint_eval.get("valid", False))
             constraint_reasons = constraint_eval.get("reasons", [])
 
+            constrained_text = apply_learning_bias(constrained_text)
+
             if len(constrained_text) < 20:
                 validation_attempts.append(
                     {
@@ -3566,6 +3572,8 @@ def submit_feedback(
     outcome: str = Form("not_sure"),
     original_text: str = Form(""),
     rewritten_text: str = Form(""),
+    rewrite_style: str = Form("balanced"),
+    decision: str = Form(""),
     from_risk_band: str = Form(""),
     to_risk_band: str = Form(""),
     from_score: int = Form(0),
@@ -3576,6 +3584,8 @@ def submit_feedback(
             "outcome": outcome,
             "original_text": original_text,
             "rewritten_text": rewritten_text,
+            "rewrite_style": rewrite_style,
+            "decision": decision,
             "from_risk_band": from_risk_band,
             "to_risk_band": to_risk_band,
         }

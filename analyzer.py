@@ -378,6 +378,7 @@ def analyze_email(
 
     signals = {
         "analysis_mode": mode,
+        "email_source": normalized_email,
         "auth_verifiable": auth_verifiable,
         "analysis_confidence": "high" if full_mode and clean_domain else "medium",
         "spf": spf_result.get("status") == "found",
@@ -448,12 +449,20 @@ def analyze_email(
             "content_score": scored.get("content_score", scored["score"]),
             "infra_impact": scored.get("infra_impact", 0),
             "final_score": scored.get("final_score", scored["score"]),
+            "base_score": scored.get("base_score", scored["score"]),
+            "learning_delta": scored.get("learning_delta", 0),
+            "learning_adjustments": scored.get("learning_adjustments", []),
             "deliverability_confidence": scored.get("deliverability_confidence", "medium"),
             "confidence_note": scored.get("confidence_note", ""),
             "verdict_label": scored.get("verdict_label", "Content/technical diagnostic only"),
             "real_world_risk": scored.get("real_world_risk", "UNKNOWN (reputation and engagement history not analyzed)"),
             "missing_factors": scored.get("missing_factors", []),
             "top_fixes": scored.get("top_fixes", []),
+            "primary_issue": (
+                (scored.get("top_fixes", [{}])[0] or {}).get("title", "No primary issue identified")
+                if isinstance(scored.get("top_fixes", []), list)
+                else "No primary issue identified"
+            ),
             "provider_results": scored.get("provider_results", {}),
             "detected_signals": scored.get("detected_signals", []),
             "risk_points": scored["risk_points"],
