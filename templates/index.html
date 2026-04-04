@@ -11,7 +11,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>{{ page_title or "InboxGuard | Progressive Command Center" }}</title>
-    <meta name="description" content="{{ meta_description or 'Middle-input progressive email safety flow with decision and rewrite reveal.' }}" />
+    <meta name="description" content="{{ meta_description or 'Progressive command center to analyze risk and rewrite email drafts before send.' }}" />
     <meta property="og:image" content="https://inboxguard.me/static/logo.svg" />
     <meta name="twitter:image" content="https://inboxguard.me/static/logo.svg" />
     <link rel="icon" href="/static/favicon.svg" type="image/svg+xml" sizes="any" />
@@ -22,90 +22,85 @@
     <link rel="stylesheet" href="/static/css/styles.css" />
   </head>
   <body>
-    <header class="cc-header">
-      <a href="/" class="cc-brand">
-        <img src="/static/logo.svg" width="30" height="30" alt="InboxGuard" />
-        <span>InboxGuard</span>
-      </a>
-      <div class="cc-top-links">
-        <a href="/saved-fixes">Saved Fixes</a>
-        <a href="/results">Results</a>
-        <a href="/reports">Reports</a>
-      </div>
-    </header>
+    <div class="cc-root cc-v2">
+      <section class="cc-panel cc-left">
+        <a href="/" class="cc-brand">
+          <img src="/static/logo.svg" width="30" height="30" alt="InboxGuard" />
+          <span>InboxGuard</span>
+        </a>
+        <p class="cc-label">STATUS OVERVIEW</p>
 
-    <main class="cc-flow">
-      <aside class="cc-side cc-side-left">
-        <p class="cc-label">FEATURE MODULES</p>
-        <div class="cc-module-list">
-          <a class="cc-module" href="/inbox-tips"><strong>Inbox Tips</strong><span>Provider playbooks and anti-spam guidance.</span></a>
-          <a class="cc-module" href="/seed-inbox"><strong>Seed Inbox</strong><span>Validate placement before scaling sends.</span></a>
-          <a class="cc-module" href="/blog"><strong>Deliverability Blog</strong><span>Learn what changed and why it matters.</span></a>
-        </div>
-      </aside>
-
-      <section class="cc-main">
-        <div class="cc-input-shell">
-          <p class="cc-label">INPUT + CONTROLS</p>
-          <textarea id="emailInput" class="cc-textarea" placeholder="Paste your email (Subject + Body)"></textarea>
-
-          <div class="cc-input-row">
-            <div class="cc-field">
-              <label for="analysisMode">Analysis Mode</label>
-              <select id="analysisMode" class="cc-select">
-                <option value="content">Content Only</option>
-                <option value="full" selected>Full (Content + Auth)</option>
-              </select>
-            </div>
-            <div class="cc-field">
-              <label for="rewriteStyle">Rewrite Style</label>
-              <select id="rewriteStyle" class="cc-select">
-                <option value="safe">Safe</option>
-                <option value="balanced" selected>Balanced</option>
-                <option value="aggressive">Aggressive</option>
-              </select>
-            </div>
-          </div>
-
-          <button id="analyzeBtn" class="cc-btn-primary">Check Before Sending</button>
-          <p id="winCounter" class="cc-meta">Emails improved: 0</p>
-          <p id="streak" class="cc-meta">Streak: 0</p>
+        <div class="cc-status-grid" id="statusOverview">
+          <article class="cc-status-card" id="riskStatusCard">
+            <p class="cc-status-title">RISK STATUS</p>
+            <p class="cc-status-value" id="riskStatusValue">Pending</p>
+          </article>
+          <article class="cc-status-card" id="primaryIssueCard">
+            <p class="cc-status-title">PRIMARY ISSUE</p>
+            <p class="cc-status-value" id="primaryIssueValue">Waiting for scan</p>
+          </article>
+          <article class="cc-status-card" id="confidenceCard">
+            <p class="cc-status-title">CONFIDENCE</p>
+            <p class="cc-status-value" id="confidenceValue">Pending</p>
+          </article>
+          <article class="cc-status-card" id="infraCard">
+            <p class="cc-status-title">INFRASTRUCTURE</p>
+            <p class="cc-status-value" id="infraValue">Pending</p>
+          </article>
         </div>
 
-        <section id="analysisPanel" class="cc-stage hidden">
-          <p class="cc-label">PROGRESSIVE ANALYSIS</p>
-          <div id="analysisSteps" class="cc-steps">
-            <p class="step">Scanning structure...</p>
-            <p class="step">Checking spam patterns...</p>
-            <p class="step">Analyzing tone...</p>
-            <p class="step">Predicting inbox placement...</p>
-            <div class="progress-track"><div id="progressBar" class="progress-bar"></div></div>
-          </div>
-        </section>
+        <article class="cc-biggest-risk" id="biggestRiskCard">
+          <p class="cc-status-title">Biggest Risk Right Now</p>
+          <p id="biggestRiskValue">Run a scan to reveal the top blocker before sending.</p>
+        </article>
 
-        <section id="decisionPanel" class="cc-stage hidden">
-          <p class="cc-label">DECISION</p>
-          <div id="decisionBlock" class="cc-decision">
-            <h1 id="decisionText"></h1>
-            <p id="decisionSub"></p>
-            <p id="primaryIssue"></p>
-            <div id="learningAdjustments" class="cc-learning"></div>
-          </div>
-        </section>
-
-        <section id="featureReveal" class="cc-stage hidden">
-          <p class="cc-label">UNLOCKED TOOLS</p>
-          <div class="cc-reveal-grid">
-            <a class="cc-module" href="/saved-fixes"><strong>Saved Fixes</strong><span>Track all rewritten drafts and decisions.</span></a>
-            <a class="cc-module" href="/results"><strong>Results Feed</strong><span>See recent scan outcomes in one place.</span></a>
-            <a class="cc-module" href="/reports"><strong>Reports Export</strong><span>Share outcomes with ops and growth teams.</span></a>
-            <a class="cc-module" href="/profile"><strong>Profile + Usage</strong><span>Manage plan, activity, and access.</span></a>
-          </div>
-        </section>
+        <p id="winCounter" class="cc-meta">Emails improved: 0</p>
+        <p id="streak" class="cc-meta">Streak: 0</p>
       </section>
 
-      <aside id="rewritePanel" class="cc-side cc-side-right hidden">
-        <p class="cc-label">FIX / REWRITE</p>
+      <section class="cc-panel cc-center">
+        <p class="cc-label">INPUT + PROGRESSIVE ANALYSIS</p>
+
+        <textarea id="emailInput" class="cc-textarea" placeholder="Paste your email (Subject + Body)"></textarea>
+
+        <div class="cc-row-fields">
+          <div class="cc-field">
+            <label for="analysisMode">Analysis Mode</label>
+            <select id="analysisMode" class="cc-select">
+              <option value="content">Content only</option>
+              <option value="full" selected>Full (content + SPF/DKIM/DMARC)</option>
+            </select>
+          </div>
+          <div class="cc-field">
+            <label for="rewriteStyle">Rewrite Style</label>
+            <select id="rewriteStyle" class="cc-select">
+              <option value="safe">Safe</option>
+              <option value="balanced" selected>Balanced</option>
+              <option value="aggressive">Aggressive</option>
+            </select>
+          </div>
+        </div>
+
+        <button id="analyzeBtn" class="cc-btn-primary">Check Before Sending</button>
+
+        <div id="analysisSteps" class="cc-steps hidden">
+          <p class="step">Scanning structure...</p>
+          <p class="step">Checking spam patterns...</p>
+          <p class="step">Analyzing tone...</p>
+          <p class="step">Predicting inbox placement...</p>
+          <div class="progress-track"><div id="progressBar" class="progress-bar"></div></div>
+        </div>
+
+        <div id="decisionBlock" class="cc-decision hidden">
+          <h1 id="decisionText"></h1>
+          <p id="decisionSub"></p>
+          <p id="decisionPrimaryText"></p>
+          <div id="learningAdjustments" class="cc-learning"></div>
+        </div>
+      </section>
+
+      <section class="cc-panel cc-right">
+        <p class="cc-label">SPLIT REWRITE</p>
 
         <div class="cc-split">
           <article>
@@ -119,7 +114,9 @@
           </article>
         </div>
 
-        <div id="rewardBox" class="reward-box hidden"><div id="rewardText" class="reward-text"></div></div>
+        <div id="rewardBox" class="reward-box hidden">
+          <div id="rewardText" class="reward-text"></div>
+        </div>
         <div id="successBadge" class="hidden success-badge">✔ Safer version ready</div>
 
         <div class="cc-feedback">
@@ -131,11 +128,13 @@
 
         <button id="useRewrite" class="cc-btn-success hidden">Copy Safer Version</button>
         <div id="nextAction" class="next-action">Try another email →</div>
-      </aside>
-    </main>
+      </section>
+    </div>
 
     <div id="decisionOverlay" class="decision-overlay hidden" role="status" aria-live="polite">
-      <div class="decision-overlay-card"><p id="decisionOverlayText">Decision</p></div>
+      <div class="decision-overlay-card">
+        <p id="decisionOverlayText">Decision</p>
+      </div>
     </div>
 
     <script src="/static/js/app.js?v=20260404-command2"></script>

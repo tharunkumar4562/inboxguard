@@ -8,18 +8,21 @@
         return;
     }
 
-    const analysisPanel = document.getElementById("analysisPanel");
-    const decisionPanel = document.getElementById("decisionPanel");
-    const rewritePanel = document.getElementById("rewritePanel");
-    const featureReveal = document.getElementById("featureReveal");
-
+    const stepsWrap = document.getElementById("analysisSteps");
     const steps = Array.from(document.querySelectorAll(".step"));
     const progressBar = document.getElementById("progressBar");
 
+    const decisionBlock = document.getElementById("decisionBlock");
     const decisionText = document.getElementById("decisionText");
     const decisionSub = document.getElementById("decisionSub");
-    const primaryIssue = document.getElementById("primaryIssue");
+    const decisionPrimaryText = document.getElementById("decisionPrimaryText");
     const learningAdjustments = document.getElementById("learningAdjustments");
+
+    const riskStatusValue = document.getElementById("riskStatusValue");
+    const primaryIssueValue = document.getElementById("primaryIssueValue");
+    const confidenceValue = document.getElementById("confidenceValue");
+    const infraValue = document.getElementById("infraValue");
+    const biggestRiskValue = document.getElementById("biggestRiskValue");
 
     const beforeBox = document.getElementById("beforeBox");
     const afterBox = document.getElementById("afterBox");
@@ -38,11 +41,11 @@
     const overlay = document.getElementById("decisionOverlay");
     const overlayText = document.getElementById("decisionOverlayText");
 
-    const winsNode = document.getElementById("winCounter");
-    const streakNode = document.getElementById("streak");
+    const winCounter = document.getElementById("winCounter");
+    const streak = document.getElementById("streak");
     const nextAction = document.getElementById("nextAction");
 
-    const defaultAnalyzeLabel = analyzeBtn.textContent;
+    const defaultAnalyze = analyzeBtn.textContent;
     const APP_WINS = "ig_wins";
     const APP_STREAK = "ig_streak";
 
@@ -56,6 +59,7 @@
     function spring({ from, to, stiffness = 0.08, damping = 0.8, onUpdate }) {
         let position = Number(from || 0);
         let velocity = 0;
+
         function frame() {
             const force = (to - position) * stiffness;
             velocity = velocity * damping + force;
@@ -67,52 +71,88 @@
                 onUpdate(to);
             }
         }
+
         requestAnimationFrame(frame);
     }
 
     function animateDecision(el) {
         spring({
-            from: 0.82,
+            from: 0.8,
             to: 1,
-            stiffness: 0.09,
-            damping: 0.79,
             onUpdate: (scale) => {
                 el.style.transform = `scale(${scale})`;
-                el.style.opacity = String(Math.max(0.25, Math.min(1, scale)));
+                el.style.opacity = String(Math.max(0.2, Math.min(1, scale)));
             },
         });
     }
 
+    function slideIn(el) {
+        spring({
+            from: 100,
+            to: 0,
+            stiffness: 0.06,
+            damping: 0.75,
+            onUpdate: (x) => {
+                el.style.transform = `translateX(${x}px)`;
+                el.style.opacity = String(1 - Math.min(1, x / 100));
+            },
+        });
+    }
+
+    function revealText(el, text) {
+        if (!el) {
+            return;
+        }
+        let i = 0;
+        el.textContent = "";
+        function step() {
+            if (i < text.length) {
+                el.textContent += text[i];
+                i += 1;
+                setTimeout(step, 14);
+            }
+        }
+        step();
+    }
+
     function showOverlay(text) {
-        if (!overlay || !overlayText) return;
+        if (!overlay || !overlayText) {
+            return;
+        }
         overlayText.textContent = text;
         overlay.classList.remove("hidden");
         overlay.style.opacity = "0";
+
         spring({
-            from: 0.75,
+            from: 0.7,
             to: 1,
             onUpdate: (scale) => {
                 overlay.style.transform = `scale(${scale})`;
                 overlay.style.opacity = String(Math.max(0.2, Math.min(1, scale)));
             },
         });
+
         setTimeout(() => {
             overlay.classList.add("hidden");
             overlay.style.transform = "scale(1)";
             overlay.style.opacity = "1";
-        }, 1400);
+        }, 1500);
     }
 
     function updateCounters() {
-        const wins = Number(localStorage.getItem(APP_WINS) || "0");
-        const streak = Number(localStorage.getItem(APP_STREAK) || "0");
-        if (winsNode) winsNode.textContent = `Emails improved: ${wins}`;
-        if (streakNode) streakNode.textContent = `Streak: ${streak}`;
+        if (winCounter) {
+            winCounter.textContent = `Emails improved: ${Number(localStorage.getItem(APP_WINS) || "0")}`;
+        }
+        if (streak) {
+            streak.textContent = `Streak: ${Number(localStorage.getItem(APP_STREAK) || "0")}`;
+        }
     }
 
-    function incrementCounters() {
-        localStorage.setItem(APP_WINS, String(Number(localStorage.getItem(APP_WINS) || "0") + 1));
-        localStorage.setItem(APP_STREAK, String(Number(localStorage.getItem(APP_STREAK) || "0") + 1));
+    function registerWin() {
+        const wins = Number(localStorage.getItem(APP_WINS) || "0") + 1;
+        const streakNow = Number(localStorage.getItem(APP_STREAK) || "0") + 1;
+        localStorage.setItem(APP_WINS, String(wins));
+        localStorage.setItem(APP_STREAK, String(streakNow));
         updateCounters();
     }
 
@@ -121,153 +161,191 @@
         updateCounters();
     }
 
-    function lockAnalyze(locked) {
-        analyzeBtn.disabled = locked;
-        analyzeBtn.textContent = locked ? "Analyzing..." : defaultAnalyzeLabel;
+    function inferInfrastructure(signals) {
+        const spf = String(signals && signals.spf_status ? signals.spf_status : "unknown").toUpperCase();
+        const dkim = String(signals && signals.dkim_status ? signals.dkim_status : "unknown").toUpperCase();
+        const dmarc = String(signals && signals.dmarc_status ? signals.dmarc_status : "unknown").toUpperCase();
+        return `SPF: ${spf} | DKIM: ${dkim} | DMARC: ${dmarc}`;
     }
 
-    function resetStepLines() {
-        const labels = [
-            "Scanning structure...",
-            "Checking spam patterns...",
-            "Analyzing tone...",
-            "Predicting inbox placement...",
-        ];
-        steps.forEach((step, index) => {
-            step.classList.remove("active");
-            step.textContent = labels[index];
+    function revealStatusOneByOne() {
+        const cards = [
+            document.getElementById("riskStatusCard"),
+            document.getElementById("primaryIssueCard"),
+            document.getElementById("confidenceCard"),
+            document.getElementById("infraCard"),
+            document.getElementById("biggestRiskCard"),
+        ].filter(Boolean);
+
+        cards.forEach((card) => card.classList.remove("reveal-on"));
+        cards.forEach((card, idx) => {
+            setTimeout(() => {
+                card.classList.add("reveal-on");
+            }, 110 * (idx + 1));
         });
+    }
+
+    function resetUI() {
+        steps.forEach((step, idx) => {
+            step.classList.remove("active");
+            step.textContent = [
+                "Scanning structure...",
+                "Checking spam patterns...",
+                "Analyzing tone...",
+                "Predicting inbox placement...",
+            ][idx];
+        });
+
+        stepsWrap.classList.add("hidden");
+        decisionBlock.classList.add("hidden");
+        decisionText.classList.remove("pulse-red");
+        decisionText.style.transform = "scale(1)";
+        decisionText.style.opacity = "1";
+
         if (progressBar) {
             progressBar.style.width = "0%";
         }
-    }
-
-    function resetOutput() {
-        decisionText.textContent = "";
-        decisionSub.textContent = "";
-        primaryIssue.textContent = "";
-        learningAdjustments.innerHTML = "";
 
         beforeBox.textContent = "-";
         afterBox.textContent = "-";
         changeTags.innerHTML = "";
-
         useRewrite.classList.add("hidden");
         successBadge.classList.add("hidden");
         rewardBox.classList.add("hidden");
-        feedbackState.textContent = "Different emails produce different results.";
 
-        latestDecision = "";
-        latestFromBand = "";
-        latestToBand = "";
-        latestFromScore = 0;
-        latestToScore = 0;
+        feedbackState.textContent = "Different emails produce different results.";
     }
 
-    function showStage(node) {
-        if (!node) return;
-        node.classList.remove("hidden");
-        node.classList.add("cc-stage-enter");
-        setTimeout(() => node.classList.remove("cc-stage-enter"), 350);
+    function lockAnalyze(locked) {
+        analyzeBtn.disabled = locked;
+        analyzeBtn.textContent = locked ? "Analyzing..." : defaultAnalyze;
     }
 
     async function runSteps() {
-        showStage(analysisPanel);
+        stepsWrap.classList.remove("hidden");
         spring({
             from: 0,
             to: 100,
             stiffness: 0.05,
             damping: 0.85,
-            onUpdate: (value) => {
+            onUpdate: (v) => {
                 if (progressBar) {
-                    progressBar.style.width = `${Math.max(0, Math.min(100, value))}%`;
+                    progressBar.style.width = `${Math.max(0, Math.min(100, v))}%`;
                 }
             },
         });
 
         for (let i = 0; i < steps.length; i += 1) {
             steps[i].classList.add("active");
-            steps[i].textContent = `${steps[i].textContent} ✓`;
+            if (!steps[i].textContent.endsWith(" ✓")) {
+                steps[i].textContent += " ✓";
+            }
             // eslint-disable-next-line no-await-in-loop
-            await new Promise((resolve) => setTimeout(resolve, 360 + i * 110));
+            await new Promise((resolve) => setTimeout(resolve, 350 + i * 100));
         }
     }
 
     async function analyzeEmail(rawEmail) {
         const payload = new FormData();
         payload.set("raw_email", rawEmail);
-        payload.set("analysis_mode", analysisMode.value || "full");
+        payload.set("analysis_mode", analysisMode ? analysisMode.value : "full");
 
-        const res = await fetch("/analyze", { method: "POST", body: payload });
-        if (!res.ok) {
-            const err = await res.json().catch(() => ({}));
+        const response = await fetch("/analyze", { method: "POST", body: payload });
+        if (!response.ok) {
+            const err = await response.json().catch(() => ({}));
             throw new Error(String(err.detail || "Analysis failed"));
         }
-        return res.json();
+        return response.json();
     }
 
     async function rewriteEmail(rawEmail) {
-        latestRewriteStyle = rewriteStyle.value || "balanced";
+        latestRewriteStyle = rewriteStyle ? rewriteStyle.value : "balanced";
         const payload = new FormData();
         payload.set("raw_email", rawEmail);
-        payload.set("analysis_mode", analysisMode.value || "full");
+        payload.set("analysis_mode", analysisMode ? analysisMode.value : "full");
         payload.set("rewrite_style", latestRewriteStyle);
 
-        const res = await fetch("/rewrite", { method: "POST", body: payload });
-        if (!res.ok) {
+        const response = await fetch("/rewrite", { method: "POST", body: payload });
+        if (!response.ok) {
             throw new Error("Rewrite failed");
         }
-        return res.json();
+        return response.json();
     }
 
-    function renderLearning(items) {
-        if (!Array.isArray(items) || !items.length) {
+    function renderLearning(rows) {
+        if (!Array.isArray(rows) || !rows.length) {
             learningAdjustments.innerHTML = "";
             return;
         }
-        learningAdjustments.innerHTML = items.slice(0, 4).map((item) => {
-            const impact = Number(item.impact || 0);
+        learningAdjustments.innerHTML = rows.slice(0, 3).map((row) => {
+            const impact = Number(row.impact || 0);
             const sign = impact > 0 ? "+" : "";
-            return `<div>${item.pattern}: ${sign}${impact} -> ${item.reason || "learning signal"}</div>`;
+            return `<div>${row.pattern}: ${sign}${impact} -> ${row.reason || "learning impact"}</div>`;
         }).join("");
     }
 
-    function renderDecision(payload) {
-        const summary = payload.summary || {};
-        const prediction = payload.prediction || {};
+    function updateStatusOverview(summary, signals, prediction) {
+        const band = String(summary.risk_band || "Needs Review");
+        const confidence = String(summary.deliverability_confidence || "medium").toUpperCase();
+        const issue = String(summary.primary_issue || "No primary issue identified");
+        const biggest = Array.isArray(summary.top_fixes) && summary.top_fixes.length
+            ? String(summary.top_fixes[0].title || summary.top_fixes[0].action || issue)
+            : issue;
 
-        latestDecision = String(prediction.decision || "TEST FIRST");
+        riskStatusValue.textContent = band;
+        primaryIssueValue.textContent = issue;
+        confidenceValue.textContent = `${confidence}${prediction && prediction.decision ? ` | ${prediction.decision}` : ""}`;
+        infraValue.textContent = inferInfrastructure(signals || {});
+        biggestRiskValue.textContent = biggest;
+
+        revealStatusOneByOne();
+    }
+
+    function showDecision(analysis) {
+        const summary = analysis.summary || {};
+        const prediction = analysis.prediction || {};
+
+        const decision = String(prediction.decision || "TEST FIRST");
+        const probability = Number(prediction.inbox_probability || 0);
+
+        latestDecision = decision;
         latestFromBand = String(summary.risk_band || "");
         latestFromScore = Number(summary.final_score || summary.score || 0);
 
-        showStage(decisionPanel);
-        decisionText.classList.remove("pulse-red");
-        decisionText.textContent = latestDecision;
-        if (latestDecision === "DO NOT SEND") {
+        updateStatusOverview(summary, analysis.signals || {}, prediction);
+
+        stepsWrap.classList.add("hidden");
+        decisionBlock.classList.remove("hidden");
+
+        decisionText.textContent = decision;
+        if (decision === "DO NOT SEND") {
             decisionText.classList.add("pulse-red");
         }
         animateDecision(decisionText);
-        showOverlay(latestDecision);
+        showOverlay(decision);
 
-        decisionSub.textContent = `Estimated inbox: ${Number(prediction.inbox_probability || 0).toFixed(1)}%`;
-        primaryIssue.textContent = `Primary issue: ${summary.primary_issue || "No primary issue identified"}`;
+        revealText(decisionSub, `Estimated inbox: ${probability.toFixed(1)}%`);
+        decisionPrimaryText.textContent = `Primary issue: ${summary.primary_issue || "No primary issue identified"}`;
         renderLearning(summary.learning_adjustments || []);
     }
 
     function renderChanges(changes) {
         changeTags.innerHTML = "";
         (Array.isArray(changes) ? changes : []).slice(0, 4).forEach((line) => {
-            const chip = document.createElement("span");
-            chip.className = "cc-tag";
-            chip.textContent = String(line);
-            changeTags.appendChild(chip);
+            const tag = document.createElement("span");
+            tag.className = "cc-tag";
+            tag.textContent = String(line);
+            changeTags.appendChild(tag);
         });
     }
 
-    function renderRewrite(rewrite, original) {
-        showStage(rewritePanel);
-        beforeBox.textContent = String(rewrite.original_text || original || "");
-        afterBox.textContent = String(rewrite.rewritten_text || original || "");
+    function showRewrite(rewrite, original) {
+        const beforeText = String(rewrite.original_text || original || "");
+        const afterText = String(rewrite.rewritten_text || original || "");
+
+        beforeBox.textContent = beforeText;
+        afterBox.textContent = afterText;
+        slideIn(afterBox);
 
         latestToBand = String(rewrite.to_risk_band || latestFromBand || "");
         latestToScore = Number(rewrite.to_score || latestFromScore || 0);
@@ -277,20 +355,19 @@
         rewardText.textContent = delta > 0
             ? `Spam risk reduced ↑ (+${delta})`
             : "Structure improved for better delivery";
-        rewardBox.classList.remove("hidden");
 
-        renderChanges(rewrite.rewrite_changes || []);
+        rewardBox.classList.remove("hidden");
         successBadge.classList.remove("hidden");
         useRewrite.classList.remove("hidden");
+        renderChanges(rewrite.rewrite_changes || []);
 
-        incrementCounters();
-
-        showStage(featureReveal);
+        registerWin();
     }
 
     async function sendFeedback(outcome) {
         const original = beforeBox.textContent === "-" ? "" : beforeBox.textContent;
         const rewritten = afterBox.textContent === "-" ? "" : afterBox.textContent;
+
         if (!original || !rewritten) {
             feedbackState.textContent = "Run rewrite first.";
             return;
@@ -309,14 +386,16 @@
         });
 
         try {
-            const res = await fetch("/feedback", {
+            const response = await fetch("/feedback", {
                 method: "POST",
                 headers: { "Content-Type": "application/x-www-form-urlencoded" },
                 body: payload,
             });
-            if (!res.ok) {
-                throw new Error("feedback failed");
+
+            if (!response.ok) {
+                throw new Error("Feedback failed");
             }
+
             feedbackState.textContent = "Feedback saved. Model updated.";
             if (outcome === "spam") {
                 resetStreak();
@@ -326,9 +405,37 @@
         }
     }
 
+    analyzeBtn.addEventListener("click", async () => {
+        const email = String(emailInput.value || "").trim();
+        if (!email) {
+            feedbackState.textContent = "Paste an email first.";
+            return;
+        }
+
+        resetUI();
+        lockAnalyze(true);
+
+        try {
+            await runSteps();
+            const analysis = await analyzeEmail(email);
+            showDecision(analysis);
+            const rewrite = await rewriteEmail(email);
+            showRewrite(rewrite, email);
+        } catch (error) {
+            decisionBlock.classList.remove("hidden");
+            decisionText.textContent = "ERROR";
+            decisionSub.textContent = String(error && error.message ? error.message : "Something went wrong");
+        } finally {
+            lockAnalyze(false);
+        }
+    });
+
     useRewrite.addEventListener("click", async () => {
         const text = afterBox.textContent || "";
-        if (!text || text === "-") return;
+        if (!text || text === "-") {
+            return;
+        }
+
         try {
             await navigator.clipboard.writeText(text);
             useRewrite.textContent = "✓ Copied";
@@ -340,38 +447,6 @@
             setTimeout(() => {
                 useRewrite.textContent = "Copy Safer Version";
             }, 1200);
-        }
-    });
-
-    analyzeBtn.addEventListener("click", async () => {
-        const rawEmail = String(emailInput.value || "").trim();
-        if (!rawEmail) {
-            feedbackState.textContent = "Paste your email first.";
-            return;
-        }
-
-        resetStepLines();
-        resetOutput();
-        decisionPanel.classList.add("hidden");
-        rewritePanel.classList.add("hidden");
-        featureReveal.classList.add("hidden");
-        lockAnalyze(true);
-
-        try {
-            await runSteps();
-            const analysis = await analyzeEmail(rawEmail);
-            renderDecision(analysis);
-
-            await new Promise((resolve) => setTimeout(resolve, 220));
-            const rewrite = await rewriteEmail(rawEmail);
-            renderRewrite(rewrite, rawEmail);
-        } catch (error) {
-            showStage(decisionPanel);
-            decisionText.textContent = "ERROR";
-            decisionSub.textContent = String(error && error.message ? error.message : "Something went wrong");
-            primaryIssue.textContent = "";
-        } finally {
-            lockAnalyze(false);
         }
     });
 
