@@ -186,7 +186,6 @@ let currentUserName = "";
 let currentUserEmail = "";
 let currentUserAvatar = "";
 let currentUserStatus = "inactive";
-let currentUserPlan = "free";
 let emailPastedTracked = false;
 let advancedOpenedTracked = false;
 let pendingAuthRedirectPath = "";
@@ -255,13 +254,6 @@ async function parseApiError(response, fallbackMessage) {
             openPricingModal();
         }
         return "Subscription required for this tool.";
-    }
-    if (detail === "FREE_PLAN_LIMIT_REACHED") {
-        showError("Free scans used. Upgrade to keep checking before you send.");
-        if (typeof openPricingModal === "function") {
-            openPricingModal();
-        }
-        return "Free scans used. Upgrade to keep checking before you send.";
     }
     return detail || String(fallbackMessage || "Request failed.");
 }
@@ -698,43 +690,20 @@ function updateProfileNav() {
 
 async function refreshAuthStatus() {
     try {
-        const meResponse = await fetch("/me", { method: "GET" });
-        if (meResponse.ok) {
-            const meData = await meResponse.json();
-            const user = meData && meData.user ? meData.user : null;
-            window.user = user;
-            currentUserName = String(user && user.name ? user.name : "");
-            currentUserEmail = String(user && user.email ? user.email : "");
-            currentUserAvatar = String(user && user.avatar_url ? user.avatar_url : "");
-            currentUserPlan = String(user && user.plan ? user.plan : "free").toLowerCase();
-            currentUserStatus = String(user && user.status ? user.status : "inactive").toLowerCase();
-            window.userIsPro = Boolean(user && (user.plan === "pro" || user.unlimited));
-            window.userStatus = currentUserStatus;
-            window.currentUserEmail = currentUserEmail;
-            window.currentUserName = currentUserName;
-        }
-
         const response = await fetch("/auth/status", { method: "GET" });
         if (!response.ok) {
             return;
         }
         const data = await response.json();
         isAuthenticated = Boolean(data && data.authenticated);
-        if (!currentUserName) {
-            currentUserName = String(data && data.name ? data.name : "");
-        }
-        if (!currentUserEmail) {
-            currentUserEmail = String(data && data.email ? data.email : "");
-        }
-        if (!currentUserAvatar) {
-            currentUserAvatar = String(data && data.avatar_url ? data.avatar_url : "");
-        }
+        currentUserName = String(data && data.name ? data.name : "");
+        currentUserEmail = String(data && data.email ? data.email : "");
+        currentUserAvatar = String(data && data.avatar_url ? data.avatar_url : "");
         anonymousScansUsed = Number(data && data.anonymous_scans_used ? data.anonymous_scans_used : 0);
         anonymousScansLimit = Number(data && data.anonymous_scans_limit ? data.anonymous_scans_limit : 3);
         userScansUsed = Number(data && data.user_scans_used ? data.user_scans_used : 0);
         userScansLimit = Number(data && data.user_scans_limit ? data.user_scans_limit : 50);
         currentUserStatus = String(data && data.status ? data.status : "inactive").toLowerCase();
-        currentUserPlan = String(data && data.plan ? data.plan : currentUserPlan || "free").toLowerCase();
         leadCaptureSaved = Boolean(data && data.lead_email_captured);
         leadCaptureEmail = String(data && data.lead_email ? data.lead_email : leadCaptureEmail);
 
@@ -742,7 +711,6 @@ async function refreshAuthStatus() {
         window.currentUser = isAuthenticated;
         window.userIsPro = Boolean(data && data.pro);
         window.userStatus = currentUserStatus;
-        window.userPlan = currentUserPlan;
         window.currentUserEmail = currentUserEmail;
         window.currentUserName = currentUserName;
 
@@ -2686,7 +2654,11 @@ function openPricingModal() {
     const modal = document.getElementById("pricing-modal");
     if (modal) {
         modal.classList.remove("hidden");
-        document.body.style.overflow = "hidden";
+        document.body.classList.add("modal-open");
+        const focusTarget = modal.querySelector("button, input, select, textarea, a");
+        if (focusTarget && typeof focusTarget.focus === "function") {
+            setTimeout(() => focusTarget.focus(), 30);
+        }
     }
 }
 
@@ -2694,7 +2666,7 @@ function closePricingModal() {
     const modal = document.getElementById("pricing-modal");
     if (modal) {
         modal.classList.add("hidden");
-        document.body.style.overflow = "";
+        document.body.classList.remove("modal-open");
     }
 }
 
@@ -2702,14 +2674,22 @@ function handleGetAccess() {
     openPricingModal();
 }
 
+const pricingModal = document.getElementById("pricing-modal");
+if (pricingModal) {
+    pricingModal.addEventListener("click", (event) => {
+        if (event.target === pricingModal) {
+            closePricingModal();
+        }
+    });
+}
+
 function canUserScan() {
     if (!isAuthenticated) {
         return true;
     }
 
-    const plan = String(window.userPlan || currentUserPlan || "free").toLowerCase();
     const status = String(window.userStatus || currentUserStatus || "inactive").toLowerCase();
-    const hasAccess = Boolean(window.userIsPro) && (plan === "pro" || status === "active");
+    const hasAccess = Boolean(window.userIsPro) && status === "active";
     if (hasAccess) {
         return true;
     }

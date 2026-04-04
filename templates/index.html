@@ -33,7 +33,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="/static/css/styles.css?v=20260404-dsv2-two-tools" />
+    <link rel="stylesheet" href="/static/css/styles.css?v=20260404-modal-fix-1" />
     <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
     <script type="application/ld+json">
       [
@@ -107,51 +107,6 @@
           </div>
         </header>
         
-        <div id="pricing-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="pricing-modal-title" onclick="closePricingModal()">
-          <div class="modal-card" onclick="event.stopPropagation()">
-            <button class="modal-close" type="button" onclick="closePricingModal()">×</button>
-            <h2 id="pricing-modal-title">Stop guessing before you send</h2>
-            <p class="pricing-note">Most emails do not fail because of infra. They fail because of small mistakes that show up at scale.</p>
-            <p class="pricing-note">InboxGuard catches that before you hit send.</p>
-            <p class="price">$12 / month</p>
-            <p class="pricing-note">Billed locally at checkout.</p>
-            <ul class="pricing-features">
-              <li>Avoid spam triggers before they burn your domain</li>
-              <li>Know if it is content or infra before testing</li>
-              <li>Stop wasting batches guessing what broke</li>
-            </ul>
-            <p class="pricing-note">Used before every campaign by people who care about deliverability.</p>
-            <p class="pricing-note">One bad batch can damage your domain reputation.</p>
-            <div class="inline-fields" style="margin-top:8px;">
-              <div>
-                <label for="access-request-email" class="pricing-note" style="display:block; margin-bottom:4px;">Need enterprise or custom plan?</label>
-                <input id="access-request-email" type="email" placeholder="you@company.com" class="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-slate-100" />
-              </div>
-            </div>
-            <label for="inline-plan-type" class="pricing-note" style="display:block; margin-top:8px;">Choose plan</label>
-            <select id="inline-plan-type" class="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-slate-100" style="margin-top:6px;">
-              <option value="monthly">Monthly Pro</option>
-              <option value="annual">Annual Pro</option>
-              <option value="trial">Trial Pro</option>
-              <option value="usage">Usage-Based</option>
-            </select>
-            <select id="plan-type" class="hidden" aria-hidden="true" tabindex="-1">
-              <option value="monthly" selected>Monthly Pro</option>
-              <option value="annual">Annual Pro</option>
-              <option value="trial">Trial Pro</option>
-              <option value="usage">Usage-Based</option>
-            </select>
-            <button id="refresh-plans" type="button" class="secondary-btn" style="margin-top:8px;">Refresh Plans</button>
-            <ul id="plans-output" class="compact-list" style="margin-top:8px;">
-              <li>Plan details load from server when requested.</li>
-            </ul>
-            <button id="pay-btn" type="button" class="primary-btn">Unlock Safe Sending</button>
-            <button id="request-access" type="button" class="secondary-btn">Request Access</button>
-            <button id="cancel-subscription" type="button" class="secondary-btn hidden">Cancel Subscription</button>
-            <button onclick="closePricingModal()" class="secondary-btn">Cancel</button>
-          </div>
-        </div>
-
         <section class="domain-risk-alert">
           <p class="domain-risk-title">Domain reputation at risk</p>
           <p class="domain-risk-text">Repeated sends from risky drafts can degrade sender trust across major inbox providers.</p>
@@ -676,6 +631,51 @@ I noticed your recent post and had one short idea to improve reply rates."></tex
       </div>
     </div>
 
+    <div id="pricing-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="pricing-modal-title">
+      <div class="modal-content">
+        <button class="modal-close" onclick="closePricingModal()" aria-label="Close pricing modal">×</button>
+        <h2 id="pricing-modal-title">Stop guessing before you send</h2>
+        <p class="pricing-note">Most emails do not fail because of infra. They fail because of small mistakes that show up at scale.</p>
+        <p class="pricing-note">InboxGuard catches that before you hit send.</p>
+        <p class="price">$12 / month</p>
+        <p class="pricing-note">Billed locally at checkout.</p>
+        <ul class="pricing-features">
+          <li>Avoid spam triggers before they burn your domain</li>
+          <li>Know if it is content or infra before testing</li>
+          <li>Stop wasting batches guessing what broke</li>
+        </ul>
+        <p class="pricing-note">Used before every campaign by people who care about deliverability.</p>
+        <p class="pricing-note">One bad batch can damage your domain reputation.</p>
+        <div class="inline-fields" style="margin-top:8px;">
+          <div>
+            <label for="access-request-email" class="pricing-note" style="display:block; margin-bottom:4px;">Need enterprise or custom plan?</label>
+            <input id="access-request-email" type="email" placeholder="you@company.com" class="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-slate-100" />
+          </div>
+        </div>
+        <label for="inline-plan-type" class="pricing-note" style="display:block; margin-top:8px;">Choose plan</label>
+        <select id="inline-plan-type" class="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-slate-100" style="margin-top:6px;">
+          <option value="monthly">Monthly Pro</option>
+          <option value="annual">Annual Pro</option>
+          <option value="trial">Trial Pro</option>
+          <option value="usage">Usage-Based</option>
+        </select>
+        <select id="plan-type" class="hidden" aria-hidden="true" tabindex="-1">
+          <option value="monthly" selected>Monthly Pro</option>
+          <option value="annual">Annual Pro</option>
+          <option value="trial">Trial Pro</option>
+          <option value="usage">Usage-Based</option>
+        </select>
+        <button id="refresh-plans" type="button" class="secondary-btn" style="margin-top:8px;">Refresh Plans</button>
+        <ul id="plans-output" class="compact-list" style="margin-top:8px;">
+          <li>Plan details load from server when requested.</li>
+        </ul>
+        <button id="pay-btn" type="button" class="primary-btn">Unlock Safe Sending</button>
+        <button id="request-access" type="button" class="secondary-btn">Request Access</button>
+        <button id="cancel-subscription" type="button" class="secondary-btn hidden">Cancel Subscription</button>
+        <button onclick="closePricingModal()" class="secondary-btn">Cancel</button>
+      </div>
+    </div>
+
     <div id="toolWorkspaceBackdrop" class="tool-workspace-backdrop hidden" aria-hidden="true"></div>
 
     <script>
@@ -750,6 +750,6 @@ I noticed your recent post and had one short idea to improve reply rates."></tex
       })();
     </script>
 
-    <script src="/static/js/app.js?v=20260404-authpersist-1"></script>
+    <script src="/static/js/app.js?v=20260404-modal-fix-1"></script>
   </body>
 </html>
