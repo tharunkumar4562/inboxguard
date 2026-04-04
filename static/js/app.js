@@ -2336,28 +2336,51 @@ async function runCampaignDiagnosis() {
 
 async function runBlacklistCheck() {
     const domain = blacklistDomainInput ? String(blacklistDomainInput.value || "").trim() : "";
+    const runButton = runBlacklistCheckButton;
     if (!domain) {
         showError("Enter a domain first.");
         return;
     }
+    const previousLabel = runButton ? runButton.textContent : "Check Domain Risk";
     if (blacklistResultNode) {
         blacklistResultNode.textContent = "Checking domain risk...";
     }
+    if (runButton) {
+        runButton.disabled = true;
+        runButton.textContent = "Checking...";
+    }
     const payload = new FormData();
     payload.set("domain", domain);
-    const response = await fetch("/blacklist-check", { method: "POST", body: payload });
-    if (!response.ok) {
-        const message = await parseApiError(response, "Could not run blacklist check.");
-        if (blacklistResultNode) {
-            blacklistResultNode.textContent = message;
+    try {
+        const response = await fetch("/blacklist-check", { method: "POST", body: payload });
+        if (!response.ok) {
+            const message = await parseApiError(response, "Could not run blacklist check.");
+            if (blacklistResultNode) {
+                blacklistResultNode.textContent = message;
+            }
+            throw new Error(message);
         }
-        throw new Error(message);
-    }
-    const data = await response.json();
-    if (blacklistResultNode) {
-        blacklistResultNode.textContent = data.listed
-            ? `High risk: ${data.domain} appears in risk list. ${data.details}`
-            : `Low risk: ${data.domain} is not in current risk list. ${data.details}`;
+        const data = await response.json();
+        if (blacklistResultNode) {
+            blacklistResultNode.textContent = data.listed
+                ? `High risk: ${data.domain} appears in risk list. ${data.details}`
+                : `Low risk: ${data.domain} is not in current risk list. ${data.details}`;
+        }
+        if (runButton) {
+            runButton.textContent = data.listed ? "⚠️ Risk Found" : "✅ Clean";
+        }
+    } catch (error) {
+        if (runButton) {
+            runButton.textContent = "Error";
+        }
+        throw error;
+    } finally {
+        if (runButton) {
+            runButton.disabled = false;
+            setTimeout(() => {
+                runButton.textContent = previousLabel;
+            }, 1000);
+        }
     }
 }
 

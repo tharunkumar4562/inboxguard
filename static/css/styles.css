@@ -379,7 +379,7 @@ nav {
     display: block;
 }
 
-.main-area.tool-panel-open > :not(.topbar):not(.tool-pane):not(#pricing-modal) {
+.main-area.tool-panel-open> :not(.topbar):not(.tool-pane):not(#pricing-modal) {
     display: none !important;
 }
 
@@ -423,6 +423,48 @@ nav {
 
 .tool-pane .tool-pane-primary {
     width: 100%;
+}
+
+#campaign-debugger .tool-pane-primary {
+    border: 1px solid rgba(239, 68, 68, 0.35);
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    color: #fff;
+    box-shadow: 0 6px 18px rgba(239, 68, 68, 0.22);
+}
+
+#blacklist-checker .tool-pane-primary {
+    border: 1px solid rgba(239, 68, 68, 0.35);
+    background: linear-gradient(135deg, #ef4444, #b91c1c);
+    color: #fff;
+    box-shadow: 0 6px 18px rgba(239, 68, 68, 0.22);
+}
+
+#seed-inbox-tracker .tool-pane-primary {
+    border: 1px solid rgba(59, 130, 246, 0.35);
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    color: #fff;
+    box-shadow: 0 6px 18px rgba(59, 130, 246, 0.22);
+}
+
+#bulk-scan .tool-pane-primary {
+    border: 1px solid rgba(168, 85, 247, 0.35);
+    background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+    color: #fff;
+    box-shadow: 0 6px 18px rgba(139, 92, 246, 0.22);
+}
+
+#ops-api-team .tool-pane-primary {
+    border: 1px solid rgba(100, 116, 139, 0.35);
+    background: linear-gradient(135deg, #334155, #0f172a);
+    color: #e2e8f0;
+    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.24);
+}
+
+#operator-insights .tool-pane-primary {
+    border: 1px solid rgba(14, 165, 233, 0.35);
+    background: linear-gradient(135deg, #0ea5e9, #0284c7);
+    color: #fff;
+    box-shadow: 0 6px 18px rgba(14, 165, 233, 0.22);
 }
 
 .profile-shell {
@@ -704,6 +746,21 @@ select {
     font-size: 0.8rem;
 }
 
+.action-block {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.input-field {
+    width: 100%;
+    padding: 12px 14px;
+    border-radius: 10px;
+    background: #0c1628;
+    border: 1px solid var(--border-strong);
+    color: var(--text-primary);
+}
+
 .btn-danger,
 .btn-primary,
 .btn-secondary {
@@ -749,6 +806,30 @@ select {
     transform: scale(0.97);
 }
 
+.btn-action-primary {
+    width: 100%;
+    border: 1px solid rgba(239, 68, 68, 0.35);
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    color: #fff;
+    font-weight: 700;
+    border-radius: 10px;
+    padding: 14px 18px;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+    box-shadow: 0 6px 18px rgba(239, 68, 68, 0.25);
+}
+
+.btn-action-primary:hover {
+    transform: translateY(-2px);
+    filter: brightness(1.03);
+    box-shadow:
+        0 0 0 2px rgba(239, 68, 68, 0.28),
+        0 10px 24px rgba(239, 68, 68, 0.35);
+}
+
+.btn-action-primary:active {
+    transform: scale(0.98);
+}
+
 .scan-panel .btn-primary {
     width: 100%;
     margin-top: 12px;
@@ -764,6 +845,26 @@ select {
     background: #0f1a2e;
     color: var(--text-primary);
     padding: 10px 12px;
+    transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease, transform 0.18s ease;
+}
+
+.btn-secondary:hover {
+    background: #1f2937;
+    border-color: #4b5563;
+    color: #fff;
+    transform: translateY(-1px);
+}
+
+.btn-ghost {
+    border: 1px solid transparent;
+    background: transparent;
+    color: #9ca3af;
+    padding: 10px 12px;
+}
+
+.btn-ghost:hover {
+    color: #e5e7eb;
+    background: rgba(255, 255, 255, 0.04);
 }
 
 .link-action {

@@ -476,13 +476,13 @@ I noticed your recent post and had one short idea to improve reply rates."></tex
             <button type="button" class="tool-pane-head-close" data-tool-close>Close</button>
           </div>
           <p class="micro">Quickly check if your sender domain appears in a known risky list.</p>
-          <div class="inline-fields" style="margin-top: 8px;">
+          <div class="action-block" style="margin-top: 8px;">
             <div>
               <label for="blacklist-domain">Domain</label>
-              <input id="blacklist-domain" type="text" placeholder="yourdomain.com" />
+              <input id="blacklist-domain" class="input-field" type="text" placeholder="yourdomain.com" />
             </div>
+            <button id="run-blacklist-check" type="button" class="btn-action-primary tool-pane-primary">Check Domain Risk</button>
           </div>
-          <button id="run-blacklist-check" type="button" class="btn-secondary tool-pane-primary" style="margin-top: 10px;">Check Domain Risk</button>
           <p id="blacklist-result" class="micro" style="margin-top: 8px;">No check yet.</p>
         </section>
 
