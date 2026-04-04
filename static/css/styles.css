@@ -326,15 +326,16 @@ nav {
     display: block;
     position: fixed;
     top: 66px;
-    left: calc(278px + ((100vw - 298px) - min(1024px, (100vw - 298px))) / 2);
-    width: min(1024px, calc(100vw - 298px));
-    right: auto;
+    left: 278px;
+    right: 20px;
     bottom: 20px;
+    width: min(1080px, calc(100vw - 340px));
+    margin-left: auto;
+    margin-right: auto;
     z-index: 70;
     overflow: auto;
     margin-top: 0 !important;
     border: 1px solid #334155;
-    border-radius: 16px;
     background: #0f1d33;
     box-shadow: 0 24px 48px rgba(2, 6, 23, 0.55);
 }
@@ -1432,6 +1433,7 @@ select {
         right: 12px;
         top: 14px;
         bottom: 14px;
+        width: auto;
     }
 }
 
