@@ -187,19 +187,11 @@ const errorBanner = document.createElement("div");
 errorBanner.id = "error-banner";
 errorBanner.className = "hidden";
 document.body.appendChild(errorBanner);
-let errorBannerTimer = null;
 
 function showError(message) {
-    if (errorBannerTimer) {
-        clearTimeout(errorBannerTimer);
-        errorBannerTimer = null;
-    }
     errorBanner.textContent = message;
     errorBanner.classList.remove("hidden");
-    errorBannerTimer = setTimeout(() => {
-        errorBanner.classList.add("hidden");
-        errorBannerTimer = null;
-    }, 4200);
+    setTimeout(() => errorBanner.classList.add("hidden"), 3800);
 }
 
 function trackEvent(eventName, params) {
@@ -305,6 +297,27 @@ function animateProgress(to = 100) {
             progressBarNode.style.width = `${Math.max(0, Math.min(100, val))}%`;
         },
     });
+}
+
+function refreshToolPaneData(toolKey) {
+    const key = String(toolKey || "").trim().toLowerCase();
+    if (!key) {
+        return;
+    }
+
+    if (key === "seed") {
+        refreshSeedTests().catch(() => null);
+        return;
+    }
+    if (key === "ops") {
+        listApiKeys().catch(() => null);
+        listTeams().catch(() => null);
+        return;
+    }
+    if (key === "insights") {
+        refreshOutcomeStats().catch(() => null);
+        refreshJobs().catch(() => null);
+    }
 }
 
 function revealText(el, text) {
@@ -2618,6 +2631,17 @@ if (cancelSubscriptionButton) {
 }
 
 if (dashboardTab) {
+    const toolNavButtons = Array.from(document.querySelectorAll(".tool-nav-btn"));
+    toolNavButtons.forEach((button) => {
+        button.addEventListener("click", () => {
+            const key = String(button.getAttribute("data-tool") || "");
+            const opened = button.classList.contains("active");
+            if (opened) {
+                refreshToolPaneData(key);
+            }
+        });
+    });
+
     if (threatScanTab) {
         threatScanTab.addEventListener("click", () => activateTab("threat-scan"));
     }
