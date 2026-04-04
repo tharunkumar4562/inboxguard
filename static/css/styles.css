@@ -492,7 +492,7 @@ nav {
     display: block;
 }
 
-.main-area.tool-panel-open> :not(.topbar):not(.tool-pane):not(#pricing-modal) {
+.main-area.tool-panel-open> :not(.topbar):not(#tool-panel):not(#pricing-modal) {
     display: none !important;
 }
 
