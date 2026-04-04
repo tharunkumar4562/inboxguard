@@ -102,55 +102,55 @@ const feedbackPromotionsButton = document.getElementById("feedback-promotions");
 const feedbackStatusNode = document.getElementById("feedback-status");
 const realityStripTitleNode = document.getElementById("reality-strip-title");
 const realityStripBodyNode = document.getElementById("reality-strip-body");
-let metricOpenRateInput = document.getElementById("cd-open") || document.getElementById("metric-open-rate");
-let metricReplyRateInput = document.getElementById("cd-reply") || document.getElementById("metric-reply-rate");
-let metricBounceRateInput = document.getElementById("cd-bounce") || document.getElementById("metric-bounce-rate");
-let metricSentCountInput = document.getElementById("cd-sent") || document.getElementById("metric-sent-count");
-let runDiagnosisButton = document.getElementById("cd-run") || document.getElementById("run-diagnosis");
-let diagnosisOutput = document.getElementById("diagnosis-output");
-let diagnosisPrimaryNode = document.getElementById("diagnosis-primary");
-let diagnosisConfidenceNode = document.getElementById("diagnosis-confidence");
-let diagnosisWhyNode = document.getElementById("diagnosis-why");
-let diagnosisActionsNode = document.getElementById("diagnosis-actions");
-let campaignDebuggerResultNode = document.getElementById("cd-result");
-let blacklistDomainInput = document.getElementById("blacklist-domain");
-let runBlacklistCheckButton = document.getElementById("run-blacklist-check");
-let blacklistResultNode = document.getElementById("blacklist-result");
-let seedCampaignInput = document.getElementById("seed-campaign");
-let seedProviderInput = document.getElementById("seed-provider");
-let seedInboxCountInput = document.getElementById("seed-inbox-count");
-let seedSpamCountInput = document.getElementById("seed-spam-count");
-let saveSeedTestButton = document.getElementById("save-seed-test");
-let seedTestListNode = document.getElementById("seed-test-list");
-let runSeedSyncButton = document.getElementById("run-seed-sync");
-let runSeedAutoButton = document.getElementById("run-seed-auto");
-let bulkFileInput = document.getElementById("bulk-file");
-let runBulkScanButton = document.getElementById("run-bulk-scan");
-let bulkResultsNode = document.getElementById("bulk-results");
-let apiKeyNameInput = document.getElementById("api-key-name");
-let createApiKeyButton = document.getElementById("create-api-key");
-let listApiKeysButton = document.getElementById("list-api-keys");
-let revokeApiKeyButton = document.getElementById("revoke-api-key");
-let revokeKeyIdInput = document.getElementById("revoke-key-id");
-let apiKeyListNode = document.getElementById("api-key-list");
-let teamNameInput = document.getElementById("team-name");
-let createTeamButton = document.getElementById("create-team");
-let listTeamsButton = document.getElementById("list-teams");
-let addTeamMemberButton = document.getElementById("add-team-member");
-let teamMemberTeamIdInput = document.getElementById("team-member-team-id");
-let teamMemberEmailInput = document.getElementById("team-member-email");
-let teamMemberRoleInput = document.getElementById("team-member-role");
-let teamListNode = document.getElementById("team-list");
-let opsOutputNode = document.getElementById("ops-output");
-let refreshOutcomeStatsButton = document.getElementById("refresh-outcome-stats");
-let refreshJobsButton = document.getElementById("refresh-jobs");
-let outcomeStatsListNode = document.getElementById("outcome-stats-list");
-let jobListNode = document.getElementById("job-list");
-let inlinePlanTypeInput = document.getElementById("inline-plan-type");
-let refreshPlansButton = document.getElementById("refresh-plans");
-let plansOutputNode = document.getElementById("plans-output");
-let requestAccessButton = document.getElementById("request-access");
-let accessRequestEmailInput = document.getElementById("access-request-email");
+const metricOpenRateInput = document.getElementById("cd-open") || document.getElementById("metric-open-rate");
+const metricReplyRateInput = document.getElementById("cd-reply") || document.getElementById("metric-reply-rate");
+const metricBounceRateInput = document.getElementById("cd-bounce") || document.getElementById("metric-bounce-rate");
+const metricSentCountInput = document.getElementById("cd-sent") || document.getElementById("metric-sent-count");
+const runDiagnosisButton = document.getElementById("cd-run") || document.getElementById("run-diagnosis");
+const diagnosisOutput = document.getElementById("diagnosis-output");
+const diagnosisPrimaryNode = document.getElementById("diagnosis-primary");
+const diagnosisConfidenceNode = document.getElementById("diagnosis-confidence");
+const diagnosisWhyNode = document.getElementById("diagnosis-why");
+const diagnosisActionsNode = document.getElementById("diagnosis-actions");
+const campaignDebuggerResultNode = document.getElementById("cd-result");
+const blacklistDomainInput = document.getElementById("blacklist-domain");
+const runBlacklistCheckButton = document.getElementById("run-blacklist-check");
+const blacklistResultNode = document.getElementById("blacklist-result");
+const seedCampaignInput = document.getElementById("seed-campaign");
+const seedProviderInput = document.getElementById("seed-provider");
+const seedInboxCountInput = document.getElementById("seed-inbox-count");
+const seedSpamCountInput = document.getElementById("seed-spam-count");
+const saveSeedTestButton = document.getElementById("save-seed-test");
+const seedTestListNode = document.getElementById("seed-test-list");
+const runSeedSyncButton = document.getElementById("run-seed-sync");
+const runSeedAutoButton = document.getElementById("run-seed-auto");
+const bulkFileInput = document.getElementById("bulk-file");
+const runBulkScanButton = document.getElementById("run-bulk-scan");
+const bulkResultsNode = document.getElementById("bulk-results");
+const apiKeyNameInput = document.getElementById("api-key-name");
+const createApiKeyButton = document.getElementById("create-api-key");
+const listApiKeysButton = document.getElementById("list-api-keys");
+const revokeApiKeyButton = document.getElementById("revoke-api-key");
+const revokeKeyIdInput = document.getElementById("revoke-key-id");
+const apiKeyListNode = document.getElementById("api-key-list");
+const teamNameInput = document.getElementById("team-name");
+const createTeamButton = document.getElementById("create-team");
+const listTeamsButton = document.getElementById("list-teams");
+const addTeamMemberButton = document.getElementById("add-team-member");
+const teamMemberTeamIdInput = document.getElementById("team-member-team-id");
+const teamMemberEmailInput = document.getElementById("team-member-email");
+const teamMemberRoleInput = document.getElementById("team-member-role");
+const teamListNode = document.getElementById("team-list");
+const opsOutputNode = document.getElementById("ops-output");
+const refreshOutcomeStatsButton = document.getElementById("refresh-outcome-stats");
+const refreshJobsButton = document.getElementById("refresh-jobs");
+const outcomeStatsListNode = document.getElementById("outcome-stats-list");
+const jobListNode = document.getElementById("job-list");
+const inlinePlanTypeInput = document.getElementById("inline-plan-type");
+const refreshPlansButton = document.getElementById("refresh-plans");
+const plansOutputNode = document.getElementById("plans-output");
+const requestAccessButton = document.getElementById("request-access");
+const accessRequestEmailInput = document.getElementById("access-request-email");
 
 const loadSteps = [
     "Checking content signals...",
@@ -188,14 +188,6 @@ const errorBanner = document.createElement("div");
 errorBanner.id = "error-banner";
 errorBanner.className = "hidden";
 document.body.appendChild(errorBanner);
-
-let workspaceNode = document.getElementById("workspace");
-let mainPanelNode = document.getElementById("main-panel") || document.querySelector(".main-area");
-let toolPanelNode = document.getElementById("tool-panel");
-let toolTitleNode = document.getElementById("tool-title");
-let toolContentNode = document.getElementById("tool-content");
-let activeToolKey = "";
-let toolCloseTimer = null;
 
 function showError(message) {
     errorBanner.textContent = message;
@@ -243,163 +235,6 @@ function trackEvent(eventName, params) {
 
 function sleep(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-function openTool(toolId, title) {
-    const key = String(toolId || "").trim().toLowerCase();
-    const template = document.getElementById(`tool-${key}`);
-    if (!template || !toolContentNode || !toolPanelNode) {
-        showError(`Missing tool template for ${key || "unknown"}.`);
-        return;
-    }
-
-    activeToolKey = key;
-    if (toolCloseTimer) {
-        clearTimeout(toolCloseTimer);
-        toolCloseTimer = null;
-    }
-    toolContentNode.innerHTML = "";
-    toolContentNode.appendChild(template.content.cloneNode(true));
-
-    if (toolTitleNode) {
-        toolTitleNode.textContent = title || template.getAttribute("data-title") || key;
-    }
-
-    toolPanelNode.classList.remove("hidden");
-    requestAnimationFrame(() => {
-        toolPanelNode.classList.add("active");
-    });
-
-    document.body.classList.add("tool-open");
-    wireTool(key);
-    refreshToolPaneData(key);
-
-    const focusTarget = toolContentNode.querySelector(".tool-pane-primary, input, textarea, select, button:not([data-tool-close])");
-    if (focusTarget && typeof focusTarget.focus === "function") {
-        setTimeout(() => focusTarget.focus(), 50);
-    }
-}
-
-function closeTool() {
-    if (!toolPanelNode || !toolContentNode) {
-        return;
-    }
-
-    toolPanelNode.classList.remove("active");
-    document.body.classList.remove("tool-open");
-    activeToolKey = "";
-
-    toolCloseTimer = window.setTimeout(() => {
-        toolPanelNode.classList.add("hidden");
-        toolContentNode.innerHTML = "";
-        toolCloseTimer = null;
-    }, 320);
-}
-
-function wireTool(toolId) {
-    const key = String(toolId || "").trim().toLowerCase();
-    const root = toolContentNode;
-    if (!root) {
-        return;
-    }
-
-    root.querySelectorAll("[data-tool-close]").forEach((button) => {
-        button.onclick = () => closeTool();
-    });
-
-    if (key === "campaign") {
-        metricOpenRateInput = root.querySelector("#cd-open") || root.querySelector("#metric-open-rate");
-        metricReplyRateInput = root.querySelector("#cd-reply") || root.querySelector("#metric-reply-rate");
-        metricBounceRateInput = root.querySelector("#cd-bounce") || root.querySelector("#metric-bounce-rate");
-        metricSentCountInput = root.querySelector("#cd-sent") || root.querySelector("#metric-sent-count");
-        runDiagnosisButton = root.querySelector("#cd-run") || root.querySelector("#run-diagnosis");
-        diagnosisOutput = root.querySelector("#diagnosis-output");
-        diagnosisPrimaryNode = root.querySelector("#diagnosis-primary");
-        diagnosisConfidenceNode = root.querySelector("#diagnosis-confidence");
-        diagnosisWhyNode = root.querySelector("#diagnosis-why");
-        diagnosisActionsNode = root.querySelector("#diagnosis-actions");
-        campaignDebuggerResultNode = root.querySelector("#cd-result");
-        if (runDiagnosisButton) {
-            runDiagnosisButton.onclick = () => runCampaignDiagnosis().catch((error) => showError(error && error.message ? error.message : "Could not diagnose campaign."));
-        }
-        return;
-    }
-
-    if (key === "domain") {
-        blacklistDomainInput = root.querySelector("#blacklist-domain") || root.querySelector("#domain-input");
-        runBlacklistCheckButton = root.querySelector("#run-blacklist-check") || root.querySelector("#check-domain");
-        blacklistResultNode = root.querySelector("#blacklist-result") || root.querySelector("#domain-result");
-        if (runBlacklistCheckButton) {
-            runBlacklistCheckButton.onclick = () => runBlacklistCheck().catch((error) => showError(error && error.message ? error.message : "Could not check domain risk."));
-        }
-        return;
-    }
-
-    if (key === "seed") {
-        seedCampaignInput = root.querySelector("#seed-campaign");
-        seedProviderInput = root.querySelector("#seed-provider");
-        seedInboxCountInput = root.querySelector("#seed-inbox-count");
-        seedSpamCountInput = root.querySelector("#seed-spam-count");
-        saveSeedTestButton = root.querySelector("#save-seed-test");
-        seedTestListNode = root.querySelector("#seed-test-list");
-        runSeedSyncButton = root.querySelector("#run-seed-sync") || root.querySelector("#run-seed");
-        runSeedAutoButton = root.querySelector("#run-seed-auto");
-        if (saveSeedTestButton) {
-            saveSeedTestButton.onclick = () => saveSeedTest().catch((error) => showError(error && error.message ? error.message : "Could not save seed test."));
-        }
-        if (runSeedSyncButton) {
-            runSeedSyncButton.onclick = () => runSeedSync().catch((error) => showError(error && error.message ? error.message : "Could not run instant seed probe."));
-        }
-        if (runSeedAutoButton) {
-            runSeedAutoButton.onclick = () => runSeedAuto().catch((error) => showError(error && error.message ? error.message : "Could not run automated seed test."));
-        }
-        return;
-    }
-
-    if (key === "bulk") {
-        bulkFileInput = root.querySelector("#bulk-file");
-        runBulkScanButton = root.querySelector("#run-bulk-scan") || root.querySelector("#run-bulk");
-        bulkResultsNode = root.querySelector("#bulk-results") || root.querySelector("#bulk-result");
-        if (runBulkScanButton) {
-            runBulkScanButton.onclick = () => runBulkScan().catch((error) => showError(error && error.message ? error.message : "Could not run bulk scan."));
-        }
-        return;
-    }
-
-    if (key === "api") {
-        apiKeyNameInput = root.querySelector("#api-key-name") || root.querySelector("#api-label");
-        createApiKeyButton = root.querySelector("#create-api-key") || root.querySelector("#create-api");
-        listApiKeysButton = root.querySelector("#list-api-keys");
-        revokeApiKeyButton = root.querySelector("#revoke-api-key");
-        revokeKeyIdInput = root.querySelector("#revoke-key-id");
-        apiKeyListNode = root.querySelector("#api-key-list");
-        teamNameInput = root.querySelector("#team-name");
-        createTeamButton = root.querySelector("#create-team");
-        listTeamsButton = root.querySelector("#list-teams");
-        addTeamMemberButton = root.querySelector("#add-team-member");
-        teamMemberTeamIdInput = root.querySelector("#team-member-team-id");
-        teamMemberEmailInput = root.querySelector("#team-member-email");
-        teamMemberRoleInput = root.querySelector("#team-member-role");
-        teamListNode = root.querySelector("#team-list");
-        opsOutputNode = root.querySelector("#ops-output");
-        if (createApiKeyButton) createApiKeyButton.onclick = () => createApiKey().catch((error) => showError(error && error.message ? error.message : "Could not create API key."));
-        if (listApiKeysButton) listApiKeysButton.onclick = () => listApiKeys().catch((error) => showError(error && error.message ? error.message : "Could not load API keys."));
-        if (revokeApiKeyButton) revokeApiKeyButton.onclick = () => revokeApiKey().catch((error) => showError(error && error.message ? error.message : "Could not revoke API key."));
-        if (createTeamButton) createTeamButton.onclick = () => createTeam().catch((error) => showError(error && error.message ? error.message : "Could not create team."));
-        if (listTeamsButton) listTeamsButton.onclick = () => listTeams().catch((error) => showError(error && error.message ? error.message : "Could not load teams."));
-        if (addTeamMemberButton) addTeamMemberButton.onclick = () => addTeamMember().catch((error) => showError(error && error.message ? error.message : "Could not add team member."));
-        return;
-    }
-
-    if (key === "insights") {
-        refreshOutcomeStatsButton = root.querySelector("#refresh-outcome-stats");
-        refreshJobsButton = root.querySelector("#refresh-jobs");
-        outcomeStatsListNode = root.querySelector("#outcome-stats-list");
-        jobListNode = root.querySelector("#job-list");
-        if (refreshOutcomeStatsButton) refreshOutcomeStatsButton.onclick = () => refreshOutcomeStats().catch((error) => showError(error && error.message ? error.message : "Could not load outcome stats."));
-        if (refreshJobsButton) refreshJobsButton.onclick = () => refreshJobs().catch((error) => showError(error && error.message ? error.message : "Could not load async jobs."));
-        return;
-    }
 }
 
 // Lightweight spring interpolator for physics-like, interruptible motion.
@@ -509,7 +344,7 @@ function refreshToolPaneData(toolKey) {
         });
         return;
     }
-    if (key === "api") {
+    if (key === "ops") {
         listApiKeys().catch((error) => {
             const msg = error && error.message ? error.message : "Could not load API keys.";
             setListMessage(apiKeyListNode, msg);
@@ -2899,19 +2734,15 @@ if (cancelSubscriptionButton) {
 }
 
 if (dashboardTab) {
-    const toolNavButtons = Array.from(document.querySelectorAll(".tool-nav-btn"));
-    toolNavButtons.forEach((button) => {
-        button.addEventListener("click", () => {
-            const key = String(button.getAttribute("data-tool") || "").trim().toLowerCase();
-            const title = String(button.textContent || key).trim();
-            openTool(key, title);
-        });
-    });
-
-    window.openTool = openTool;
-    window.closeTool = closeTool;
-    window.igOpenToolPane = openTool;
-    window.igCloseToolPane = closeTool;
+    window.igOnToolPaneOpened = (key, pane) => {
+        refreshToolPaneData(key);
+        const primary = pane && pane.querySelector
+            ? pane.querySelector(".tool-pane-primary")
+            : null;
+        if (primary && typeof primary.focus === "function") {
+            setTimeout(() => primary.focus(), 30);
+        }
+    };
 
     if (threatScanTab) {
         threatScanTab.addEventListener("click", () => activateTab("threat-scan"));
