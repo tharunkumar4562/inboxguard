@@ -1005,15 +1005,20 @@ function forceOpenToolPane(tool) {
     allButtons.forEach((button) => button.classList.remove("active"));
 
     const pane = document.querySelector(`.tool-pane[data-tool-pane="${String(tool)}"]`);
+    const button = document.querySelector(`.tool-nav-btn[data-tool="${String(tool)}"]`);
+    const mainArea = document.querySelector(".main-area");
+
     if (pane) {
         pane.classList.add("active");
+        if (mainArea) {
+            mainArea.classList.add("tool-panel-open");
+        }
         const firstInput = pane.querySelector("input,select,textarea,button");
         if (firstInput && typeof firstInput.focus === "function") {
             setTimeout(() => firstInput.focus(), 60);
         }
     }
 
-    const button = document.querySelector(`.tool-nav-btn[data-tool="${String(tool)}"]`);
     if (button) {
         button.classList.add("active");
     }
@@ -1360,7 +1365,7 @@ function renderBiggestRisk(summary, findings) {
 
     if (trustHookNode) {
         const samples = latestLearningProfile && Number(latestLearningProfile.sample_size || 0) > 0
-            ? ` Model trained on ${latestLearningProfile.sample_size} outcome(s).`
+            ? ` Learned from ${latestLearningProfile.sample_size} recorded outcome(s).`
             : "";
         trustHookNode.textContent = `Bulk-pattern check.${samples}`;
     }
@@ -2439,6 +2444,7 @@ async function sendFeedback(outcome) {
         if (feedbackStatusNode) {
             feedbackStatusNode.textContent = message;
         }
+        refreshOutcomeStats().catch(() => null);
         showError(`${message} (${samples} learned outcomes)`);
     } catch (error) {
         showError(error && error.message ? error.message : "Could not save feedback");
@@ -2822,7 +2828,8 @@ async function loadUserTokens() {
 }
 
 async function handleRequestAccess() {
-    const email = window.prompt("Enter your email:");
+    const inlineEmail = String(accessRequestEmailInput && accessRequestEmailInput.value ? accessRequestEmailInput.value : "").trim();
+    const email = inlineEmail || window.prompt("Enter your email:");
     if (!email) {
         return;
     }
@@ -3021,7 +3028,7 @@ function wireUiEvents() {
     if (requestAccessButton) {
         requestAccessButton.addEventListener("click", (event) => {
             event.preventDefault();
-            handleRequestAccess().catch((error) => {
+            requestAccess().catch((error) => {
                 showError(error && error.message ? error.message : "Could not submit access request.");
             });
         });
