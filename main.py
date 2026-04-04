@@ -16,6 +16,7 @@ import smtplib
 from typing import Any, Optional
 from uuid import uuid4
 from email.message import EmailMessage
+import time
 
 import httpx
 
@@ -23,6 +24,7 @@ from fastapi import FastAPI, Form, Request, HTTPException, Header, BackgroundTas
 from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse, Response, JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from pydantic import BaseModel
 from starlette.middleware.sessions import SessionMiddleware
 from jinja2 import TemplateNotFound, TemplateError
 from authlib.integrations.starlette_client import OAuth
@@ -143,6 +145,20 @@ if GOOGLE_AUTH_CONFIGURED:
         server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
         client_kwargs={"scope": "openid email profile"},
     )
+
+
+class CampaignDebuggerInput(BaseModel):
+    open_rate: float
+    reply_rate: float
+    bounce_rate: float
+    sent: int
+
+
+class SeedTestInput(BaseModel):
+    subject: str
+    body: str
+    campaign_name: str = "Seed Campaign"
+    wait_seconds: int = 6
 
 
 def _auth_db_conn() -> sqlite3.Connection:
@@ -1238,12 +1254,17 @@ def _send_seed_probe(subject_token: str, body_text: str, recipients: list[str]) 
         return False
 
 
-def _run_seed_test(subject_token: str, body_text: str) -> dict[str, str]:
+def _run_seed_test(subject_token: str, body_text: str, wait_seconds: int = 5) -> dict[str, str]:
     accounts = _seed_accounts()
     if not accounts:
         raise HTTPException(status_code=503, detail="Seed accounts are not configured")
 
     _send_seed_probe(subject_token, body_text, [a["email"] for a in accounts if a.get("email")])
+
+    # Allow mailbox indexing and provider categorization to settle before IMAP checks.
+    delay = max(0, min(20, int(wait_seconds or 0)))
+    if delay:
+        time.sleep(delay)
 
     results: dict[str, str] = {}
     for account in accounts:
@@ -1265,6 +1286,123 @@ def _run_seed_test(subject_token: str, body_text: str) -> dict[str, str]:
             logger.exception("Seed IMAP check failed for provider=%s", provider)
             results[provider] = "unknown"
     return results
+
+
+def _campaign_debugger_logic(open_rate: float, reply_rate: float, bounce_rate: float, sent_count: int) -> dict[str, Any]:
+    o = max(0.0, min(100.0, float(open_rate or 0.0)))
+    r = max(0.0, min(100.0, float(reply_rate or 0.0)))
+    b = max(0.0, min(100.0, float(bounce_rate or 0.0)))
+    sent = max(0, int(sent_count or 0))
+
+    severity_score = 0
+    diagnosis = "Mixed issue"
+    confidence = "medium"
+    why = "Signals are mixed. Start with highest-impact fixes below and re-test on a smaller batch."
+    actions: list[str] = [
+        "Run a 50-email controlled test after each fix to isolate impact.",
+        "Reduce links and heavy CTA pressure in first-touch emails.",
+        "Validate SPF, DKIM, and DMARC alignment for sending domain.",
+    ]
+    issue = "No Major Issues"
+    reason = "Your campaign metrics look healthy."
+    action = "Scale this campaign."
+
+    if b >= 5.0:
+        diagnosis = "List quality / deliverability issue"
+        confidence = "high"
+        severity_score = 90
+        why = "Bounce rate is elevated, which usually indicates invalid contacts or sender trust issues."
+        actions = [
+            "Clean the list immediately: remove invalid and risky addresses.",
+            "Pause high-volume sends until bounce rate drops below 3%.",
+            "Verify domain authentication and sending reputation before next batch.",
+        ]
+        issue = "High Bounce Rate"
+        reason = "Your email list quality is poor or domains are invalid."
+        action = "Clean your list and verify emails before sending."
+    elif o < 20.0:
+        diagnosis = "Deliverability issue"
+        confidence = "high"
+        severity_score = 86
+        why = "Very low open rate strongly suggests spam-folder placement or weak sender trust."
+        actions = [
+            "Check SPF, DKIM, and DMARC alignment first.",
+            "Reduce suspicious patterns: urgency phrases, too many links, promotional tone.",
+            "Warm domain gradually and test with smaller sends before scaling.",
+        ]
+        issue = "Low Open Rate"
+        reason = "Your emails are likely going to spam or subject line trust is weak."
+        action = "Improve subject line and deliverability baseline."
+    elif o < 30.0:
+        diagnosis = "Deliverability issue"
+        confidence = "high"
+        severity_score = 82
+        why = "Low open rate usually indicates inbox placement problems rather than copy quality."
+        actions = [
+            "Check SPF, DKIM, and DMARC alignment first.",
+            "Reduce suspicious patterns: urgency phrases, too many links, promotional tone.",
+            "Warm domain gradually and test with smaller sends before scaling.",
+        ]
+        issue = "Low Open Rate"
+        reason = "Inbox placement looks weak for this campaign."
+        action = "Fix deliverability posture before scaling."
+    elif o >= 40.0 and r < 2.0:
+        diagnosis = "Copy / targeting issue"
+        confidence = "high"
+        severity_score = 68
+        why = "Healthy opens but weak replies suggest the message or audience fit is off."
+        actions = [
+            "Rewrite first two lines for relevance to recipient context.",
+            "Use one low-pressure CTA with a clear, specific ask.",
+            "Tighten ICP targeting and segment by persona before next send.",
+        ]
+        issue = "Low Reply Rate"
+        reason = "Your email content is being opened but not engaging enough to reply."
+        action = "Improve personalization and CTA clarity."
+    elif o >= 30.0 and o < 40.0 and r < 2.0:
+        diagnosis = "Mixed deliverability + copy issue"
+        confidence = "medium"
+        severity_score = 74
+        why = "Both opens and replies are under target, suggesting placement and message friction together."
+        actions = [
+            "Fix technical/authentication baseline first.",
+            "Then test a safer subject line and simpler body copy.",
+            "Compare control vs rewritten variant on equal audience slices.",
+        ]
+        issue = "Mixed Performance Issue"
+        reason = "Both deliverability and message effectiveness need correction."
+        action = "Fix technical trust first, then iterate copy variant tests."
+
+    if sent > 0 and sent < 100:
+        actions.append("Sample size is small; validate with a larger controlled batch before major changes.")
+    if sent >= 1000 and o < 35:
+        actions.append("High volume with weak opens: pause scale-up until placement stabilizes.")
+
+    if severity_score == 0:
+        severity_score = 50 if r < 2 else 35
+
+    return {
+        "ok": True,
+        "issue": issue,
+        "reason": reason,
+        "action": action,
+        "diagnosis": diagnosis,
+        "confidence": confidence,
+        "why": why,
+        "actions": actions,
+        "severity_score": severity_score,
+        "benchmarks": {
+            "open_rate_target_min": 35.0,
+            "reply_rate_target_min": 2.0,
+            "bounce_rate_target_max": 3.0,
+        },
+        "inputs": {
+            "open_rate": o,
+            "reply_rate": r,
+            "bounce_rate": b,
+            "sent_count": sent,
+        },
+    }
 
 
 def _record_email_outcome(user_id: int, score: int, outcome: str, risk_band: str = "") -> None:
@@ -2148,9 +2286,10 @@ def seed_run(
     campaign_name: str = Form("Seed Campaign"),
     subject_token: str = Form(""),
     body_text: str = Form("InboxGuard seed probe"),
+    wait_seconds: int = Form(5),
 ):
     token = (subject_token or "").strip() or f"IG-{secrets.token_hex(4)}"
-    results = _run_seed_test(token, body_text)
+    results = _run_seed_test(token, body_text, wait_seconds=wait_seconds)
     inbox_count = sum(1 for value in results.values() if value == "inbox")
     spam_count = sum(1 for value in results.values() if value == "spam")
     user = _get_session_user(request)
@@ -3076,7 +3215,7 @@ def seed_run_async(
         retries = 0
         while retries <= ASYNC_JOB_MAX_RETRIES:
             try:
-                results = _run_seed_test(token, body_text)
+                results = _run_seed_test(token, body_text, wait_seconds=5)
                 inbox_count = sum(1 for value in results.values() if value == "inbox")
                 spam_count = sum(1 for value in results.values() if value == "spam")
                 _save_seed_test(int(user["id"]) if user else None, campaign_name, "multi", inbox_count, spam_count, json.dumps(results))
@@ -3136,88 +3275,48 @@ def diagnose_campaign(
     bounce_rate: float = Form(0.0),
     sent_count: int = Form(0),
 ):
-    o = max(0.0, min(100.0, float(open_rate or 0.0)))
-    r = max(0.0, min(100.0, float(reply_rate or 0.0)))
-    b = max(0.0, min(100.0, float(bounce_rate or 0.0)))
-    sent = max(0, int(sent_count or 0))
-    severity_score = 0
+    return _campaign_debugger_logic(open_rate, reply_rate, bounce_rate, sent_count)
 
-    diagnosis = "Mixed issue"
-    confidence = "medium"
-    why = "Signals are mixed. Start with highest-impact fixes below and re-test on a smaller batch."
-    actions: list[str] = [
-        "Run a 50-email controlled test after each fix to isolate impact.",
-        "Reduce links and heavy CTA pressure in first-touch emails.",
-        "Validate SPF, DKIM, and DMARC alignment for sending domain.",
-    ]
 
-    if b >= 5.0:
-        diagnosis = "List quality / deliverability issue"
-        confidence = "high"
-        severity_score = 90
-        why = "Bounce rate is elevated, which usually indicates invalid contacts or sender trust issues."
-        actions = [
-            "Clean the list immediately: remove invalid and risky addresses.",
-            "Pause high-volume sends until bounce rate drops below 3%.",
-            "Verify domain authentication and sending reputation before next batch.",
-        ]
-    elif o < 30.0:
-        diagnosis = "Deliverability issue"
-        confidence = "high"
-        severity_score = 82
-        why = "Low open rate usually indicates inbox placement problems rather than copy quality."
-        actions = [
-            "Check SPF, DKIM, and DMARC alignment first.",
-            "Reduce suspicious patterns: urgency phrases, too many links, promotional tone.",
-            "Warm domain gradually and test with smaller sends before scaling.",
-        ]
-    elif o >= 40.0 and r < 2.0:
-        diagnosis = "Copy / targeting issue"
-        confidence = "high"
-        severity_score = 68
-        why = "Healthy opens but weak replies suggest the message or audience fit is off."
-        actions = [
-            "Rewrite first two lines for relevance to recipient context.",
-            "Use one low-pressure CTA with a clear, specific ask.",
-            "Tighten ICP targeting and segment by persona before next send.",
-        ]
-    elif o >= 30.0 and o < 40.0 and r < 2.0:
-        diagnosis = "Mixed deliverability + copy issue"
-        confidence = "medium"
-        severity_score = 74
-        why = "Both opens and replies are under target, suggesting placement and message friction together."
-        actions = [
-            "Fix technical/authentication baseline first.",
-            "Then test a safer subject line and simpler body copy.",
-            "Compare control vs rewritten variant on equal audience slices.",
-        ]
+@app.post("/campaign-debugger")
+def campaign_debugger(data: CampaignDebuggerInput):
+    return _campaign_debugger_logic(data.open_rate, data.reply_rate, data.bounce_rate, data.sent)
 
-    if sent > 0 and sent < 100:
-        actions.append("Sample size is small; validate with a larger controlled batch before major changes.")
-    if sent >= 1000 and o < 35:
-        actions.append("High volume with weak opens: pause scale-up until placement stabilizes.")
 
-    if severity_score == 0:
-        severity_score = 50 if r < 2 else 35
+@app.post("/seed-test")
+def seed_test(request: Request, data: SeedTestInput):
+    campaign_name = str(data.campaign_name or "Seed Campaign").strip() or "Seed Campaign"
+    subject = str(data.subject or "InboxGuard Seed Test").strip() or "InboxGuard Seed Test"
+    body = str(data.body or "InboxGuard seed probe").strip() or "InboxGuard seed probe"
+    wait_seconds = max(0, min(20, int(data.wait_seconds or 6)))
+    test_id = f"IG-{uuid4().hex[:10]}"
+    subject_token = f"{test_id}:{subject[:80]}"
+
+    results = _run_seed_test(subject_token, body, wait_seconds=wait_seconds)
+    placements = [{"provider": provider, "placement": placement} for provider, placement in results.items()]
+    summary = {
+        "inbox": sum(1 for value in results.values() if value == "inbox"),
+        "spam": sum(1 for value in results.values() if value == "spam"),
+        "promotions": sum(1 for value in results.values() if value == "promotions"),
+        "unknown": sum(1 for value in results.values() if value == "unknown"),
+    }
+
+    user = _get_session_user(request)
+    _save_seed_test(
+        int(user["id"]) if user else None,
+        campaign_name,
+        "multi",
+        int(summary["inbox"]),
+        int(summary["spam"]),
+        json.dumps({"test_id": test_id, "subject_token": subject_token, "results": results}),
+    )
 
     return {
         "ok": True,
-        "diagnosis": diagnosis,
-        "confidence": confidence,
-        "why": why,
-        "actions": actions,
-        "severity_score": severity_score,
-        "benchmarks": {
-            "open_rate_target_min": 35.0,
-            "reply_rate_target_min": 2.0,
-            "bounce_rate_target_max": 3.0,
-        },
-        "inputs": {
-            "open_rate": o,
-            "reply_rate": r,
-            "bounce_rate": b,
-            "sent_count": sent,
-        },
+        "test_id": test_id,
+        "subject_token": subject_token,
+        "placements": placements,
+        "summary": summary,
     }
 
 

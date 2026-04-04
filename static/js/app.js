@@ -102,16 +102,17 @@ const feedbackPromotionsButton = document.getElementById("feedback-promotions");
 const feedbackStatusNode = document.getElementById("feedback-status");
 const realityStripTitleNode = document.getElementById("reality-strip-title");
 const realityStripBodyNode = document.getElementById("reality-strip-body");
-const metricOpenRateInput = document.getElementById("metric-open-rate");
-const metricReplyRateInput = document.getElementById("metric-reply-rate");
-const metricBounceRateInput = document.getElementById("metric-bounce-rate");
-const metricSentCountInput = document.getElementById("metric-sent-count");
-const runDiagnosisButton = document.getElementById("run-diagnosis");
+const metricOpenRateInput = document.getElementById("cd-open") || document.getElementById("metric-open-rate");
+const metricReplyRateInput = document.getElementById("cd-reply") || document.getElementById("metric-reply-rate");
+const metricBounceRateInput = document.getElementById("cd-bounce") || document.getElementById("metric-bounce-rate");
+const metricSentCountInput = document.getElementById("cd-sent") || document.getElementById("metric-sent-count");
+const runDiagnosisButton = document.getElementById("cd-run") || document.getElementById("run-diagnosis");
 const diagnosisOutput = document.getElementById("diagnosis-output");
 const diagnosisPrimaryNode = document.getElementById("diagnosis-primary");
 const diagnosisConfidenceNode = document.getElementById("diagnosis-confidence");
 const diagnosisWhyNode = document.getElementById("diagnosis-why");
 const diagnosisActionsNode = document.getElementById("diagnosis-actions");
+const campaignDebuggerResultNode = document.getElementById("cd-result");
 const blacklistDomainInput = document.getElementById("blacklist-domain");
 const runBlacklistCheckButton = document.getElementById("run-blacklist-check");
 const blacklistResultNode = document.getElementById("blacklist-result");
@@ -1365,33 +1366,45 @@ async function runSeedAuto() {
 
 async function runSeedSync() {
     const campaign = seedCampaignInput ? String(seedCampaignInput.value || "").trim() : "";
-    const subjectToken = `IG-${Date.now().toString(36)}`;
-    const payload = new FormData();
-    payload.set("campaign_name", campaign || "Instant Seed Run");
-    payload.set("subject_token", subjectToken);
-    payload.set("body_text", String(rawEmailInput && rawEmailInput.value ? rawEmailInput.value : "InboxGuard seed probe"));
-    const response = await fetch("/seed-run", { method: "POST", body: payload });
+    const subject = campaign || "InboxGuard Seed Test";
+    const body = String(rawEmailInput && rawEmailInput.value ? rawEmailInput.value : "InboxGuard seed probe");
+    const response = await fetch("/seed-test", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+            subject,
+            body,
+            campaign_name: campaign || "Instant Seed Run",
+            wait_seconds: 6,
+        }),
+    });
     if (!response.ok) {
-        throw new Error("Could not run instant seed probe.");
+        const errorBody = await response.json().catch(() => ({}));
+        throw new Error(String(errorBody.detail || "Could not run instant seed probe."));
     }
     const data = await response.json();
-    const results = data.results && typeof data.results === "object" ? data.results : {};
-    const entries = Object.entries(results);
+    const placements = Array.isArray(data.placements) ? data.placements : [];
+    const summary = data.summary && typeof data.summary === "object" ? data.summary : {};
     if (seedTestListNode) {
         seedTestListNode.innerHTML = "";
-        if (!entries.length) {
+        const summaryLine = document.createElement("li");
+        summaryLine.textContent = `Summary | Inbox ${Number(summary.inbox || 0)} | Spam ${Number(summary.spam || 0)} | Promotions ${Number(summary.promotions || 0)} | Unknown ${Number(summary.unknown || 0)}`;
+        seedTestListNode.appendChild(summaryLine);
+        if (!placements.length) {
             const li = document.createElement("li");
-            li.textContent = "Seed probe completed, but no provider results returned.";
+            li.textContent = "Seed probe completed, but no provider placements were returned.";
             seedTestListNode.appendChild(li);
         } else {
-            entries.forEach(([provider, status]) => {
+            placements.forEach((row) => {
                 const li = document.createElement("li");
-                li.textContent = `Instant probe | ${provider}: ${String(status)}`;
+                li.textContent = `Instant probe | ${String(row.provider || "provider")}: ${String(row.placement || "unknown")}`;
                 seedTestListNode.appendChild(li);
             });
         }
     }
-    showError("Instant seed probe completed.");
+    showError(`Instant seed probe completed (${String(data.test_id || "test")}).`);
 }
 
 async function refreshPlans() {
@@ -2190,19 +2203,22 @@ async function runCampaignDiagnosis() {
         has_metrics: openRate > 0 || replyRate > 0 || bounceRate > 0 || sentCount > 0,
     });
 
-    const payload = new FormData();
-    payload.set("open_rate", String(openRate));
-    payload.set("reply_rate", String(replyRate));
-    payload.set("bounce_rate", String(bounceRate));
-    payload.set("sent_count", String(sentCount));
-
-    const response = await fetch("/diagnose-campaign", {
+    const response = await fetch("/campaign-debugger", {
         method: "POST",
-        body: payload,
+        headers: {
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+            open_rate: openRate,
+            reply_rate: replyRate,
+            bounce_rate: bounceRate,
+            sent: sentCount,
+        }),
     });
 
     if (!response.ok) {
-        throw new Error("Could not diagnose campaign.");
+        const errorBody = await response.json().catch(() => ({}));
+        throw new Error(String(errorBody.detail || "Could not diagnose campaign."));
     }
 
     const data = await response.json();
@@ -2211,6 +2227,10 @@ async function runCampaignDiagnosis() {
     });
     if (!diagnosisOutput || !diagnosisPrimaryNode || !diagnosisConfidenceNode || !diagnosisWhyNode || !diagnosisActionsNode) {
         return;
+    }
+
+    if (campaignDebuggerResultNode) {
+        campaignDebuggerResultNode.innerHTML = `<strong>Issue:</strong> ${String(data.issue || "No Major Issues")}<br/><strong>Reason:</strong> ${String(data.reason || "No reason returned")}<br/><strong>Action:</strong> ${String(data.action || "No action returned")}`;
     }
 
     const severity = Number(data.severity_score || 0);

@@ -69,7 +69,7 @@
           <button id="tab-dashboard" class="nav-item active" type="button">Home</button>
           <button id="tab-threat-scan" class="nav-item" type="button">Scan Email</button>
           <p class="nav-group-label">Tools</p>
-          <button class="nav-item tool-nav-btn" type="button" data-tool="campaign">Campaign Debugger</button>
+          <button class="nav-item tool-nav-btn" type="button" data-tool="campaign-debugger">Campaign Debugger</button>
           <button class="nav-item tool-nav-btn" type="button" data-tool="blacklist">Domain Check</button>
           <button class="nav-item tool-nav-btn" type="button" data-tool="seed">Seed Testing</button>
           <button class="nav-item tool-nav-btn" type="button" data-tool="bulk">Bulk Scan</button>
@@ -432,7 +432,7 @@ I noticed your recent post and had one short idea to improve reply rates."></tex
           </section>
         </section>
 
-        <section class="card tool-pane" id="campaign-debugger" data-tool-pane="campaign" style="margin-top: 12px;">
+        <section class="card tool-pane" id="campaign-debugger" data-tool-pane="campaign-debugger" style="margin-top: 12px;">
           <div class="tool-pane-head">
             <h2 class="tool-pane-title">Campaign Failure Debugger</h2>
             <button type="button" class="tool-pane-head-close" data-tool-close>Close</button>
@@ -440,25 +440,25 @@ I noticed your recent post and had one short idea to improve reply rates."></tex
           <p class="micro">Sent a campaign already? Enter outcomes to diagnose whether failure is deliverability, copy, or targeting.</p>
           <div class="inline-fields" style="margin-top: 10px;">
             <div>
-              <label for="metric-open-rate">Open Rate (%)</label>
-              <input id="metric-open-rate" type="number" min="0" max="100" step="0.1" placeholder="e.g. 22.5" />
+              <label for="cd-open">Open Rate (%)</label>
+              <input id="cd-open" type="number" min="0" max="100" step="0.1" placeholder="e.g. 22.5" />
             </div>
             <div>
-              <label for="metric-reply-rate">Reply Rate (%)</label>
-              <input id="metric-reply-rate" type="number" min="0" max="100" step="0.1" placeholder="e.g. 1.8" />
+              <label for="cd-reply">Reply Rate (%)</label>
+              <input id="cd-reply" type="number" min="0" max="100" step="0.1" placeholder="e.g. 1.8" />
             </div>
           </div>
           <div class="inline-fields" style="margin-top: 8px;">
             <div>
-              <label for="metric-bounce-rate">Bounce Rate (%)</label>
-              <input id="metric-bounce-rate" type="number" min="0" max="100" step="0.1" placeholder="e.g. 4.2" />
+              <label for="cd-bounce">Bounce Rate (%)</label>
+              <input id="cd-bounce" type="number" min="0" max="100" step="0.1" placeholder="e.g. 4.2" />
             </div>
             <div>
-              <label for="metric-sent-count">Emails Sent</label>
-              <input id="metric-sent-count" type="number" min="1" step="1" placeholder="e.g. 500" />
+              <label for="cd-sent">Emails Sent</label>
+              <input id="cd-sent" type="number" min="1" step="1" placeholder="e.g. 500" />
             </div>
           </div>
-          <button id="run-diagnosis" type="button" class="btn-danger tool-pane-primary" style="margin-top: 10px;">Diagnose Campaign Failure</button>
+          <button id="cd-run" type="button" class="btn-danger tool-pane-primary" style="margin-top: 10px;">Diagnose Campaign</button>
 
           <div id="diagnosis-output" class="card hidden" style="margin-top: 12px; background: #0f1d31;">
             <p id="diagnosis-primary" class="main-issue">-</p>
@@ -466,6 +466,8 @@ I noticed your recent post and had one short idea to improve reply rates."></tex
             <p id="diagnosis-why" class="micro">-</p>
             <ul id="diagnosis-actions" class="compact-list"></ul>
           </div>
+
+          <div id="cd-result" class="micro" style="margin-top: 10px; color: #cbd5e1;">Run diagnosis to see issue, reason, and action.</div>
         </section>
 
         <section class="card tool-pane" id="blacklist-checker" data-tool-pane="blacklist" style="margin-top: 12px;">
@@ -734,6 +736,6 @@ I noticed your recent post and had one short idea to improve reply rates."></tex
       })();
     </script>
 
-    <script src="/static/js/app.js?v=20260404-micro4"></script>
+    <script src="/static/js/app.js?v=20260404-micro6"></script>
   </body>
 </html>
