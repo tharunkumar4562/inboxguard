@@ -205,6 +205,28 @@ function setListMessage(node, message) {
     node.appendChild(li);
 }
 
+function setActionButtonState(button, state, label) {
+    if (!button) {
+        return;
+    }
+    button.classList.remove("is-loading", "is-success", "is-error");
+    if (state === "loading") {
+        button.classList.add("is-loading");
+        button.disabled = true;
+    } else if (state === "success") {
+        button.classList.add("is-success");
+        button.disabled = false;
+    } else if (state === "error") {
+        button.classList.add("is-error");
+        button.disabled = false;
+    } else {
+        button.disabled = false;
+    }
+    if (typeof label === "string") {
+        button.textContent = label;
+    }
+}
+
 async function parseApiError(response, fallbackMessage) {
     const payload = await response.json().catch(() => ({}));
     const detail = String(payload.detail || "").trim();
@@ -1386,77 +1408,102 @@ function renderPrediction(summary, prediction) {
 }
 
 async function runSeedAuto() {
+    const previousLabel = runSeedAutoButton ? runSeedAutoButton.textContent : "Run Automated Seed Test";
+    setActionButtonState(runSeedAutoButton, "loading", "Running...");
     const campaign = seedCampaignInput ? String(seedCampaignInput.value || "").trim() : "";
     const subjectToken = `IG-${Date.now().toString(36)}`;
     const payload = new FormData();
     payload.set("campaign_name", campaign || "Automated Seed Run");
     payload.set("subject_token", subjectToken);
     payload.set("body_text", String(rawEmailInput && rawEmailInput.value ? rawEmailInput.value : "InboxGuard seed probe"));
-    const response = await fetch("/seed-run-async", { method: "POST", body: payload });
-    if (!response.ok) {
-        throw new Error("Could not start automated seed test.");
-    }
-    const data = await response.json();
-    showError("Automated seed test queued. Polling result...");
-    for (let i = 0; i < 20; i += 1) {
-        await sleep(1200);
-        const poll = await fetch(`/analyze-jobs/${String(data.job_id || "")}`, { method: "GET" });
-        if (!poll.ok) {
-            continue;
+    try {
+        const response = await fetch("/seed-run-async", { method: "POST", body: payload });
+        if (!response.ok) {
+            throw new Error("Could not start automated seed test.");
         }
-        const job = await poll.json();
-        if (job.status === "completed") {
-            showError("Automated seed test completed.");
-            await refreshSeedTests();
-            return;
+        const data = await response.json();
+        showError("Automated seed test queued. Polling result...");
+        for (let i = 0; i < 20; i += 1) {
+            await sleep(1200);
+            const poll = await fetch(`/analyze-jobs/${String(data.job_id || "")}`, { method: "GET" });
+            if (!poll.ok) {
+                continue;
+            }
+            const job = await poll.json();
+            if (job.status === "completed") {
+                setActionButtonState(runSeedAutoButton, "success", "Completed");
+                showError("Automated seed test completed.");
+                await refreshSeedTests();
+                return;
+            }
+            if (job.status === "failed") {
+                throw new Error(String(job.error || "Seed test failed."));
+            }
         }
-        if (job.status === "failed") {
-            throw new Error(String(job.error || "Seed test failed."));
-        }
+        throw new Error("Seed test is still running. Check jobs and try again.");
+    } catch (error) {
+        setActionButtonState(runSeedAutoButton, "error", "Error");
+        throw error;
+    } finally {
+        setTimeout(() => {
+            setActionButtonState(runSeedAutoButton, "idle", previousLabel);
+        }, 1000);
     }
 }
 
 async function runSeedSync() {
+    const previousLabel = runSeedSyncButton ? runSeedSyncButton.textContent : "Run Instant Seed Probe";
+    setActionButtonState(runSeedSyncButton, "loading", "Running...");
     const campaign = seedCampaignInput ? String(seedCampaignInput.value || "").trim() : "";
     const subject = campaign || "InboxGuard Seed Test";
     const body = String(rawEmailInput && rawEmailInput.value ? rawEmailInput.value : "InboxGuard seed probe");
-    const response = await fetch("/seed-test", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-            subject,
-            body,
-            campaign_name: campaign || "Instant Seed Run",
-            wait_seconds: 6,
-        }),
-    });
-    if (!response.ok) {
-        const errorBody = await response.json().catch(() => ({}));
-        throw new Error(String(errorBody.detail || "Could not run instant seed probe."));
-    }
-    const data = await response.json();
-    const placements = Array.isArray(data.placements) ? data.placements : [];
-    const summary = data.summary && typeof data.summary === "object" ? data.summary : {};
-    if (seedTestListNode) {
-        seedTestListNode.innerHTML = "";
-        const summaryLine = document.createElement("li");
-        summaryLine.textContent = `Summary | Inbox ${Number(summary.inbox || 0)} | Spam ${Number(summary.spam || 0)} | Promotions ${Number(summary.promotions || 0)} | Unknown ${Number(summary.unknown || 0)}`;
-        seedTestListNode.appendChild(summaryLine);
-        if (!placements.length) {
-            const li = document.createElement("li");
-            li.textContent = "Seed probe completed, but no provider placements were returned.";
-            seedTestListNode.appendChild(li);
-        } else {
-            placements.forEach((row) => {
-                const li = document.createElement("li");
-                li.textContent = `Instant probe | ${String(row.provider || "provider")}: ${String(row.placement || "unknown")}`;
-                seedTestListNode.appendChild(li);
-            });
+    try {
+        const response = await fetch("/seed-test", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                subject,
+                body,
+                campaign_name: campaign || "Instant Seed Run",
+                wait_seconds: 6,
+            }),
+        });
+        if (!response.ok) {
+            const errorBody = await response.json().catch(() => ({}));
+            throw new Error(String(errorBody.detail || "Could not run instant seed probe."));
         }
+        const data = await response.json();
+        const placements = Array.isArray(data.placements) ? data.placements : [];
+        const summary = data.summary && typeof data.summary === "object" ? data.summary : {};
+        if (seedTestListNode) {
+            seedTestListNode.innerHTML = "";
+            const summaryLine = document.createElement("li");
+            summaryLine.textContent = `Summary | Inbox ${Number(summary.inbox || 0)} | Spam ${Number(summary.spam || 0)} | Promotions ${Number(summary.promotions || 0)} | Unknown ${Number(summary.unknown || 0)}`;
+            seedTestListNode.appendChild(summaryLine);
+            if (!placements.length) {
+                const li = document.createElement("li");
+                li.textContent = "Seed probe completed, but no provider placements were returned.";
+                seedTestListNode.appendChild(li);
+            } else {
+                placements.forEach((row) => {
+                    const li = document.createElement("li");
+                    li.textContent = `Instant probe | ${String(row.provider || "provider")}: ${String(row.placement || "unknown")}`;
+                    seedTestListNode.appendChild(li);
+                });
+            }
+        }
+        setActionButtonState(runSeedSyncButton, "success", "Completed");
+        showError(`Instant seed probe completed (${String(data.test_id || "test")}).`);
+    } catch (error) {
+        setActionButtonState(runSeedSyncButton, "error", "Error");
+        throw error;
+    } finally {
+        setTimeout(() => {
+            setActionButtonState(runSeedSyncButton, "idle", previousLabel);
+        }, 1000);
     }
-    showError(`Instant seed probe completed (${String(data.test_id || "test")}).`);
 }
 
 async function refreshPlans() {
@@ -2345,10 +2392,7 @@ async function runBlacklistCheck() {
     if (blacklistResultNode) {
         blacklistResultNode.textContent = "Checking domain risk...";
     }
-    if (runButton) {
-        runButton.disabled = true;
-        runButton.textContent = "Checking...";
-    }
+    setActionButtonState(runButton, "loading", "Checking...");
     const payload = new FormData();
     payload.set("domain", domain);
     try {
@@ -2366,21 +2410,14 @@ async function runBlacklistCheck() {
                 ? `High risk: ${data.domain} appears in risk list. ${data.details}`
                 : `Low risk: ${data.domain} is not in current risk list. ${data.details}`;
         }
-        if (runButton) {
-            runButton.textContent = data.listed ? "⚠️ Risk Found" : "✅ Clean";
-        }
+        setActionButtonState(runButton, "success", data.listed ? "⚠️ Risk Found" : "✅ Clean");
     } catch (error) {
-        if (runButton) {
-            runButton.textContent = "Error";
-        }
+        setActionButtonState(runButton, "error", "Error");
         throw error;
     } finally {
-        if (runButton) {
-            runButton.disabled = false;
-            setTimeout(() => {
-                runButton.textContent = previousLabel;
-            }, 1000);
-        }
+        setTimeout(() => {
+            setActionButtonState(runButton, "idle", previousLabel);
+        }, 1000);
     }
 }
 
@@ -2425,12 +2462,24 @@ async function saveSeedTest() {
     payload.set("spam_count", String(spamCount));
     payload.set("notes", "Logged from dashboard");
 
-    const response = await fetch("/seed-tests", { method: "POST", body: payload });
-    if (!response.ok) {
-        throw new Error("Could not save seed test.");
+    const previousLabel = saveSeedTestButton ? saveSeedTestButton.textContent : "Save Seed Result";
+    setActionButtonState(saveSeedTestButton, "loading", "Saving...");
+    try {
+        const response = await fetch("/seed-tests", { method: "POST", body: payload });
+        if (!response.ok) {
+            throw new Error("Could not save seed test.");
+        }
+        setActionButtonState(saveSeedTestButton, "success", "Saved");
+        showError("Seed test saved.");
+        await refreshSeedTests();
+    } catch (error) {
+        setActionButtonState(saveSeedTestButton, "error", "Error");
+        throw error;
+    } finally {
+        setTimeout(() => {
+            setActionButtonState(saveSeedTestButton, "idle", previousLabel);
+        }, 1000);
     }
-    showError("Seed test saved.");
-    await refreshSeedTests();
 }
 
 async function runAnalyzeAsync() {
