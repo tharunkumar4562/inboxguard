@@ -719,6 +719,63 @@ def _record_payment(
         conn.close()
 
 
+def _subscription_period_end_from_event(subscription: dict[str, Any]) -> str:
+    raw_value = (
+        subscription.get("current_end")
+        or subscription.get("current_end_at")
+        or subscription.get("current_period_end")
+        or subscription.get("end_at")
+        or ""
+    )
+    if isinstance(raw_value, (int, float)) and raw_value > 0:
+        try:
+            return datetime.fromtimestamp(float(raw_value), tz=timezone.utc).isoformat()
+        except Exception:
+            return ""
+    text = str(raw_value or "").strip()
+    if not text:
+        return ""
+    parsed = _safe_parse_iso(text)
+    if parsed:
+        return parsed.isoformat()
+    try:
+        return datetime.fromtimestamp(float(text), tz=timezone.utc).isoformat()
+    except Exception:
+        return text
+
+
+def _extract_user_id(notes: dict[str, Any]) -> int:
+    try:
+        return int((notes or {}).get("user_id", 0) or 0)
+    except (TypeError, ValueError):
+        return 0
+
+
+def _apply_razorpay_subscription_state(subscription: dict[str, Any], *, pro: bool, status: str) -> int:
+    notes = subscription.get("notes", {}) or {}
+    sub_id = str(subscription.get("id", "") or "")
+    user_id = _extract_user_id(notes) or _get_user_id_by_subscription_id(sub_id)
+    if user_id <= 0:
+        return 0
+
+    period_end = _subscription_period_end_from_event(subscription)
+    _set_user_subscription_state(
+        user_id,
+        pro=pro,
+        status=status,
+        subscription_id=sub_id,
+        past_due_since="",
+    )
+    if period_end:
+        conn = _auth_db_conn()
+        try:
+            conn.execute("UPDATE users SET current_period_end=? WHERE id=?", (period_end, user_id))
+            conn.commit()
+        finally:
+            conn.close()
+    return user_id
+
+
 def _create_user(email: str, password: str) -> int:
     _ensure_auth_db_ready()
     now = _now_iso()
@@ -2173,6 +2230,7 @@ async def create_order_backcompat(request: Request):
     return await create_subscription(request)
 
 
+@app.post("/webhook/razorpay")
 @app.post("/razorpay-webhook")
 async def razorpay_webhook(request: Request, x_razorpay_signature: str | None = Header(default=None, alias="X-Razorpay-Signature")):
     if not RAZORPAY_WEBHOOK_SECRET:
@@ -2193,29 +2251,25 @@ async def razorpay_webhook(request: Request, x_razorpay_signature: str | None = 
         return JSONResponse(status_code=400, content={"status": "invalid_json"})
 
     event = str(payload.get("event", "")).strip().lower()
+    logger.info("Razorpay webhook received: event=%s payload=%s", event, json.dumps(payload, indent=2, sort_keys=True))
 
     def _extract_user_id(notes: dict) -> int:
         return int((notes or {}).get("user_id", 0) or 0)
 
     if event == "subscription.activated":
         sub = (payload.get("payload", {}) or {}).get("subscription", {}).get("entity", {}) or {}
-        notes = sub.get("notes", {}) or {}
-        sub_id = str(sub.get("id", "") or "")
-        user_id = _extract_user_id(notes) or _get_user_id_by_subscription_id(sub_id)
+        user_id = _apply_razorpay_subscription_state(sub, pro=True, status="active")
         if user_id > 0:
-            _set_user_subscription_state(
-                user_id,
-                pro=True,
-                status="active",
-                subscription_id=sub_id,
-                past_due_since="",
-            )
-            track_event("pro_activated", {"user_id": str(user_id), "provider": "razorpay", "subscription_id": sub_id})
+            _set_user_plan(user_id, "pro", tokens=PLAN_TOKENS.get("pro", 1000))
+            track_event("pro_activated", {"user_id": str(user_id), "provider": "razorpay", "subscription_id": str(sub.get("id", "") or "")})
 
-    elif event == "invoice.paid":
-        invoice = (payload.get("payload", {}) or {}).get("invoice", {}).get("entity", {}) or {}
-        notes = invoice.get("notes", {}) or {}
-        subscription_id = str(invoice.get("subscription_id", "") or "")
+    elif event in {"payment.captured", "subscription.charged", "invoice.paid"}:
+        payment_entity = (payload.get("payload", {}) or {}).get("payment", {}).get("entity", {}) or {}
+        invoice_entity = (payload.get("payload", {}) or {}).get("invoice", {}).get("entity", {}) or {}
+        subscription_entity = (payload.get("payload", {}) or {}).get("subscription", {}).get("entity", {}) or {}
+        entity = payment_entity or invoice_entity or subscription_entity
+        notes = entity.get("notes", {}) or {}
+        subscription_id = str(entity.get("subscription_id", "") or subscription_entity.get("id", "") or "")
         user_id = _extract_user_id(notes) or _get_user_id_by_subscription_id(subscription_id)
         if user_id > 0:
             _set_user_subscription_state(
@@ -2223,16 +2277,20 @@ async def razorpay_webhook(request: Request, x_razorpay_signature: str | None = 
                 pro=True,
                 status="active",
                 past_due_since="",
-                subscription_id=subscription_id,
+                subscription_id=subscription_id or str(subscription_entity.get("id", "") or ""),
             )
+            if subscription_entity:
+                _apply_razorpay_subscription_state(subscription_entity, pro=True, status="active")
+            _set_user_plan(user_id, "pro", tokens=PLAN_TOKENS.get("pro", 1000))
             _record_payment(
                 user_id=user_id,
-                amount=int(invoice.get("amount", 0) or 0),
+                amount=int(entity.get("amount", 0) or 0),
                 status="paid",
                 subscription_id=subscription_id,
-                payment_id=str(invoice.get("payment_id", "") or ""),
-                invoice_id=str(invoice.get("id", "") or ""),
+                payment_id=str(entity.get("id", "") or payment_entity.get("id", "") or ""),
+                invoice_id=str(invoice_entity.get("id", "") or ""),
             )
+            track_event("payment_captured", {"user_id": str(user_id), "provider": "razorpay", "subscription_id": subscription_id})
 
     elif event == "invoice.payment_failed":
         invoice = (payload.get("payload", {}) or {}).get("invoice", {}).get("entity", {}) or {}
@@ -2257,16 +2315,9 @@ async def razorpay_webhook(request: Request, x_razorpay_signature: str | None = 
 
     elif event == "subscription.cancelled":
         sub = (payload.get("payload", {}) or {}).get("subscription", {}).get("entity", {}) or {}
-        notes = sub.get("notes", {}) or {}
-        sub_id = str(sub.get("id", "") or "")
-        user_id = _extract_user_id(notes) or _get_user_id_by_subscription_id(sub_id)
+        user_id = _apply_razorpay_subscription_state(sub, pro=False, status="cancelled")
         if user_id > 0:
-            _set_user_subscription_state(
-                user_id,
-                pro=False,
-                status="cancelled",
-                subscription_id=sub_id,
-            )
+            _set_user_plan(user_id, "free", tokens=PLAN_TOKENS.get("free", 10))
 
     else:
         return JSONResponse(status_code=200, content={"status": "ignored"})
@@ -3211,11 +3262,11 @@ def _run_analysis_request(
         
         # Check if user has enough tokens
         if current_tokens < token_cost:
-            raise HTTPException(status_code=402, detail="INSUFFICIENT_TOKENS")
+            raise HTTPException(status_code=402, detail="NO_TOKENS")
         
         # Deduct tokens
         if not _deduct_tokens(user_id, token_cost):
-            raise HTTPException(status_code=402, detail="INSUFFICIENT_TOKENS")
+            raise HTTPException(status_code=402, detail="NO_TOKENS")
     else:
         # Non-authenticated users: check anonymous scan limit
         anon_used = _get_anon_scans_used(request)

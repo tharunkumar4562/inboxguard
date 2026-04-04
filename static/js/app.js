@@ -2290,7 +2290,8 @@ async function runAnalyze() {
                 showPaywall();
                 throw new Error("Active subscription required. Upgrade to continue scanning.");
             }
-            if (code === "FREE_PLAN_LIMIT_REACHED") {
+            if (code === "FREE_PLAN_LIMIT_REACHED" || code === "NO_TOKENS" || code === "INSUFFICIENT_TOKENS") {
+                openPricingModal();
                 throw new Error("You reached your monthly free plan scan limit. Upgrade is required for more scans.");
             }
             throw new Error("Unable to complete risk scan. Try again.");
@@ -2816,6 +2817,7 @@ async function loadUserTokens() {
     try {
         const tokenBadge = document.getElementById("token-display");
         const tokenCount = document.getElementById("token-count");
+        const planLabel = document.getElementById("plan-label");
 
         if (!isAuthenticated) {
             if (tokenBadge) {
@@ -2830,10 +2832,14 @@ async function loadUserTokens() {
         }
         const data = await res.json();
         const tokens = Number(data.tokens || 0);
+        const plan = String(data.plan || userState.plan || "free").toLowerCase();
 
         if (tokenBadge && tokenCount) {
             tokenBadge.classList.remove("hidden");
             tokenCount.textContent = String(tokens);
+        }
+        if (planLabel) {
+            planLabel.textContent = plan === "pro" ? "PRO" : "FREE";
         }
 
         updateTokenMessaging(tokens);
@@ -2994,7 +3000,7 @@ async function startPayment() {
             },
             handler: function () {
                 closePricingModal();
-                showError("Subscription started. Processing payment and unlocking access...");
+                showError("Payment submitted. Waiting for webhook confirmation before access changes.");
                 setTimeout(() => {
                     window.location.reload();
                 }, 5000);
