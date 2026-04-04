@@ -2084,8 +2084,23 @@ async def create_subscription(request: Request, plan: str = Form("monthly")):
             },
         )
 
-    if not RAZORPAY_KEY or not RAZORPAY_SECRET or not plan_id:
-        return JSONResponse(status_code=503, content={"success": False, "detail": "Subscription not configured"})
+    missing_config = []
+    if not RAZORPAY_KEY:
+        missing_config.append("RAZORPAY_KEY")
+    if not RAZORPAY_SECRET:
+        missing_config.append("RAZORPAY_SECRET")
+    if not plan_id:
+        missing_config.append(f"plan_id_for_{selected_plan}")
+    if missing_config:
+        return JSONResponse(
+            status_code=503,
+            content={
+                "success": False,
+                "detail": "Subscription not configured",
+                "missing": missing_config,
+                "plan": selected_plan,
+            },
+        )
 
     subscription_payload = {
         "plan_id": plan_id,
