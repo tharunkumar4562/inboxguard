@@ -187,11 +187,19 @@ const errorBanner = document.createElement("div");
 errorBanner.id = "error-banner";
 errorBanner.className = "hidden";
 document.body.appendChild(errorBanner);
+let errorBannerTimer = null;
 
 function showError(message) {
+    if (errorBannerTimer) {
+        clearTimeout(errorBannerTimer);
+        errorBannerTimer = null;
+    }
     errorBanner.textContent = message;
     errorBanner.classList.remove("hidden");
-    setTimeout(() => errorBanner.classList.add("hidden"), 3800);
+    errorBannerTimer = setTimeout(() => {
+        errorBanner.classList.add("hidden");
+        errorBannerTimer = null;
+    }, 4200);
 }
 
 function trackEvent(eventName, params) {
