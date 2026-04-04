@@ -28,6 +28,10 @@ const submitButton = document.getElementById("run-check");
 const submitAsyncButton = document.getElementById("run-check-async");
 const loadingPanel = document.getElementById("result-loading");
 const loadingStep = document.getElementById("loading-step");
+const progressiveStepNodes = Array.from(document.querySelectorAll(".cc-step"));
+const fullscreenDecision = document.getElementById("fullscreen-decision");
+const fullscreenDecisionTitle = document.getElementById("fs-decision");
+const fullscreenDecisionSub = document.getElementById("fs-sub");
 
 const statusRiskBandNode = document.getElementById("status-risk-band");
 const statusRiskCardNode = document.getElementById("status-risk-card");
@@ -629,6 +633,14 @@ function setIdleState() {
     if (fixOutput) {
         fixOutput.classList.add("hidden");
     }
+    if (progressiveStepNodes.length) {
+        progressiveStepNodes.forEach((node) => {
+            node.classList.remove("active", "complete");
+        });
+    }
+    if (fullscreenDecision) {
+        fullscreenDecision.classList.add("hidden");
+    }
     if (submitButton) {
         submitButton.disabled = false;
         submitButton.textContent = defaultSubmitLabel;
@@ -644,6 +656,11 @@ function setLoadingState() {
     }
     if (loadingPanel) {
         loadingPanel.classList.remove("hidden");
+    }
+    if (progressiveStepNodes.length) {
+        progressiveStepNodes.forEach((node) => {
+            node.classList.remove("active", "complete");
+        });
     }
     if (submitButton) {
         submitButton.disabled = true;
@@ -676,6 +693,51 @@ function startRealtimeScanSteps() {
         idx = (idx + 1) % loadSteps.length;
         loadingStep.textContent = loadSteps[idx];
     }, 280);
+}
+
+async function playProgressiveReveal() {
+    if (!progressiveStepNodes.length) {
+        return;
+    }
+
+    for (let idx = 0; idx < progressiveStepNodes.length; idx += 1) {
+        const current = progressiveStepNodes[idx];
+        current.classList.add("active");
+        if (idx > 0) {
+            progressiveStepNodes[idx - 1].classList.remove("active");
+            progressiveStepNodes[idx - 1].classList.add("complete");
+        }
+        await sleep(280);
+    }
+}
+
+function resolveDecisionLabel(summary, prediction) {
+    const band = String(summary && summary.risk_band ? summary.risk_band : "");
+    const predictionDecision = String(prediction && prediction.decision ? prediction.decision : "").toUpperCase();
+
+    if (predictionDecision === "DO NOT SEND" || band === "High Spam-Risk Signals" || band === "High Risk") {
+        return "DO NOT SEND";
+    }
+    if (predictionDecision === "SAFE TO SEND" || band === "Content Safe") {
+        return "SAFE TO SEND";
+    }
+    return "TEST FIRST";
+}
+
+function showFullscreenDecisionMoment(decisionLabel, summary, prediction) {
+    if (!fullscreenDecision || !fullscreenDecisionTitle || !fullscreenDecisionSub) {
+        return;
+    }
+
+    const probability = Number(prediction && prediction.inbox_probability ? prediction.inbox_probability : 0);
+    const primaryIssue = primaryIssue(summary || {}, latestFindings || []);
+    fullscreenDecisionTitle.textContent = decisionLabel;
+    fullscreenDecisionSub.textContent = `${primaryIssue} | Inbox probability: ${probability.toFixed(1)}%`;
+
+    fullscreenDecision.classList.remove("hidden");
+    setTimeout(() => {
+        fullscreenDecision.classList.add("hidden");
+    }, 1500);
 }
 
 function setImpactBadge(node, impact) {
@@ -1446,9 +1508,11 @@ function getRecommendedRewriteStyle() {
     return "balanced";
 }
 async function showFixTransformation() {
-    if (!fixOutput || !beforeEmailNode || !afterEmailNode || !rawEmailInput || !fixNowButton) {
+    if (!fixOutput || !beforeEmailNode || !afterEmailNode || !rawEmailInput) {
         return;
     }
+
+    const rewriteTriggerButton = fixNowButton || riskFixNowButton;
 
     const original = rawEmailInput.value.trim();
     if (!original) {
@@ -1456,8 +1520,10 @@ async function showFixTransformation() {
         return;
     }
 
-    fixNowButton.disabled = true;
-    fixNowButton.textContent = "Fixing...";
+    if (rewriteTriggerButton) {
+        rewriteTriggerButton.disabled = true;
+        rewriteTriggerButton.textContent = "Fixing...";
+    }
     trackEvent("fix_clicked", {
         source: "fix_issues_button",
         rewrite_style: rewriteStyleInput ? rewriteStyleInput.value : "balanced",
@@ -1617,8 +1683,10 @@ async function showFixTransformation() {
         showError(error && error.message ? error.message : "Rewrite failed.");
     }
 
-    fixNowButton.disabled = false;
-    fixNowButton.textContent = "Fix Issues";
+    if (rewriteTriggerButton) {
+        rewriteTriggerButton.disabled = false;
+        rewriteTriggerButton.textContent = "Make This Safe to Send";
+    }
 }
 
 async function runAnalyze() {
@@ -1649,6 +1717,7 @@ async function runAnalyze() {
 
     setLoadingState();
     const loadingTicker = startRealtimeScanSteps();
+    const progressiveRevealPromise = playProgressiveReveal();
 
     try {
         const payload = new FormData();
@@ -1681,6 +1750,7 @@ async function runAnalyze() {
         }
 
         const data = await response.json();
+        await progressiveRevealPromise;
         if (loadingTicker) {
             clearInterval(loadingTicker);
         }
@@ -1702,6 +1772,9 @@ async function runAnalyze() {
         renderDecisionEngine(summary, signals, findings, data.prediction || null);
         renderBreakdown(summary);
         renderPrediction(summary, data.prediction || null);
+
+        const decisionLabel = resolveDecisionLabel(summary, data.prediction || null);
+        showFullscreenDecisionMoment(decisionLabel, summary, data.prediction || null);
 
         if (rewriteStyleInput) {
             rewriteStyleInput.value = getRecommendedRewriteStyle();
@@ -1727,6 +1800,8 @@ async function runAnalyze() {
         }
         activateTab("dashboard");
 
+        await showFixTransformation();
+
         if (data.usage && !data.usage.authenticated) {
             anonymousScansUsed = Number(data.usage.anonymous_scans_used || anonymousScansUsed + 1);
             anonymousScansLimit = Number(data.usage.anonymous_scans_limit || anonymousScansLimit);
@@ -1741,6 +1816,7 @@ async function runAnalyze() {
             userScansLimit = Number(data.usage.user_scans_limit || userScansLimit);
         }
     } catch (error) {
+        await progressiveRevealPromise;
         if (loadingTicker) {
             clearInterval(loadingTicker);
         }
