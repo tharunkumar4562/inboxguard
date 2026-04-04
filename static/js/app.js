@@ -162,6 +162,10 @@ const refreshPlansButton = document.getElementById("refresh-plans");
 const plansOutputNode = document.getElementById("plans-output");
 const requestAccessButton = document.getElementById("request-access");
 const accessRequestEmailInput = document.getElementById("access-request-email");
+const promoCodeInput = document.getElementById("promo-code");
+const applyPromoButton = document.getElementById("apply-promo");
+const promoStatusNode = document.getElementById("promo-status");
+const upgradeTestButton = document.getElementById("upgrade-test");
 
 const loadSteps = [
     "Checking content signals...",
@@ -186,6 +190,9 @@ let currentUserName = "";
 let currentUserEmail = "";
 let currentUserAvatar = "";
 let currentUserStatus = "inactive";
+let currentPlan = "free";
+let tokensRemaining = 0;
+let tokensLimit = 10;
 let emailPastedTracked = false;
 let advancedOpenedTracked = false;
 let pendingAuthRedirectPath = "";
@@ -254,6 +261,13 @@ async function parseApiError(response, fallbackMessage) {
             openPricingModal();
         }
         return "Subscription required for this tool.";
+    }
+    if (detail === "TOKENS_EXHAUSTED" || detail === "FREE_PLAN_LIMIT_REACHED") {
+        showError("Not enough tokens. Upgrade or apply a promo code.");
+        if (typeof openPricingModal === "function") {
+            openPricingModal();
+        }
+        return "Not enough tokens. Upgrade or apply a promo code.";
     }
     return detail || String(fallbackMessage || "Request failed.");
 }
@@ -688,6 +702,16 @@ function updateProfileNav() {
     }
 }
 
+function renderBillingState() {
+    if (!plansOutputNode) {
+        return;
+    }
+    plansOutputNode.innerHTML = "";
+    const li = document.createElement("li");
+    li.textContent = `Plan: ${String(currentPlan || "free").toUpperCase()} | Tokens: ${tokensRemaining}/${tokensLimit}`;
+    plansOutputNode.appendChild(li);
+}
+
 async function refreshAuthStatus() {
     try {
         const response = await fetch("/auth/status", { method: "GET" });
@@ -704,6 +728,9 @@ async function refreshAuthStatus() {
         userScansUsed = Number(data && data.user_scans_used ? data.user_scans_used : 0);
         userScansLimit = Number(data && data.user_scans_limit ? data.user_scans_limit : 50);
         currentUserStatus = String(data && data.status ? data.status : "inactive").toLowerCase();
+        currentPlan = String(data && data.plan ? data.plan : "free").toLowerCase();
+        tokensRemaining = Number(data && data.tokens_remaining ? data.tokens_remaining : 0);
+        tokensLimit = Number(data && data.tokens_limit ? data.tokens_limit : 10);
         leadCaptureSaved = Boolean(data && data.lead_email_captured);
         leadCaptureEmail = String(data && data.lead_email ? data.lead_email : leadCaptureEmail);
 
@@ -711,6 +738,9 @@ async function refreshAuthStatus() {
         window.currentUser = isAuthenticated;
         window.userIsPro = Boolean(data && data.pro);
         window.userStatus = currentUserStatus;
+        window.userPlan = currentPlan;
+        window.tokensRemaining = tokensRemaining;
+        window.tokensLimit = tokensLimit;
         window.currentUserEmail = currentUserEmail;
         window.currentUserName = currentUserName;
 
@@ -720,9 +750,55 @@ async function refreshAuthStatus() {
         if (leadCaptureEmail) {
             localStorage.setItem("ig_lead_capture_email", leadCaptureEmail);
         }
+        renderBillingState();
         updateProfileNav();
     } catch (error) {
         // Keep UI operational even if auth status endpoint is temporarily unavailable.
+    }
+}
+
+async function applyPromoCode() {
+    const code = String(promoCodeInput && promoCodeInput.value ? promoCodeInput.value : "").trim();
+    if (!code) {
+        showError("Enter a promo code first.");
+        return;
+    }
+    if (promoStatusNode) {
+        promoStatusNode.textContent = "Applying promo...";
+    }
+    const response = await fetch("/apply-promo", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ code }),
+    });
+    if (!response.ok) {
+        const message = await parseApiError(response, "Could not apply promo code.");
+        if (promoStatusNode) {
+            promoStatusNode.textContent = message;
+        }
+        throw new Error(message);
+    }
+    const data = await response.json();
+    await refreshAuthStatus();
+    if (promoStatusNode) {
+        promoStatusNode.textContent = String(data.message || "Promo applied.");
+    }
+    showError(String(data.message || "Promo applied."));
+}
+
+async function activateProTest() {
+    const response = await fetch("/upgrade-test", { method: "POST" });
+    if (!response.ok) {
+        const message = await parseApiError(response, "Could not activate test upgrade.");
+        throw new Error(message);
+    }
+    const data = await response.json();
+    await refreshAuthStatus();
+    showError(String(data.message || "Pro test upgrade applied."));
+    if (promoStatusNode) {
+        promoStatusNode.textContent = `Plan upgraded. Tokens: ${tokensRemaining}/${tokensLimit}`;
     }
 }
 
@@ -2688,17 +2764,14 @@ function canUserScan() {
         return true;
     }
 
-    const status = String(window.userStatus || currentUserStatus || "inactive").toLowerCase();
-    const hasAccess = Boolean(window.userIsPro) && status === "active";
-    if (hasAccess) {
+    const remaining = Number(window.tokensRemaining || tokensRemaining || 0);
+    if (remaining > 0) {
         return true;
     }
 
-    if (status === "past_due") {
-        showError("Payment failed. Update your payment method to keep access.");
-    }
-
+    showError("No tokens left. Upgrade or apply a promo code.");
     showPaywall();
+    openPricingModal();
     return false;
 
     /*
@@ -2830,6 +2903,22 @@ if (cancelSubscriptionButton) {
         }
         showError("Subscription cancelled. Access will remain until current period ends.");
         setTimeout(() => window.location.reload(), 1200);
+    });
+}
+if (applyPromoButton) {
+    applyPromoButton.addEventListener("click", (event) => {
+        event.preventDefault();
+        applyPromoCode().catch((error) => {
+            showError(error && error.message ? error.message : "Could not apply promo code.");
+        });
+    });
+}
+if (upgradeTestButton) {
+    upgradeTestButton.addEventListener("click", (event) => {
+        event.preventDefault();
+        activateProTest().catch((error) => {
+            showError(error && error.message ? error.message : "Could not activate test upgrade.");
+        });
     });
 }
 

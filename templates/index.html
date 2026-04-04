@@ -665,11 +665,20 @@ I noticed your recent post and had one short idea to improve reply rates."></tex
           <option value="trial">Trial Pro</option>
           <option value="usage">Usage-Based</option>
         </select>
+        <label for="promo-code" class="pricing-note" style="display:block; margin-top:8px;">Promo code</label>
+        <div class="inline-fields" style="margin-top:6px;">
+          <div>
+            <input id="promo-code" type="text" placeholder="FREE30" class="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-slate-100" />
+          </div>
+        </div>
+        <button id="apply-promo" type="button" class="secondary-btn" style="margin-top:8px;">Apply Promo</button>
+        <p id="promo-status" class="pricing-note" style="margin-top:8px;">Use FREE30, BONUS100, or PROUNLOCK.</p>
         <button id="refresh-plans" type="button" class="secondary-btn" style="margin-top:8px;">Refresh Plans</button>
         <ul id="plans-output" class="compact-list" style="margin-top:8px;">
           <li>Plan details load from server when requested.</li>
         </ul>
         <button id="pay-btn" type="button" class="primary-btn">Unlock Safe Sending</button>
+        <button id="upgrade-test" type="button" class="secondary-btn">Activate Pro Test</button>
         <button id="request-access" type="button" class="secondary-btn">Request Access</button>
         <button id="cancel-subscription" type="button" class="secondary-btn hidden">Cancel Subscription</button>
         <button onclick="closePricingModal()" class="secondary-btn">Cancel</button>
@@ -750,6 +759,6 @@ I noticed your recent post and had one short idea to improve reply rates."></tex
       })();
     </script>
 
-    <script src="/static/js/app.js?v=20260404-modal-fix-1"></script>
+    <script src="/static/js/app.js?v=20260404-monetization-v1"></script>
   </body>
 </html>

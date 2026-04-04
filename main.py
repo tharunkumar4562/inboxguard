@@ -59,6 +59,12 @@ SESSION_HTTPS_ONLY = os.getenv("INBOXGUARD_SESSION_HTTPS_ONLY", "0").strip().low
 AUTH_DB_FILE = BASE_DIR / "data" / "auth.db"
 ANON_SCAN_LIMIT = int(os.getenv("INBOXGUARD_ANON_SCAN_LIMIT", "3"))
 FREE_USER_SCAN_LIMIT = int(os.getenv("INBOXGUARD_FREE_USER_SCAN_LIMIT", "50"))
+FREE_PLAN_TOKENS = int(os.getenv("INBOXGUARD_FREE_PLAN_TOKENS", "10"))
+PRO_PLAN_TOKENS = int(os.getenv("INBOXGUARD_PRO_PLAN_TOKENS", "500"))
+TEAM_PLAN_TOKENS = int(os.getenv("INBOXGUARD_TEAM_PLAN_TOKENS", "2000"))
+TOKEN_COST_SCAN = int(os.getenv("INBOXGUARD_TOKEN_COST_SCAN", "1"))
+TOKEN_COST_CAMPAIGN_DEBUGGER = int(os.getenv("INBOXGUARD_TOKEN_COST_CAMPAIGN_DEBUGGER", "2"))
+TOKEN_COST_SEED_TEST = int(os.getenv("INBOXGUARD_TOKEN_COST_SEED_TEST", "5"))
 GOOGLE_OAUTH_ENABLED = os.getenv("INBOXGUARD_GOOGLE_OAUTH_ENABLED", "0").strip().lower() in {"1", "true", "yes"}
 GOOGLE_CLIENT_ID = os.getenv("INBOXGUARD_GOOGLE_CLIENT_ID", os.getenv("GOOGLE_CLIENT_ID", "")).strip()
 GOOGLE_CLIENT_SECRET = os.getenv("INBOXGUARD_GOOGLE_CLIENT_SECRET", os.getenv("GOOGLE_CLIENT_SECRET", "")).strip()
@@ -159,6 +165,10 @@ class SeedTestInput(BaseModel):
     body: str
     campaign_name: str = "Seed Campaign"
     wait_seconds: int = 6
+
+
+class PromoApplyInput(BaseModel):
+    code: str
 
 
 def _auth_db_conn() -> sqlite3.Connection:
@@ -359,6 +369,47 @@ def _ensure_auth_db() -> None:
             )
             """
         )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS usage_logs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                feature TEXT NOT NULL,
+                tokens_used INTEGER NOT NULL DEFAULT 0,
+                created_at TEXT NOT NULL,
+                FOREIGN KEY(user_id) REFERENCES users(id)
+            )
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS promo_codes (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                code TEXT UNIQUE NOT NULL,
+                type TEXT NOT NULL,
+                value INTEGER NOT NULL DEFAULT 0,
+                duration_days INTEGER NOT NULL DEFAULT 0,
+                max_uses INTEGER NOT NULL DEFAULT 1,
+                used_count INTEGER NOT NULL DEFAULT 0,
+                expires_at TEXT,
+                active INTEGER NOT NULL DEFAULT 1,
+                created_at TEXT NOT NULL
+            )
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS promo_redemptions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                promo_id INTEGER NOT NULL,
+                used_at TEXT NOT NULL,
+                UNIQUE(user_id, promo_id),
+                FOREIGN KEY(user_id) REFERENCES users(id),
+                FOREIGN KEY(promo_id) REFERENCES promo_codes(id)
+            )
+            """
+        )
         conn.commit()
     finally:
         conn.close()
@@ -371,6 +422,8 @@ def _ensure_auth_db_ready() -> None:
     _ensure_auth_db()
     _ensure_user_pro_column()
     _ensure_user_subscription_columns()
+    _ensure_user_billing_columns()
+    _seed_default_promos()
     AUTH_DB_READY = True
 
 
@@ -410,6 +463,72 @@ def _ensure_user_subscription_columns(conn: Optional[sqlite3.Connection] = None)
     finally:
         if close_conn:
             conn.close()
+
+
+def _ensure_user_billing_columns(conn: Optional[sqlite3.Connection] = None) -> None:
+    close_conn = False
+    if conn is None:
+        conn = _auth_db_conn()
+        close_conn = True
+    try:
+        columns = conn.execute("PRAGMA table_info(users)").fetchall()
+        column_names = {str(column[1]) for column in columns}
+        if "plan" not in column_names:
+            conn.execute("ALTER TABLE users ADD COLUMN plan TEXT NOT NULL DEFAULT 'free'")
+        if "tokens_remaining" not in column_names:
+            conn.execute("ALTER TABLE users ADD COLUMN tokens_remaining INTEGER NOT NULL DEFAULT 0")
+        if "tokens_limit" not in column_names:
+            conn.execute("ALTER TABLE users ADD COLUMN tokens_limit INTEGER NOT NULL DEFAULT 0")
+        if "is_trial" not in column_names:
+            conn.execute("ALTER TABLE users ADD COLUMN is_trial INTEGER NOT NULL DEFAULT 0")
+        if "trial_ends_at" not in column_names:
+            conn.execute("ALTER TABLE users ADD COLUMN trial_ends_at TEXT")
+        conn.commit()
+    finally:
+        if close_conn:
+            conn.close()
+
+
+def _plan_tokens(plan: str) -> int:
+    normalized = str(plan or "free").strip().lower()
+    if normalized == "pro":
+        return max(1, PRO_PLAN_TOKENS)
+    if normalized == "team":
+        return max(1, TEAM_PLAN_TOKENS)
+    return max(1, FREE_PLAN_TOKENS)
+
+
+def _feature_cost(feature: str) -> int:
+    key = str(feature or "scan_email").strip().lower()
+    if key == "campaign_debugger":
+        return max(1, TOKEN_COST_CAMPAIGN_DEBUGGER)
+    if key in {"seed_test", "seed_run"}:
+        return max(1, TOKEN_COST_SEED_TEST)
+    return max(1, TOKEN_COST_SCAN)
+
+
+def _seed_default_promos() -> None:
+    _ensure_auth_db()
+    conn = _auth_db_conn()
+    try:
+        now = _now_iso()
+        defaults = [
+            ("FREE30", "trial", 0, 30, 1000, None, 1),
+            ("BONUS100", "free_tokens", 100, 0, 1000, None, 1),
+            ("PROUNLOCK", "upgrade", 0, 0, 200, None, 1),
+        ]
+        for code, promo_type, value, duration_days, max_uses, expires_at, active in defaults:
+            conn.execute(
+                """
+                INSERT INTO promo_codes(code, type, value, duration_days, max_uses, used_count, expires_at, active, created_at)
+                VALUES (?, ?, ?, ?, ?, 0, ?, ?, ?)
+                ON CONFLICT(code) DO NOTHING
+                """,
+                (code, promo_type, int(value), int(duration_days), int(max_uses), expires_at, int(active), now),
+            )
+        conn.commit()
+    finally:
+        conn.close()
 
 
 def _now_iso() -> str:
@@ -646,6 +765,7 @@ def _create_user(email: str, password: str) -> int:
             (user_id, now),
         )
         conn.commit()
+        _set_user_plan(user_id, "free")
         return user_id
     finally:
         conn.close()
@@ -692,6 +812,197 @@ def _get_usage(user_id: int) -> dict:
         }
     finally:
         conn.close()
+
+
+def _ensure_user_token_defaults(user_id: int) -> dict[str, Any]:
+    _ensure_auth_db_ready()
+    conn = _auth_db_conn()
+    try:
+        row = conn.execute(
+            "SELECT plan, tokens_remaining, tokens_limit, is_trial, trial_ends_at FROM users WHERE id=?",
+            (user_id,),
+        ).fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        plan = str(row["plan"] or "free").strip().lower()
+        tokens_limit = int(row["tokens_limit"] or 0)
+        tokens_remaining = int(row["tokens_remaining"] or 0)
+        trial_ends_at = str(row["trial_ends_at"] or "")
+        is_trial = bool(int(row["is_trial"] or 0))
+
+        expected_limit = _plan_tokens(plan)
+        if tokens_limit <= 0:
+            tokens_limit = expected_limit
+        if tokens_remaining < 0:
+            tokens_remaining = 0
+        if tokens_remaining > tokens_limit:
+            tokens_remaining = tokens_limit
+
+        if int(row["tokens_limit"] or 0) != tokens_limit or int(row["tokens_remaining"] or 0) != tokens_remaining:
+            conn.execute(
+                "UPDATE users SET tokens_limit=?, tokens_remaining=? WHERE id=?",
+                (tokens_limit, tokens_remaining, user_id),
+            )
+            conn.commit()
+
+        return {
+            "plan": plan,
+            "tokens_remaining": tokens_remaining,
+            "tokens_limit": tokens_limit,
+            "is_trial": is_trial,
+            "trial_ends_at": trial_ends_at,
+        }
+    finally:
+        conn.close()
+
+
+def _set_user_plan(user_id: int, plan: str, *, is_trial: bool = False, trial_ends_at: str = "") -> None:
+    normalized = str(plan or "free").strip().lower()
+    if normalized not in {"free", "pro", "team"}:
+        normalized = "free"
+    token_limit = _plan_tokens(normalized)
+    _ensure_auth_db_ready()
+    conn = _auth_db_conn()
+    try:
+        conn.execute(
+            """
+            UPDATE users
+            SET plan=?, tokens_limit=?, tokens_remaining=?, is_trial=?, trial_ends_at=?
+            WHERE id=?
+            """,
+            (normalized, token_limit, token_limit, 1 if is_trial else 0, (trial_ends_at or "") or None, user_id),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def _consume_user_tokens(user_id: int, feature: str, *, cost: Optional[int] = None) -> dict[str, Any]:
+    token_cost = int(cost if cost is not None else _feature_cost(feature))
+    token_cost = max(1, token_cost)
+    _ensure_auth_db_ready()
+    conn = _auth_db_conn()
+    try:
+        row = conn.execute(
+            "SELECT tokens_remaining, tokens_limit FROM users WHERE id=?",
+            (user_id,),
+        ).fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        remaining = int(row["tokens_remaining"] or 0)
+        limit = int(row["tokens_limit"] or 0)
+        if remaining < token_cost:
+            raise HTTPException(status_code=402, detail="TOKENS_EXHAUSTED")
+
+        new_remaining = remaining - token_cost
+        conn.execute("UPDATE users SET tokens_remaining=? WHERE id=?", (new_remaining, user_id))
+        conn.execute(
+            "INSERT INTO usage_logs(user_id, feature, tokens_used, created_at) VALUES (?, ?, ?, ?)",
+            (user_id, (feature or "scan_email")[:40], token_cost, _now_iso()),
+        )
+        conn.commit()
+        return {
+            "tokens_remaining": new_remaining,
+            "tokens_limit": limit,
+            "cost": token_cost,
+            "feature": feature,
+        }
+    finally:
+        conn.close()
+
+
+def _apply_promo_code(user_id: int, code: str) -> dict[str, Any]:
+    normalized = str(code or "").strip().upper()
+    if not normalized:
+        raise HTTPException(status_code=400, detail="Promo code is required")
+
+    now = _now_iso()
+    _ensure_auth_db_ready()
+    conn = _auth_db_conn()
+    try:
+        promo = conn.execute(
+            "SELECT id, code, type, value, duration_days, max_uses, used_count, expires_at, active FROM promo_codes WHERE code=?",
+            (normalized,),
+        ).fetchone()
+        if not promo:
+            raise HTTPException(status_code=400, detail="Invalid promo code")
+        if int(promo["active"] or 0) != 1:
+            raise HTTPException(status_code=400, detail="Promo code is inactive")
+        expires_at = _safe_parse_iso(str(promo["expires_at"] or ""))
+        if expires_at and expires_at < datetime.now(timezone.utc):
+            raise HTTPException(status_code=400, detail="Promo code expired")
+        if int(promo["used_count"] or 0) >= int(promo["max_uses"] or 0):
+            raise HTTPException(status_code=400, detail="Promo code fully used")
+
+        existing = conn.execute(
+            "SELECT id FROM promo_redemptions WHERE user_id=? AND promo_id=?",
+            (user_id, int(promo["id"])),
+        ).fetchone()
+        if existing:
+            raise HTTPException(status_code=400, detail="Promo already used")
+
+        promo_type = str(promo["type"] or "").strip().lower()
+        value = int(promo["value"] or 0)
+        duration_days = int(promo["duration_days"] or 0)
+
+        user_row = conn.execute(
+            "SELECT plan, tokens_remaining, tokens_limit FROM users WHERE id=?",
+            (user_id,),
+        ).fetchone()
+        if not user_row:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        message = "Promo applied"
+        if promo_type == "trial":
+            trial_days = max(1, duration_days or 30)
+            trial_ends = datetime.now(timezone.utc) + timedelta(days=trial_days)
+            plan = "pro"
+            limit = _plan_tokens(plan)
+            conn.execute(
+                "UPDATE users SET plan=?, tokens_limit=?, tokens_remaining=?, is_trial=1, trial_ends_at=? WHERE id=?",
+                (plan, limit, limit, trial_ends.isoformat(), user_id),
+            )
+            message = f"Trial activated for {trial_days} days"
+        elif promo_type == "free_tokens":
+            current_limit = int(user_row["tokens_limit"] or _plan_tokens(str(user_row["plan"] or "free")))
+            current_remaining = int(user_row["tokens_remaining"] or 0)
+            bonus = max(1, value or 50)
+            next_remaining = min(current_limit, current_remaining + bonus)
+            conn.execute(
+                "UPDATE users SET tokens_remaining=? WHERE id=?",
+                (next_remaining, user_id),
+            )
+            message = f"Added {bonus} tokens"
+        else:
+            plan = "pro"
+            limit = _plan_tokens(plan)
+            conn.execute(
+                "UPDATE users SET plan=?, tokens_limit=?, tokens_remaining=?, is_trial=0, trial_ends_at=NULL WHERE id=?",
+                (plan, limit, limit, user_id),
+            )
+            message = "Pro plan activated"
+
+        conn.execute(
+            "UPDATE promo_codes SET used_count = used_count + 1 WHERE id=?",
+            (int(promo["id"]),),
+        )
+        conn.execute(
+            "INSERT INTO promo_redemptions(user_id, promo_id, used_at) VALUES (?, ?, ?)",
+            (user_id, int(promo["id"]), now),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+    state = _ensure_user_token_defaults(user_id)
+    return {
+        "ok": True,
+        "message": message,
+        "code": normalized,
+        **state,
+    }
 
 
 def _increment_user_scan(user_id: int) -> int:
@@ -1590,32 +1901,6 @@ def _get_session_user(request: Request):
     }
 
 
-def _build_me_payload(request: Request) -> dict[str, Any]:
-    user = _get_session_user(request)
-    if not user:
-        return {"user": None}
-
-    usage = _get_usage(int(user["id"]))
-    plan = "pro" if bool(user.get("pro", False)) and str(user.get("status", "inactive")).lower() == "active" else "free"
-    remaining_credits = max(FREE_USER_SCAN_LIMIT - int(usage.get("scans_used", 0)), 0)
-
-    return {
-        "user": {
-            "id": int(user["id"]),
-            "email": user["email"],
-            "name": user["name"] or _display_name_from_email(user["email"]),
-            "avatar_url": user["picture"] or _avatar_url_for_email(user["email"]),
-            "plan": plan,
-            "credits": None if plan == "pro" else remaining_credits,
-            "credits_label": "Unlimited" if plan == "pro" else str(remaining_credits),
-            "unlimited": plan == "pro",
-            "status": str(user.get("status", "inactive")),
-            "subscription_id": str(user.get("subscription_id", "")),
-            "usage": usage,
-        }
-    }
-
-
 def _display_name_from_email(email: str) -> str:
     local = (email or "").split("@", 1)[0].replace(".", " ").replace("_", " ").strip()
     if not local:
@@ -1655,11 +1940,15 @@ def _auth_status_payload(request: Request) -> dict:
         "status": "inactive",
         "subscription_id": "",
         "plan": "free",
+        "tokens_remaining": 0,
+        "tokens_limit": _plan_tokens("free"),
+        "is_trial": False,
+        "trial_ends_at": "",
     }
     if user:
         usage = _get_usage(user["id"])
+        token_state = _ensure_user_token_defaults(int(user["id"]))
         is_pro = bool(user.get("pro", False))
-        plan = "pro" if is_pro and str(user.get("status", "inactive")).lower() == "active" else "free"
         payload.update(
             {
                 "user_scans_used": usage["scans_used"],
@@ -1669,7 +1958,11 @@ def _auth_status_payload(request: Request) -> dict:
                 "pro": is_pro,
                 "status": str(user.get("status", "inactive")),
                 "subscription_id": str(user.get("subscription_id", "")),
-                "plan": plan,
+                "plan": str(token_state.get("plan", "free")),
+                "tokens_remaining": int(token_state.get("tokens_remaining", 0)),
+                "tokens_limit": int(token_state.get("tokens_limit", _plan_tokens("free"))),
+                "is_trial": bool(token_state.get("is_trial", False)),
+                "trial_ends_at": str(token_state.get("trial_ends_at", "")),
             }
         )
     return payload
@@ -1998,11 +2291,6 @@ async def razorpay_webhook(request: Request, x_razorpay_signature: str | None = 
 @app.get("/auth/status")
 def auth_status(request: Request):
     return _auth_status_payload(request)
-
-
-@app.get("/me")
-def me(request: Request):
-    return _build_me_payload(request)
 
 
 @app.get("/config")
@@ -2715,6 +3003,50 @@ def auth_logout(request: Request):
     return {"ok": True}
 
 
+@app.get("/billing/state")
+def billing_state(request: Request):
+    user = _get_session_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="AUTH_REQUIRED")
+    token_state = _ensure_user_token_defaults(int(user["id"]))
+    return {
+        "ok": True,
+        "plan": token_state.get("plan", "free"),
+        "tokens_remaining": int(token_state.get("tokens_remaining", 0)),
+        "tokens_limit": int(token_state.get("tokens_limit", _plan_tokens("free"))),
+        "is_trial": bool(token_state.get("is_trial", False)),
+        "trial_ends_at": str(token_state.get("trial_ends_at", "")),
+    }
+
+
+@app.post("/upgrade-test")
+def upgrade_test(request: Request):
+    user = _get_session_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="AUTH_REQUIRED")
+    _set_user_plan(int(user["id"]), "pro")
+    _set_user_subscription_state(int(user["id"]), pro=True, status="active")
+    state = _ensure_user_token_defaults(int(user["id"]))
+    return {
+        "ok": True,
+        "message": "Pro test upgrade applied",
+        "plan": state.get("plan", "pro"),
+        "tokens_remaining": int(state.get("tokens_remaining", 0)),
+        "tokens_limit": int(state.get("tokens_limit", _plan_tokens("pro"))),
+    }
+
+
+@app.post("/apply-promo")
+def apply_promo(request: Request, payload: PromoApplyInput):
+    user = _get_session_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="AUTH_REQUIRED")
+    result = _apply_promo_code(int(user["id"]), payload.code)
+    if str(result.get("plan", "")).lower() == "pro":
+        _set_user_subscription_state(int(user["id"]), pro=True, status="active")
+    return result
+
+
 @app.get("/p/{slug}", response_class=HTMLResponse)
 def programmatic_page(request: Request, slug: str):
     item = LONG_TAIL_BY_SLUG.get(slug)
@@ -2846,16 +3178,13 @@ def _run_analysis_request(
     if api_user_id is not None:
         user = {"id": api_user_id, "pro": True, "status": "active"}
 
+    token_usage: Optional[dict[str, Any]] = None
     if user:
-        if not bool(user.get("pro", False)) or str(user.get("status", "inactive")).lower() != "active":
-            raise HTTPException(status_code=402, detail="SUBSCRIPTION_REQUIRED")
-        usage = _get_usage(int(user["id"]))
-        if usage["scans_used"] >= FREE_USER_SCAN_LIMIT:
-            raise HTTPException(status_code=402, detail="FREE_PLAN_LIMIT_REACHED")
+        token_usage = _consume_user_tokens(int(user["id"]), "scan_email", cost=_feature_cost("scan_email"))
     else:
         anon_used = _get_anon_scans_used(request)
         if anon_used >= ANON_SCAN_LIMIT:
-            raise HTTPException(status_code=402, detail="FREE_PLAN_LIMIT_REACHED")
+            raise HTTPException(status_code=401, detail="AUTH_REQUIRED")
 
     track_event("analyze_request", {"mode": mode, "auth": "user" if user else "anon"})
 
@@ -2892,6 +3221,9 @@ def _run_analysis_request(
             "authenticated": True,
             "user_scans_used": user_scans,
             "user_scans_limit": FREE_USER_SCAN_LIMIT,
+            "tokens_remaining": int((token_usage or {}).get("tokens_remaining", 0)),
+            "tokens_limit": int((token_usage or {}).get("tokens_limit", 0)),
+            "tokens_cost": int((token_usage or {}).get("cost", _feature_cost("scan_email"))),
         }
     else:
         prediction = _predict_inbox_probability(final_score, None)
@@ -3225,6 +3557,8 @@ def seed_run_async(
     body_text: str = Form("InboxGuard seed probe"),
 ):
     user = _get_session_user(request)
+    if user:
+        _consume_user_tokens(int(user["id"]), "seed_run", cost=_feature_cost("seed_run"))
     job_id = str(uuid4())
     token = (subject_token or "").strip() or f"IG-{job_id[:8]}"
     _set_job_runtime_state(
@@ -3313,7 +3647,10 @@ def diagnose_campaign(
 
 
 @app.post("/campaign-debugger")
-def campaign_debugger(data: CampaignDebuggerInput):
+def campaign_debugger(request: Request, data: CampaignDebuggerInput):
+    user = _get_session_user(request)
+    if user:
+        _consume_user_tokens(int(user["id"]), "campaign_debugger", cost=_feature_cost("campaign_debugger"))
     return _campaign_debugger_logic(data.open_rate, data.reply_rate, data.bounce_rate, data.sent)
 
 
@@ -3336,6 +3673,8 @@ def seed_test(request: Request, data: SeedTestInput):
     }
 
     user = _get_session_user(request)
+    if user:
+        _consume_user_tokens(int(user["id"]), "seed_test", cost=_feature_cost("seed_test"))
     _save_seed_test(
         int(user["id"]) if user else None,
         campaign_name,
