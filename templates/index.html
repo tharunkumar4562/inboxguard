@@ -106,9 +106,12 @@
               🔋 <span id="token-count">0</span> <span id="token-label">credits</span>
             </div>
             <button id="start-btn" type="button" class="start-btn">Try with your email</button>
+            <button id="access-request-top" type="button" class="start-btn">Request Access</button>
             <button id="access-btn" type="button" class="access-link">Unlock Safe Sending</button>
           </div>
         </header>
+
+        <section id="home-view">
 
         <section class="hero-story card home-only">
           <h2>Stop guessing before you send</h2>
@@ -125,7 +128,7 @@
                       <div class="feature-cost">1 token</div>
                       <h3 class="feature-title">Scan Email</h3>
                       <p class="feature-description">Check if your email will land in inbox or spam across Gmail, Outlook, and other providers.</p>
-                      <button class="feature-open-btn" onclick="activateTab('threat-scan'); document.getElementById('raw-email').focus();">Open</button>
+                      <button class="feature-open-btn" onclick="openTool('scan')">Open</button>
                     </div>
 
                     <!-- Campaign Debugger -->
@@ -133,7 +136,7 @@
                       <div class="feature-cost">2 tokens</div>
                       <h3 class="feature-title">Campaign Debugger</h3>
                       <p class="feature-description">Diagnose why your emails are failing. Analyze metrics and find the exact issue.</p>
-                      <button class="feature-open-btn" onclick="openToolPane('campaign-debugger');">Open</button>
+                      <button class="feature-open-btn" onclick="openTool('campaign-debugger')">Open</button>
                     </div>
 
                     <!-- Domain Check -->
@@ -141,7 +144,7 @@
                       <div class="feature-cost">1 token</div>
                       <h3 class="feature-title">Domain Check</h3>
                       <p class="feature-description">Check if your domain is blacklisted on major blocklists. Essential before campaign launch.</p>
-                      <button class="feature-open-btn" onclick="openToolPane('blacklist');">Open</button>
+                      <button class="feature-open-btn" onclick="openTool('blacklist')">Open</button>
                     </div>
 
                     <!-- Seed Testing -->
@@ -149,7 +152,7 @@
                       <div class="feature-cost">5 tokens</div>
                       <h3 class="feature-title">Seed Testing</h3>
                       <p class="feature-description">Send test emails to seed inboxes and track delivery across providers in real-time.</p>
-                      <button class="feature-open-btn" onclick="openToolPane('seed');">Open</button>
+                      <button class="feature-open-btn" onclick="openTool('seed')">Open</button>
                     </div>
 
                     <!-- Bulk Scan -->
@@ -157,7 +160,7 @@
                       <div class="feature-cost">3 tokens</div>
                       <h3 class="feature-title">Bulk Scan</h3>
                       <p class="feature-description">Upload CSV of emails and scan them all at once. Great for testing variations.</p>
-                      <button class="feature-open-btn" onclick="openToolPane('bulk');">Open</button>
+                      <button class="feature-open-btn" onclick="openTool('bulk')">Open</button>
                     </div>
 
                     <!-- API + Team -->
@@ -165,7 +168,7 @@
                       <div class="feature-cost">Custom</div>
                       <h3 class="feature-title">API + Team</h3>
                       <p class="feature-description">Integrate InboxGuard into your workflow. Manage teams and collaborate securely.</p>
-                      <button class="feature-open-btn" onclick="openToolPane('ops');">Open</button>
+                      <button class="feature-open-btn" onclick="openTool('ops')">Open</button>
                     </div>
           </section>
         </section>
@@ -175,6 +178,13 @@
           <p class="micro">Upgrade when you are ready. Keep your domain safe before every campaign launch.</p>
           <button type="button" class="btn-primary" onclick="handleUnlock()">Unlock Safe Sending</button>
         </section>
+
+        </section>
+
+        <section id="tool-view" class="hidden">
+        <div class="card" style="margin-bottom: 12px; padding: 10px 12px;">
+          <button id="back-home-btn" type="button" class="btn-secondary">← Back</button>
+        </div>
 
         <section id="scan-panel" class="scan-panel card hidden scan-only">
           <form id="risk-form" class="scan-form">
@@ -633,6 +643,8 @@ I noticed your recent post and had one short idea to improve reply rates."></tex
           </div>
         </section>
 
+        </section>
+
         <section class="card" id="trust-social-proof" style="margin-top: 12px;">
           <h3>Trusted by teams who send before sunrise</h3>
           <p class="micro">Tested emails: 12,483 | Avg inbox improvement after fix: +37% (tracked outcomes).</p>
@@ -743,78 +755,6 @@ I noticed your recent post and had one short idea to improve reply rates."></tex
 
     <div id="toolWorkspaceBackdrop" class="tool-workspace-backdrop hidden" aria-hidden="true"></div>
 
-    <script>
-      (function () {
-        const buttons = Array.from(document.querySelectorAll('.tool-nav-btn'));
-        const panes = Array.from(document.querySelectorAll('.tool-pane'));
-        const closeButtons = Array.from(document.querySelectorAll('[data-tool-close]'));
-        const mainArea = document.querySelector('.main-area');
-
-        function closePanes() {
-          panes.forEach((pane) => pane.classList.remove('active'));
-          buttons.forEach((btn) => btn.classList.remove('active'));
-          if (mainArea) {
-            mainArea.classList.remove('tool-panel-open');
-          }
-          if (typeof window.activateTab === 'function') {
-            window.activateTab('dashboard');
-          }
-        }
-
-        function openPane(key) {
-          closePanes();
-          const pane = panes.find((item) => item.getAttribute('data-tool-pane') === key);
-          const btn = buttons.find((item) => item.getAttribute('data-tool') === key);
-          if (!pane || !btn) {
-            console.error('Missing panel for:', key);
-            return;
-          }
-          pane.classList.add('active');
-          btn.classList.add('active');
-          if (mainArea) {
-            mainArea.classList.add('tool-panel-open');
-          }
-          if (typeof window.activateTab === 'function') {
-            window.activateTab('dashboard');
-          }
-          if (typeof window.igOnToolPaneOpened === 'function') {
-            window.igOnToolPaneOpened(key, pane);
-          }
-          const firstInput = pane.querySelector('input,select,textarea,button');
-          if (firstInput && typeof firstInput.focus === 'function') {
-            setTimeout(() => firstInput.focus(), 60);
-          }
-        }
-
-        buttons.forEach((button) => {
-          button.addEventListener('click', () => {
-            const key = button.getAttribute('data-tool') || '';
-            const open = button.classList.contains('active');
-            if (open) {
-              closePanes();
-            } else {
-              openPane(key);
-            }
-          });
-        });
-
-        closeButtons.forEach((button) => {
-          button.addEventListener('click', closePanes);
-        });
-
-        window.closeTool = closePanes;
-        window.openTool = openPane;
-        window.igOpenToolPane = openPane;
-        window.igCloseToolPane = closePanes;
-
-        document.addEventListener('keydown', (event) => {
-          if (event.key === 'Escape') {
-            closePanes();
-          }
-        });
-      })();
-    </script>
-
-    <script src="/static/js/app.js?v=20260404-modal-fix-1"></script>
+    <script type="module" src="/static/js/app.js?v=20260404-clean-arch-1"></script>
   </body>
 </html>
