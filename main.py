@@ -4109,8 +4109,15 @@ def track(
 
 
 @app.post("/request-access")
-def request_access(email: str = Form("")):
+async def request_access(request: Request, email: str = Form("")):
     clean_email = (email or "").strip()
+    if not clean_email:
+        try:
+            payload = await request.json()
+        except Exception:
+            payload = {}
+        if isinstance(payload, dict):
+            clean_email = str(payload.get("email", "")).strip()
     track_event("access_request", {"email": clean_email[:120]})
     return JSONResponse({"ok": True})
 

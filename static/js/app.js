@@ -10,111 +10,19 @@ window.fetch = (input, init = {}) => {
     return nativeFetch(input, options);
 };
 
-// ============================================================================
-// CRITICAL BUTTON HANDLERS (PREVIOUSLY DEAD)
-// ============================================================================
-
-async function handleUnlock() {
-  try {
-    const res = await fetch("/auth/status", { credentials: "include" });
-    if (!res.ok) throw new Error("Not authenticated");
-    
-    const status = await res.json();
-    
-    if (status.authenticated) {
-      // User is logged in - upgrade them
-      const upgradeRes = await fetch("/upgrade-test", {
-        method: "POST",
-        credentials: "include"
-      });
-      
-      if (upgradeRes.ok) {
-        alert("✅ Upgraded to Pro! You now have 500 credits.");
-        location.reload();
-      } else {
-        alert("Failed to upgrade. Please try again.");
-      }
-    } else {
-      // Not logged in - open auth modal
-      if (authModal) {
-        authModal.classList.remove("hidden");
-      }
-    }
-  } catch (error) {
-    console.error("Unlock error:", error);
-    alert("Error processing your request. Please try again.");
-  }
-}
-
-async function handleRequestAccess() {
-  try {
-    const res = await fetch("/auth/status", { credentials: "include" });
-    const status = await res.json();
-    
-    let email = status.authenticated ? status.email : "";
-    
-    if (!email) {
-      email = prompt("Enter your email to request access:");
-      if (!email || !email.includes("@")) {
-        alert("Please enter a valid email.");
-        return;
-      }
-    }
-    
-    const accessRes = await fetch("/request-access", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify({ email })
-    });
-    
-    if (accessRes.ok) {
-      alert("✅ Access requested! We'll reach out to " + email + " soon.");
-    } else {
-      alert("Error submitting request. Please try again.");
-    }
-  } catch (error) {
-    console.error("Access request error:", error);
-    alert("Error processing your request. Please try again.");
-  }
-}
-
-// Update token display from API
-async function updateTokenDisplay() {
-  try {
-    const res = await fetch("/auth/status", { credentials: "include" });
-    if (!res.ok) return;
-    
-    const status = await res.json();
-    if (status.authenticated && status.tokens !== undefined) {
-      const tokenCountEl = document.getElementById("token-count");
-      const remainingEl = document.getElementById("remaining-count");
-      
-      if (tokenCountEl) tokenCountEl.textContent = status.tokens;
-      if (remainingEl) remainingEl.textContent = status.tokens;
-      
-      // Show token badge if user has tokens
-      const tokenBadge = document.getElementById("token-badge");
-      if (tokenBadge && status.tokens > 0) {
-        tokenBadge.classList.remove("hidden");
-      }
-    }
-  } catch (error) {
-    console.error("Token display error:", error);
-  }
-}
-
-// Initialize token display on page load
-document.addEventListener("DOMContentLoaded", updateTokenDisplay);
-
 const resultSection = document.getElementById("result");
 const idleNote = document.getElementById("idle-note");
-const scanPanel = document.querySelector(".scan-panel");
+const scanPanel = document.getElementById("scan-panel");
+const homeSections = Array.from(document.querySelectorAll(".home-only"));
+const scanSections = Array.from(document.querySelectorAll(".scan-only"));
 const tabFeedbackNode = document.getElementById("tab-feedback");
 const dashboardTab = document.getElementById("tab-dashboard");
 const threatScanTab = document.getElementById("tab-threat-scan");
 const startButton = document.getElementById("start-btn");
 const accessButton = document.getElementById("access-btn");
+const fillExampleButton = document.getElementById("fill-example");
+const tokenCostHintNode = document.getElementById("token-cost-hint");
+const tokenAfterHintNode = document.getElementById("token-after-hint");
 
 const authModal = document.getElementById("auth-modal");
 const authSignInButton = document.getElementById("auth-signin");
@@ -1051,6 +959,8 @@ function activateTab(tab) {
 
     if (tab === "threat-scan") {
         threatScanTab.classList.add("active");
+        homeSections.forEach((node) => node.classList.add("hidden"));
+        scanSections.forEach((node) => node.classList.remove("hidden"));
         if (scanPanel) {
             scanPanel.classList.add("focused");
             scanPanel.classList.remove("hidden");
@@ -1062,11 +972,13 @@ function activateTab(tab) {
         setTabFeedback("Scan mode active. Paste your email and click Check Before Sending.");
     } else {
         dashboardTab.classList.add("active");
+        homeSections.forEach((node) => node.classList.remove("hidden"));
+        scanSections.forEach((node) => node.classList.add("hidden"));
         if (scanPanel) {
             scanPanel.classList.remove("focused");
             scanPanel.classList.add("hidden");
         }
-        setTabFeedback("Paste your email, click Check Before Sending, then fix top issues.");
+        setTabFeedback("Choose a tool to get started.");
     }
 }
 
@@ -1142,9 +1054,6 @@ function setResultState() {
     if (progressBarNode) {
         progressBarNode.style.width = "100%";
     }
-    
-    // Refresh token count after scan completes
-    updateTokenDisplay();
 }
 
 function startRealtimeScanSteps() {
@@ -2320,7 +2229,7 @@ async function runAnalyze() {
         if (resultSection) {
             resultSection.scrollIntoView({ behavior: "smooth", block: "start" });
         }
-        activateTab("dashboard");
+        activateTab("threat-scan");
 
         if (data.usage && !data.usage.authenticated) {
             anonymousScansUsed = Number(data.usage.anonymous_scans_used || anonymousScansUsed + 1);
@@ -2334,6 +2243,13 @@ async function runAnalyze() {
         if (data.usage && data.usage.authenticated) {
             userScansUsed = Number(data.usage.user_scans_used || userScansUsed + 1);
             userScansLimit = Number(data.usage.user_scans_limit || userScansLimit);
+        }
+
+        await loadUserTokens();
+        const tokenCountNode = document.getElementById("token-count");
+        if (tokenAfterHintNode && tokenCountNode) {
+            tokenAfterHintNode.textContent = `Credits remaining: ${String(tokenCountNode.textContent || "0")}`;
+            tokenAfterHintNode.classList.remove("hidden");
         }
     } catch (error) {
         if (loadingTicker && typeof loadingTicker.stop === "function") {
@@ -2757,128 +2673,115 @@ async function runRewriteAsync() {
 // ===== RAZORPAY PAYMENT INTEGRATION =====
 window.currentUser = isAuthenticated;
 
+function updateTokenMessaging(tokens) {
+    const safeTokens = Math.max(0, Number(tokens || 0));
+    if (tokenCostHintNode) {
+        tokenCostHintNode.textContent = `This will cost 1 credit. You have ${safeTokens} left.`;
+    }
+}
+
+async function loadUserTokens() {
+    try {
+        const tokenBadge = document.getElementById("token-badge");
+        const tokenCount = document.getElementById("token-count");
+        const tokenLabel = document.getElementById("token-label");
+
+        if (!isAuthenticated) {
+            if (tokenBadge) {
+                tokenBadge.classList.add("hidden");
+            }
+            return;
+        }
+
+        const res = await fetch("/tokens/info", { method: "GET" });
+        if (!res.ok) {
+            return;
+        }
+        const data = await res.json();
+        const tokens = Number(data.tokens || 0);
+
+        if (tokenBadge && tokenCount) {
+            tokenBadge.classList.remove("hidden");
+            tokenCount.textContent = String(tokens);
+            if (tokenLabel) {
+                tokenLabel.textContent = tokens === 1 ? "credit" : "credits";
+            }
+        }
+
+        updateTokenMessaging(tokens);
+    } catch (error) {
+        // Keep UI responsive even if token endpoint is unavailable.
+    }
+}
+
+async function handleUnlock() {
+    const res = await fetch("/auth/me", { method: "GET", credentials: "include" });
+    if (!res.ok) {
+        showAuthModal();
+        return;
+    }
+
+    const upgrade = await fetch("/upgrade-test", {
+        method: "POST",
+        credentials: "include",
+    });
+    if (!upgrade.ok) {
+        showError("Could not upgrade account. Try again.");
+        return;
+    }
+
+    alert("Upgraded to Pro 🚀");
+    window.location.reload();
+}
+
+async function handleRequestAccess() {
+    const email = window.prompt("Enter your email:");
+    if (!email) {
+        return;
+    }
+
+    const response = await fetch("/request-access", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+        credentials: "include",
+    });
+    if (!response.ok) {
+        showError("Could not submit access request.");
+        return;
+    }
+
+    alert("Access requested. We'll reach out.");
+}
+
 function openPricingModal() {
     const modal = document.getElementById("pricing-modal");
-    if (modal) {
-        modal.classList.remove("hidden");
-        document.body.classList.add("modal-open");
-        const focusTarget = modal.querySelector("button, input, select, textarea, a");
-        if (focusTarget && typeof focusTarget.focus === "function") {
-            setTimeout(() => focusTarget.focus(), 30);
-        }
+    if (!modal) {
+        return;
     }
+    modal.classList.remove("hidden");
+    document.body.classList.add("modal-open");
 }
 
 function closePricingModal() {
     const modal = document.getElementById("pricing-modal");
-    if (modal) {
-        modal.classList.add("hidden");
-        document.body.classList.remove("modal-open");
+    if (!modal) {
+        return;
     }
+    modal.classList.add("hidden");
+    document.body.classList.remove("modal-open");
 }
 
 function handleGetAccess() {
     openPricingModal();
 }
 
-const pricingModal = document.getElementById("pricing-modal");
-if (pricingModal) {
-    pricingModal.addEventListener("click", (event) => {
-        if (event.target === pricingModal) {
-            closePricingModal();
-            // Load user's token balance
-            async function loadUserTokens() {
-                try {
-                    const res = await fetch("/tokens/info");
-                    if (!res.ok) {
-                        console.warn("Could not load tokens");
-                        return;
-                    }
-                    const data = await res.json();
-                    const tokenBadge = document.getElementById("token-badge");
-                    const tokenCount = document.getElementById("token-count");
-                    const tokenLabel = document.getElementById("token-label");
-
-                    if (tokenBadge && tokenCount) {
-                        tokenBadge.classList.remove("hidden");
-                        tokenCount.innerText = String(data.tokens || 0);
-                        if (tokenLabel) {
-                            tokenLabel.innerText = (data.tokens === 1) ? "credit" : "credits";
-                        }
-                    }
-                } catch (err) {
-                    console.warn("Error loading tokens:", err);
-                }
-            }
-
-            // Apply promo code
-            async function applyPromoCode() {
-                const codeInput = document.getElementById("promo-code-input");
-                const msg = document.getElementById("promo-message");
-                const code = (codeInput.value || "").trim().toUpperCase();
-
-                if (!code) {
-                    if (msg) {
-                        msg.innerText = "Enter a promo code";
-                        msg.style.color = "#fca5a5";
-                        msg.style.display = "block";
-                    }
-                    return;
-                }
-
-                try {
-                    const res = await fetch("/apply-promo", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-                        body: `code=${encodeURIComponent(code)}`,
-                    });
-                    const data = await res.json();
-
-                    if (res.ok) {
-                        if (msg) {
-                            msg.innerText = data.message || "Promo applied! Refresh to see tokens.";
-                            msg.style.color = "#86efac";
-                            msg.style.display = "block";
-                        }
-                        if (codeInput) codeInput.value = "";
-                        // Reload tokens
-                        await loadUserTokens();
-                        // Refresh page after 1s
-                        setTimeout(() => location.reload(), 1000);
-                    } else {
-                        if (msg) {
-                            msg.innerText = data.message || "Invalid promo code";
-                            msg.style.color = "#fca5a5";
-                            msg.style.display = "block";
-                        }
-                    }
-                } catch (err) {
-                    console.error("Error applying promo:", err);
-                    if (msg) {
-                        msg.innerText = "Error applying code. Try again.";
-                        msg.style.color = "#fca5a5";
-                        msg.style.display = "block";
-                    }
-                }
-            }
-
-            // Bind promo button
-            const applyPromoBtn = document.getElementById("apply-promo-btn");
-            if (applyPromoBtn) {
-                applyPromoBtn.addEventListener("click", applyPromoCode);
-            }
-
-            const promoInput = document.getElementById("promo-code-input");
-            if (promoInput) {
-                promoInput.addEventListener("keypress", (e) => {
-                    if (e.key === "Enter") {
-                        e.preventDefault();
-                        applyPromoCode();
-                    }
-                });
-            }
-        }
-    });
+function openToolPane(toolKey) {
+    if (typeof window.igOpenToolPane === "function") {
+        window.igOpenToolPane(toolKey);
+    } else if (typeof window.openTool === "function") {
+        window.openTool(toolKey);
+    }
 }
 
 function canUserScan() {
@@ -2898,32 +2801,25 @@ function canUserScan() {
 
     showPaywall();
     return false;
-
-    /*
-    Legacy free-scan gate retained intentionally for potential future re-enable:
-    if (userScansUsed >= 1) {
-        showPaywall();
-        return false;
-    }
-    */
 }
 
 function showPaywall() {
     const paywall = document.getElementById("paywall");
-    if (paywall) {
-        paywall.classList.remove("hidden");
-        const title = paywall.querySelector("h3");
-        const body = paywall.querySelector("p");
-        const button = paywall.querySelector("button");
-        if (title) {
-            title.textContent = "You've found your biggest risk. Fixing one email isn't enough.";
-        }
-        if (body) {
-            body.textContent = "Unlock Safe Sending to run your next check before the next campaign goes out.";
-        }
-        if (button) {
-            button.textContent = "Unlock Safe Sending";
-        }
+    if (!paywall) {
+        return;
+    }
+    paywall.classList.remove("hidden");
+    const title = paywall.querySelector("h3");
+    const body = paywall.querySelector("p");
+    const button = paywall.querySelector("button");
+    if (title) {
+        title.textContent = "You've found your biggest risk. Fixing one email isn't enough.";
+    }
+    if (body) {
+        body.textContent = "Unlock Safe Sending to run your next check before the next campaign goes out.";
+    }
+    if (button) {
+        button.textContent = "Unlock Safe Sending";
     }
 }
 
@@ -2936,98 +2832,93 @@ function showUpgradeBlock() {
 }
 
 async function startPayment() {
-    function openToolPane(toolKey) {
-        const pane = document.querySelector(`[data-tool-pane="${toolKey}"]`);
-        const btn = document.querySelector(`[data-tool="${toolKey}"]`);
-        if (!pane || !btn) {
-            console.error('Tool pane not found:', toolKey);
+    try {
+        if (!isAuthenticated) {
+            showAuthModal();
             return;
         }
-        // Close all other panes
-        document.querySelectorAll('.tool-pane').forEach(p => p.classList.remove('active'));
-        document.querySelectorAll('.tool-nav-btn').forEach(b => b.classList.remove('active'));
-        // Open this pane
-        pane.classList.add('active');
-        btn.classList.add('active');
-        const mainArea = document.querySelector('.main-area');
-        if (mainArea) {
-            mainArea.classList.add('tool-panel-open');
+
+        const payload = new FormData();
+        const selectedPlan = inlinePlanTypeInput
+            ? String(inlinePlanTypeInput.value || "monthly")
+            : "monthly";
+        payload.set("plan", selectedPlan);
+
+        const response = await fetch("/create-subscription", { method: "POST", body: payload });
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok || !data.success) {
+            showError(data.detail || "Payment system not configured. Please try again later.");
+            return;
         }
-        // Focus first input
-        const firstInput = pane.querySelector('input,select,textarea,button');
-        if (firstInput && typeof firstInput.focus === 'function') {
-            setTimeout(() => firstInput.focus(), 60);
+
+        if (data.usage_mode) {
+            showError("Usage-based plan enabled. API billing will apply per scan.");
+            closePricingModal();
+            return;
         }
-    }
 
-    // Load user's token balance
-    async function loadUserTokens() {
-        try {
-            if (!isAuthenticated) {
-                showAuthModal();
-                return;
-            }
+        if (typeof Razorpay === "undefined") {
+            showError("Payment system not available. Please try again.");
+            return;
+        }
 
-            const planInput = document.getElementById("plan-type");
-            const payload = new FormData();
-            const selectedPlan = inlinePlanTypeInput
-                ? String(inlinePlanTypeInput.value || "monthly")
-                : (planInput ? String(planInput.value || "monthly") : "monthly");
-            payload.set("plan", selectedPlan);
-            const response = await fetch("/create-subscription", { method: "POST", body: payload });
-            const data = await response.json().catch(() => ({}));
-
-            if (!response.ok || !data.success) {
-                showError(data.detail || "Payment system not configured. Please try again later.");
-                return;
-            }
-
-            if (data.usage_mode) {
-                showError("Usage-based plan enabled. API billing will apply per scan.");
+        const options = {
+            key: data.key,
+            amount: data.amount,
+            currency: data.currency || "INR",
+            subscription_id: data.subscription_id,
+            name: "InboxGuard",
+            description: `${data.display_price || "$12"} / month`,
+            prefill: {
+                email: currentUserEmail || "",
+                name: currentUserName || "",
+            },
+            handler: function () {
                 closePricingModal();
-                return;
-            }
+                showError("Subscription started. Processing payment and unlocking access...");
+                setTimeout(() => {
+                    window.location.reload();
+                }, 5000);
+            },
+        };
 
-            if (typeof Razorpay === "undefined") {
-                showError("Payment system not available. Please try again.");
-                return;
-            }
-
-            const options = {
-                key: data.key,
-                amount: data.amount,
-                currency: data.currency || "INR",
-                subscription_id: data.subscription_id,
-                name: "InboxGuard",
-                description: `${data.display_price || "$12"} / month`,
-                prefill: {
-                    email: currentUserEmail || "",
-                    name: currentUserName || "",
-                },
-                handler: function () {
-                    closePricingModal();
-                    showError("Subscription started. Processing payment and unlocking access...");
-                    setTimeout(() => {
-                        window.location.reload();
-                    }, 5000);
-                },
-            };
-
-            const rzp = new Razorpay(options);
-            rzp.open();
-        } catch (error) {
-            showError("Could not start checkout: " + (error && error.message ? error.message : "Unknown error"));
-        }
+        const rzp = new Razorpay(options);
+        rzp.open();
+    } catch (error) {
+        showError(`Could not start checkout: ${error && error.message ? error.message : "Unknown error"}`);
     }
+}
 
+window.openPricingModal = openPricingModal;
+window.closePricingModal = closePricingModal;
+window.handleUnlock = handleUnlock;
+window.handleRequestAccess = handleRequestAccess;
+window.openToolPane = openToolPane;
+
+function wireUiEvents() {
+    const pricingModal = document.getElementById("pricing-modal");
     const payButton = document.getElementById("pay-btn");
     const cancelSubscriptionButton = document.getElementById("cancel-subscription");
+    const applyPromoBtn = document.getElementById("apply-promo-btn");
+    const promoInput = document.getElementById("promo-code-input");
+    const promoMessage = document.getElementById("promo-message");
+
+    if (pricingModal) {
+        pricingModal.addEventListener("click", (event) => {
+            if (event.target === pricingModal) {
+                closePricingModal();
+            }
+        });
+    }
+
     if (payButton) {
         payButton.addEventListener("click", (event) => {
             event.preventDefault();
             startPayment();
         });
     }
+
     if (refreshPlansButton) {
         refreshPlansButton.addEventListener("click", (event) => {
             event.preventDefault();
@@ -3036,14 +2927,16 @@ async function startPayment() {
             });
         });
     }
+
     if (requestAccessButton) {
         requestAccessButton.addEventListener("click", (event) => {
             event.preventDefault();
-            requestAccess().catch((error) => {
+            handleRequestAccess().catch((error) => {
                 showError(error && error.message ? error.message : "Could not submit access request.");
             });
         });
     }
+
     if (cancelSubscriptionButton) {
         cancelSubscriptionButton.addEventListener("click", async (event) => {
             event.preventDefault();
@@ -3057,349 +2950,277 @@ async function startPayment() {
         });
     }
 
-    if (dashboardTab) {
-        window.igOnToolPaneOpened = (key, pane) => {
-            refreshToolPaneData(key);
-            const primary = pane && pane.querySelector
-                ? pane.querySelector(".tool-pane-primary")
-                : null;
-            if (primary && typeof primary.focus === "function") {
-                setTimeout(() => primary.focus(), 30);
+    if (applyPromoBtn) {
+        applyPromoBtn.addEventListener("click", async () => {
+            const code = String(promoInput && promoInput.value ? promoInput.value : "").trim().toUpperCase();
+            if (!code) {
+                if (promoMessage) {
+                    promoMessage.textContent = "Enter a promo code";
+                    promoMessage.style.display = "block";
+                    promoMessage.style.color = "#fca5a5";
+                }
+                return;
             }
-        };
+            const response = await fetch("/apply-promo", {
+                method: "POST",
+                headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                body: `code=${encodeURIComponent(code)}`,
+            });
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok) {
+                if (promoMessage) {
+                    promoMessage.textContent = String(data.message || "Invalid promo code");
+                    promoMessage.style.display = "block";
+                    promoMessage.style.color = "#fca5a5";
+                }
+                return;
+            }
+            if (promoMessage) {
+                promoMessage.textContent = String(data.message || "Promo applied!");
+                promoMessage.style.display = "block";
+                promoMessage.style.color = "#86efac";
+            }
+            if (promoInput) {
+                promoInput.value = "";
+            }
+            await loadUserTokens();
+            setTimeout(() => window.location.reload(), 1000);
+        });
+    }
 
+    if (promoInput) {
+        promoInput.addEventListener("keypress", (event) => {
+            if (event.key === "Enter") {
+                event.preventDefault();
+                if (applyPromoBtn) {
+                    applyPromoBtn.click();
+                }
+            }
+        });
+    }
+
+    if (dashboardTab) {
         dashboardTab.addEventListener("click", () => {
             if (typeof window.closeTool === "function") {
                 window.closeTool();
             }
             activateTab("dashboard");
         });
+    }
 
-        if (threatScanTab) {
-            threatScanTab.addEventListener("click", () => {
-                if (typeof window.closeTool === "function") {
-                    window.closeTool();
-                }
-                activateTab("threat-scan");
-            });
-        }
-        if (startButton) {
-            startButton.addEventListener("click", () => {
-                if (rawEmailInput) {
-                    rawEmailInput.scrollIntoView({ behavior: "smooth", block: "center" });
-                    setTimeout(() => rawEmailInput.focus(), 160);
-                }
-                activateTab("threat-scan");
-                trackEvent("start_clicked", { destination: "email_input" });
-            });
-        }
-        if (accessButton) {
-            accessButton.addEventListener("click", (event) => {
-                event.preventDefault();
-                handleGetAccess();
-            });
-        }
-        if (fixNowButton) {
-            fixNowButton.addEventListener("click", () => {
-                const payload = new FormData();
-                payload.set("event", "rewrite_clicked");
-                fetch("/track", { method: "POST", body: payload }).catch(() => null);
+    if (threatScanTab) {
+        threatScanTab.addEventListener("click", () => {
+            if (typeof window.closeTool === "function") {
+                window.closeTool();
+            }
+            activateTab("threat-scan");
+        });
+    }
 
-                pendingAction = "fix";
-                runPendingAction();
-            });
-        }
-        if (riskFixNowButton) {
-            riskFixNowButton.addEventListener("click", () => {
-                trackEvent("fix_clicked", { source: "risk_fix_now" });
-                pendingAction = "fix";
-                runPendingAction();
-            });
-        }
-        if (riskFixAsyncButton) {
-            riskFixAsyncButton.addEventListener("click", () => {
-                trackEvent("fix_async_clicked", { source: "risk_fix_async" });
-                runRewriteAsync().catch((error) => {
-                    showError(error && error.message ? error.message : "Could not queue async rewrite.");
-                });
-            });
-        }
-        if (postFixAccessButton) {
-            postFixAccessButton.addEventListener("click", () => {
-                if (!isAuthenticated) {
-                    openPricingModal();
-                    trackEvent("post_fix_access_clicked", { state: "anon" });
-                    return;
-                }
-                trackEvent("post_fix_access_clicked", { state: "authenticated" });
-                runSeedAuto().catch(() => {
-                    window.location.href = "/seed-inbox";
-                });
-            });
-        }
-        if (useFixedButton) {
-            useFixedButton.addEventListener("click", useFixedVersion);
-        }
-        if (sendGmailButton) {
-            sendGmailButton.addEventListener("click", openInGmail);
-        }
-        if (restoreOriginalButton) {
-            restoreOriginalButton.addEventListener("click", restoreOriginalDraft);
-        }
-        if (editManualButton) {
-            editManualButton.addEventListener("click", editManually);
-        }
-        if (feedbackInboxButton) {
-            feedbackInboxButton.addEventListener("click", () => sendFeedback("inbox"));
-        }
-        if (feedbackSpamButton) {
-            feedbackSpamButton.addEventListener("click", () => sendFeedback("spam"));
-        }
-        if (feedbackPromotionsButton) {
-            feedbackPromotionsButton.addEventListener("click", () => sendFeedback("promotions"));
-        }
-        if (saveFixButton) {
-            saveFixButton.addEventListener("click", () => {
-                pendingAction = "save-fix";
-                saveCurrentFix().catch((error) => {
-                    showError(error && error.message ? error.message : "Could not save this fix.");
-                });
-            });
-        }
-        if (runDiagnosisButton) {
-            runDiagnosisButton.addEventListener("click", () => {
-                runCampaignDiagnosis().catch((error) => {
-                    showError(error && error.message ? error.message : "Could not diagnose campaign.");
-                });
-            });
-        }
-        if (submitAsyncButton) {
-            submitAsyncButton.addEventListener("click", () => {
-                runAnalyzeAsync().catch((error) => {
-                    showError(error && error.message ? error.message : "Could not queue async scan.");
-                });
-            });
-        }
-        if (runBlacklistCheckButton) {
-            runBlacklistCheckButton.addEventListener("click", () => {
-                runBlacklistCheck().catch((error) => {
-                    showError(error && error.message ? error.message : "Could not check domain risk.");
-                });
-            });
-        }
-        if (saveSeedTestButton) {
-            saveSeedTestButton.addEventListener("click", () => {
-                saveSeedTest().catch((error) => {
-                    showError(error && error.message ? error.message : "Could not save seed test.");
-                });
-            });
-        }
-        if (runSeedAutoButton) {
-            runSeedAutoButton.addEventListener("click", () => {
-                runSeedAuto().catch((error) => {
-                    showError(error && error.message ? error.message : "Could not run automated seed test.");
-                });
-            });
-        }
-        if (runSeedSyncButton) {
-            runSeedSyncButton.addEventListener("click", () => {
-                runSeedSync().catch((error) => {
-                    showError(error && error.message ? error.message : "Could not run instant seed probe.");
-                });
-            });
-        }
-        if (runBulkScanButton) {
-            runBulkScanButton.addEventListener("click", () => {
-                runBulkScan().catch((error) => {
-                    showError(error && error.message ? error.message : "Could not run bulk scan.");
-                });
-            });
-        }
-        if (createApiKeyButton) {
-            createApiKeyButton.addEventListener("click", () => {
-                createApiKey().catch((error) => {
-                    showError(error && error.message ? error.message : "Could not create API key.");
-                });
-            });
-        }
-        if (listApiKeysButton) {
-            listApiKeysButton.addEventListener("click", () => {
-                listApiKeys().catch((error) => {
-                    showError(error && error.message ? error.message : "Could not load API keys.");
-                });
-            });
-        }
-        if (revokeApiKeyButton) {
-            revokeApiKeyButton.addEventListener("click", () => {
-                revokeApiKey().catch((error) => {
-                    showError(error && error.message ? error.message : "Could not revoke API key.");
-                });
-            });
-        }
-        if (createTeamButton) {
-            createTeamButton.addEventListener("click", () => {
-                createTeam().catch((error) => {
-                    showError(error && error.message ? error.message : "Could not create team.");
-                });
-            });
-        }
-        if (listTeamsButton) {
-            listTeamsButton.addEventListener("click", () => {
-                listTeams().catch((error) => {
-                    showError(error && error.message ? error.message : "Could not load teams.");
-                });
-            });
-        }
-        if (addTeamMemberButton) {
-            addTeamMemberButton.addEventListener("click", () => {
-                addTeamMember().catch((error) => {
-                    showError(error && error.message ? error.message : "Could not add team member.");
-                });
-            });
-        }
-        if (refreshOutcomeStatsButton) {
-            refreshOutcomeStatsButton.addEventListener("click", () => {
-                refreshOutcomeStats().catch((error) => {
-                    showError(error && error.message ? error.message : "Could not load outcome stats.");
-                });
-            });
-        }
-        if (refreshJobsButton) {
-            refreshJobsButton.addEventListener("click", () => {
-                refreshJobs().catch((error) => {
-                    showError(error && error.message ? error.message : "Could not load async jobs.");
-                });
-            });
-        }
-        if (leadCaptureContinueButton) {
-            leadCaptureContinueButton.addEventListener("click", () => {
-                continueWithLeadCapture().catch((error) => {
-                    showError(error && error.message ? error.message : "Could not save your email.");
-                });
-            });
-        }
-        if (leadCaptureCloseButton) {
-            leadCaptureCloseButton.addEventListener("click", () => {
-                hideLeadCaptureModal();
-            });
-        }
-        if (authSignInButton) {
-            authSignInButton.addEventListener("click", () => handleAuthAction("signin"));
-        }
-        if (authCreateButton) {
-            authCreateButton.addEventListener("click", () => handleAuthAction("create"));
-        }
-        if (authCloseButton) {
-            authCloseButton.addEventListener("click", () => handleAuthAction("close"));
-        }
-        if (authModal) {
-            authModal.addEventListener("click", (event) => {
-                const target = event.target;
-                if (!(target instanceof HTMLElement)) {
-                    return;
-                }
-                if (target.id === "auth-modal") {
-                    handleAuthAction("close");
-                    return;
-                }
-                if (target.id === "auth-signin") {
-                    handleAuthAction("signin");
-                    return;
-                }
-                if (target.id === "auth-create") {
-                    handleAuthAction("create");
-                    return;
-                }
-                if (target.id === "auth-close") {
-                    handleAuthAction("close");
-                }
-            });
-        }
-        if (leadCaptureModal) {
-            leadCaptureModal.addEventListener("click", (event) => {
-                const target = event.target;
-                if (!(target instanceof HTMLElement)) {
-                    return;
-                }
-                if (target.id === "lead-capture-modal") {
-                    hideLeadCaptureModal();
-                    return;
-                }
-                if (target.id === "lead-capture-continue") {
-                    continueWithLeadCapture().catch((error) => {
-                        showError(error && error.message ? error.message : "Could not save your email.");
-                    });
-                    return;
-                }
-                if (target.id === "lead-capture-close") {
-                    hideLeadCaptureModal();
-                }
-            });
-        }
+    if (startButton) {
+        startButton.addEventListener("click", () => {
+            activateTab("threat-scan");
+            if (rawEmailInput) {
+                rawEmailInput.scrollIntoView({ behavior: "smooth", block: "center" });
+                setTimeout(() => rawEmailInput.focus(), 160);
+            }
+            trackEvent("start_clicked", { destination: "email_input" });
+        });
+    }
 
-        if (form) {
-            form.addEventListener("submit", async (event) => {
-                event.preventDefault();
-                if (!canUserScan()) {
-                    return;
-                }
-                pendingAction = "analyze";
-                if (needsLeadCaptureGate("analyze")) {
-                    showLeadCaptureModal();
-                    return;
-                }
-                if (needsAuthGate("analyze")) {
-                    if (isAuthenticated) {
-                        showError("You reached your monthly free plan scan limit. Upgrade is required for more scans.");
-                        return;
-                    }
-                    showAuthModal();
-                    return;
-                }
-                runPendingAction();
-            });
-        }
-
-        if (rawEmailInput) {
-            rawEmailInput.addEventListener("input", () => {
-                const value = String(rawEmailInput.value || "").trim();
-                if (!emailPastedTracked && value.length >= 20) {
-                    emailPastedTracked = true;
-                    trackEvent("email_pasted", {
-                        length_bucket: value.length >= 300 ? "300_plus" : value.length >= 120 ? "120_299" : "20_119",
-                    });
-                }
-            });
-        }
-
-        document.querySelectorAll("details.secondary-options, details.advanced-block").forEach((detailsNode) => {
-            detailsNode.addEventListener("toggle", () => {
-                if (detailsNode.open && !advancedOpenedTracked) {
-                    advancedOpenedTracked = true;
-                    trackEvent("advanced_opened", {
-                        section: detailsNode.classList.contains("advanced-block") ? "why_flagged" : "scan_options",
-                    });
-                }
+    if (accessButton) {
+        accessButton.addEventListener("click", (event) => {
+            event.preventDefault();
+            handleUnlock().catch((error) => {
+                showError(error && error.message ? error.message : "Could not unlock account.");
             });
         });
     }
 
-    magnetic(submitButton);
-    magnetic(useFixedButton);
-    initializeLoopCounters();
-    setupNextAction();
-    setupParallax();
+    if (fillExampleButton) {
+        fillExampleButton.addEventListener("click", () => {
+            if (!rawEmailInput) {
+                return;
+            }
+            rawEmailInput.value = "Subject: Quick question about your outreach\n\nHi John,\nI noticed your recent post and had one short idea to improve reply rates without changing your offer.\nWould you be open to a quick review this week?\n\nBest,\nTharun";
+            rawEmailInput.focus();
+            showError("Example email loaded. Click Check Before Sending.");
+        });
+    }
 
-    setIdleState();
-    activateTab("dashboard");
-    refreshAuthStatus().then(() => {
-        resumePendingAfterAuthIfNeeded();
-        openAuthModalFromQueryIfNeeded();
-        refreshSeedTests().catch(() => null);
-        if (isAuthenticated) {
-            listApiKeys().catch(() => null);
-            listTeams().catch(() => null);
-            refreshOutcomeStats().catch(() => null);
-        }
-        refreshJobs().catch(() => null);
+    if (fixNowButton) {
+        fixNowButton.addEventListener("click", () => {
+            const payload = new FormData();
+            payload.set("event", "rewrite_clicked");
+            fetch("/track", { method: "POST", body: payload }).catch(() => null);
+            pendingAction = "fix";
+            runPendingAction();
+        });
+    }
+    if (riskFixNowButton) {
+        riskFixNowButton.addEventListener("click", () => {
+            trackEvent("fix_clicked", { source: "risk_fix_now" });
+            pendingAction = "fix";
+            runPendingAction();
+        });
+    }
+    if (riskFixAsyncButton) {
+        riskFixAsyncButton.addEventListener("click", () => {
+            trackEvent("fix_async_clicked", { source: "risk_fix_async" });
+            runRewriteAsync().catch((error) => {
+                showError(error && error.message ? error.message : "Could not queue async rewrite.");
+            });
+        });
+    }
+    if (postFixAccessButton) {
+        postFixAccessButton.addEventListener("click", () => {
+            if (!isAuthenticated) {
+                openPricingModal();
+                trackEvent("post_fix_access_clicked", { state: "anon" });
+                return;
+            }
+            trackEvent("post_fix_access_clicked", { state: "authenticated" });
+            runSeedAuto().catch(() => {
+                window.location.href = "/seed-inbox";
+            });
+        });
+    }
+
+    if (useFixedButton) useFixedButton.addEventListener("click", useFixedVersion);
+    if (sendGmailButton) sendGmailButton.addEventListener("click", openInGmail);
+    if (restoreOriginalButton) restoreOriginalButton.addEventListener("click", restoreOriginalDraft);
+    if (editManualButton) editManualButton.addEventListener("click", editManually);
+    if (feedbackInboxButton) feedbackInboxButton.addEventListener("click", () => sendFeedback("inbox"));
+    if (feedbackSpamButton) feedbackSpamButton.addEventListener("click", () => sendFeedback("spam"));
+    if (feedbackPromotionsButton) feedbackPromotionsButton.addEventListener("click", () => sendFeedback("promotions"));
+
+    if (saveFixButton) {
+        saveFixButton.addEventListener("click", () => {
+            pendingAction = "save-fix";
+            saveCurrentFix().catch((error) => {
+                showError(error && error.message ? error.message : "Could not save this fix.");
+            });
+        });
+    }
+    if (runDiagnosisButton) runDiagnosisButton.addEventListener("click", () => runCampaignDiagnosis().catch((error) => showError(error && error.message ? error.message : "Could not diagnose campaign.")));
+    if (submitAsyncButton) submitAsyncButton.addEventListener("click", () => runAnalyzeAsync().catch((error) => showError(error && error.message ? error.message : "Could not queue async scan.")));
+    if (runBlacklistCheckButton) runBlacklistCheckButton.addEventListener("click", () => runBlacklistCheck().catch((error) => showError(error && error.message ? error.message : "Could not check domain risk.")));
+    if (saveSeedTestButton) saveSeedTestButton.addEventListener("click", () => saveSeedTest().catch((error) => showError(error && error.message ? error.message : "Could not save seed test.")));
+    if (runSeedAutoButton) runSeedAutoButton.addEventListener("click", () => runSeedAuto().catch((error) => showError(error && error.message ? error.message : "Could not run automated seed test.")));
+    if (runSeedSyncButton) runSeedSyncButton.addEventListener("click", () => runSeedSync().catch((error) => showError(error && error.message ? error.message : "Could not run instant seed probe.")));
+    if (runBulkScanButton) runBulkScanButton.addEventListener("click", () => runBulkScan().catch((error) => showError(error && error.message ? error.message : "Could not run bulk scan.")));
+    if (createApiKeyButton) createApiKeyButton.addEventListener("click", () => createApiKey().catch((error) => showError(error && error.message ? error.message : "Could not create API key.")));
+    if (listApiKeysButton) listApiKeysButton.addEventListener("click", () => listApiKeys().catch((error) => showError(error && error.message ? error.message : "Could not load API keys.")));
+    if (revokeApiKeyButton) revokeApiKeyButton.addEventListener("click", () => revokeApiKey().catch((error) => showError(error && error.message ? error.message : "Could not revoke API key.")));
+    if (createTeamButton) createTeamButton.addEventListener("click", () => createTeam().catch((error) => showError(error && error.message ? error.message : "Could not create team.")));
+    if (listTeamsButton) listTeamsButton.addEventListener("click", () => listTeams().catch((error) => showError(error && error.message ? error.message : "Could not load teams.")));
+    if (addTeamMemberButton) addTeamMemberButton.addEventListener("click", () => addTeamMember().catch((error) => showError(error && error.message ? error.message : "Could not add team member.")));
+    if (refreshOutcomeStatsButton) refreshOutcomeStatsButton.addEventListener("click", () => refreshOutcomeStats().catch((error) => showError(error && error.message ? error.message : "Could not load outcome stats.")));
+    if (refreshJobsButton) refreshJobsButton.addEventListener("click", () => refreshJobs().catch((error) => showError(error && error.message ? error.message : "Could not load async jobs.")));
+
+    if (leadCaptureContinueButton) {
+        leadCaptureContinueButton.addEventListener("click", () => {
+            continueWithLeadCapture().catch((error) => {
+                showError(error && error.message ? error.message : "Could not save your email.");
+            });
+        });
+    }
+    if (leadCaptureCloseButton) leadCaptureCloseButton.addEventListener("click", hideLeadCaptureModal);
+    if (authSignInButton) authSignInButton.addEventListener("click", () => handleAuthAction("signin"));
+    if (authCreateButton) authCreateButton.addEventListener("click", () => handleAuthAction("create"));
+    if (authCloseButton) authCloseButton.addEventListener("click", () => handleAuthAction("close"));
+
+    if (authModal) {
+        authModal.addEventListener("click", (event) => {
+            const target = event.target;
+            if (!(target instanceof HTMLElement)) return;
+            if (target.id === "auth-modal") handleAuthAction("close");
+            if (target.id === "auth-signin") handleAuthAction("signin");
+            if (target.id === "auth-create") handleAuthAction("create");
+            if (target.id === "auth-close") handleAuthAction("close");
+        });
+    }
+
+    if (leadCaptureModal) {
+        leadCaptureModal.addEventListener("click", (event) => {
+            const target = event.target;
+            if (!(target instanceof HTMLElement)) return;
+            if (target.id === "lead-capture-modal") hideLeadCaptureModal();
+            if (target.id === "lead-capture-continue") {
+                continueWithLeadCapture().catch((error) => {
+                    showError(error && error.message ? error.message : "Could not save your email.");
+                });
+            }
+            if (target.id === "lead-capture-close") hideLeadCaptureModal();
+        });
+    }
+
+    if (form) {
+        form.addEventListener("submit", async (event) => {
+            event.preventDefault();
+            if (!canUserScan()) {
+                return;
+            }
+            pendingAction = "analyze";
+            if (needsLeadCaptureGate("analyze")) {
+                showLeadCaptureModal();
+                return;
+            }
+            if (needsAuthGate("analyze")) {
+                if (isAuthenticated) {
+                    showError("You reached your monthly free plan scan limit. Upgrade is required for more scans.");
+                    return;
+                }
+                showAuthModal();
+                return;
+            }
+            runPendingAction();
+        });
+    }
+
+    if (rawEmailInput) {
+        rawEmailInput.addEventListener("input", () => {
+            const value = String(rawEmailInput.value || "").trim();
+            if (!emailPastedTracked && value.length >= 20) {
+                emailPastedTracked = true;
+                trackEvent("email_pasted", {
+                    length_bucket: value.length >= 300 ? "300_plus" : value.length >= 120 ? "120_299" : "20_119",
+                });
+            }
+        });
+    }
+
+    document.querySelectorAll("details.secondary-options, details.advanced-block").forEach((detailsNode) => {
+        detailsNode.addEventListener("toggle", () => {
+            if (detailsNode.open && !advancedOpenedTracked) {
+                advancedOpenedTracked = true;
+                trackEvent("advanced_opened", {
+                    section: detailsNode.classList.contains("advanced-block") ? "why_flagged" : "scan_options",
+                });
+            }
+        });
     });
+}
+
+wireUiEvents();
+
+magnetic(submitButton);
+magnetic(useFixedButton);
+initializeLoopCounters();
+setupNextAction();
+setupParallax();
+
+setIdleState();
+activateTab("dashboard");
+refreshAuthStatus().then(() => {
+    resumePendingAfterAuthIfNeeded();
+    openAuthModalFromQueryIfNeeded();
+    refreshSeedTests().catch(() => null);
+    if (isAuthenticated) {
+        listApiKeys().catch(() => null);
+        listTeams().catch(() => null);
+        refreshOutcomeStats().catch(() => null);
+    }
+    refreshJobs().catch(() => null);
+    loadUserTokens().catch(() => null);
+});
