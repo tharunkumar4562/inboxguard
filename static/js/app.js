@@ -2631,10 +2631,15 @@ if (cancelSubscriptionButton) {
 }
 
 if (dashboardTab) {
-    window.addEventListener("ig:tool-open", (event) => {
-        const key = String(event && event.detail && event.detail.key ? event.detail.key : "");
+    window.igOnToolPaneOpened = (key, pane) => {
         refreshToolPaneData(key);
-    });
+        const primary = pane && pane.querySelector
+            ? pane.querySelector(".tool-pane-primary")
+            : null;
+        if (primary && typeof primary.focus === "function") {
+            setTimeout(() => primary.focus(), 30);
+        }
+    };
 
     if (threatScanTab) {
         threatScanTab.addEventListener("click", () => activateTab("threat-scan"));
