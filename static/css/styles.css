@@ -8,6 +8,100 @@
     }
 }
 
+/* Feature Grid Layout */
+.feature-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.feature-grid-title {
+    grid-column: 1 / -1;
+    margin: 0 0 4px;
+    font-size: clamp(1.2rem, 2vw, 1.55rem);
+    font-weight: 800;
+    color: #dbeafe;
+}
+
+.feature-card {
+    background: linear-gradient(148deg, rgba(59, 130, 246, 0.12) 0%, rgba(15, 23, 42, 0.82) 55%, rgba(16, 185, 129, 0.08) 100%);
+    border: 1px solid rgba(96, 165, 250, 0.35);
+    border-radius: 14px;
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.feature-card:hover {
+    border-color: rgba(96, 165, 250, 0.7);
+    transform: translateY(-2px);
+    box-shadow: 0 12px 24px rgba(30, 64, 175, 0.25);
+}
+
+.feature-cost {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: #60a5fa;
+    background: rgba(59, 130, 246, 0.16);
+    padding: 4px 8px;
+    border-radius: 999px;
+    width: fit-content;
+}
+
+.feature-title {
+    margin: 0;
+    font-size: 1.08rem;
+    font-weight: 800;
+    color: #f8fafc;
+}
+
+.feature-description {
+    margin: 0;
+    font-size: 0.93rem;
+    color: #cbd5e1;
+    line-height: 1.45;
+    flex-grow: 1;
+}
+
+.feature-open-btn {
+    align-self: flex-start;
+    background: linear-gradient(90deg, #2563eb 0%, #0ea5e9 100%);
+    color: #eff6ff;
+    border: none;
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-weight: 700;
+    font-size: 0.88rem;
+    cursor: pointer;
+    transition: transform 0.18s ease, filter 0.18s ease;
+}
+
+.feature-open-btn:hover {
+    filter: brightness(1.07);
+    transform: translateY(-1px);
+}
+
+.example-btn {
+    margin-top: 8px;
+    background: transparent;
+    color: #93c5fd;
+    border: 1px dashed rgba(59, 130, 246, 0.5);
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-size: 0.84rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: border-color 0.18s ease, color 0.18s ease;
+}
+
+.example-btn:hover {
+    color: #dbeafe;
+    border-color: rgba(147, 197, 253, 0.8);
+}
+
 @keyframes slideUp {
     from {
         opacity: 0;

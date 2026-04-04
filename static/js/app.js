@@ -13,6 +13,7 @@ window.fetch = (input, init = {}) => {
 const resultSection = document.getElementById("result");
 const idleNote = document.getElementById("idle-note");
 const scanPanel = document.querySelector(".scan-panel");
+const featureGridPanel = document.getElementById("feature-grid-panel");
 const tabFeedbackNode = document.getElementById("tab-feedback");
 const dashboardTab = document.getElementById("tab-dashboard");
 const threatScanTab = document.getElementById("tab-threat-scan");
@@ -162,6 +163,21 @@ const refreshPlansButton = document.getElementById("refresh-plans");
 const plansOutputNode = document.getElementById("plans-output");
 const requestAccessButton = document.getElementById("request-access");
 const accessRequestEmailInput = document.getElementById("access-request-email");
+const fillExampleButton = document.getElementById("fill-example");
+
+const EXAMPLE_EMAIL = `Subject: Quick question about your onboarding flow
+
+Hi Sarah,
+
+I noticed your team recently expanded customer onboarding.
+We helped a similar SaaS company raise activation rate by 18% with one simple email sequence change.
+
+If helpful, I can send the exact sequence and benchmark notes.
+
+Open to a quick look this week?
+
+Best,
+Alex`;
 
 const loadSteps = [
     "Checking content signals...",
@@ -722,1817 +738,1890 @@ async function refreshAuthStatus() {
         }
         updateProfileNav();
 
-            } catch (error) {
-                // Keep UI operational even if auth status endpoint is temporarily unavailable.
-            }
-            // Load user tokens if authenticated
-            if (isAuthenticated) {
-                setTimeout(() => loadUserTokens(), 100);
-            }
-        }
-
-    function runPendingAction() {
-        if (pendingAction === "analyze") {
-            runAnalyze();
-        } else if (pendingAction === "fix") {
-            showFixTransformation();
-        } else if (pendingAction === "save-fix") {
-            saveCurrentFix();
-        }
-        pendingAction = null;
+    } catch (error) {
+        // Keep UI operational even if auth status endpoint is temporarily unavailable.
     }
-
-    function stashPendingContext(actionName) {
-        localStorage.setItem("ig_pending_action", actionName || "analyze");
-        localStorage.setItem("ig_pending_draft", rawEmailInput ? rawEmailInput.value : "");
-        localStorage.setItem("ig_pending_domain", domainInput ? domainInput.value : "");
-        localStorage.setItem("ig_pending_analysis_mode", analysisModeInput ? analysisModeInput.value : "content");
-        localStorage.setItem("ig_pending_rewrite_style", rewriteStyleInput ? rewriteStyleInput.value : "balanced");
+    // Load user tokens if authenticated
+    if (isAuthenticated) {
+        setTimeout(() => loadUserTokens(), 100);
     }
+}
 
-    function restorePendingContext() {
-        if (rawEmailInput && !rawEmailInput.value) {
-            rawEmailInput.value = localStorage.getItem("ig_pending_draft") || "";
-        }
-        if (domainInput && !domainInput.value) {
-            domainInput.value = localStorage.getItem("ig_pending_domain") || "";
-        }
-        if (analysisModeInput) {
-            const mode = localStorage.getItem("ig_pending_analysis_mode");
-            if (mode) {
-                analysisModeInput.value = mode;
-            }
-        }
-        if (rewriteStyleInput) {
-            const style = localStorage.getItem("ig_pending_rewrite_style");
-            if (style) {
-                rewriteStyleInput.value = style;
-            }
+function runPendingAction() {
+    if (pendingAction === "analyze") {
+        runAnalyze();
+    } else if (pendingAction === "fix") {
+        showFixTransformation();
+    } else if (pendingAction === "save-fix") {
+        saveCurrentFix();
+    }
+    pendingAction = null;
+}
+
+function stashPendingContext(actionName) {
+    localStorage.setItem("ig_pending_action", actionName || "analyze");
+    localStorage.setItem("ig_pending_draft", rawEmailInput ? rawEmailInput.value : "");
+    localStorage.setItem("ig_pending_domain", domainInput ? domainInput.value : "");
+    localStorage.setItem("ig_pending_analysis_mode", analysisModeInput ? analysisModeInput.value : "content");
+    localStorage.setItem("ig_pending_rewrite_style", rewriteStyleInput ? rewriteStyleInput.value : "balanced");
+}
+
+function restorePendingContext() {
+    if (rawEmailInput && !rawEmailInput.value) {
+        rawEmailInput.value = localStorage.getItem("ig_pending_draft") || "";
+    }
+    if (domainInput && !domainInput.value) {
+        domainInput.value = localStorage.getItem("ig_pending_domain") || "";
+    }
+    if (analysisModeInput) {
+        const mode = localStorage.getItem("ig_pending_analysis_mode");
+        if (mode) {
+            analysisModeInput.value = mode;
         }
     }
+    if (rewriteStyleInput) {
+        const style = localStorage.getItem("ig_pending_rewrite_style");
+        if (style) {
+            rewriteStyleInput.value = style;
+        }
+    }
+}
 
-    function clearPendingContext() {
-        localStorage.removeItem("ig_pending_action");
-        localStorage.removeItem("ig_pending_draft");
-        localStorage.removeItem("ig_pending_domain");
-        localStorage.removeItem("ig_pending_analysis_mode");
-        localStorage.removeItem("ig_pending_rewrite_style");
+function clearPendingContext() {
+    localStorage.removeItem("ig_pending_action");
+    localStorage.removeItem("ig_pending_draft");
+    localStorage.removeItem("ig_pending_domain");
+    localStorage.removeItem("ig_pending_analysis_mode");
+    localStorage.removeItem("ig_pending_rewrite_style");
+}
+
+function resumePendingAfterAuthIfNeeded() {
+    const shouldResume = localStorage.getItem("ig_resume_after_auth") === "1";
+    if (!shouldResume || !isAuthenticated) {
+        return;
     }
 
-    function resumePendingAfterAuthIfNeeded() {
-        const shouldResume = localStorage.getItem("ig_resume_after_auth") === "1";
-        if (!shouldResume || !isAuthenticated) {
-            return;
-        }
+    restorePendingContext();
+    const action = localStorage.getItem("ig_pending_action");
+    if (action) {
+        pendingAction = action;
+        runPendingAction();
+    }
+    clearPendingContext();
+    localStorage.removeItem("ig_resume_after_auth");
+}
 
-        restorePendingContext();
-        const action = localStorage.getItem("ig_pending_action");
-        if (action) {
-            pendingAction = action;
-            runPendingAction();
-        }
-        clearPendingContext();
-        localStorage.removeItem("ig_resume_after_auth");
+function openAuthModalFromQueryIfNeeded() {
+    const params = new URLSearchParams(window.location.search);
+    const shouldOpen = params.get("auth") === "1";
+    if (!shouldOpen) {
+        return;
     }
 
-    function openAuthModalFromQueryIfNeeded() {
-        const params = new URLSearchParams(window.location.search);
-        const shouldOpen = params.get("auth") === "1";
-        if (!shouldOpen) {
-            return;
-        }
+    showAuthModal();
+    const cleanUrl = window.location.pathname + window.location.hash;
+    window.history.replaceState({}, document.title, cleanUrl);
+}
 
+function onAuthSuccess(source) {
+    isAuthenticated = true;
+    hideAuthModal();
+    updateProfileNav();
+
+    const payload = new FormData();
+    payload.set("event", "access_request");
+    payload.set("target", source || "auth_modal");
+    payload.set("mode", "resume_pending_action");
+    fetch("/track", { method: "POST", body: payload }).catch(() => null);
+
+    if (!pendingAction && pendingAuthRedirectPath) {
+        const destination = pendingAuthRedirectPath;
+        pendingAuthRedirectPath = "";
+        window.location.href = destination;
+        return;
+    }
+
+    runPendingAction();
+}
+
+async function continueWithEmail() {
+    const email = authEmailInput ? String(authEmailInput.value || "").trim().toLowerCase() : "";
+    if (!email || !email.includes("@")) {
+        showError("Enter a valid email to continue.");
+        return;
+    }
+
+    const payload = new FormData();
+    payload.set("email", email);
+
+    const response = await fetch("/auth/email/continue", {
+        method: "POST",
+        body: payload,
+    });
+
+    if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.detail || "Could not continue with email.");
+    }
+
+    await refreshAuthStatus();
+    onAuthSuccess("email_continue");
+}
+
+async function continueWithLeadCapture() {
+    const email = leadCaptureEmailInput ? String(leadCaptureEmailInput.value || "").trim().toLowerCase() : "";
+    if (!email || !email.includes("@")) {
+        showError("Enter a valid email to continue.");
+        return;
+    }
+
+    const payload = new FormData();
+    payload.set("email", email);
+    payload.set("source", "scan_gate");
+
+    const response = await fetch("/lead-capture", {
+        method: "POST",
+        body: payload,
+    });
+
+    if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.detail || "Could not save your email.");
+    }
+
+    leadCaptureSaved = true;
+    leadCaptureEmail = email;
+    localStorage.setItem("ig_lead_capture_saved", "1");
+    localStorage.setItem("ig_lead_capture_email", email);
+    hideLeadCaptureModal();
+    runPendingAction();
+}
+
+async function continueWithGoogle() {
+    stashPendingContext(pendingAction || "analyze");
+    localStorage.setItem("ig_resume_after_auth", "1");
+    const next = encodeURIComponent("/");
+    window.location.href = `/auth/google/login?next=${next}`;
+}
+
+function handleAuthAction(action) {
+    if (action === "signin") {
+        continueWithGoogle();
+        return;
+    }
+    if (action === "create") {
+        continueWithEmail().catch((error) => {
+            showError(error && error.message ? error.message : "Could not continue with email.");
+        });
+        return;
+    }
+    hideAuthModal();
+}
+
+async function saveCurrentFix() {
+    if (!latestRewriteContext) {
+        showError("Generate a fix first so we have something to save.");
+        return;
+    }
+    if (!isAuthenticated) {
         showAuthModal();
-        const cleanUrl = window.location.pathname + window.location.hash;
-        window.history.replaceState({}, document.title, cleanUrl);
+        return;
     }
 
-    function onAuthSuccess(source) {
-        isAuthenticated = true;
-        hideAuthModal();
-        updateProfileNav();
+    const payload = new FormData();
+    payload.set("original_subject", String(latestRewriteContext.original_subject || ""));
+    payload.set("original_body", String(latestRewriteContext.original_body || latestRewriteContext.original_text || ""));
+    payload.set("rewritten_subject", String(latestRewriteContext.rewritten_subject || ""));
+    payload.set("rewritten_body", String(latestRewriteContext.rewritten_body || latestRewriteContext.rewritten_text || ""));
+    payload.set("score_delta", String(latestRewriteContext.score_delta || 0));
+    payload.set("from_risk_band", String(latestRewriteContext.from_risk_band || ""));
+    payload.set("to_risk_band", String(latestRewriteContext.to_risk_band || ""));
+    payload.set("rewrite_style", String(latestRewriteContext.rewrite_style || "balanced"));
 
-        const payload = new FormData();
-        payload.set("event", "access_request");
-        payload.set("target", source || "auth_modal");
-        payload.set("mode", "resume_pending_action");
-        fetch("/track", { method: "POST", body: payload }).catch(() => null);
-
-        if (!pendingAction && pendingAuthRedirectPath) {
-            const destination = pendingAuthRedirectPath;
-            pendingAuthRedirectPath = "";
-            window.location.href = destination;
-            return;
-        }
-
-        runPendingAction();
+    const response = await fetch("/save-fix", {
+        method: "POST",
+        body: payload,
+    });
+    if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.detail || "Could not save this fix.");
     }
 
-    async function continueWithEmail() {
-        const email = authEmailInput ? String(authEmailInput.value || "").trim().toLowerCase() : "";
-        if (!email || !email.includes("@")) {
-            showError("Enter a valid email to continue.");
-            return;
-        }
+    if (saveFixButton) {
+        saveFixButton.textContent = "Saved";
+        saveFixButton.disabled = true;
+    }
+    showError("Fix saved to your account.");
+}
 
-        const payload = new FormData();
-        payload.set("email", email);
+// Inline fallback hooks for resilient modal behavior.
+window.igAuthSignIn = () => handleAuthAction("signin");
+window.igAuthCreate = () => handleAuthAction("create");
+window.igAuthClose = () => handleAuthAction("close");
+window.igLeadCaptureClose = () => hideLeadCaptureModal();
 
-        const response = await fetch("/auth/email/continue", {
-            method: "POST",
-            body: payload,
-        });
-
-        if (!response.ok) {
-            const data = await response.json().catch(() => ({}));
-            throw new Error(data.detail || "Could not continue with email.");
-        }
-
-        await refreshAuthStatus();
-        onAuthSuccess("email_continue");
+function activateTab(tab) {
+    if (!dashboardTab || !threatScanTab) {
+        return;
     }
 
-    async function continueWithLeadCapture() {
-        const email = leadCaptureEmailInput ? String(leadCaptureEmailInput.value || "").trim().toLowerCase() : "";
-        if (!email || !email.includes("@")) {
-            showError("Enter a valid email to continue.");
-            return;
+    dashboardTab.classList.remove("active");
+    threatScanTab.classList.remove("active");
+
+    if (tab === "threat-scan") {
+        threatScanTab.classList.add("active");
+        if (featureGridPanel) {
+            featureGridPanel.classList.add("hidden");
         }
-
-        const payload = new FormData();
-        payload.set("email", email);
-        payload.set("source", "scan_gate");
-
-        const response = await fetch("/lead-capture", {
-            method: "POST",
-            body: payload,
-        });
-
-        if (!response.ok) {
-            const data = await response.json().catch(() => ({}));
-            throw new Error(data.detail || "Could not save your email.");
+        if (scanPanel) {
+            scanPanel.classList.add("focused");
+            scanPanel.classList.remove("hidden");
+            scanPanel.scrollIntoView({ behavior: "smooth", block: "start" });
         }
+        if (rawEmailInput) {
+            rawEmailInput.focus();
+        }
+        setTabFeedback("Scan mode active. Paste your email and click Check Before Sending.");
+    } else {
+        dashboardTab.classList.add("active");
+        if (featureGridPanel) {
+            featureGridPanel.classList.remove("hidden");
+        }
+        if (scanPanel) {
+            scanPanel.classList.remove("focused");
+            scanPanel.classList.add("hidden");
+        }
+        setTabFeedback("Paste your email, click Check Before Sending, then fix top issues.");
+    }
+}
 
-        leadCaptureSaved = true;
-        leadCaptureEmail = email;
-        localStorage.setItem("ig_lead_capture_saved", "1");
-        localStorage.setItem("ig_lead_capture_email", email);
-        hideLeadCaptureModal();
-        runPendingAction();
+window.activateTab = activateTab;
+
+function setIdleState() {
+    hasScanResult = false;
+    if (resultSection) {
+        resultSection.classList.add("hidden");
+    }
+    if (idleNote) {
+        idleNote.classList.remove("hidden");
+    }
+    if (loadingPanel) {
+        loadingPanel.classList.add("hidden");
+    }
+    if (fixOutput) {
+        fixOutput.classList.add("hidden");
+    }
+    if (successBadge) {
+        successBadge.classList.add("hidden");
+    }
+    if (rewardBoxNode) {
+        rewardBoxNode.classList.add("hidden");
+    }
+    if (progressBarNode) {
+        progressBarNode.style.width = "0%";
+    }
+    if (submitButton) {
+        submitButton.disabled = false;
+        submitButton.textContent = defaultSubmitLabel;
+    }
+}
+
+function setLoadingState() {
+    if (resultSection) {
+        resultSection.classList.add("hidden");
+    }
+    if (idleNote) {
+        idleNote.classList.add("hidden");
+    }
+    if (loadingPanel) {
+        loadingPanel.classList.remove("hidden");
+    }
+    if (submitButton) {
+        submitButton.disabled = true;
+        submitButton.textContent = "Analyzing...";
+    }
+    if (successBadge) {
+        successBadge.classList.add("hidden");
+    }
+    if (rewardBoxNode) {
+        rewardBoxNode.classList.add("hidden");
+    }
+    if (progressBarNode) {
+        progressBarNode.style.width = "0%";
+    }
+    animateProgress(100);
+}
+
+function setResultState() {
+    if (loadingPanel) {
+        loadingPanel.classList.add("hidden");
+    }
+    if (resultSection) {
+        resultSection.classList.remove("hidden");
+        resultSection.classList.add("fade-in");
+    }
+    if (submitButton) {
+        submitButton.disabled = false;
+        submitButton.textContent = defaultSubmitLabel;
+    }
+    if (progressBarNode) {
+        progressBarNode.style.width = "100%";
+    }
+}
+
+function startRealtimeScanSteps() {
+    if (!loadingStep) {
+        return null;
     }
 
-    async function continueWithGoogle() {
-        stashPendingContext(pendingAction || "analyze");
-        localStorage.setItem("ig_resume_after_auth", "1");
-        const next = encodeURIComponent("/");
-        window.location.href = `/auth/google/login?next=${next}`;
-    }
+    let idx = 0;
+    let cancelled = false;
+    loadingStep.textContent = loadSteps[idx];
+    loadingStepNodes.forEach((node) => {
+        if (node) {
+            node.classList.remove("active");
+            node.textContent = node.textContent.replace(/\s✓$/, "");
+        }
+    });
 
-    function handleAuthAction(action) {
-        if (action === "signin") {
-            continueWithGoogle();
+    function runStep() {
+        if (cancelled) {
             return;
         }
-        if (action === "create") {
-            continueWithEmail().catch((error) => {
-                showError(error && error.message ? error.message : "Could not continue with email.");
-            });
-            return;
-        }
-        hideAuthModal();
-    }
-
-    async function saveCurrentFix() {
-        if (!latestRewriteContext) {
-            showError("Generate a fix first so we have something to save.");
-            return;
-        }
-        if (!isAuthenticated) {
-            showAuthModal();
-            return;
-        }
-
-        const payload = new FormData();
-        payload.set("original_subject", String(latestRewriteContext.original_subject || ""));
-        payload.set("original_body", String(latestRewriteContext.original_body || latestRewriteContext.original_text || ""));
-        payload.set("rewritten_subject", String(latestRewriteContext.rewritten_subject || ""));
-        payload.set("rewritten_body", String(latestRewriteContext.rewritten_body || latestRewriteContext.rewritten_text || ""));
-        payload.set("score_delta", String(latestRewriteContext.score_delta || 0));
-        payload.set("from_risk_band", String(latestRewriteContext.from_risk_band || ""));
-        payload.set("to_risk_band", String(latestRewriteContext.to_risk_band || ""));
-        payload.set("rewrite_style", String(latestRewriteContext.rewrite_style || "balanced"));
-
-        const response = await fetch("/save-fix", {
-            method: "POST",
-            body: payload,
-        });
-        if (!response.ok) {
-            const data = await response.json().catch(() => ({}));
-            throw new Error(data.detail || "Could not save this fix.");
-        }
-
-        if (saveFixButton) {
-            saveFixButton.textContent = "Saved";
-            saveFixButton.disabled = true;
-        }
-        showError("Fix saved to your account.");
-    }
-
-    // Inline fallback hooks for resilient modal behavior.
-    window.igAuthSignIn = () => handleAuthAction("signin");
-    window.igAuthCreate = () => handleAuthAction("create");
-    window.igAuthClose = () => handleAuthAction("close");
-    window.igLeadCaptureClose = () => hideLeadCaptureModal();
-
-    function activateTab(tab) {
-        if (!dashboardTab || !threatScanTab) {
-            return;
-        }
-
-        dashboardTab.classList.remove("active");
-        threatScanTab.classList.remove("active");
-
-        if (tab === "threat-scan") {
-            threatScanTab.classList.add("active");
-            if (scanPanel) {
-                scanPanel.classList.add("focused");
-                scanPanel.scrollIntoView({ behavior: "smooth", block: "start" });
+        const current = loadingStepNodes[idx];
+        if (current) {
+            current.classList.add("active");
+            if (!current.textContent.endsWith(" ✓")) {
+                current.textContent = `${loadSteps[idx]} ✓`;
             }
-            if (rawEmailInput) {
-                rawEmailInput.focus();
-            }
-            setTabFeedback("Scan mode active. Paste your email and click Check Before Sending.");
-        } else {
-            dashboardTab.classList.add("active");
-            if (scanPanel) {
-                scanPanel.classList.remove("focused");
-            }
-            setTabFeedback("Paste your email, click Check Before Sending, then fix top issues.");
         }
-    }
-
-    window.activateTab = activateTab;
-
-    function setIdleState() {
-        hasScanResult = false;
-        if (resultSection) {
-            resultSection.classList.add("hidden");
-        }
-        if (idleNote) {
-            idleNote.classList.remove("hidden");
-        }
-        if (loadingPanel) {
-            loadingPanel.classList.add("hidden");
-        }
-        if (fixOutput) {
-            fixOutput.classList.add("hidden");
-        }
-        if (successBadge) {
-            successBadge.classList.add("hidden");
-        }
-        if (rewardBoxNode) {
-            rewardBoxNode.classList.add("hidden");
-        }
-        if (progressBarNode) {
-            progressBarNode.style.width = "0%";
-        }
-        if (submitButton) {
-            submitButton.disabled = false;
-            submitButton.textContent = defaultSubmitLabel;
-        }
-    }
-
-    function setLoadingState() {
-        if (resultSection) {
-            resultSection.classList.add("hidden");
-        }
-        if (idleNote) {
-            idleNote.classList.add("hidden");
-        }
-        if (loadingPanel) {
-            loadingPanel.classList.remove("hidden");
-        }
-        if (submitButton) {
-            submitButton.disabled = true;
-            submitButton.textContent = "Analyzing...";
-        }
-        if (successBadge) {
-            successBadge.classList.add("hidden");
-        }
-        if (rewardBoxNode) {
-            rewardBoxNode.classList.add("hidden");
-        }
-        if (progressBarNode) {
-            progressBarNode.style.width = "0%";
-        }
-        animateProgress(100);
-    }
-
-    function setResultState() {
-        if (loadingPanel) {
-            loadingPanel.classList.add("hidden");
-        }
-        if (resultSection) {
-            resultSection.classList.remove("hidden");
-            resultSection.classList.add("fade-in");
-        }
-        if (submitButton) {
-            submitButton.disabled = false;
-            submitButton.textContent = defaultSubmitLabel;
-        }
-        if (progressBarNode) {
-            progressBarNode.style.width = "100%";
-        }
-    }
-
-    function startRealtimeScanSteps() {
-        if (!loadingStep) {
-            return null;
-        }
-
-        let idx = 0;
-        let cancelled = false;
+        idx = (idx + 1) % loadSteps.length;
         loadingStep.textContent = loadSteps[idx];
-        loadingStepNodes.forEach((node) => {
-            if (node) {
-                node.classList.remove("active");
-                node.textContent = node.textContent.replace(/\s✓$/, "");
-            }
-        });
-
-        function runStep() {
-            if (cancelled) {
-                return;
-            }
-            const current = loadingStepNodes[idx];
-            if (current) {
-                current.classList.add("active");
-                if (!current.textContent.endsWith(" ✓")) {
-                    current.textContent = `${loadSteps[idx]} ✓`;
-                }
-            }
-            idx = (idx + 1) % loadSteps.length;
-            loadingStep.textContent = loadSteps[idx];
-            setTimeout(runStep, 350 + idx * 100);
-        }
-
-        setTimeout(runStep, 140);
-        return {
-            stop: () => {
-                cancelled = true;
-            },
-        };
+        setTimeout(runStep, 350 + idx * 100);
     }
 
-    function setImpactBadge(node, impact) {
-        if (!node) {
-            return;
-        }
+    setTimeout(runStep, 140);
+    return {
+        stop: () => {
+            cancelled = true;
+        },
+    };
+}
 
-        node.className = "badge";
-        if (impact === "HIGH") {
-            node.classList.add("badge-red");
-        } else if (impact === "MEDIUM") {
-            node.classList.add("badge-yellow");
-        } else {
-            node.classList.add("badge-green");
-        }
-        node.textContent = impact;
+function setImpactBadge(node, impact) {
+    if (!node) {
+        return;
     }
 
-    function primaryIssue(summary, findings) {
-        const topFixes = summary.top_fixes || [];
-        if (topFixes.length && topFixes[0].title) {
-            return topFixes[0].title;
-        }
+    node.className = "badge";
+    if (impact === "HIGH") {
+        node.classList.add("badge-red");
+    } else if (impact === "MEDIUM") {
+        node.classList.add("badge-yellow");
+    } else {
+        node.classList.add("badge-green");
+    }
+    node.textContent = impact;
+}
 
-        const nonMeta = (findings || []).filter((f) => !String(f.title || "").toLowerCase().includes("analysis mode"));
-        if (nonMeta.length) {
-            return nonMeta[0].title || "Detected issue";
-        }
-        return "No critical issue detected";
+function primaryIssue(summary, findings) {
+    const topFixes = summary.top_fixes || [];
+    if (topFixes.length && topFixes[0].title) {
+        return topFixes[0].title;
     }
 
-    function confidenceScoreValue(confidence) {
-        const value = String(confidence || "medium").toLowerCase();
-        if (value === "high") {
-            return 88;
-        }
-        if (value === "medium") {
-            return 58;
-        }
-        return 28;
+    const nonMeta = (findings || []).filter((f) => !String(f.title || "").toLowerCase().includes("analysis mode"));
+    if (nonMeta.length) {
+        return nonMeta[0].title || "Detected issue";
     }
+    return "No critical issue detected";
+}
 
-    function classifyIssueScope(summary, signals, findings) {
-        const band = String(summary.risk_band || "");
-        const lowerFindings = (findings || []).map((item) => `${item.title || ""} ${item.issue || ""} ${item.impact || ""}`.toLowerCase());
-        const hasContentSignals = lowerFindings.some((text) => /broadcast|mass|personal|cta|urgency|pressure|tone|promo|link|image/.test(text));
-        const spf = String(signals.spf_status || "unknown");
-        const dkim = String(signals.dkim_status || "unknown");
-        const dmarc = String(signals.dmarc_status || "unknown");
-        const infraWeak = !(spf === "found" && dkim === "found" && dmarc === "found");
+function confidenceScoreValue(confidence) {
+    const value = String(confidence || "medium").toLowerCase();
+    if (value === "high") {
+        return 88;
+    }
+    if (value === "medium") {
+        return 58;
+    }
+    return 28;
+}
 
-        if (infraWeak && hasContentSignals) {
-            return "MIXED";
-        }
-        if (infraWeak || band === "High Spam-Risk Signals" || band === "High Risk") {
-            return "INFRA";
-        }
-        if (hasContentSignals) {
-            return "CONTENT";
-        }
+function classifyIssueScope(summary, signals, findings) {
+    const band = String(summary.risk_band || "");
+    const lowerFindings = (findings || []).map((item) => `${item.title || ""} ${item.issue || ""} ${item.impact || ""}`.toLowerCase());
+    const hasContentSignals = lowerFindings.some((text) => /broadcast|mass|personal|cta|urgency|pressure|tone|promo|link|image/.test(text));
+    const spf = String(signals.spf_status || "unknown");
+    const dkim = String(signals.dkim_status || "unknown");
+    const dmarc = String(signals.dmarc_status || "unknown");
+    const infraWeak = !(spf === "found" && dkim === "found" && dmarc === "found");
+
+    if (infraWeak && hasContentSignals) {
+        return "MIXED";
+    }
+    if (infraWeak || band === "High Spam-Risk Signals" || band === "High Risk") {
+        return "INFRA";
+    }
+    if (hasContentSignals) {
         return "CONTENT";
     }
+    return "CONTENT";
+}
 
-    function renderStatus(summary, signals, findings) {
-        if (!statusRiskBandNode || !statusPrimaryIssueNode || !statusConfidenceNode) {
-            return;
-        }
+function renderStatus(summary, signals, findings) {
+    if (!statusRiskBandNode || !statusPrimaryIssueNode || !statusConfidenceNode) {
+        return;
+    }
 
-        const band = String(summary.risk_band || "Needs Review");
-        let label = "At Risk";
-        let cls = "warning";
+    const band = String(summary.risk_band || "Needs Review");
+    let label = "At Risk";
+    let cls = "warning";
 
-        if (band === "High Spam-Risk Signals" || band === "High Risk") {
-            label = "Likely Filtered";
-            cls = "critical";
-        } else if (band === "Content Safe") {
-            label = "Safe";
-            cls = "safe";
-        }
+    if (band === "High Spam-Risk Signals" || band === "High Risk") {
+        label = "Likely Filtered";
+        cls = "critical";
+    } else if (band === "Content Safe") {
+        label = "Safe";
+        cls = "safe";
+    }
 
-        const confidence = String(summary.deliverability_confidence || "medium");
-        const confidenceValue = confidenceScoreValue(confidence);
-        const mode = String(summary.analysis_mode || "content");
-        const scope = classifyIssueScope(summary, signals, findings);
+    const confidence = String(summary.deliverability_confidence || "medium");
+    const confidenceValue = confidenceScoreValue(confidence);
+    const mode = String(summary.analysis_mode || "content");
+    const scope = classifyIssueScope(summary, signals, findings);
 
-        if (band === "Content Safe" && confidence === "low") {
-            label = "Low Risk (Incomplete Check)";
-            cls = "warning";
-        }
+    if (band === "Content Safe" && confidence === "low") {
+        label = "Low Risk (Incomplete Check)";
+        cls = "warning";
+    }
 
-        statusRiskBandNode.textContent = label;
-        statusRiskBandNode.className = `status-value ${cls}`;
+    statusRiskBandNode.textContent = label;
+    statusRiskBandNode.className = `status-value ${cls}`;
 
-        if (statusRiskCardNode) {
-            statusRiskCardNode.classList.remove("critical-bg", "warning-bg", "safe-bg");
-            if (cls === "critical") {
-                statusRiskCardNode.classList.add("critical-bg");
-            } else if (cls === "warning") {
-                statusRiskCardNode.classList.add("warning-bg");
-            } else {
-                statusRiskCardNode.classList.add("safe-bg");
-            }
-        }
-
-        statusPrimaryIssueNode.textContent = `${scope}: ${primaryIssue(summary, findings)}`;
-
-        const confidenceBasis = String(summary.analysis_mode || "content") === "full"
-            ? "content + technical signals"
-            : "content-only signals";
-        const confidenceLabel = confidence.charAt(0).toUpperCase() + confidence.slice(1);
-        statusConfidenceNode.textContent = `${confidenceLabel} (${scope === "INFRA" ? "infra-heavy" : scope === "MIXED" ? "mixed" : "content-led"})`;
-
-        if (confidenceMeterFillNode) {
-            confidenceMeterFillNode.style.width = `${confidenceValue}%`;
-            confidenceMeterFillNode.style.background = confidenceValue >= 80
-                ? "linear-gradient(90deg, #ef4444 0%, #f97316 100%)"
-                : confidenceValue >= 50
-                    ? "linear-gradient(90deg, #f59e0b 0%, #facc15 100%)"
-                    : "linear-gradient(90deg, #f97316 0%, #f59e0b 100%)";
-        }
-
-        if (confidenceMeterDetailNode) {
-            confidenceMeterDetailNode.textContent = `Confidence is ${confidenceLabel.toLowerCase()} because ${confidenceBasis}.`;
+    if (statusRiskCardNode) {
+        statusRiskCardNode.classList.remove("critical-bg", "warning-bg", "safe-bg");
+        if (cls === "critical") {
+            statusRiskCardNode.classList.add("critical-bg");
+        } else if (cls === "warning") {
+            statusRiskCardNode.classList.add("warning-bg");
+        } else {
+            statusRiskCardNode.classList.add("safe-bg");
         }
     }
 
-    function renderBiggestRisk(summary, findings) {
-        if (!biggestRiskTitleNode || !biggestRiskImpactNode || !biggestRiskDescNode || !biggestRiskCard) {
-            return;
-        }
+    statusPrimaryIssueNode.textContent = `${scope}: ${primaryIssue(summary, findings)}`;
 
-        const nonMeta = (findings || []).filter((f) => !String(f.title || "").toLowerCase().includes("analysis mode"));
-        const top = nonMeta[0];
+    const confidenceBasis = String(summary.analysis_mode || "content") === "full"
+        ? "content + technical signals"
+        : "content-only signals";
+    const confidenceLabel = confidence.charAt(0).toUpperCase() + confidence.slice(1);
+    statusConfidenceNode.textContent = `${confidenceLabel} (${scope === "INFRA" ? "infra-heavy" : scope === "MIXED" ? "mixed" : "content-led"})`;
 
-        if (!top) {
-            if (hasScanResult) {
-                biggestRiskTitleNode.textContent = "No critical issue detected";
-                biggestRiskDescNode.textContent = "Clean content signal profile. Still good practice to make emails shorter and more personal.";
-                setImpactBadge(biggestRiskImpactNode, "LOW");
-                biggestRiskCard.classList.remove("card-critical");
-                if (trustHookNode) {
-                    trustHookNode.textContent = "Scan complete. Use Fix Issues to make it 1:1 and personal.";
-                }
-                return;
-            }
-            biggestRiskTitleNode.textContent = "No scan yet";
-            biggestRiskDescNode.textContent = "Run analysis to detect the top deliverability blocker.";
+    if (confidenceMeterFillNode) {
+        confidenceMeterFillNode.style.width = `${confidenceValue}%`;
+        confidenceMeterFillNode.style.background = confidenceValue >= 80
+            ? "linear-gradient(90deg, #ef4444 0%, #f97316 100%)"
+            : confidenceValue >= 50
+                ? "linear-gradient(90deg, #f59e0b 0%, #facc15 100%)"
+                : "linear-gradient(90deg, #f97316 0%, #f59e0b 100%)";
+    }
+
+    if (confidenceMeterDetailNode) {
+        confidenceMeterDetailNode.textContent = `Confidence is ${confidenceLabel.toLowerCase()} because ${confidenceBasis}.`;
+    }
+}
+
+function renderBiggestRisk(summary, findings) {
+    if (!biggestRiskTitleNode || !biggestRiskImpactNode || !biggestRiskDescNode || !biggestRiskCard) {
+        return;
+    }
+
+    const nonMeta = (findings || []).filter((f) => !String(f.title || "").toLowerCase().includes("analysis mode"));
+    const top = nonMeta[0];
+
+    if (!top) {
+        if (hasScanResult) {
+            biggestRiskTitleNode.textContent = "No critical issue detected";
+            biggestRiskDescNode.textContent = "Clean content signal profile. Still good practice to make emails shorter and more personal.";
             setImpactBadge(biggestRiskImpactNode, "LOW");
             biggestRiskCard.classList.remove("card-critical");
-            return;
-        }
-
-        const title = String(top.title || "risk signal").toLowerCase();
-        const impactStatement = title.includes("broadcast")
-            ? "This will likely be filtered as spam"
-            : title.includes("urgency") || title.includes("pressure")
-                ? "This looks like pressure language — reduces trust"
-                : title.includes("link") || title.includes("image")
-                    ? "Too many links/images for cold outreach — flagged as bulk"
-                    : title.includes("personalization")
-                        ? "Looks like a mass send — inbox filters catch these first"
-                        : (top.title || "Top risk detected");
-
-        biggestRiskTitleNode.textContent = impactStatement;
-
-        const reason = (top.issue || top.impact || "Pattern increases spam filtering risk").split(".")[0];
-        biggestRiskDescNode.textContent = `Why it matters: ${reason}`;
-
-        const sev = String(top.severity || "medium").toLowerCase();
-        const impact = sev === "high" ? "HIGH" : sev === "low" ? "LOW" : "MEDIUM";
-        setImpactBadge(biggestRiskImpactNode, impact);
-
-        if (trustHookNode) {
-            const samples = latestLearningProfile && Number(latestLearningProfile.sample_size || 0) > 0
-                ? ` Model trained on ${latestLearningProfile.sample_size} outcome(s).`
-                : "";
-            trustHookNode.textContent = `Bulk-pattern check.${samples}`;
-        }
-
-        if (impact === "HIGH") {
-            biggestRiskCard.classList.add("card-critical", "slide-up");
-        } else {
-            biggestRiskCard.classList.remove("card-critical");
-        }
-    }
-
-    function renderConsequences(summary) {
-        if (!consequenceListNode) {
-            return;
-        }
-
-        consequenceListNode.innerHTML = "";
-        const high = ["High Spam-Risk Signals", "High Risk"].includes(String(summary.risk_band || ""));
-        const lines = high
-            ? [
-                "This email will likely be filtered or land in spam if you send it now.",
-                "Repeated sends with these patterns will damage your domain reputation.",
-                "Fix this before sending — use the safer version below.",
-            ]
-            : [
-                "This can still land in spam if unchanged.",
-                "Repeated sends from this account compound the filtering risk.",
-                "Fix it now to protect future deliverability.",
-            ];
-
-        lines.forEach((line) => {
-            const li = document.createElement("li");
-            li.textContent = line;
-            consequenceListNode.appendChild(li);
-        });
-    }
-
-    function renderHurting(findings) {
-        if (!hurtListNode) {
-            return;
-        }
-
-        hurtListNode.innerHTML = "";
-        const nonMeta = (findings || []).filter((f) => !String(f.title || "").toLowerCase().includes("analysis mode"));
-
-        if (!nonMeta.length) {
-            hurtListNode.innerHTML = "<li>No scan yet - run analysis to detect deliverability risks.</li>";
-            return;
-        }
-
-        nonMeta.slice(0, 3).forEach((item) => {
-            const li = document.createElement("li");
-            const title = String(item.title || "Risk");
-            const low = title.toLowerCase();
-            if (low.includes("urgency") || low.includes("pressure")) {
-                li.textContent = `\"Only 1 day left\" style language is a spam trigger for Gmail filters.`;
-            } else if (low.includes("broadcast") || low.includes("mass")) {
-                li.textContent = "This reads like a mass campaign and lowers trust/reply rates.";
-            } else if (low.includes("personalization")) {
-                li.textContent = "Low personalization makes this look promotional instead of 1:1 outreach.";
-            } else if (low.includes("spf") || low.includes("dkim") || low.includes("dmarc")) {
-                li.textContent = "Authentication gaps can push this to spam even with good copy.";
-            } else {
-                li.textContent = `${title} can reduce inbox placement if not fixed.`;
+            if (trustHookNode) {
+                trustHookNode.textContent = "Scan complete. Use Fix Issues to make it 1:1 and personal.";
             }
-            hurtListNode.appendChild(li);
-        });
+            return;
+        }
+        biggestRiskTitleNode.textContent = "No scan yet";
+        biggestRiskDescNode.textContent = "Run analysis to detect the top deliverability blocker.";
+        setImpactBadge(biggestRiskImpactNode, "LOW");
+        biggestRiskCard.classList.remove("card-critical");
+        return;
     }
 
-    function commandFix(title, fallback) {
-        const txt = String(title || "").toLowerCase();
-        if (txt.includes("broadcast")) {
-            return "Remove feature list and rewrite as a 1-to-1 message.";
-        }
-        if (txt.includes("personalization")) {
-            return "Add recipient-specific detail in the opening line.";
-        }
-        if (txt.includes("dkim") || txt.includes("spf") || txt.includes("dmarc")) {
-            return "Fix authentication setup before sending campaign traffic.";
-        }
-        if (txt.includes("link/image") || txt.includes("balance")) {
-            return "Reduce dense links or balance with clean visual/text structure.";
-        }
-        return fallback || "Resolve this issue before sending.";
+    const title = String(top.title || "risk signal").toLowerCase();
+    const impactStatement = title.includes("broadcast")
+        ? "This will likely be filtered as spam"
+        : title.includes("urgency") || title.includes("pressure")
+            ? "This looks like pressure language — reduces trust"
+            : title.includes("link") || title.includes("image")
+                ? "Too many links/images for cold outreach — flagged as bulk"
+                : title.includes("personalization")
+                    ? "Looks like a mass send — inbox filters catch these first"
+                    : (top.title || "Top risk detected");
+
+    biggestRiskTitleNode.textContent = impactStatement;
+
+    const reason = (top.issue || top.impact || "Pattern increases spam filtering risk").split(".")[0];
+    biggestRiskDescNode.textContent = `Why it matters: ${reason}`;
+
+    const sev = String(top.severity || "medium").toLowerCase();
+    const impact = sev === "high" ? "HIGH" : sev === "low" ? "LOW" : "MEDIUM";
+    setImpactBadge(biggestRiskImpactNode, impact);
+
+    if (trustHookNode) {
+        const samples = latestLearningProfile && Number(latestLearningProfile.sample_size || 0) > 0
+            ? ` Model trained on ${latestLearningProfile.sample_size} outcome(s).`
+            : "";
+        trustHookNode.textContent = `Bulk-pattern check.${samples}`;
     }
 
-    function renderFixes(summary) {
-        if (!topFixesListNode) {
-            return;
-        }
+    if (impact === "HIGH") {
+        biggestRiskCard.classList.add("card-critical", "slide-up");
+    } else {
+        biggestRiskCard.classList.remove("card-critical");
+    }
+}
 
-        topFixesListNode.innerHTML = "";
-        const fixes = summary.top_fixes || [];
-
-        if (!fixes.length) {
-            topFixesListNode.innerHTML = "<li>No fixes loaded yet - run analysis first.</li>";
-            return;
-        }
-
-        fixes.slice(0, 3).forEach((fix, idx) => {
-            const li = document.createElement("li");
-            li.textContent = `${idx + 1}. ${commandFix(fix.title || fix.type || "Fix issue", fix.action)}`;
-            topFixesListNode.appendChild(li);
-        });
+function renderConsequences(summary) {
+    if (!consequenceListNode) {
+        return;
     }
 
-    function renderBreakdown(summary) {
-        if (!scoreBreakdownNode) {
-            return;
-        }
-
-        scoreBreakdownNode.innerHTML = "";
-        const model = summary.scoring_model || {};
-        const penalties = (summary.breakdown || []).filter((item) => Number(item.points) < 0);
-
-        const baseline = Number(model.baseline_score || 0);
-        const totalPenalty = Number(model.total_penalty_points || summary.risk_points || 0);
-        const finalScore = Number(model.final_score || summary.final_score || summary.score || 0);
-
-        if (baseline > 0) {
-            const formulaLine = document.createElement("li");
-            formulaLine.textContent = `Model: ${baseline} baseline - ${totalPenalty} penalties = ${finalScore} final score`;
-            scoreBreakdownNode.appendChild(formulaLine);
-        }
-
-        if (!penalties.length) {
-            const noPenalty = document.createElement("li");
-            noPenalty.textContent = "No penalties triggered from current detected signals.";
-            scoreBreakdownNode.appendChild(noPenalty);
-            return;
-        }
-
-        penalties.slice(0, 5).forEach((item) => {
-            const li = document.createElement("li");
-            const points = Math.abs(Number(item.points || 0));
-            const reason = item.reason ? ` | ${item.reason}` : "";
-            li.textContent = `-${points} ${item.label}${reason}`;
-            scoreBreakdownNode.appendChild(li);
-        });
-    }
-
-    function renderPrediction(summary, prediction) {
-        if (!predictionHeadlineNode || !predictionDetailNode || !predictionBandsNode) {
-            return;
-        }
-        const score = Number(summary && (summary.final_score || summary.score || 0));
-        const prob = Number(prediction && prediction.inbox_probability ? prediction.inbox_probability : 0);
-        const likely = String(prediction && prediction.likely_outcome ? prediction.likely_outcome : "unknown");
-        const benchmark = Number(prediction && prediction.benchmark_top_10_score ? prediction.benchmark_top_10_score : 85);
-        const samples = Number(prediction && prediction.samples ? prediction.samples : 0);
-
-        predictionHeadlineNode.textContent = `Will likely land: ${likely.toUpperCase()} (${prob.toFixed(1)}% inbox probability)`;
-        predictionDetailNode.textContent = `Your score: ${score} | Top campaigns usually score ${benchmark}+ before scale | Learned samples: ${samples}`;
-        predictionBandsNode.innerHTML = "";
-        const rows = [
-            `Score 85+ usually maps to strongest inbox probability.`,
-            `Score 70-84 is often test-batch safe with monitoring.`,
-            `Score below 70 usually needs fixes before scaling.`,
+    consequenceListNode.innerHTML = "";
+    const high = ["High Spam-Risk Signals", "High Risk"].includes(String(summary.risk_band || ""));
+    const lines = high
+        ? [
+            "This email will likely be filtered or land in spam if you send it now.",
+            "Repeated sends with these patterns will damage your domain reputation.",
+            "Fix this before sending — use the safer version below.",
+        ]
+        : [
+            "This can still land in spam if unchanged.",
+            "Repeated sends from this account compound the filtering risk.",
+            "Fix it now to protect future deliverability.",
         ];
-        rows.forEach((line) => {
-            const li = document.createElement("li");
-            li.textContent = line;
-            predictionBandsNode.appendChild(li);
-        });
+
+    lines.forEach((line) => {
+        const li = document.createElement("li");
+        li.textContent = line;
+        consequenceListNode.appendChild(li);
+    });
+}
+
+function renderHurting(findings) {
+    if (!hurtListNode) {
+        return;
     }
 
-    async function runSeedAuto() {
-        const previousLabel = runSeedAutoButton ? runSeedAutoButton.textContent : "Run Automated Seed Test";
-        setActionButtonState(runSeedAutoButton, "loading", "Running...");
-        const campaign = seedCampaignInput ? String(seedCampaignInput.value || "").trim() : "";
-        const subjectToken = `IG-${Date.now().toString(36)}`;
-        const payload = new FormData();
-        payload.set("campaign_name", campaign || "Automated Seed Run");
-        payload.set("subject_token", subjectToken);
-        payload.set("body_text", String(rawEmailInput && rawEmailInput.value ? rawEmailInput.value : "InboxGuard seed probe"));
-        try {
-            const response = await fetch("/seed-run-async", { method: "POST", body: payload });
-            if (!response.ok) {
-                throw new Error("Could not start automated seed test.");
-            }
-            const data = await response.json();
-            showError("Automated seed test queued. Polling result...");
-            for (let i = 0; i < 20; i += 1) {
-                await sleep(1200);
-                const poll = await fetch(`/analyze-jobs/${String(data.job_id || "")}`, { method: "GET" });
-                if (!poll.ok) {
-                    continue;
-                }
-                const job = await poll.json();
-                if (job.status === "completed") {
-                    setActionButtonState(runSeedAutoButton, "success", "Completed");
-                    showError("Automated seed test completed.");
-                    await refreshSeedTests();
-                    return;
-                }
-                if (job.status === "failed") {
-                    throw new Error(String(job.error || "Seed test failed."));
-                }
-            }
-            throw new Error("Seed test is still running. Check jobs and try again.");
-        } catch (error) {
-            setActionButtonState(runSeedAutoButton, "error", "Error");
-            throw error;
-        } finally {
-            setTimeout(() => {
-                setActionButtonState(runSeedAutoButton, "idle", previousLabel);
-            }, 1000);
-        }
+    hurtListNode.innerHTML = "";
+    const nonMeta = (findings || []).filter((f) => !String(f.title || "").toLowerCase().includes("analysis mode"));
+
+    if (!nonMeta.length) {
+        hurtListNode.innerHTML = "<li>No scan yet - run analysis to detect deliverability risks.</li>";
+        return;
     }
 
-    async function runSeedSync() {
-        const previousLabel = runSeedSyncButton ? runSeedSyncButton.textContent : "Run Instant Seed Probe";
-        setActionButtonState(runSeedSyncButton, "loading", "Running...");
-        const campaign = seedCampaignInput ? String(seedCampaignInput.value || "").trim() : "";
-        const subject = campaign || "InboxGuard Seed Test";
-        const body = String(rawEmailInput && rawEmailInput.value ? rawEmailInput.value : "InboxGuard seed probe");
-        try {
-            const response = await fetch("/seed-test", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                    subject,
-                    body,
-                    campaign_name: campaign || "Instant Seed Run",
-                    wait_seconds: 6,
-                }),
-            });
-            if (!response.ok) {
-                const errorBody = await response.json().catch(() => ({}));
-                throw new Error(String(errorBody.detail || "Could not run instant seed probe."));
-            }
-            const data = await response.json();
-            const placements = Array.isArray(data.placements) ? data.placements : [];
-            const summary = data.summary && typeof data.summary === "object" ? data.summary : {};
-            if (seedTestListNode) {
-                seedTestListNode.innerHTML = "";
-                const summaryLine = document.createElement("li");
-                summaryLine.textContent = `Summary | Inbox ${Number(summary.inbox || 0)} | Spam ${Number(summary.spam || 0)} | Promotions ${Number(summary.promotions || 0)} | Unknown ${Number(summary.unknown || 0)}`;
-                seedTestListNode.appendChild(summaryLine);
-                if (!placements.length) {
-                    const li = document.createElement("li");
-                    li.textContent = "Seed probe completed, but no provider placements were returned.";
-                    seedTestListNode.appendChild(li);
-                } else {
-                    placements.forEach((row) => {
-                        const li = document.createElement("li");
-                        li.textContent = `Instant probe | ${String(row.provider || "provider")}: ${String(row.placement || "unknown")}`;
-                        seedTestListNode.appendChild(li);
-                    });
-                }
-            }
-            setActionButtonState(runSeedSyncButton, "success", "Completed");
-            showError(`Instant seed probe completed (${String(data.test_id || "test")}).`);
-        } catch (error) {
-            setActionButtonState(runSeedSyncButton, "error", "Error");
-            throw error;
-        } finally {
-            setTimeout(() => {
-                setActionButtonState(runSeedSyncButton, "idle", previousLabel);
-            }, 1000);
-        }
-    }
-
-    async function refreshPlans() {
-        const response = await fetch("/plans", { method: "GET" });
-        if (!response.ok) {
-            throw new Error("Could not load plan details.");
-        }
-        const data = await response.json();
-        const plans = data.plans && typeof data.plans === "object" ? data.plans : {};
-        if (!plansOutputNode) {
-            return;
-        }
-        plansOutputNode.innerHTML = "";
-        const keys = Object.keys(plans);
-        if (!keys.length) {
-            const li = document.createElement("li");
-            li.textContent = "No plans returned by server.";
-            plansOutputNode.appendChild(li);
-            return;
-        }
-        keys.forEach((key) => {
-            const item = plans[key] || {};
-            const li = document.createElement("li");
-            li.textContent = `${key}: ${String(item.display_price || item.price || "n/a")}`;
-            plansOutputNode.appendChild(li);
-        });
-    }
-
-    async function requestAccess() {
-        const email = String(accessRequestEmailInput && accessRequestEmailInput.value ? accessRequestEmailInput.value : "").trim();
-        if (!email) {
-            showError("Enter your email to request access.");
-            return;
-        }
-        const payload = new FormData();
-        payload.set("email", email);
-        const response = await fetch("/request-access", { method: "POST", body: payload });
-        if (!response.ok) {
-            throw new Error("Could not submit access request.");
-        }
-        showError("Access request submitted.");
-    }
-
-    async function runBulkScan() {
-        if (!bulkFileInput || !bulkFileInput.files || !bulkFileInput.files.length) {
-            showError("Select a CSV file first.");
-            return;
-        }
-        setListMessage(bulkResultsNode, "Running bulk scan...");
-        const payload = new FormData();
-        payload.set("file", bulkFileInput.files[0]);
-        payload.set("analysis_mode", analysisModeInput ? analysisModeInput.value : "content");
-        const response = await fetch("/bulk-analyze", { method: "POST", body: payload });
-        if (!response.ok) {
-            const message = await parseApiError(response, "Bulk scan failed. Verify CSV format and try again.");
-            setListMessage(bulkResultsNode, message);
-            throw new Error(message);
-        }
-        const data = await response.json();
-        if (!bulkResultsNode) {
-            return;
-        }
-        bulkResultsNode.innerHTML = "";
-        const items = Array.isArray(data.items) ? data.items : [];
-        items.slice(0, 8).forEach((item) => {
-            const li = document.createElement("li");
-            if (item.error) {
-                li.textContent = `Row ${item.row}: ${item.error}`;
-            } else {
-                li.textContent = `Row ${item.row}: Score ${item.score} | ${item.risk_band}`;
-            }
-            bulkResultsNode.appendChild(li);
-        });
-    }
-
-    async function createApiKey() {
-        const payload = new FormData();
-        payload.set("name", apiKeyNameInput ? String(apiKeyNameInput.value || "Primary key") : "Primary key");
-        setListMessage(opsOutputNode, "Creating API key...");
-        const response = await fetch("/api-keys", { method: "POST", body: payload });
-        if (!response.ok) {
-            const message = await parseApiError(response, "Could not create API key.");
-            setListMessage(opsOutputNode, message);
-            throw new Error(message);
-        }
-        const data = await response.json();
-        if (opsOutputNode) {
-            opsOutputNode.innerHTML = "";
-            const li = document.createElement("li");
-            li.textContent = `API key created: ${String(data.api_key || "")}`;
-            opsOutputNode.appendChild(li);
-        }
-    }
-
-    async function listApiKeys() {
-        setListMessage(apiKeyListNode, "Loading API keys...");
-        const response = await fetch("/api-keys", { method: "GET" });
-        if (!response.ok) {
-            const message = await parseApiError(response, "Could not load API keys.");
-            setListMessage(apiKeyListNode, message);
-            throw new Error(message);
-        }
-        const data = await response.json();
-        const items = Array.isArray(data.items) ? data.items : [];
-        if (!apiKeyListNode) {
-            return;
-        }
-        apiKeyListNode.innerHTML = "";
-        if (!items.length) {
-            const li = document.createElement("li");
-            li.textContent = "No API keys found.";
-            apiKeyListNode.appendChild(li);
-            return;
-        }
-        items.slice(0, 10).forEach((item) => {
-            const li = document.createElement("li");
-            const id = Number(item.id || 0);
-            const name = String(item.name || "API key");
-            const prefix = String(item.key_prefix || "");
-            const created = String(item.created_at || "").slice(0, 10);
-            const revoked = item.revoked_at ? "revoked" : "active";
-            li.textContent = `#${id} ${name} (${prefix}...) | ${revoked} | created ${created}`;
-            apiKeyListNode.appendChild(li);
-        });
-    }
-
-    async function revokeApiKey() {
-        const keyId = Number(revokeKeyIdInput && revokeKeyIdInput.value ? revokeKeyIdInput.value : 0);
-        if (!keyId) {
-            showError("Enter a valid API key ID to revoke.");
-            return;
-        }
-        setListMessage(opsOutputNode, `Revoking API key #${keyId}...`);
-        const payload = new FormData();
-        payload.set("key_id", String(keyId));
-        const response = await fetch("/api-keys/revoke", { method: "POST", body: payload });
-        if (!response.ok) {
-            const message = await parseApiError(response, "Could not revoke API key.");
-            setListMessage(opsOutputNode, message);
-            throw new Error(message);
-        }
-        showError(`API key #${keyId} revoked.`);
-        await listApiKeys();
-    }
-
-    async function createTeam() {
-        const payload = new FormData();
-        payload.set("name", teamNameInput ? String(teamNameInput.value || "My Team") : "My Team");
-        setListMessage(opsOutputNode, "Creating team...");
-        const response = await fetch("/teams", { method: "POST", body: payload });
-        if (!response.ok) {
-            const message = await parseApiError(response, "Could not create team.");
-            setListMessage(opsOutputNode, message);
-            throw new Error(message);
-        }
-        const data = await response.json();
-        if (opsOutputNode) {
-            const li = document.createElement("li");
-            li.textContent = `Team created with id: ${String(data.team_id || "")}`;
-            opsOutputNode.appendChild(li);
-        }
-    }
-
-    async function listTeams() {
-        setListMessage(teamListNode, "Loading teams...");
-        const response = await fetch("/teams", { method: "GET" });
-        if (!response.ok) {
-            const message = await parseApiError(response, "Could not load teams.");
-            setListMessage(teamListNode, message);
-            throw new Error(message);
-        }
-        const data = await response.json();
-        const items = Array.isArray(data.items) ? data.items : [];
-        if (!teamListNode) {
-            return;
-        }
-        teamListNode.innerHTML = "";
-        if (!items.length) {
-            const li = document.createElement("li");
-            li.textContent = "No teams found.";
-            teamListNode.appendChild(li);
-            return;
-        }
-        items.slice(0, 10).forEach((item) => {
-            const li = document.createElement("li");
-            const id = Number(item.id || 0);
-            const name = String(item.name || "Team");
-            const role = String(item.role || "member");
-            li.textContent = `#${id} ${name} | your role: ${role}`;
-            teamListNode.appendChild(li);
-        });
-    }
-
-    async function addTeamMember() {
-        const teamId = Number(teamMemberTeamIdInput && teamMemberTeamIdInput.value ? teamMemberTeamIdInput.value : 0);
-        const email = String(teamMemberEmailInput && teamMemberEmailInput.value ? teamMemberEmailInput.value : "").trim();
-        const role = String(teamMemberRoleInput && teamMemberRoleInput.value ? teamMemberRoleInput.value : "member");
-        if (!teamId || !email) {
-            showError("Enter team ID and member email.");
-            return;
-        }
-        setListMessage(opsOutputNode, `Adding ${email} to team #${teamId}...`);
-        const payload = new FormData();
-        payload.set("team_id", String(teamId));
-        payload.set("email", email);
-        payload.set("role", role);
-        const response = await fetch("/teams/member", { method: "POST", body: payload });
-        if (!response.ok) {
-            const message = await parseApiError(response, "Could not add team member.");
-            setListMessage(opsOutputNode, message);
-            throw new Error(message);
-        }
-        showError(`Added ${email} to team #${teamId} as ${role}.`);
-        await listTeams();
-    }
-
-    async function refreshOutcomeStats() {
-        setListMessage(outcomeStatsListNode, "Loading outcome stats...");
-        const response = await fetch("/outcome-stats", { method: "GET" });
-        if (!response.ok) {
-            const message = await parseApiError(response, "Could not load outcome stats.");
-            setListMessage(outcomeStatsListNode, message);
-            throw new Error(message);
-        }
-        const data = await response.json();
-        if (!outcomeStatsListNode) {
-            return;
-        }
-        const bands = Array.isArray(data.score_bands) ? data.score_bands : [];
-        outcomeStatsListNode.innerHTML = "";
-        const summary = document.createElement("li");
-        summary.textContent = `Samples: ${Number(data.samples || 0)} | Inbox rate: ${Number(data.inbox_rate || 0).toFixed(1)}% | Top benchmark: ${Number(data.benchmark_top_10_score || 85)}+`;
-        outcomeStatsListNode.appendChild(summary);
-        bands.slice(0, 4).forEach((row) => {
-            const li = document.createElement("li");
-            li.textContent = `Band ${String(row.band || "-")}: ${Number(row.inbox_rate || 0).toFixed(1)}% inbox (${Number(row.samples || 0)} samples)`;
-            outcomeStatsListNode.appendChild(li);
-        });
-    }
-
-    async function refreshJobs() {
-        setListMessage(jobListNode, "Loading async jobs...");
-        const response = await fetch("/jobs?limit=12", { method: "GET" });
-        if (!response.ok) {
-            const message = await parseApiError(response, "Could not load async jobs.");
-            setListMessage(jobListNode, message);
-            throw new Error(message);
-        }
-        const data = await response.json();
-        const items = Array.isArray(data.items) ? data.items : [];
-        if (!jobListNode) {
-            return;
-        }
-        jobListNode.innerHTML = "";
-        if (!items.length) {
-            const li = document.createElement("li");
-            li.textContent = "No async jobs found.";
-            jobListNode.appendChild(li);
-            return;
-        }
-        items.slice(0, 10).forEach((item) => {
-            const li = document.createElement("li");
-            const id = String(item.id || "").slice(0, 8);
-            const status = String(item.status || "unknown");
-            const queue = String(item.queue_name || "analysis");
-            const updated = String(item.updated_at || "").replace("T", " ").slice(0, 19);
-            li.textContent = `${id} | ${queue} | ${status} | ${updated}`;
-            jobListNode.appendChild(li);
-        });
-    }
-
-    function renderDecisionEngine(summary, signals, findings, prediction) {
-        if (!decisionProblemNode || !decisionSignalNode || !decisionScopeNode || !decisionWhyNode || !decisionFixFirstNode || !decisionConsequenceNode || !riskStripNode || !riskStripTitleNode || !riskStripBodyNode || !scaleWarningListNode) {
-            return;
-        }
-
-        const band = String(summary.risk_band || "Needs Review");
-        const predictionDecision = String(prediction && prediction.decision ? prediction.decision : "").toUpperCase();
-        const spf = String(signals.spf_status || "unknown");
-        const dkim = String(signals.dkim_status || "unknown");
-        const dmarc = String(signals.dmarc_status || "unknown");
-        const infraWeak = !(spf === "found" && dkim === "found" && dmarc === "found");
-        const scope = classifyIssueScope(summary, signals, findings);
-
-        let problem = "TEST FIRST - Risk unclear at scale";
-        let signalLine = "Use this verdict before your batch send to avoid preventable filtering.";
-        let stripTitle = "TEST FIRST";
-        let stripBody = "Risk is mixed. Run a real inbox test before scaling.";
-        let stripClass = "risk-strip risk-strip-medium";
-        if (predictionDecision === "DO NOT SEND" || band === "High Spam-Risk Signals" || band === "High Risk") {
-            problem = "DO NOT SEND - This will likely hit spam";
-            signalLine = "High-confidence spam pattern detected.";
-            stripTitle = "DO NOT SEND";
-            stripBody = "This email will likely land in spam if sent now.";
-            stripClass = "risk-strip risk-strip-high";
-        } else if (predictionDecision === "SAFE TO SEND" || band === "Content Safe") {
-            problem = "SAFE TO SEND - Low spam risk";
-            signalLine = "Low immediate risk. Start with a controlled test batch.";
-            stripTitle = "SAFE TO SEND";
-            stripBody = "This is acceptable for a small test batch.";
-            stripClass = "risk-strip risk-strip-low";
-        }
-
-        if (infraWeak && (band === "High Spam-Risk Signals" || band === "High Risk")) {
-            stripBody = "This email is likely to be filtered and technical trust signals are weak.";
-        }
-
-        decisionProblemNode.textContent = problem;
-        decisionProblemNode.classList.remove("decision-pop", "pulse-red");
-        void decisionProblemNode.offsetWidth;
-        decisionProblemNode.classList.add("decision-pop");
-        if (predictionDecision === "DO NOT SEND" || band === "High Spam-Risk Signals" || band === "High Risk") {
-            decisionProblemNode.classList.add("pulse-red");
-            transitionColor(decisionProblemNode, "#fca5a5", "#ef4444");
+    nonMeta.slice(0, 3).forEach((item) => {
+        const li = document.createElement("li");
+        const title = String(item.title || "Risk");
+        const low = title.toLowerCase();
+        if (low.includes("urgency") || low.includes("pressure")) {
+            li.textContent = `\"Only 1 day left\" style language is a spam trigger for Gmail filters.`;
+        } else if (low.includes("broadcast") || low.includes("mass")) {
+            li.textContent = "This reads like a mass campaign and lowers trust/reply rates.";
+        } else if (low.includes("personalization")) {
+            li.textContent = "Low personalization makes this look promotional instead of 1:1 outreach.";
+        } else if (low.includes("spf") || low.includes("dkim") || low.includes("dmarc")) {
+            li.textContent = "Authentication gaps can push this to spam even with good copy.";
         } else {
-            transitionColor(decisionProblemNode, "#93c5fd", "#22c55e");
+            li.textContent = `${title} can reduce inbox placement if not fixed.`;
         }
-        animateDecision(decisionProblemNode);
-        showOverlaySpring(stripTitle);
-        revealText(decisionSignalNode, signalLine);
-        decisionScopeNode.textContent = `Primary issue: ${scope}${scope === "INFRA" ? " - technical trust signals" : scope === "MIXED" ? " - content and infrastructure" : " - content signals"}`;
-        riskStripNode.className = stripClass;
-        riskStripTitleNode.textContent = stripTitle;
-        riskStripBodyNode.textContent = stripBody;
-        if (realityStripTitleNode) {
-            realityStripTitleNode.textContent = "Reality Check";
-        }
-        if (realityStripBodyNode) {
-            const benchmark = prediction && prediction.benchmark ? prediction.benchmark : null;
-            const analyzed = Number(benchmark && benchmark.emails_analyzed ? benchmark.emails_analyzed : 12483);
-            const topScore = Number(benchmark && benchmark.top_score ? benchmark.top_score : (prediction && prediction.benchmark_top_10_score ? prediction.benchmark_top_10_score : 85));
-            const drop = Number(benchmark && benchmark.avg_reply_drop ? benchmark.avg_reply_drop : 37);
-            realityStripBodyNode.textContent = `${analyzed.toLocaleString()} emails analyzed. Top inbox campaigns usually score ${topScore}+. Emails that stay below this commonly see ~${drop}% lower replies at scale.`;
-        }
+        hurtListNode.appendChild(li);
+    });
+}
 
-        const nonMeta = (findings || []).filter((f) => !String(f.title || "").toLowerCase().includes("analysis mode"));
-        decisionWhyNode.innerHTML = "";
-        (nonMeta.slice(0, 3).length ? nonMeta.slice(0, 3) : [{ title: "Signals detected", issue: "Multiple risk patterns are present." }]).forEach((item) => {
-            const li = document.createElement("li");
-            const title = String(item.title || "risk signal").toLowerCase();
-            if (title.includes("broadcast") || title.includes("promo") || title.includes("mass")) {
-                li.textContent = "Detected broadcast-style phrasing (common spam signal).";
-            } else if (title.includes("personal")) {
-                li.textContent = "No recipient-specific personalization found.";
-            } else if (title.includes("urgency") || title.includes("pressure")) {
-                li.textContent = "Urgency language detected (reduces trust signals).";
-            } else if (title.includes("spf") || title.includes("dkim") || title.includes("dmarc")) {
-                li.textContent = "Authentication trust signals are incomplete for this send context.";
-            } else {
-                const issue = String(item.issue || item.impact || "This pattern increases filtering risk.");
-                li.textContent = `Detected ${String(item.title || "risk signal")}: ${issue}`;
-            }
-            decisionWhyNode.appendChild(li);
-        });
+function commandFix(title, fallback) {
+    const txt = String(title || "").toLowerCase();
+    if (txt.includes("broadcast")) {
+        return "Remove feature list and rewrite as a 1-to-1 message.";
+    }
+    if (txt.includes("personalization")) {
+        return "Add recipient-specific detail in the opening line.";
+    }
+    if (txt.includes("dkim") || txt.includes("spf") || txt.includes("dmarc")) {
+        return "Fix authentication setup before sending campaign traffic.";
+    }
+    if (txt.includes("link/image") || txt.includes("balance")) {
+        return "Reduce dense links or balance with clean visual/text structure.";
+    }
+    return fallback || "Resolve this issue before sending.";
+}
 
-        const fixes = Array.isArray(summary.top_fixes) ? summary.top_fixes : [];
-        decisionFixFirstNode.innerHTML = "";
-        (fixes.slice(0, 3).length ? fixes.slice(0, 3) : [{ title: "Review technical auth" }, { title: "Lower CTA pressure" }, { title: "Simplify message structure" }]).forEach((fix, idx) => {
-            const li = document.createElement("li");
-            li.textContent = `${idx + 1}. ${commandFix(fix.title || fix.type || "Fix issue", fix.action)}`;
-            decisionFixFirstNode.appendChild(li);
-        });
-
-        decisionConsequenceNode.innerHTML = "";
-        const consequences = (band === "High Spam-Risk Signals" || band === "High Risk")
-            ? [
-                "This looks like bulk promotional email, so Gmail is likely to filter it.",
-                "Repeated sends like this can damage domain reputation.",
-            ]
-            : [
-                "This is likely safe for a small test batch, but scale risk can rise fast.",
-                "If volume increases, keep watching inbox placement and replies.",
-            ];
-        consequences.forEach((line) => {
-            const li = document.createElement("li");
-            li.textContent = line;
-            decisionConsequenceNode.appendChild(li);
-        });
-
-        scaleWarningListNode.innerHTML = "";
-        const scaleLines = (band === "High Spam-Risk Signals" || band === "High Risk")
-            ? [
-                "If you send this to 500+ people, high risk of spam placement.",
-                "Domain reputation risk increases after the first batch.",
-                "Performance will degrade as volume rises.",
-            ]
-            : [
-                "Safe for an initial 20-50 email test batch.",
-                "Re-check before scaling to 500+ sends.",
-                "Monitor inbox placement after the first batch.",
-            ];
-        scaleLines.forEach((line) => {
-            const li = document.createElement("li");
-            li.textContent = line;
-            scaleWarningListNode.appendChild(li);
-        });
+function renderFixes(summary) {
+    if (!topFixesListNode) {
+        return;
     }
 
-    function getRecommendedRewriteStyle() {
-        const band = String(latestSummary && latestSummary.risk_band ? latestSummary.risk_band : "");
-        if (band === "High Spam-Risk Signals" || band === "High Risk") {
-            return "safe";
-        }
-        return "balanced";
-    }
-    async function showFixTransformation() {
-        if (!fixOutput || !beforeEmailNode || !afterEmailNode || !rawEmailInput || !fixNowButton) {
-            return;
-        }
+    topFixesListNode.innerHTML = "";
+    const fixes = summary.top_fixes || [];
 
-        const original = rawEmailInput.value.trim();
-        if (!original) {
-            showError("Paste an email first so we can fix it.");
-            return;
-        }
-
-        fixNowButton.disabled = true;
-        fixNowButton.textContent = "Fixing...";
-        trackEvent("fix_clicked", {
-            source: "fix_issues_button",
-            rewrite_style: rewriteStyleInput ? rewriteStyleInput.value : "balanced",
-        });
-
-        try {
-            const payload = new FormData();
-            payload.set("raw_email", original);
-            if (domainInput && domainInput.value.trim()) {
-                payload.set("domain", domainInput.value.trim());
-            }
-            payload.set("analysis_mode", analysisModeInput ? analysisModeInput.value : "content");
-            payload.set("rewrite_style", rewriteStyleInput ? rewriteStyleInput.value : "balanced");
-
-            const response = await fetch("/rewrite", {
-                method: "POST",
-                body: payload,
-            });
-            if (!response.ok) {
-                throw new Error("Rewrite failed. Try again.");
-            }
-            const data = await response.json();
-            const rewritten = String(data.rewritten_text || original);
-
-            const originalSubject = String(data.original_subject || "").trim();
-            const originalBody = String(data.original_body || data.original_text || original).trim();
-            const rewrittenSubject = String(data.rewritten_subject || "").trim();
-            const rewrittenBody = String(data.rewritten_body || rewritten).trim();
-
-            const formatEmailBlock = (subject, body) => {
-                const parts = [];
-                if (subject) {
-                    parts.push(`Subject: ${subject}`);
-                }
-                parts.push("Body:");
-                parts.push(body || "-");
-                return parts.join("\n\n");
-            };
-
-            const beforeBlock = formatEmailBlock(originalSubject, originalBody);
-            const afterBlock = formatEmailBlock(rewrittenSubject, rewrittenBody);
-            beforeEmailNode.innerHTML = highlightSpamSignals(beforeBlock);
-            afterEmailNode.innerHTML = escapeHtml(afterBlock);
-            beforeEmailNode.classList.remove("split-enter");
-            afterEmailNode.classList.remove("split-enter");
-            void beforeEmailNode.offsetWidth;
-            beforeEmailNode.classList.add("split-enter");
-            afterEmailNode.classList.add("split-enter");
-            slideIn(afterEmailNode);
-            highlightDiff(beforeEmailNode, afterEmailNode);
-            if (successBadge) {
-                successBadge.classList.remove("hidden");
-            }
-
-            latestRewriteContext = {
-                original_subject: originalSubject,
-                original_body: originalBody,
-                rewritten_subject: rewrittenSubject,
-                rewritten_body: rewrittenBody,
-                original_text: String(data.original_text || original),
-                rewritten_text: rewritten,
-                from_risk_band: String(data.from_risk_band || "Needs Review"),
-                to_risk_band: String(data.to_risk_band || "Needs Review"),
-                score_delta: Number(data.score_delta || 0),
-                rewrite_style: String(data.rewrite_style || "balanced"),
-            };
-
-            const rewriteOutcome = String(data.rewrite_outcome || "neutral").toLowerCase();
-
-            if (workflowStateNode) {
-                workflowStateNode.textContent = "Step 2: Fix complete";
-            }
-            if (workflowTitleNode) {
-                workflowTitleNode.textContent = rewriteOutcome === "improved"
-                    ? "Safer version generated"
-                    : rewriteOutcome === "failed_fix"
-                        ? "Partial fix generated"
-                        : "Best safer version generated";
-            }
-
-            if (improvementEstimateNode) {
-                const delta = Number(data.score_delta || 0);
-                if (rewriteOutcome === "improved") {
-                    improvementEstimateNode.textContent = `✅ Spam Risk Reduced | Deliverability Score: ${delta >= 0 ? "+" : ""}${delta} | Higher chance of inbox placement`;
-                } else if (rewriteOutcome === "failed_fix") {
-                    improvementEstimateNode.textContent = "Could not safely remove all pressure signals without changing core intent. Use this draft as a base and refine further.";
-                } else {
-                    improvementEstimateNode.textContent = "No major risk shift detected. We still simplified structure to reduce bulk-style triggers.";
-                }
-                showReward(delta);
-                updateWins();
-                updateStreak();
-            }
-
-            if (rewriteModeDisplayNode) {
-                const mode = String(data.rewrite_style || "balanced").toLowerCase();
-                const modeLabel = mode === "safe"
-                    ? "Safe (keeps more detail)"
-                    : mode === "aggressive"
-                        ? "Aggressive (max reply rate)"
-                        : "Balanced (best mix)";
-                rewriteModeDisplayNode.textContent = `Rewrite mode: ${modeLabel}`;
-            }
-
-            if (subjectChangeNode) {
-                const changed = Boolean(data.subject_changed) && originalSubject && rewrittenSubject && originalSubject !== rewrittenSubject;
-                if (changed) {
-                    subjectChangeNode.textContent = `Subject updated:\n"${originalSubject}" -> "${rewrittenSubject}"`;
-                    subjectChangeNode.classList.remove("hidden");
-                } else {
-                    subjectChangeNode.textContent = "";
-                    subjectChangeNode.classList.add("hidden");
-                }
-            }
-
-            if (rewriteChangesNode) {
-                rewriteChangesNode.innerHTML = "";
-                const lines = Array.isArray(data.rewrite_changes) ? data.rewrite_changes : [];
-                if (!lines.length) {
-                    const li = document.createElement("li");
-                    li.textContent = "Improved clarity and reduced bulk-style patterns.";
-                    rewriteChangesNode.appendChild(li);
-                } else {
-                    lines.slice(0, 4).forEach((line) => {
-                        const li = document.createElement("li");
-                        li.textContent = String(line);
-                        rewriteChangesNode.appendChild(li);
-                    });
-                }
-            }
-
-            if (rewriteDiffNode) {
-                const diffRows = buildRewriteDiff(beforeBlock, afterBlock);
-                rewriteDiffNode.innerHTML = "";
-                diffRows.forEach((row) => {
-                    const li = document.createElement("li");
-                    li.textContent = `${row.type}: ${row.text}`;
-                    rewriteDiffNode.appendChild(li);
-                });
-            }
-
-            if (rewriteTrustNoteNode) {
-                rewriteTrustNoteNode.textContent = String(
-                    data.rewrite_trust_note || "This version removes common bulk-style patterns flagged by Gmail and Outlook filters."
-                );
-            }
-
-            if (rewriteLimitationsNode) {
-                const notes = Array.isArray(data.rewrite_limitations) ? data.rewrite_limitations : [];
-                rewriteLimitationsNode.innerHTML = "";
-                notes.slice(0, 3).forEach((note) => {
-                    const li = document.createElement("li");
-                    li.textContent = String(note);
-                    rewriteLimitationsNode.appendChild(li);
-                });
-                if (!notes.length) {
-                    const li = document.createElement("li");
-                    li.textContent = "Final placement still depends on domain reputation, list quality, and send behavior.";
-                    rewriteLimitationsNode.appendChild(li);
-                }
-            }
-
-            fixOutput.classList.remove("hidden");
-            fixOutput.classList.add("fade-in");
-
-            // Auto-scroll to transformation with immediate visibility
-            await sleep(100);
-            fixOutput.scrollIntoView({ behavior: "smooth", block: "start" });
-        } catch (error) {
-            showError(error && error.message ? error.message : "Rewrite failed.");
-        }
-
-        fixNowButton.disabled = false;
-        fixNowButton.textContent = "Fix Issues";
+    if (!fixes.length) {
+        topFixesListNode.innerHTML = "<li>No fixes loaded yet - run analysis first.</li>";
+        return;
     }
 
-    async function runAnalyze() {
-        await refreshAuthStatus();
+    fixes.slice(0, 3).forEach((fix, idx) => {
+        const li = document.createElement("li");
+        li.textContent = `${idx + 1}. ${commandFix(fix.title || fix.type || "Fix issue", fix.action)}`;
+        topFixesListNode.appendChild(li);
+    });
+}
 
-        if (needsAuthGate("analyze")) {
-            if (isAuthenticated) {
-                showError("You reached your monthly free plan scan limit. Upgrade is required for more scans.");
-            } else {
-                showAuthModal();
-            }
-            return;
-        }
-
-        const rawText = rawEmailInput ? rawEmailInput.value.trim() : "";
-        const domainText = domainInput ? domainInput.value.trim() : "";
-        const mode = analysisModeInput ? analysisModeInput.value : "content";
-
-        trackEvent("analyze_clicked", {
-            analysis_mode: mode,
-            has_domain: Boolean(domainText),
-        });
-
-        if (rawText.length < 20) {
-            showError("Paste the full email draft before scanning.");
-            return;
-        }
-
-        setLoadingState();
-        const loadingTicker = startRealtimeScanSteps();
-
-        try {
-            const payload = new FormData();
-            payload.set("raw_email", rawText);
-            if (domainText) {
-                payload.set("domain", domainText);
-            }
-            payload.set("analysis_mode", mode);
-
-            const response = await fetch("/analyze", {
-                method: "POST",
-                body: payload,
-            });
-
-            if (!response.ok) {
-                const err = await response.json().catch(() => ({}));
-                const code = String(err.detail || "");
-                if (code === "AUTH_REQUIRED") {
-                    showAuthModal();
-                    throw new Error("Sign in to continue scanning.");
-                }
-                if (code === "SUBSCRIPTION_REQUIRED") {
-                    showPaywall();
-                    throw new Error("Active subscription required. Upgrade to continue scanning.");
-                }
-                if (code === "FREE_PLAN_LIMIT_REACHED") {
-                    throw new Error("You reached your monthly free plan scan limit. Upgrade is required for more scans.");
-                }
-                throw new Error("Unable to complete risk scan. Try again.");
-            }
-
-            const data = await response.json();
-            if (loadingTicker && typeof loadingTicker.stop === "function") {
-                loadingTicker.stop();
-            }
-            const summary = data.summary || {};
-            const signals = data.signals || {};
-            const findings = data.partial_findings || summary.findings || [];
-            latestLearningProfile = data.learning_profile || latestLearningProfile;
-            hasScanResult = true;
-
-            latestSummary = summary;
-            latestFindings = findings;
-
-            trackEvent("result_viewed", {
-                risk: String(summary.risk_band || "unknown"),
-                analysis_mode: mode,
-            });
-
-            renderStatus(summary, signals, findings);
-            renderDecisionEngine(summary, signals, findings, data.prediction || null);
-            renderBreakdown(summary);
-            renderPrediction(summary, data.prediction || null);
-
-            if (rewriteStyleInput) {
-                rewriteStyleInput.value = getRecommendedRewriteStyle();
-            }
-
-            if (workflowStateNode) {
-                workflowStateNode.textContent = "Step 1: Scan complete";
-            }
-            if (workflowTitleNode) {
-                workflowTitleNode.textContent = "Step 2: Make this safe to send";
-            }
-            if (fixOutput) {
-                fixOutput.classList.add("hidden");
-            }
-            if (saveFixButton) {
-                saveFixButton.disabled = false;
-                saveFixButton.textContent = "Save Fix";
-            }
-
-            setResultState();
-            if (resultSection) {
-                resultSection.scrollIntoView({ behavior: "smooth", block: "start" });
-            }
-            activateTab("dashboard");
-
-            if (data.usage && !data.usage.authenticated) {
-                anonymousScansUsed = Number(data.usage.anonymous_scans_used || anonymousScansUsed + 1);
-                anonymousScansLimit = Number(data.usage.anonymous_scans_limit || anonymousScansLimit);
-                localStorage.setItem("ig_anon_scans_used", String(anonymousScansUsed));
-                localStorage.setItem("ig_anon_scans_limit", String(anonymousScansLimit));
-                if (anonymousScansUsed >= 2) {
-                    showUpgradeBlock();
-                }
-            }
-            if (data.usage && data.usage.authenticated) {
-                userScansUsed = Number(data.usage.user_scans_used || userScansUsed + 1);
-                userScansLimit = Number(data.usage.user_scans_limit || userScansLimit);
-            }
-        } catch (error) {
-            if (loadingTicker && typeof loadingTicker.stop === "function") {
-                loadingTicker.stop();
-            }
-            showError(error && error.message ? error.message : "Scan failed.");
-            setIdleState();
-        }
+function renderBreakdown(summary) {
+    if (!scoreBreakdownNode) {
+        return;
     }
 
-    function useFixedVersion() {
-        if (!afterEmailNode || !rawEmailInput) {
-            return;
+    scoreBreakdownNode.innerHTML = "";
+    const model = summary.scoring_model || {};
+    const penalties = (summary.breakdown || []).filter((item) => Number(item.points) < 0);
+
+    const baseline = Number(model.baseline_score || 0);
+    const totalPenalty = Number(model.total_penalty_points || summary.risk_points || 0);
+    const finalScore = Number(model.final_score || summary.final_score || summary.score || 0);
+
+    if (baseline > 0) {
+        const formulaLine = document.createElement("li");
+        formulaLine.textContent = `Model: ${baseline} baseline - ${totalPenalty} penalties = ${finalScore} final score`;
+        scoreBreakdownNode.appendChild(formulaLine);
+    }
+
+    if (!penalties.length) {
+        const noPenalty = document.createElement("li");
+        noPenalty.textContent = "No penalties triggered from current detected signals.";
+        scoreBreakdownNode.appendChild(noPenalty);
+        return;
+    }
+
+    penalties.slice(0, 5).forEach((item) => {
+        const li = document.createElement("li");
+        const points = Math.abs(Number(item.points || 0));
+        const reason = item.reason ? ` | ${item.reason}` : "";
+        li.textContent = `-${points} ${item.label}${reason}`;
+        scoreBreakdownNode.appendChild(li);
+    });
+}
+
+function renderPrediction(summary, prediction) {
+    if (!predictionHeadlineNode || !predictionDetailNode || !predictionBandsNode) {
+        return;
+    }
+    const score = Number(summary && (summary.final_score || summary.score || 0));
+    const prob = Number(prediction && prediction.inbox_probability ? prediction.inbox_probability : 0);
+    const likely = String(prediction && prediction.likely_outcome ? prediction.likely_outcome : "unknown");
+    const benchmark = Number(prediction && prediction.benchmark_top_10_score ? prediction.benchmark_top_10_score : 85);
+    const samples = Number(prediction && prediction.samples ? prediction.samples : 0);
+
+    predictionHeadlineNode.textContent = `Will likely land: ${likely.toUpperCase()} (${prob.toFixed(1)}% inbox probability)`;
+    predictionDetailNode.textContent = `Your score: ${score} | Top campaigns usually score ${benchmark}+ before scale | Learned samples: ${samples}`;
+    predictionBandsNode.innerHTML = "";
+    const rows = [
+        `Score 85+ usually maps to strongest inbox probability.`,
+        `Score 70-84 is often test-batch safe with monitoring.`,
+        `Score below 70 usually needs fixes before scaling.`,
+    ];
+    rows.forEach((line) => {
+        const li = document.createElement("li");
+        li.textContent = line;
+        predictionBandsNode.appendChild(li);
+    });
+}
+
+async function runSeedAuto() {
+    const previousLabel = runSeedAutoButton ? runSeedAutoButton.textContent : "Run Automated Seed Test";
+    setActionButtonState(runSeedAutoButton, "loading", "Running...");
+    const campaign = seedCampaignInput ? String(seedCampaignInput.value || "").trim() : "";
+    const subjectToken = `IG-${Date.now().toString(36)}`;
+    const payload = new FormData();
+    payload.set("campaign_name", campaign || "Automated Seed Run");
+    payload.set("subject_token", subjectToken);
+    payload.set("body_text", String(rawEmailInput && rawEmailInput.value ? rawEmailInput.value : "InboxGuard seed probe"));
+    try {
+        const response = await fetch("/seed-run-async", { method: "POST", body: payload });
+        if (!response.ok) {
+            throw new Error("Could not start automated seed test.");
         }
-        const text = String(afterEmailNode.textContent || rawEmailInput.value || "");
-        navigator.clipboard.writeText(text).then(() => {
-            rawEmailInput.value = text;
-            trackEvent("copy_clicked", { source: "fixed_email" });
-            if (useFixedButton) {
-                useFixedButton.textContent = "✓ Copied";
-                useFixedButton.classList.add("bg-green-700");
-                setTimeout(() => {
-                    useFixedButton.textContent = "Copy Fixed Email";
-                    useFixedButton.classList.remove("bg-green-700");
-                }, 1200);
+        const data = await response.json();
+        showError("Automated seed test queued. Polling result...");
+        for (let i = 0; i < 20; i += 1) {
+            await sleep(1200);
+            const poll = await fetch(`/analyze-jobs/${String(data.job_id || "")}`, { method: "GET" });
+            if (!poll.ok) {
+                continue;
             }
-            showError("Copied fixed email. You can paste directly into your sender.");
-        }).catch(() => {
-            rawEmailInput.value = text;
-            showError("Fixed version ready. Clipboard blocked, but draft is updated in editor.");
-        });
-    }
-
-    function restoreOriginalDraft() {
-        if (!rawEmailInput || !latestRewriteContext) {
-            return;
-        }
-        rawEmailInput.value = latestRewriteContext.original_text || rawEmailInput.value;
-        showError("Original draft restored.");
-    }
-
-    function editManually() {
-        if (!rawEmailInput) {
-            return;
-        }
-        rawEmailInput.focus();
-        showError("Manual edit mode active.");
-    }
-
-    function openInGmail() {
-        const bodyText = String(afterEmailNode && afterEmailNode.textContent ? afterEmailNode.textContent : rawEmailInput.value || "");
-        if (!bodyText.trim()) {
-            showError("Generate or paste an email first.");
-            return;
-        }
-
-        const composeUrl = `https://mail.google.com/mail/?view=cm&fs=1&body=${encodeURIComponent(bodyText)}`;
-        trackEvent("gmail_open_clicked", { source: "fix_output" });
-        window.open(composeUrl, "_blank", "noopener");
-    }
-
-    async function sendFeedback(outcome) {
-        if (!latestRewriteContext) {
-            showError("Generate a fixed version first.");
-            return;
-        }
-
-        try {
-            const payload = new FormData();
-            payload.set("outcome", outcome);
-            payload.set("original_text", latestRewriteContext.original_text || "");
-            payload.set("rewritten_text", latestRewriteContext.rewritten_text || "");
-            payload.set("from_risk_band", latestRewriteContext.from_risk_band || "");
-            payload.set("to_risk_band", latestRewriteContext.to_risk_band || "");
-            payload.set("from_score", String(latestSummary && (latestSummary.final_score || latestSummary.score || 0) || 0));
-            payload.set("to_score", String((latestSummary && (latestSummary.final_score || latestSummary.score || 0) || 0) + Number(latestRewriteContext.score_delta || 0)));
-
-            const response = await fetch("/feedback", {
-                method: "POST",
-                body: payload,
-            });
-            if (!response.ok) {
-                throw new Error("Could not save feedback");
+            const job = await poll.json();
+            if (job.status === "completed") {
+                setActionButtonState(runSeedAutoButton, "success", "Completed");
+                showError("Automated seed test completed.");
+                await refreshSeedTests();
+                return;
             }
-            const data = await response.json();
-            latestLearningProfile = data.learning_profile || latestLearningProfile;
-            trackEvent("feedback_given", {
-                outcome: String(outcome || "unknown"),
-                from_risk_band: latestRewriteContext.from_risk_band || "unknown",
-                to_risk_band: latestRewriteContext.to_risk_band || "unknown",
-            });
-            const samples = latestLearningProfile ? Number(latestLearningProfile.sample_size || 0) : 0;
-            const message = "Saved. This helps improve future accuracy.";
-            if (feedbackStatusNode) {
-                feedbackStatusNode.textContent = message;
+            if (job.status === "failed") {
+                throw new Error(String(job.error || "Seed test failed."));
             }
-            showError(`${message} (${samples} learned outcomes)`);
-        } catch (error) {
-            showError(error && error.message ? error.message : "Could not save feedback");
         }
+        throw new Error("Seed test is still running. Check jobs and try again.");
+    } catch (error) {
+        setActionButtonState(runSeedAutoButton, "error", "Error");
+        throw error;
+    } finally {
+        setTimeout(() => {
+            setActionButtonState(runSeedAutoButton, "idle", previousLabel);
+        }, 1000);
     }
+}
 
-    async function runCampaignDiagnosis() {
-        const openRate = Number(metricOpenRateInput && metricOpenRateInput.value ? metricOpenRateInput.value : 0);
-        const replyRate = Number(metricReplyRateInput && metricReplyRateInput.value ? metricReplyRateInput.value : 0);
-        const bounceRate = Number(metricBounceRateInput && metricBounceRateInput.value ? metricBounceRateInput.value : 0);
-        const sentCount = Number(metricSentCountInput && metricSentCountInput.value ? metricSentCountInput.value : 0);
-
-        trackEvent("campaign_debug_used", {
-            has_metrics: openRate > 0 || replyRate > 0 || bounceRate > 0 || sentCount > 0,
-        });
-
-        const response = await fetch("/campaign-debugger", {
+async function runSeedSync() {
+    const previousLabel = runSeedSyncButton ? runSeedSyncButton.textContent : "Run Instant Seed Probe";
+    setActionButtonState(runSeedSyncButton, "loading", "Running...");
+    const campaign = seedCampaignInput ? String(seedCampaignInput.value || "").trim() : "";
+    const subject = campaign || "InboxGuard Seed Test";
+    const body = String(rawEmailInput && rawEmailInput.value ? rawEmailInput.value : "InboxGuard seed probe");
+    try {
+        const response = await fetch("/seed-test", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
             },
             body: JSON.stringify({
-                open_rate: openRate,
-                reply_rate: replyRate,
-                bounce_rate: bounceRate,
-                sent: sentCount,
+                subject,
+                body,
+                campaign_name: campaign || "Instant Seed Run",
+                wait_seconds: 6,
             }),
         });
-
         if (!response.ok) {
             const errorBody = await response.json().catch(() => ({}));
-            throw new Error(String(errorBody.detail || "Could not diagnose campaign."));
+            throw new Error(String(errorBody.detail || "Could not run instant seed probe."));
         }
-
         const data = await response.json();
-        trackEvent("campaign_diagnosed", {
-            type: String(data.diagnosis || "unknown").toLowerCase().replace(/\s+/g, "_"),
-        });
-        if (!diagnosisOutput || !diagnosisPrimaryNode || !diagnosisConfidenceNode || !diagnosisWhyNode || !diagnosisActionsNode) {
-            return;
-        }
-
-        if (campaignDebuggerResultNode) {
-            campaignDebuggerResultNode.innerHTML = `<strong>Issue:</strong> ${String(data.issue || "No Major Issues")}<br/><strong>Reason:</strong> ${String(data.reason || "No reason returned")}<br/><strong>Action:</strong> ${String(data.action || "No action returned")}`;
-        }
-
-        const severity = Number(data.severity_score || 0);
-        diagnosisPrimaryNode.textContent = `Diagnosis: ${String(data.diagnosis || "Mixed issue")}`;
-        diagnosisConfidenceNode.textContent = `Confidence: ${String(data.confidence || "medium").toUpperCase()} | Severity: ${severity}/100`;
-        diagnosisWhyNode.textContent = String(data.why || "No diagnosis details available.");
-
-        diagnosisActionsNode.innerHTML = "";
-        const actions = Array.isArray(data.actions) ? data.actions : [];
-        if (!actions.length) {
-            const li = document.createElement("li");
-            li.textContent = "No action list returned.";
-            diagnosisActionsNode.appendChild(li);
-        } else {
-            actions.slice(0, 4).forEach((action, idx) => {
+        const placements = Array.isArray(data.placements) ? data.placements : [];
+        const summary = data.summary && typeof data.summary === "object" ? data.summary : {};
+        if (seedTestListNode) {
+            seedTestListNode.innerHTML = "";
+            const summaryLine = document.createElement("li");
+            summaryLine.textContent = `Summary | Inbox ${Number(summary.inbox || 0)} | Spam ${Number(summary.spam || 0)} | Promotions ${Number(summary.promotions || 0)} | Unknown ${Number(summary.unknown || 0)}`;
+            seedTestListNode.appendChild(summaryLine);
+            if (!placements.length) {
                 const li = document.createElement("li");
-                li.textContent = `${idx + 1}. ${String(action)}`;
-                diagnosisActionsNode.appendChild(li);
+                li.textContent = "Seed probe completed, but no provider placements were returned.";
+                seedTestListNode.appendChild(li);
+            } else {
+                placements.forEach((row) => {
+                    const li = document.createElement("li");
+                    li.textContent = `Instant probe | ${String(row.provider || "provider")}: ${String(row.placement || "unknown")}`;
+                    seedTestListNode.appendChild(li);
+                });
+            }
+        }
+        setActionButtonState(runSeedSyncButton, "success", "Completed");
+        showError(`Instant seed probe completed (${String(data.test_id || "test")}).`);
+    } catch (error) {
+        setActionButtonState(runSeedSyncButton, "error", "Error");
+        throw error;
+    } finally {
+        setTimeout(() => {
+            setActionButtonState(runSeedSyncButton, "idle", previousLabel);
+        }, 1000);
+    }
+}
+
+async function refreshPlans() {
+    const response = await fetch("/plans", { method: "GET" });
+    if (!response.ok) {
+        throw new Error("Could not load plan details.");
+    }
+    const data = await response.json();
+    const plans = data.plans && typeof data.plans === "object" ? data.plans : {};
+    if (!plansOutputNode) {
+        return;
+    }
+    plansOutputNode.innerHTML = "";
+    const keys = Object.keys(plans);
+    if (!keys.length) {
+        const li = document.createElement("li");
+        li.textContent = "No plans returned by server.";
+        plansOutputNode.appendChild(li);
+        return;
+    }
+    keys.forEach((key) => {
+        const item = plans[key] || {};
+        const li = document.createElement("li");
+        li.textContent = `${key}: ${String(item.display_price || item.price || "n/a")}`;
+        plansOutputNode.appendChild(li);
+    });
+}
+
+async function requestAccess() {
+    const email = String(accessRequestEmailInput && accessRequestEmailInput.value ? accessRequestEmailInput.value : "").trim();
+    if (!email) {
+        showError("Enter your email to request access.");
+        return;
+    }
+    const payload = new FormData();
+    payload.set("email", email);
+    const response = await fetch("/request-access", { method: "POST", body: payload });
+    if (!response.ok) {
+        throw new Error("Could not submit access request.");
+    }
+    showError("Access request submitted.");
+}
+
+async function runBulkScan() {
+    if (!bulkFileInput || !bulkFileInput.files || !bulkFileInput.files.length) {
+        showError("Select a CSV file first.");
+        return;
+    }
+    setListMessage(bulkResultsNode, "Running bulk scan...");
+    const payload = new FormData();
+    payload.set("file", bulkFileInput.files[0]);
+    payload.set("analysis_mode", analysisModeInput ? analysisModeInput.value : "content");
+    const response = await fetch("/bulk-analyze", { method: "POST", body: payload });
+    if (!response.ok) {
+        const message = await parseApiError(response, "Bulk scan failed. Verify CSV format and try again.");
+        setListMessage(bulkResultsNode, message);
+        throw new Error(message);
+    }
+    const data = await response.json();
+    if (!bulkResultsNode) {
+        return;
+    }
+    bulkResultsNode.innerHTML = "";
+    const items = Array.isArray(data.items) ? data.items : [];
+    items.slice(0, 8).forEach((item) => {
+        const li = document.createElement("li");
+        if (item.error) {
+            li.textContent = `Row ${item.row}: ${item.error}`;
+        } else {
+            li.textContent = `Row ${item.row}: Score ${item.score} | ${item.risk_band}`;
+        }
+        bulkResultsNode.appendChild(li);
+    });
+}
+
+async function createApiKey() {
+    const payload = new FormData();
+    payload.set("name", apiKeyNameInput ? String(apiKeyNameInput.value || "Primary key") : "Primary key");
+    setListMessage(opsOutputNode, "Creating API key...");
+    const response = await fetch("/api-keys", { method: "POST", body: payload });
+    if (!response.ok) {
+        const message = await parseApiError(response, "Could not create API key.");
+        setListMessage(opsOutputNode, message);
+        throw new Error(message);
+    }
+    const data = await response.json();
+    if (opsOutputNode) {
+        opsOutputNode.innerHTML = "";
+        const li = document.createElement("li");
+        li.textContent = `API key created: ${String(data.api_key || "")}`;
+        opsOutputNode.appendChild(li);
+    }
+}
+
+async function listApiKeys() {
+    setListMessage(apiKeyListNode, "Loading API keys...");
+    const response = await fetch("/api-keys", { method: "GET" });
+    if (!response.ok) {
+        const message = await parseApiError(response, "Could not load API keys.");
+        setListMessage(apiKeyListNode, message);
+        throw new Error(message);
+    }
+    const data = await response.json();
+    const items = Array.isArray(data.items) ? data.items : [];
+    if (!apiKeyListNode) {
+        return;
+    }
+    apiKeyListNode.innerHTML = "";
+    if (!items.length) {
+        const li = document.createElement("li");
+        li.textContent = "No API keys found.";
+        apiKeyListNode.appendChild(li);
+        return;
+    }
+    items.slice(0, 10).forEach((item) => {
+        const li = document.createElement("li");
+        const id = Number(item.id || 0);
+        const name = String(item.name || "API key");
+        const prefix = String(item.key_prefix || "");
+        const created = String(item.created_at || "").slice(0, 10);
+        const revoked = item.revoked_at ? "revoked" : "active";
+        li.textContent = `#${id} ${name} (${prefix}...) | ${revoked} | created ${created}`;
+        apiKeyListNode.appendChild(li);
+    });
+}
+
+async function revokeApiKey() {
+    const keyId = Number(revokeKeyIdInput && revokeKeyIdInput.value ? revokeKeyIdInput.value : 0);
+    if (!keyId) {
+        showError("Enter a valid API key ID to revoke.");
+        return;
+    }
+    setListMessage(opsOutputNode, `Revoking API key #${keyId}...`);
+    const payload = new FormData();
+    payload.set("key_id", String(keyId));
+    const response = await fetch("/api-keys/revoke", { method: "POST", body: payload });
+    if (!response.ok) {
+        const message = await parseApiError(response, "Could not revoke API key.");
+        setListMessage(opsOutputNode, message);
+        throw new Error(message);
+    }
+    showError(`API key #${keyId} revoked.`);
+    await listApiKeys();
+}
+
+async function createTeam() {
+    const payload = new FormData();
+    payload.set("name", teamNameInput ? String(teamNameInput.value || "My Team") : "My Team");
+    setListMessage(opsOutputNode, "Creating team...");
+    const response = await fetch("/teams", { method: "POST", body: payload });
+    if (!response.ok) {
+        const message = await parseApiError(response, "Could not create team.");
+        setListMessage(opsOutputNode, message);
+        throw new Error(message);
+    }
+    const data = await response.json();
+    if (opsOutputNode) {
+        const li = document.createElement("li");
+        li.textContent = `Team created with id: ${String(data.team_id || "")}`;
+        opsOutputNode.appendChild(li);
+    }
+}
+
+async function listTeams() {
+    setListMessage(teamListNode, "Loading teams...");
+    const response = await fetch("/teams", { method: "GET" });
+    if (!response.ok) {
+        const message = await parseApiError(response, "Could not load teams.");
+        setListMessage(teamListNode, message);
+        throw new Error(message);
+    }
+    const data = await response.json();
+    const items = Array.isArray(data.items) ? data.items : [];
+    if (!teamListNode) {
+        return;
+    }
+    teamListNode.innerHTML = "";
+    if (!items.length) {
+        const li = document.createElement("li");
+        li.textContent = "No teams found.";
+        teamListNode.appendChild(li);
+        return;
+    }
+    items.slice(0, 10).forEach((item) => {
+        const li = document.createElement("li");
+        const id = Number(item.id || 0);
+        const name = String(item.name || "Team");
+        const role = String(item.role || "member");
+        li.textContent = `#${id} ${name} | your role: ${role}`;
+        teamListNode.appendChild(li);
+    });
+}
+
+async function addTeamMember() {
+    const teamId = Number(teamMemberTeamIdInput && teamMemberTeamIdInput.value ? teamMemberTeamIdInput.value : 0);
+    const email = String(teamMemberEmailInput && teamMemberEmailInput.value ? teamMemberEmailInput.value : "").trim();
+    const role = String(teamMemberRoleInput && teamMemberRoleInput.value ? teamMemberRoleInput.value : "member");
+    if (!teamId || !email) {
+        showError("Enter team ID and member email.");
+        return;
+    }
+    setListMessage(opsOutputNode, `Adding ${email} to team #${teamId}...`);
+    const payload = new FormData();
+    payload.set("team_id", String(teamId));
+    payload.set("email", email);
+    payload.set("role", role);
+    const response = await fetch("/teams/member", { method: "POST", body: payload });
+    if (!response.ok) {
+        const message = await parseApiError(response, "Could not add team member.");
+        setListMessage(opsOutputNode, message);
+        throw new Error(message);
+    }
+    showError(`Added ${email} to team #${teamId} as ${role}.`);
+    await listTeams();
+}
+
+async function refreshOutcomeStats() {
+    setListMessage(outcomeStatsListNode, "Loading outcome stats...");
+    const response = await fetch("/outcome-stats", { method: "GET" });
+    if (!response.ok) {
+        const message = await parseApiError(response, "Could not load outcome stats.");
+        setListMessage(outcomeStatsListNode, message);
+        throw new Error(message);
+    }
+    const data = await response.json();
+    if (!outcomeStatsListNode) {
+        return;
+    }
+    const bands = Array.isArray(data.score_bands) ? data.score_bands : [];
+    outcomeStatsListNode.innerHTML = "";
+    const summary = document.createElement("li");
+    summary.textContent = `Samples: ${Number(data.samples || 0)} | Inbox rate: ${Number(data.inbox_rate || 0).toFixed(1)}% | Top benchmark: ${Number(data.benchmark_top_10_score || 85)}+`;
+    outcomeStatsListNode.appendChild(summary);
+    bands.slice(0, 4).forEach((row) => {
+        const li = document.createElement("li");
+        li.textContent = `Band ${String(row.band || "-")}: ${Number(row.inbox_rate || 0).toFixed(1)}% inbox (${Number(row.samples || 0)} samples)`;
+        outcomeStatsListNode.appendChild(li);
+    });
+}
+
+async function refreshJobs() {
+    setListMessage(jobListNode, "Loading async jobs...");
+    const response = await fetch("/jobs?limit=12", { method: "GET" });
+    if (!response.ok) {
+        const message = await parseApiError(response, "Could not load async jobs.");
+        setListMessage(jobListNode, message);
+        throw new Error(message);
+    }
+    const data = await response.json();
+    const items = Array.isArray(data.items) ? data.items : [];
+    if (!jobListNode) {
+        return;
+    }
+    jobListNode.innerHTML = "";
+    if (!items.length) {
+        const li = document.createElement("li");
+        li.textContent = "No async jobs found.";
+        jobListNode.appendChild(li);
+        return;
+    }
+    items.slice(0, 10).forEach((item) => {
+        const li = document.createElement("li");
+        const id = String(item.id || "").slice(0, 8);
+        const status = String(item.status || "unknown");
+        const queue = String(item.queue_name || "analysis");
+        const updated = String(item.updated_at || "").replace("T", " ").slice(0, 19);
+        li.textContent = `${id} | ${queue} | ${status} | ${updated}`;
+        jobListNode.appendChild(li);
+    });
+}
+
+function renderDecisionEngine(summary, signals, findings, prediction) {
+    if (!decisionProblemNode || !decisionSignalNode || !decisionScopeNode || !decisionWhyNode || !decisionFixFirstNode || !decisionConsequenceNode || !riskStripNode || !riskStripTitleNode || !riskStripBodyNode || !scaleWarningListNode) {
+        return;
+    }
+
+    const band = String(summary.risk_band || "Needs Review");
+    const predictionDecision = String(prediction && prediction.decision ? prediction.decision : "").toUpperCase();
+    const spf = String(signals.spf_status || "unknown");
+    const dkim = String(signals.dkim_status || "unknown");
+    const dmarc = String(signals.dmarc_status || "unknown");
+    const infraWeak = !(spf === "found" && dkim === "found" && dmarc === "found");
+    const scope = classifyIssueScope(summary, signals, findings);
+
+    let problem = "TEST FIRST - Risk unclear at scale";
+    let signalLine = "Use this verdict before your batch send to avoid preventable filtering.";
+    let stripTitle = "TEST FIRST";
+    let stripBody = "Risk is mixed. Run a real inbox test before scaling.";
+    let stripClass = "risk-strip risk-strip-medium";
+    if (predictionDecision === "DO NOT SEND" || band === "High Spam-Risk Signals" || band === "High Risk") {
+        problem = "DO NOT SEND - This will likely hit spam";
+        signalLine = "High-confidence spam pattern detected.";
+        stripTitle = "DO NOT SEND";
+        stripBody = "This email will likely land in spam if sent now.";
+        stripClass = "risk-strip risk-strip-high";
+    } else if (predictionDecision === "SAFE TO SEND" || band === "Content Safe") {
+        problem = "SAFE TO SEND - Low spam risk";
+        signalLine = "Low immediate risk. Start with a controlled test batch.";
+        stripTitle = "SAFE TO SEND";
+        stripBody = "This is acceptable for a small test batch.";
+        stripClass = "risk-strip risk-strip-low";
+    }
+
+    if (infraWeak && (band === "High Spam-Risk Signals" || band === "High Risk")) {
+        stripBody = "This email is likely to be filtered and technical trust signals are weak.";
+    }
+
+    decisionProblemNode.textContent = problem;
+    decisionProblemNode.classList.remove("decision-pop", "pulse-red");
+    void decisionProblemNode.offsetWidth;
+    decisionProblemNode.classList.add("decision-pop");
+    if (predictionDecision === "DO NOT SEND" || band === "High Spam-Risk Signals" || band === "High Risk") {
+        decisionProblemNode.classList.add("pulse-red");
+        transitionColor(decisionProblemNode, "#fca5a5", "#ef4444");
+    } else {
+        transitionColor(decisionProblemNode, "#93c5fd", "#22c55e");
+    }
+    animateDecision(decisionProblemNode);
+    showOverlaySpring(stripTitle);
+    revealText(decisionSignalNode, signalLine);
+    decisionScopeNode.textContent = `Primary issue: ${scope}${scope === "INFRA" ? " - technical trust signals" : scope === "MIXED" ? " - content and infrastructure" : " - content signals"}`;
+    riskStripNode.className = stripClass;
+    riskStripTitleNode.textContent = stripTitle;
+    riskStripBodyNode.textContent = stripBody;
+    if (realityStripTitleNode) {
+        realityStripTitleNode.textContent = "Reality Check";
+    }
+    if (realityStripBodyNode) {
+        const benchmark = prediction && prediction.benchmark ? prediction.benchmark : null;
+        const analyzed = Number(benchmark && benchmark.emails_analyzed ? benchmark.emails_analyzed : 12483);
+        const topScore = Number(benchmark && benchmark.top_score ? benchmark.top_score : (prediction && prediction.benchmark_top_10_score ? prediction.benchmark_top_10_score : 85));
+        const drop = Number(benchmark && benchmark.avg_reply_drop ? benchmark.avg_reply_drop : 37);
+        realityStripBodyNode.textContent = `${analyzed.toLocaleString()} emails analyzed. Top inbox campaigns usually score ${topScore}+. Emails that stay below this commonly see ~${drop}% lower replies at scale.`;
+    }
+
+    const nonMeta = (findings || []).filter((f) => !String(f.title || "").toLowerCase().includes("analysis mode"));
+    decisionWhyNode.innerHTML = "";
+    (nonMeta.slice(0, 3).length ? nonMeta.slice(0, 3) : [{ title: "Signals detected", issue: "Multiple risk patterns are present." }]).forEach((item) => {
+        const li = document.createElement("li");
+        const title = String(item.title || "risk signal").toLowerCase();
+        if (title.includes("broadcast") || title.includes("promo") || title.includes("mass")) {
+            li.textContent = "Detected broadcast-style phrasing (common spam signal).";
+        } else if (title.includes("personal")) {
+            li.textContent = "No recipient-specific personalization found.";
+        } else if (title.includes("urgency") || title.includes("pressure")) {
+            li.textContent = "Urgency language detected (reduces trust signals).";
+        } else if (title.includes("spf") || title.includes("dkim") || title.includes("dmarc")) {
+            li.textContent = "Authentication trust signals are incomplete for this send context.";
+        } else {
+            const issue = String(item.issue || item.impact || "This pattern increases filtering risk.");
+            li.textContent = `Detected ${String(item.title || "risk signal")}: ${issue}`;
+        }
+        decisionWhyNode.appendChild(li);
+    });
+
+    const fixes = Array.isArray(summary.top_fixes) ? summary.top_fixes : [];
+    decisionFixFirstNode.innerHTML = "";
+    (fixes.slice(0, 3).length ? fixes.slice(0, 3) : [{ title: "Review technical auth" }, { title: "Lower CTA pressure" }, { title: "Simplify message structure" }]).forEach((fix, idx) => {
+        const li = document.createElement("li");
+        li.textContent = `${idx + 1}. ${commandFix(fix.title || fix.type || "Fix issue", fix.action)}`;
+        decisionFixFirstNode.appendChild(li);
+    });
+
+    decisionConsequenceNode.innerHTML = "";
+    const consequences = (band === "High Spam-Risk Signals" || band === "High Risk")
+        ? [
+            "This looks like bulk promotional email, so Gmail is likely to filter it.",
+            "Repeated sends like this can damage domain reputation.",
+        ]
+        : [
+            "This is likely safe for a small test batch, but scale risk can rise fast.",
+            "If volume increases, keep watching inbox placement and replies.",
+        ];
+    consequences.forEach((line) => {
+        const li = document.createElement("li");
+        li.textContent = line;
+        decisionConsequenceNode.appendChild(li);
+    });
+
+    scaleWarningListNode.innerHTML = "";
+    const scaleLines = (band === "High Spam-Risk Signals" || band === "High Risk")
+        ? [
+            "If you send this to 500+ people, high risk of spam placement.",
+            "Domain reputation risk increases after the first batch.",
+            "Performance will degrade as volume rises.",
+        ]
+        : [
+            "Safe for an initial 20-50 email test batch.",
+            "Re-check before scaling to 500+ sends.",
+            "Monitor inbox placement after the first batch.",
+        ];
+    scaleLines.forEach((line) => {
+        const li = document.createElement("li");
+        li.textContent = line;
+        scaleWarningListNode.appendChild(li);
+    });
+}
+
+function getRecommendedRewriteStyle() {
+    const band = String(latestSummary && latestSummary.risk_band ? latestSummary.risk_band : "");
+    if (band === "High Spam-Risk Signals" || band === "High Risk") {
+        return "safe";
+    }
+    return "balanced";
+}
+async function showFixTransformation() {
+    if (!fixOutput || !beforeEmailNode || !afterEmailNode || !rawEmailInput || !fixNowButton) {
+        return;
+    }
+
+    const original = rawEmailInput.value.trim();
+    if (!original) {
+        showError("Paste an email first so we can fix it.");
+        return;
+    }
+
+    fixNowButton.disabled = true;
+    fixNowButton.textContent = "Fixing...";
+    trackEvent("fix_clicked", {
+        source: "fix_issues_button",
+        rewrite_style: rewriteStyleInput ? rewriteStyleInput.value : "balanced",
+    });
+
+    try {
+        const payload = new FormData();
+        payload.set("raw_email", original);
+        if (domainInput && domainInput.value.trim()) {
+            payload.set("domain", domainInput.value.trim());
+        }
+        payload.set("analysis_mode", analysisModeInput ? analysisModeInput.value : "content");
+        payload.set("rewrite_style", rewriteStyleInput ? rewriteStyleInput.value : "balanced");
+
+        const response = await fetch("/rewrite", {
+            method: "POST",
+            body: payload,
+        });
+        if (!response.ok) {
+            throw new Error("Rewrite failed. Try again.");
+        }
+        const data = await response.json();
+        const rewritten = String(data.rewritten_text || original);
+
+        const originalSubject = String(data.original_subject || "").trim();
+        const originalBody = String(data.original_body || data.original_text || original).trim();
+        const rewrittenSubject = String(data.rewritten_subject || "").trim();
+        const rewrittenBody = String(data.rewritten_body || rewritten).trim();
+
+        const formatEmailBlock = (subject, body) => {
+            const parts = [];
+            if (subject) {
+                parts.push(`Subject: ${subject}`);
+            }
+            parts.push("Body:");
+            parts.push(body || "-");
+            return parts.join("\n\n");
+        };
+
+        const beforeBlock = formatEmailBlock(originalSubject, originalBody);
+        const afterBlock = formatEmailBlock(rewrittenSubject, rewrittenBody);
+        beforeEmailNode.innerHTML = highlightSpamSignals(beforeBlock);
+        afterEmailNode.innerHTML = escapeHtml(afterBlock);
+        beforeEmailNode.classList.remove("split-enter");
+        afterEmailNode.classList.remove("split-enter");
+        void beforeEmailNode.offsetWidth;
+        beforeEmailNode.classList.add("split-enter");
+        afterEmailNode.classList.add("split-enter");
+        slideIn(afterEmailNode);
+        highlightDiff(beforeEmailNode, afterEmailNode);
+        if (successBadge) {
+            successBadge.classList.remove("hidden");
+        }
+
+        latestRewriteContext = {
+            original_subject: originalSubject,
+            original_body: originalBody,
+            rewritten_subject: rewrittenSubject,
+            rewritten_body: rewrittenBody,
+            original_text: String(data.original_text || original),
+            rewritten_text: rewritten,
+            from_risk_band: String(data.from_risk_band || "Needs Review"),
+            to_risk_band: String(data.to_risk_band || "Needs Review"),
+            score_delta: Number(data.score_delta || 0),
+            rewrite_style: String(data.rewrite_style || "balanced"),
+        };
+
+        const rewriteOutcome = String(data.rewrite_outcome || "neutral").toLowerCase();
+
+        if (workflowStateNode) {
+            workflowStateNode.textContent = "Step 2: Fix complete";
+        }
+        if (workflowTitleNode) {
+            workflowTitleNode.textContent = rewriteOutcome === "improved"
+                ? "Safer version generated"
+                : rewriteOutcome === "failed_fix"
+                    ? "Partial fix generated"
+                    : "Best safer version generated";
+        }
+
+        if (improvementEstimateNode) {
+            const delta = Number(data.score_delta || 0);
+            if (rewriteOutcome === "improved") {
+                improvementEstimateNode.textContent = `✅ Spam Risk Reduced | Deliverability Score: ${delta >= 0 ? "+" : ""}${delta} | Higher chance of inbox placement`;
+            } else if (rewriteOutcome === "failed_fix") {
+                improvementEstimateNode.textContent = "Could not safely remove all pressure signals without changing core intent. Use this draft as a base and refine further.";
+            } else {
+                improvementEstimateNode.textContent = "No major risk shift detected. We still simplified structure to reduce bulk-style triggers.";
+            }
+            showReward(delta);
+            updateWins();
+            updateStreak();
+        }
+
+        if (rewriteModeDisplayNode) {
+            const mode = String(data.rewrite_style || "balanced").toLowerCase();
+            const modeLabel = mode === "safe"
+                ? "Safe (keeps more detail)"
+                : mode === "aggressive"
+                    ? "Aggressive (max reply rate)"
+                    : "Balanced (best mix)";
+            rewriteModeDisplayNode.textContent = `Rewrite mode: ${modeLabel}`;
+        }
+
+        if (subjectChangeNode) {
+            const changed = Boolean(data.subject_changed) && originalSubject && rewrittenSubject && originalSubject !== rewrittenSubject;
+            if (changed) {
+                subjectChangeNode.textContent = `Subject updated:\n"${originalSubject}" -> "${rewrittenSubject}"`;
+                subjectChangeNode.classList.remove("hidden");
+            } else {
+                subjectChangeNode.textContent = "";
+                subjectChangeNode.classList.add("hidden");
+            }
+        }
+
+        if (rewriteChangesNode) {
+            rewriteChangesNode.innerHTML = "";
+            const lines = Array.isArray(data.rewrite_changes) ? data.rewrite_changes : [];
+            if (!lines.length) {
+                const li = document.createElement("li");
+                li.textContent = "Improved clarity and reduced bulk-style patterns.";
+                rewriteChangesNode.appendChild(li);
+            } else {
+                lines.slice(0, 4).forEach((line) => {
+                    const li = document.createElement("li");
+                    li.textContent = String(line);
+                    rewriteChangesNode.appendChild(li);
+                });
+            }
+        }
+
+        if (rewriteDiffNode) {
+            const diffRows = buildRewriteDiff(beforeBlock, afterBlock);
+            rewriteDiffNode.innerHTML = "";
+            diffRows.forEach((row) => {
+                const li = document.createElement("li");
+                li.textContent = `${row.type}: ${row.text}`;
+                rewriteDiffNode.appendChild(li);
             });
         }
 
-        diagnosisOutput.classList.remove("hidden");
-        diagnosisOutput.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        if (rewriteTrustNoteNode) {
+            rewriteTrustNoteNode.textContent = String(
+                data.rewrite_trust_note || "This version removes common bulk-style patterns flagged by Gmail and Outlook filters."
+            );
+        }
+
+        if (rewriteLimitationsNode) {
+            const notes = Array.isArray(data.rewrite_limitations) ? data.rewrite_limitations : [];
+            rewriteLimitationsNode.innerHTML = "";
+            notes.slice(0, 3).forEach((note) => {
+                const li = document.createElement("li");
+                li.textContent = String(note);
+                rewriteLimitationsNode.appendChild(li);
+            });
+            if (!notes.length) {
+                const li = document.createElement("li");
+                li.textContent = "Final placement still depends on domain reputation, list quality, and send behavior.";
+                rewriteLimitationsNode.appendChild(li);
+            }
+        }
+
+        fixOutput.classList.remove("hidden");
+        fixOutput.classList.add("fade-in");
+
+        // Auto-scroll to transformation with immediate visibility
+        await sleep(100);
+        fixOutput.scrollIntoView({ behavior: "smooth", block: "start" });
+    } catch (error) {
+        showError(error && error.message ? error.message : "Rewrite failed.");
     }
 
-    async function runBlacklistCheck() {
-        const domain = blacklistDomainInput ? String(blacklistDomainInput.value || "").trim() : "";
-        const runButton = runBlacklistCheckButton;
-        if (!domain) {
-            showError("Enter a domain first.");
-            return;
+    fixNowButton.disabled = false;
+    fixNowButton.textContent = "Fix Issues";
+}
+
+async function runAnalyze() {
+    await refreshAuthStatus();
+
+    if (needsAuthGate("analyze")) {
+        if (isAuthenticated) {
+            showError("You reached your monthly free plan scan limit. Upgrade is required for more scans.");
+        } else {
+            showAuthModal();
         }
-        const previousLabel = runButton ? runButton.textContent : "Check Domain Risk";
-        if (blacklistResultNode) {
-            blacklistResultNode.textContent = "Checking domain risk...";
-        }
-        setActionButtonState(runButton, "loading", "Checking...");
+        return;
+    }
+
+    const rawText = rawEmailInput ? rawEmailInput.value.trim() : "";
+    const domainText = domainInput ? domainInput.value.trim() : "";
+    const mode = analysisModeInput ? analysisModeInput.value : "content";
+
+    trackEvent("analyze_clicked", {
+        analysis_mode: mode,
+        has_domain: Boolean(domainText),
+    });
+
+    if (rawText.length < 20) {
+        showError("Paste the full email draft before scanning.");
+        return;
+    }
+
+    setLoadingState();
+    const loadingTicker = startRealtimeScanSteps();
+
+    try {
         const payload = new FormData();
-        payload.set("domain", domain);
-        try {
-            const response = await fetch("/blacklist-check", { method: "POST", body: payload });
-            if (!response.ok) {
-                const message = await parseApiError(response, "Could not run blacklist check.");
-                if (blacklistResultNode) {
-                    blacklistResultNode.textContent = message;
-                }
-                throw new Error(message);
-            }
-            const data = await response.json();
-            if (blacklistResultNode) {
-                blacklistResultNode.textContent = data.listed
-                    ? `High risk: ${data.domain} appears in risk list. ${data.details}`
-                    : `Low risk: ${data.domain} is not in current risk list. ${data.details}`;
-            }
-            setActionButtonState(runButton, "success", data.listed ? "⚠️ Risk Found" : "✅ Clean");
-        } catch (error) {
-            setActionButtonState(runButton, "error", "Error");
-            throw error;
-        } finally {
-            setTimeout(() => {
-                setActionButtonState(runButton, "idle", previousLabel);
-            }, 1000);
+        payload.set("raw_email", rawText);
+        if (domainText) {
+            payload.set("domain", domainText);
         }
+        payload.set("analysis_mode", mode);
+
+        const response = await fetch("/analyze", {
+            method: "POST",
+            body: payload,
+        });
+
+        if (!response.ok) {
+            const err = await response.json().catch(() => ({}));
+            const code = String(err.detail || "");
+            if (code === "AUTH_REQUIRED") {
+                showAuthModal();
+                throw new Error("Sign in to continue scanning.");
+            }
+            if (code === "SUBSCRIPTION_REQUIRED") {
+                showPaywall();
+                throw new Error("Active subscription required. Upgrade to continue scanning.");
+            }
+            if (code === "FREE_PLAN_LIMIT_REACHED") {
+                throw new Error("You reached your monthly free plan scan limit. Upgrade is required for more scans.");
+            }
+            throw new Error("Unable to complete risk scan. Try again.");
+        }
+
+        const data = await response.json();
+        if (loadingTicker && typeof loadingTicker.stop === "function") {
+            loadingTicker.stop();
+        }
+        const summary = data.summary || {};
+        const signals = data.signals || {};
+        const findings = data.partial_findings || summary.findings || [];
+        latestLearningProfile = data.learning_profile || latestLearningProfile;
+        hasScanResult = true;
+
+        latestSummary = summary;
+        latestFindings = findings;
+
+        trackEvent("result_viewed", {
+            risk: String(summary.risk_band || "unknown"),
+            analysis_mode: mode,
+        });
+
+        renderStatus(summary, signals, findings);
+        renderDecisionEngine(summary, signals, findings, data.prediction || null);
+        renderBreakdown(summary);
+        renderPrediction(summary, data.prediction || null);
+
+        if (rewriteStyleInput) {
+            rewriteStyleInput.value = getRecommendedRewriteStyle();
+        }
+
+        if (workflowStateNode) {
+            workflowStateNode.textContent = "Step 1: Scan complete";
+        }
+        if (workflowTitleNode) {
+            workflowTitleNode.textContent = "Step 2: Make this safe to send";
+        }
+        if (fixOutput) {
+            fixOutput.classList.add("hidden");
+        }
+        if (saveFixButton) {
+            saveFixButton.disabled = false;
+            saveFixButton.textContent = "Save Fix";
+        }
+
+        setResultState();
+        if (resultSection) {
+            resultSection.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+        activateTab("dashboard");
+
+        if (data.usage && !data.usage.authenticated) {
+            anonymousScansUsed = Number(data.usage.anonymous_scans_used || anonymousScansUsed + 1);
+            anonymousScansLimit = Number(data.usage.anonymous_scans_limit || anonymousScansLimit);
+            localStorage.setItem("ig_anon_scans_used", String(anonymousScansUsed));
+            localStorage.setItem("ig_anon_scans_limit", String(anonymousScansLimit));
+            if (anonymousScansUsed >= 2) {
+                showUpgradeBlock();
+            }
+        }
+        if (data.usage && data.usage.authenticated) {
+            userScansUsed = Number(data.usage.user_scans_used || userScansUsed + 1);
+            userScansLimit = Number(data.usage.user_scans_limit || userScansLimit);
+        }
+    } catch (error) {
+        if (loadingTicker && typeof loadingTicker.stop === "function") {
+            loadingTicker.stop();
+        }
+        showError(error && error.message ? error.message : "Scan failed.");
+        setIdleState();
+    }
+}
+
+function useFixedVersion() {
+    if (!afterEmailNode || !rawEmailInput) {
+        return;
+    }
+    const text = String(afterEmailNode.textContent || rawEmailInput.value || "");
+    navigator.clipboard.writeText(text).then(() => {
+        rawEmailInput.value = text;
+        trackEvent("copy_clicked", { source: "fixed_email" });
+        if (useFixedButton) {
+            useFixedButton.textContent = "✓ Copied";
+            useFixedButton.classList.add("bg-green-700");
+            setTimeout(() => {
+                useFixedButton.textContent = "Copy Fixed Email";
+                useFixedButton.classList.remove("bg-green-700");
+            }, 1200);
+        }
+        showError("Copied fixed email. You can paste directly into your sender.");
+    }).catch(() => {
+        rawEmailInput.value = text;
+        showError("Fixed version ready. Clipboard blocked, but draft is updated in editor.");
+    });
+}
+
+function restoreOriginalDraft() {
+    if (!rawEmailInput || !latestRewriteContext) {
+        return;
+    }
+    rawEmailInput.value = latestRewriteContext.original_text || rawEmailInput.value;
+    showError("Original draft restored.");
+}
+
+function editManually() {
+    if (!rawEmailInput) {
+        return;
+    }
+    rawEmailInput.focus();
+    showError("Manual edit mode active.");
+}
+
+function openInGmail() {
+    const bodyText = String(afterEmailNode && afterEmailNode.textContent ? afterEmailNode.textContent : rawEmailInput.value || "");
+    if (!bodyText.trim()) {
+        showError("Generate or paste an email first.");
+        return;
     }
 
-    async function refreshSeedTests() {
-        if (!seedTestListNode) {
-            return;
-        }
-        const response = await fetch("/seed-tests", { method: "GET" });
+    const composeUrl = `https://mail.google.com/mail/?view=cm&fs=1&body=${encodeURIComponent(bodyText)}`;
+    trackEvent("gmail_open_clicked", { source: "fix_output" });
+    window.open(composeUrl, "_blank", "noopener");
+}
+
+async function sendFeedback(outcome) {
+    if (!latestRewriteContext) {
+        showError("Generate a fixed version first.");
+        return;
+    }
+
+    try {
+        const payload = new FormData();
+        payload.set("outcome", outcome);
+        payload.set("original_text", latestRewriteContext.original_text || "");
+        payload.set("rewritten_text", latestRewriteContext.rewritten_text || "");
+        payload.set("from_risk_band", latestRewriteContext.from_risk_band || "");
+        payload.set("to_risk_band", latestRewriteContext.to_risk_band || "");
+        payload.set("from_score", String(latestSummary && (latestSummary.final_score || latestSummary.score || 0) || 0));
+        payload.set("to_score", String((latestSummary && (latestSummary.final_score || latestSummary.score || 0) || 0) + Number(latestRewriteContext.score_delta || 0)));
+
+        const response = await fetch("/feedback", {
+            method: "POST",
+            body: payload,
+        });
         if (!response.ok) {
-            return;
+            throw new Error("Could not save feedback");
         }
         const data = await response.json();
-        const items = Array.isArray(data.items) ? data.items : [];
-        seedTestListNode.innerHTML = "";
-        if (!items.length) {
-            const li = document.createElement("li");
-            li.textContent = "No seed tests logged yet.";
-            seedTestListNode.appendChild(li);
-            return;
+        latestLearningProfile = data.learning_profile || latestLearningProfile;
+        trackEvent("feedback_given", {
+            outcome: String(outcome || "unknown"),
+            from_risk_band: latestRewriteContext.from_risk_band || "unknown",
+            to_risk_band: latestRewriteContext.to_risk_band || "unknown",
+        });
+        const samples = latestLearningProfile ? Number(latestLearningProfile.sample_size || 0) : 0;
+        const message = "Saved. This helps improve future accuracy.";
+        if (feedbackStatusNode) {
+            feedbackStatusNode.textContent = message;
         }
-        items.slice(0, 5).forEach((item) => {
+        showError(`${message} (${samples} learned outcomes)`);
+    } catch (error) {
+        showError(error && error.message ? error.message : "Could not save feedback");
+    }
+}
+
+async function runCampaignDiagnosis() {
+    const openRate = Number(metricOpenRateInput && metricOpenRateInput.value ? metricOpenRateInput.value : 0);
+    const replyRate = Number(metricReplyRateInput && metricReplyRateInput.value ? metricReplyRateInput.value : 0);
+    const bounceRate = Number(metricBounceRateInput && metricBounceRateInput.value ? metricBounceRateInput.value : 0);
+    const sentCount = Number(metricSentCountInput && metricSentCountInput.value ? metricSentCountInput.value : 0);
+
+    trackEvent("campaign_debug_used", {
+        has_metrics: openRate > 0 || replyRate > 0 || bounceRate > 0 || sentCount > 0,
+    });
+
+    const response = await fetch("/campaign-debugger", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+            open_rate: openRate,
+            reply_rate: replyRate,
+            bounce_rate: bounceRate,
+            sent: sentCount,
+        }),
+    });
+
+    if (!response.ok) {
+        const errorBody = await response.json().catch(() => ({}));
+        throw new Error(String(errorBody.detail || "Could not diagnose campaign."));
+    }
+
+    const data = await response.json();
+    trackEvent("campaign_diagnosed", {
+        type: String(data.diagnosis || "unknown").toLowerCase().replace(/\s+/g, "_"),
+    });
+    if (!diagnosisOutput || !diagnosisPrimaryNode || !diagnosisConfidenceNode || !diagnosisWhyNode || !diagnosisActionsNode) {
+        return;
+    }
+
+    if (campaignDebuggerResultNode) {
+        campaignDebuggerResultNode.innerHTML = `<strong>Issue:</strong> ${String(data.issue || "No Major Issues")}<br/><strong>Reason:</strong> ${String(data.reason || "No reason returned")}<br/><strong>Action:</strong> ${String(data.action || "No action returned")}`;
+    }
+
+    const severity = Number(data.severity_score || 0);
+    diagnosisPrimaryNode.textContent = `Diagnosis: ${String(data.diagnosis || "Mixed issue")}`;
+    diagnosisConfidenceNode.textContent = `Confidence: ${String(data.confidence || "medium").toUpperCase()} | Severity: ${severity}/100`;
+    diagnosisWhyNode.textContent = String(data.why || "No diagnosis details available.");
+
+    diagnosisActionsNode.innerHTML = "";
+    const actions = Array.isArray(data.actions) ? data.actions : [];
+    if (!actions.length) {
+        const li = document.createElement("li");
+        li.textContent = "No action list returned.";
+        diagnosisActionsNode.appendChild(li);
+    } else {
+        actions.slice(0, 4).forEach((action, idx) => {
             const li = document.createElement("li");
-            li.textContent = `${String(item.campaign_name || "Campaign")} | ${String(item.provider || "provider")} | Inbox ${Number(item.inbox_count || 0)} / Spam ${Number(item.spam_count || 0)}`;
-            seedTestListNode.appendChild(li);
+            li.textContent = `${idx + 1}. ${String(action)}`;
+            diagnosisActionsNode.appendChild(li);
         });
     }
 
-    async function saveSeedTest() {
-        const campaign = seedCampaignInput ? String(seedCampaignInput.value || "").trim() : "";
-        const provider = seedProviderInput ? String(seedProviderInput.value || "gmail") : "gmail";
-        const inboxCount = Number(seedInboxCountInput && seedInboxCountInput.value ? seedInboxCountInput.value : 0);
-        const spamCount = Number(seedSpamCountInput && seedSpamCountInput.value ? seedSpamCountInput.value : 0);
-        if (!campaign) {
-            showError("Add a campaign name before saving.");
-            return;
-        }
+    diagnosisOutput.classList.remove("hidden");
+    diagnosisOutput.scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
 
-        const payload = new FormData();
-        payload.set("campaign_name", campaign);
-        payload.set("provider", provider);
-        payload.set("inbox_count", String(inboxCount));
-        payload.set("spam_count", String(spamCount));
-        payload.set("notes", "Logged from dashboard");
-
-        const previousLabel = saveSeedTestButton ? saveSeedTestButton.textContent : "Save Seed Result";
-        setActionButtonState(saveSeedTestButton, "loading", "Saving...");
-        try {
-            const response = await fetch("/seed-tests", { method: "POST", body: payload });
-            if (!response.ok) {
-                throw new Error("Could not save seed test.");
+async function runBlacklistCheck() {
+    const domain = blacklistDomainInput ? String(blacklistDomainInput.value || "").trim() : "";
+    const runButton = runBlacklistCheckButton;
+    if (!domain) {
+        showError("Enter a domain first.");
+        return;
+    }
+    const previousLabel = runButton ? runButton.textContent : "Check Domain Risk";
+    if (blacklistResultNode) {
+        blacklistResultNode.textContent = "Checking domain risk...";
+    }
+    setActionButtonState(runButton, "loading", "Checking...");
+    const payload = new FormData();
+    payload.set("domain", domain);
+    try {
+        const response = await fetch("/blacklist-check", { method: "POST", body: payload });
+        if (!response.ok) {
+            const message = await parseApiError(response, "Could not run blacklist check.");
+            if (blacklistResultNode) {
+                blacklistResultNode.textContent = message;
             }
-            setActionButtonState(saveSeedTestButton, "success", "Saved");
-            showError("Seed test saved.");
-            await refreshSeedTests();
-        } catch (error) {
-            setActionButtonState(saveSeedTestButton, "error", "Error");
-            throw error;
-        } finally {
-            setTimeout(() => {
-                setActionButtonState(saveSeedTestButton, "idle", previousLabel);
-            }, 1000);
+            throw new Error(message);
+        }
+        const data = await response.json();
+        if (blacklistResultNode) {
+            blacklistResultNode.textContent = data.listed
+                ? `High risk: ${data.domain} appears in risk list. ${data.details}`
+                : `Low risk: ${data.domain} is not in current risk list. ${data.details}`;
+        }
+        setActionButtonState(runButton, "success", data.listed ? "⚠️ Risk Found" : "✅ Clean");
+    } catch (error) {
+        setActionButtonState(runButton, "error", "Error");
+        throw error;
+    } finally {
+        setTimeout(() => {
+            setActionButtonState(runButton, "idle", previousLabel);
+        }, 1000);
+    }
+}
+
+async function refreshSeedTests() {
+    if (!seedTestListNode) {
+        return;
+    }
+    const response = await fetch("/seed-tests", { method: "GET" });
+    if (!response.ok) {
+        return;
+    }
+    const data = await response.json();
+    const items = Array.isArray(data.items) ? data.items : [];
+    seedTestListNode.innerHTML = "";
+    if (!items.length) {
+        const li = document.createElement("li");
+        li.textContent = "No seed tests logged yet.";
+        seedTestListNode.appendChild(li);
+        return;
+    }
+    items.slice(0, 5).forEach((item) => {
+        const li = document.createElement("li");
+        li.textContent = `${String(item.campaign_name || "Campaign")} | ${String(item.provider || "provider")} | Inbox ${Number(item.inbox_count || 0)} / Spam ${Number(item.spam_count || 0)}`;
+        seedTestListNode.appendChild(li);
+    });
+}
+
+async function saveSeedTest() {
+    const campaign = seedCampaignInput ? String(seedCampaignInput.value || "").trim() : "";
+    const provider = seedProviderInput ? String(seedProviderInput.value || "gmail") : "gmail";
+    const inboxCount = Number(seedInboxCountInput && seedInboxCountInput.value ? seedInboxCountInput.value : 0);
+    const spamCount = Number(seedSpamCountInput && seedSpamCountInput.value ? seedSpamCountInput.value : 0);
+    if (!campaign) {
+        showError("Add a campaign name before saving.");
+        return;
+    }
+
+    const payload = new FormData();
+    payload.set("campaign_name", campaign);
+    payload.set("provider", provider);
+    payload.set("inbox_count", String(inboxCount));
+    payload.set("spam_count", String(spamCount));
+    payload.set("notes", "Logged from dashboard");
+
+    const previousLabel = saveSeedTestButton ? saveSeedTestButton.textContent : "Save Seed Result";
+    setActionButtonState(saveSeedTestButton, "loading", "Saving...");
+    try {
+        const response = await fetch("/seed-tests", { method: "POST", body: payload });
+        if (!response.ok) {
+            throw new Error("Could not save seed test.");
+        }
+        setActionButtonState(saveSeedTestButton, "success", "Saved");
+        showError("Seed test saved.");
+        await refreshSeedTests();
+    } catch (error) {
+        setActionButtonState(saveSeedTestButton, "error", "Error");
+        throw error;
+    } finally {
+        setTimeout(() => {
+            setActionButtonState(saveSeedTestButton, "idle", previousLabel);
+        }, 1000);
+    }
+}
+
+async function runAnalyzeAsync() {
+    await refreshAuthStatus();
+
+    const rawText = rawEmailInput ? rawEmailInput.value.trim() : "";
+    if (rawText.length < 20) {
+        showError("Paste the full email draft before scanning.");
+        return;
+    }
+
+    const payload = new FormData();
+    payload.set("raw_email", rawText);
+    if (domainInput && domainInput.value.trim()) {
+        payload.set("domain", domainInput.value.trim());
+    }
+    payload.set("analysis_mode", analysisModeInput ? analysisModeInput.value : "content");
+
+    if (submitAsyncButton) {
+        submitAsyncButton.disabled = true;
+        submitAsyncButton.textContent = "Queued...";
+    }
+
+    const response = await fetch("/analyze-async", { method: "POST", body: payload });
+    if (!response.ok) {
+        if (submitAsyncButton) {
+            submitAsyncButton.disabled = false;
+            submitAsyncButton.textContent = "Analyze In Background";
+        }
+        throw new Error("Could not queue async scan.");
+    }
+
+    const data = await response.json();
+    const jobId = String(data.job_id || "");
+    showError("Background scan started. Results will appear automatically.");
+
+    for (let i = 0; i < 20; i += 1) {
+        await sleep(1200);
+        const poll = await fetch(`/analyze-jobs/${jobId}`, { method: "GET" });
+        if (!poll.ok) {
+            continue;
+        }
+        const job = await poll.json();
+        if (job.status === "completed" && job.result) {
+            const summary = job.result.summary || {};
+            const signals = job.result.signals || {};
+            const findings = job.result.partial_findings || summary.findings || [];
+            latestSummary = summary;
+            latestFindings = findings;
+            hasScanResult = true;
+            renderStatus(summary, signals, findings);
+            renderDecisionEngine(summary, signals, findings, job.result.prediction || null);
+            renderBreakdown(summary);
+            renderPrediction(summary, job.result.prediction || null);
+            setResultState();
+            if (resultSection) {
+                resultSection.scrollIntoView({ behavior: "smooth", block: "start" });
+            }
+            break;
+        }
+        if (job.status === "failed") {
+            showError(String(job.error || "Async scan failed."));
+            break;
         }
     }
 
-    async function runAnalyzeAsync() {
-        await refreshAuthStatus();
+    if (submitAsyncButton) {
+        submitAsyncButton.disabled = false;
+        submitAsyncButton.textContent = "Analyze In Background";
+    }
+}
 
-        const rawText = rawEmailInput ? rawEmailInput.value.trim() : "";
-        if (rawText.length < 20) {
-            showError("Paste the full email draft before scanning.");
-            return;
-        }
+async function runRewriteAsync() {
+    const rawText = rawEmailInput ? rawEmailInput.value.trim() : "";
+    if (rawText.length < 20) {
+        showError("Paste the full email draft before generating rewrite.");
+        return;
+    }
 
+    if (riskFixAsyncButton) {
+        riskFixAsyncButton.disabled = true;
+        riskFixAsyncButton.textContent = "Queued...";
+    }
+
+    try {
         const payload = new FormData();
         payload.set("raw_email", rawText);
         if (domainInput && domainInput.value.trim()) {
             payload.set("domain", domainInput.value.trim());
         }
         payload.set("analysis_mode", analysisModeInput ? analysisModeInput.value : "content");
+        payload.set("rewrite_style", rewriteStyleInput ? rewriteStyleInput.value : "balanced");
 
-        if (submitAsyncButton) {
-            submitAsyncButton.disabled = true;
-            submitAsyncButton.textContent = "Queued...";
-        }
-
-        const response = await fetch("/analyze-async", { method: "POST", body: payload });
+        const response = await fetch("/rewrite-async", { method: "POST", body: payload });
         if (!response.ok) {
-            if (submitAsyncButton) {
-                submitAsyncButton.disabled = false;
-                submitAsyncButton.textContent = "Analyze In Background";
-            }
-            throw new Error("Could not queue async scan.");
+            throw new Error("Could not queue async rewrite.");
         }
-
         const data = await response.json();
         const jobId = String(data.job_id || "");
-        showError("Background scan started. Results will appear automatically.");
+        showError("Background rewrite started. Waiting for result...");
 
-        for (let i = 0; i < 20; i += 1) {
+        for (let i = 0; i < 25; i += 1) {
             await sleep(1200);
             const poll = await fetch(`/analyze-jobs/${jobId}`, { method: "GET" });
             if (!poll.ok) {
@@ -2540,300 +2629,261 @@ async function refreshAuthStatus() {
             }
             const job = await poll.json();
             if (job.status === "completed" && job.result) {
-                const summary = job.result.summary || {};
-                const signals = job.result.signals || {};
-                const findings = job.result.partial_findings || summary.findings || [];
-                latestSummary = summary;
-                latestFindings = findings;
-                hasScanResult = true;
-                renderStatus(summary, signals, findings);
-                renderDecisionEngine(summary, signals, findings, job.result.prediction || null);
-                renderBreakdown(summary);
-                renderPrediction(summary, job.result.prediction || null);
-                setResultState();
-                if (resultSection) {
-                    resultSection.scrollIntoView({ behavior: "smooth", block: "start" });
+                const rewritten = String(job.result.rewritten_text || "");
+                if (rewritten && afterEmailNode && beforeEmailNode) {
+                    beforeEmailNode.innerHTML = highlightSpamSignals(rawText);
+                    afterEmailNode.innerHTML = escapeHtml(rewritten);
+                    latestRewriteContext = {
+                        original_subject: String(job.result.original_subject || ""),
+                        original_body: String(job.result.original_body || ""),
+                        rewritten_subject: String(job.result.rewritten_subject || ""),
+                        rewritten_body: String(job.result.rewritten_body || rewritten),
+                        original_text: String(job.result.original_text || rawText),
+                        rewritten_text: rewritten,
+                        from_risk_band: String(job.result.from_risk_band || "Needs Review"),
+                        to_risk_band: String(job.result.to_risk_band || "Needs Review"),
+                        score_delta: Number(job.result.score_delta || 0),
+                        rewrite_style: String(job.result.rewrite_style || "balanced"),
+                    };
+                    if (workflowStateNode) {
+                        workflowStateNode.textContent = "Step 2: Fix complete";
+                    }
+                    if (workflowTitleNode) {
+                        workflowTitleNode.textContent = "Safer version generated";
+                    }
+                    if (improvementEstimateNode) {
+                        const delta = Number(job.result.score_delta || 0);
+                        improvementEstimateNode.textContent = `Spam Risk Reduced | Deliverability Score: ${delta >= 0 ? "+" : ""}${delta}`;
+                    }
+                    if (fixOutput) {
+                        fixOutput.classList.remove("hidden");
+                        fixOutput.scrollIntoView({ behavior: "smooth", block: "start" });
+                    }
                 }
-                break;
+                showError("Background rewrite completed.");
+                return;
             }
             if (job.status === "failed") {
-                showError(String(job.error || "Async scan failed."));
-                break;
+                throw new Error(String(job.error || "Async rewrite failed."));
             }
         }
-
-        if (submitAsyncButton) {
-            submitAsyncButton.disabled = false;
-            submitAsyncButton.textContent = "Analyze In Background";
-        }
-    }
-
-    async function runRewriteAsync() {
-        const rawText = rawEmailInput ? rawEmailInput.value.trim() : "";
-        if (rawText.length < 20) {
-            showError("Paste the full email draft before generating rewrite.");
-            return;
-        }
-
+        throw new Error("Async rewrite timed out. Try again.");
+    } finally {
         if (riskFixAsyncButton) {
-            riskFixAsyncButton.disabled = true;
-            riskFixAsyncButton.textContent = "Queued...";
-        }
-
-        try {
-            const payload = new FormData();
-            payload.set("raw_email", rawText);
-            if (domainInput && domainInput.value.trim()) {
-                payload.set("domain", domainInput.value.trim());
-            }
-            payload.set("analysis_mode", analysisModeInput ? analysisModeInput.value : "content");
-            payload.set("rewrite_style", rewriteStyleInput ? rewriteStyleInput.value : "balanced");
-
-            const response = await fetch("/rewrite-async", { method: "POST", body: payload });
-            if (!response.ok) {
-                throw new Error("Could not queue async rewrite.");
-            }
-            const data = await response.json();
-            const jobId = String(data.job_id || "");
-            showError("Background rewrite started. Waiting for result...");
-
-            for (let i = 0; i < 25; i += 1) {
-                await sleep(1200);
-                const poll = await fetch(`/analyze-jobs/${jobId}`, { method: "GET" });
-                if (!poll.ok) {
-                    continue;
-                }
-                const job = await poll.json();
-                if (job.status === "completed" && job.result) {
-                    const rewritten = String(job.result.rewritten_text || "");
-                    if (rewritten && afterEmailNode && beforeEmailNode) {
-                        beforeEmailNode.innerHTML = highlightSpamSignals(rawText);
-                        afterEmailNode.innerHTML = escapeHtml(rewritten);
-                        latestRewriteContext = {
-                            original_subject: String(job.result.original_subject || ""),
-                            original_body: String(job.result.original_body || ""),
-                            rewritten_subject: String(job.result.rewritten_subject || ""),
-                            rewritten_body: String(job.result.rewritten_body || rewritten),
-                            original_text: String(job.result.original_text || rawText),
-                            rewritten_text: rewritten,
-                            from_risk_band: String(job.result.from_risk_band || "Needs Review"),
-                            to_risk_band: String(job.result.to_risk_band || "Needs Review"),
-                            score_delta: Number(job.result.score_delta || 0),
-                            rewrite_style: String(job.result.rewrite_style || "balanced"),
-                        };
-                        if (workflowStateNode) {
-                            workflowStateNode.textContent = "Step 2: Fix complete";
-                        }
-                        if (workflowTitleNode) {
-                            workflowTitleNode.textContent = "Safer version generated";
-                        }
-                        if (improvementEstimateNode) {
-                            const delta = Number(job.result.score_delta || 0);
-                            improvementEstimateNode.textContent = `Spam Risk Reduced | Deliverability Score: ${delta >= 0 ? "+" : ""}${delta}`;
-                        }
-                        if (fixOutput) {
-                            fixOutput.classList.remove("hidden");
-                            fixOutput.scrollIntoView({ behavior: "smooth", block: "start" });
-                        }
-                    }
-                    showError("Background rewrite completed.");
-                    return;
-                }
-                if (job.status === "failed") {
-                    throw new Error(String(job.error || "Async rewrite failed."));
-                }
-            }
-            throw new Error("Async rewrite timed out. Try again.");
-        } finally {
-            if (riskFixAsyncButton) {
-                riskFixAsyncButton.disabled = false;
-                riskFixAsyncButton.textContent = "Generate Safe Rewrite In Background";
-            }
+            riskFixAsyncButton.disabled = false;
+            riskFixAsyncButton.textContent = "Generate Safe Rewrite In Background";
         }
     }
+}
 
-    // ===== RAZORPAY PAYMENT INTEGRATION =====
-    window.currentUser = isAuthenticated;
+// ===== RAZORPAY PAYMENT INTEGRATION =====
+window.currentUser = isAuthenticated;
 
-    function openPricingModal() {
-        const modal = document.getElementById("pricing-modal");
-        if (modal) {
-            modal.classList.remove("hidden");
-            document.body.classList.add("modal-open");
-            const focusTarget = modal.querySelector("button, input, select, textarea, a");
-            if (focusTarget && typeof focusTarget.focus === "function") {
-                setTimeout(() => focusTarget.focus(), 30);
-            }
+function openPricingModal() {
+    const modal = document.getElementById("pricing-modal");
+    if (modal) {
+        modal.classList.remove("hidden");
+        document.body.classList.add("modal-open");
+        const focusTarget = modal.querySelector("button, input, select, textarea, a");
+        if (focusTarget && typeof focusTarget.focus === "function") {
+            setTimeout(() => focusTarget.focus(), 30);
         }
     }
+}
 
-    function closePricingModal() {
-        const modal = document.getElementById("pricing-modal");
-        if (modal) {
-            modal.classList.add("hidden");
-            document.body.classList.remove("modal-open");
-        }
+function closePricingModal() {
+    const modal = document.getElementById("pricing-modal");
+    if (modal) {
+        modal.classList.add("hidden");
+        document.body.classList.remove("modal-open");
     }
+}
 
-    function handleGetAccess() {
-        openPricingModal();
-    }
+function handleGetAccess() {
+    openPricingModal();
+}
 
-    const pricingModal = document.getElementById("pricing-modal");
-    if (pricingModal) {
-        pricingModal.addEventListener("click", (event) => {
-            if (event.target === pricingModal) {
-                closePricingModal();
-                // Load user's token balance
-                async function loadUserTokens() {
-                    try {
-                        const res = await fetch("/tokens/info");
-                        if (!res.ok) {
-                            console.warn("Could not load tokens");
-                            return;
-                        }
-                        const data = await res.json();
-                        const tokenBadge = document.getElementById("token-badge");
-                        const tokenCount = document.getElementById("token-count");
-                        const tokenLabel = document.getElementById("token-label");
-
-                        if (tokenBadge && tokenCount) {
-                            tokenBadge.classList.remove("hidden");
-                            tokenCount.innerText = String(data.tokens || 0);
-                            if (tokenLabel) {
-                                tokenLabel.innerText = (data.tokens === 1) ? "credit" : "credits";
-                            }
-                        }
-                    } catch (err) {
-                        console.warn("Error loading tokens:", err);
-                    }
-                }
-
-                // Apply promo code
-                async function applyPromoCode() {
-                    const codeInput = document.getElementById("promo-code-input");
-                    const msg = document.getElementById("promo-message");
-                    const code = (codeInput.value || "").trim().toUpperCase();
-
-                    if (!code) {
-                        if (msg) {
-                            msg.innerText = "Enter a promo code";
-                            msg.style.color = "#fca5a5";
-                            msg.style.display = "block";
-                        }
+const pricingModal = document.getElementById("pricing-modal");
+if (pricingModal) {
+    pricingModal.addEventListener("click", (event) => {
+        if (event.target === pricingModal) {
+            closePricingModal();
+            // Load user's token balance
+            async function loadUserTokens() {
+                try {
+                    const res = await fetch("/tokens/info");
+                    if (!res.ok) {
+                        console.warn("Could not load tokens");
                         return;
                     }
+                    const data = await res.json();
+                    const tokenBadge = document.getElementById("token-badge");
+                    const tokenCount = document.getElementById("token-count");
+                    const tokenLabel = document.getElementById("token-label");
 
-                    try {
-                        const res = await fetch("/apply-promo", {
-                            method: "POST",
-                            headers: { "Content-Type": "application/x-www-form-urlencoded" },
-                            body: `code=${encodeURIComponent(code)}`,
-                        });
-                        const data = await res.json();
-
-                        if (res.ok) {
-                            if (msg) {
-                                msg.innerText = data.message || "Promo applied! Refresh to see tokens.";
-                                msg.style.color = "#86efac";
-                                msg.style.display = "block";
-                            }
-                            if (codeInput) codeInput.value = "";
-                            // Reload tokens
-                            await loadUserTokens();
-                            // Refresh page after 1s
-                            setTimeout(() => location.reload(), 1000);
-                        } else {
-                            if (msg) {
-                                msg.innerText = data.message || "Invalid promo code";
-                                msg.style.color = "#fca5a5";
-                                msg.style.display = "block";
-                            }
+                    if (tokenBadge && tokenCount) {
+                        tokenBadge.classList.remove("hidden");
+                        tokenCount.innerText = String(data.tokens || 0);
+                        if (tokenLabel) {
+                            tokenLabel.innerText = (data.tokens === 1) ? "credit" : "credits";
                         }
-                    } catch (err) {
-                        console.error("Error applying promo:", err);
+                    }
+                } catch (err) {
+                    console.warn("Error loading tokens:", err);
+                }
+            }
+
+            // Apply promo code
+            async function applyPromoCode() {
+                const codeInput = document.getElementById("promo-code-input");
+                const msg = document.getElementById("promo-message");
+                const code = (codeInput.value || "").trim().toUpperCase();
+
+                if (!code) {
+                    if (msg) {
+                        msg.innerText = "Enter a promo code";
+                        msg.style.color = "#fca5a5";
+                        msg.style.display = "block";
+                    }
+                    return;
+                }
+
+                try {
+                    const res = await fetch("/apply-promo", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                        body: `code=${encodeURIComponent(code)}`,
+                    });
+                    const data = await res.json();
+
+                    if (res.ok) {
                         if (msg) {
-                            msg.innerText = "Error applying code. Try again.";
+                            msg.innerText = data.message || "Promo applied! Refresh to see tokens.";
+                            msg.style.color = "#86efac";
+                            msg.style.display = "block";
+                        }
+                        if (codeInput) codeInput.value = "";
+                        // Reload tokens
+                        await loadUserTokens();
+                        // Refresh page after 1s
+                        setTimeout(() => location.reload(), 1000);
+                    } else {
+                        if (msg) {
+                            msg.innerText = data.message || "Invalid promo code";
                             msg.style.color = "#fca5a5";
                             msg.style.display = "block";
                         }
                     }
-                }
-
-                // Bind promo button
-                const applyPromoBtn = document.getElementById("apply-promo-btn");
-                if (applyPromoBtn) {
-                    applyPromoBtn.addEventListener("click", applyPromoCode);
-                }
-
-                const promoInput = document.getElementById("promo-code-input");
-                if (promoInput) {
-                    promoInput.addEventListener("keypress", (e) => {
-                        if (e.key === "Enter") {
-                            e.preventDefault();
-                            applyPromoCode();
-                        }
-                    });
+                } catch (err) {
+                    console.error("Error applying promo:", err);
+                    if (msg) {
+                        msg.innerText = "Error applying code. Try again.";
+                        msg.style.color = "#fca5a5";
+                        msg.style.display = "block";
+                    }
                 }
             }
-        });
+
+            // Bind promo button
+            const applyPromoBtn = document.getElementById("apply-promo-btn");
+            if (applyPromoBtn) {
+                applyPromoBtn.addEventListener("click", applyPromoCode);
+            }
+
+            const promoInput = document.getElementById("promo-code-input");
+            if (promoInput) {
+                promoInput.addEventListener("keypress", (e) => {
+                    if (e.key === "Enter") {
+                        e.preventDefault();
+                        applyPromoCode();
+                    }
+                });
+            }
+        }
+    });
+}
+
+function canUserScan() {
+    if (!isAuthenticated) {
+        return true;
     }
 
-    function canUserScan() {
-        if (!isAuthenticated) {
-            return true;
-        }
+    const status = String(window.userStatus || currentUserStatus || "inactive").toLowerCase();
+    const hasAccess = Boolean(window.userIsPro) && status === "active";
+    if (hasAccess) {
+        return true;
+    }
 
-        const status = String(window.userStatus || currentUserStatus || "inactive").toLowerCase();
-        const hasAccess = Boolean(window.userIsPro) && status === "active";
-        if (hasAccess) {
-            return true;
-        }
+    if (status === "past_due") {
+        showError("Payment failed. Update your payment method to keep access.");
+    }
 
-        if (status === "past_due") {
-            showError("Payment failed. Update your payment method to keep access.");
-        }
+    showPaywall();
+    return false;
 
+    /*
+    Legacy free-scan gate retained intentionally for potential future re-enable:
+    if (userScansUsed >= 1) {
         showPaywall();
         return false;
-
-        /*
-        Legacy free-scan gate retained intentionally for potential future re-enable:
-        if (userScansUsed >= 1) {
-            showPaywall();
-            return false;
-        }
-        */
     }
+    */
+}
 
-    function showPaywall() {
-        const paywall = document.getElementById("paywall");
-        if (paywall) {
-            paywall.classList.remove("hidden");
-            const title = paywall.querySelector("h3");
-            const body = paywall.querySelector("p");
-            const button = paywall.querySelector("button");
-            if (title) {
-                title.textContent = "You've found your biggest risk. Fixing one email isn't enough.";
-            }
-            if (body) {
-                body.textContent = "Unlock Safe Sending to run your next check before the next campaign goes out.";
-            }
-            if (button) {
-                button.textContent = "Unlock Safe Sending";
-            }
+function showPaywall() {
+    const paywall = document.getElementById("paywall");
+    if (paywall) {
+        paywall.classList.remove("hidden");
+        const title = paywall.querySelector("h3");
+        const body = paywall.querySelector("p");
+        const button = paywall.querySelector("button");
+        if (title) {
+            title.textContent = "You've found your biggest risk. Fixing one email isn't enough.";
+        }
+        if (body) {
+            body.textContent = "Unlock Safe Sending to run your next check before the next campaign goes out.";
+        }
+        if (button) {
+            button.textContent = "Unlock Safe Sending";
         }
     }
+}
 
-    function showUpgradeBlock() {
-        const paywall = document.getElementById("paywall");
-        showPaywall();
-        if (paywall) {
-            paywall.scrollIntoView({ behavior: "smooth", block: "center" });
+function showUpgradeBlock() {
+    const paywall = document.getElementById("paywall");
+    showPaywall();
+    if (paywall) {
+        paywall.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+}
+
+async function startPayment() {
+    function openToolPane(toolKey) {
+        const pane = document.querySelector(`[data-tool-pane="${toolKey}"]`);
+        const btn = document.querySelector(`[data-tool="${toolKey}"]`);
+        if (!pane || !btn) {
+            console.error('Tool pane not found:', toolKey);
+            return;
+        }
+        // Close all other panes
+        document.querySelectorAll('.tool-pane').forEach(p => p.classList.remove('active'));
+        document.querySelectorAll('.tool-nav-btn').forEach(b => b.classList.remove('active'));
+        // Open this pane
+        pane.classList.add('active');
+        btn.classList.add('active');
+        const mainArea = document.querySelector('.main-area');
+        if (mainArea) {
+            mainArea.classList.add('tool-panel-open');
+        }
+        // Focus first input
+        const firstInput = pane.querySelector('input,select,textarea,button');
+        if (firstInput && typeof firstInput.focus === 'function') {
+            setTimeout(() => firstInput.focus(), 60);
         }
     }
 
-    async function startPayment() {
+    // Load user's token balance
+    async function loadUserTokens() {
         try {
             if (!isAuthenticated) {
                 showAuthModal();
@@ -2892,386 +2942,404 @@ async function refreshAuthStatus() {
         }
     }
 
-    const payButton = document.getElementById("pay-btn");
-    const cancelSubscriptionButton = document.getElementById("cancel-subscription");
-    if (payButton) {
-        payButton.addEventListener("click", (event) => {
-            event.preventDefault();
-            startPayment();
-        });
-    }
-    if (refreshPlansButton) {
-        refreshPlansButton.addEventListener("click", (event) => {
-            event.preventDefault();
-            refreshPlans().catch((error) => {
-                showError(error && error.message ? error.message : "Could not load plans.");
-            });
-        });
-    }
-    if (requestAccessButton) {
-        requestAccessButton.addEventListener("click", (event) => {
-            event.preventDefault();
-            requestAccess().catch((error) => {
-                showError(error && error.message ? error.message : "Could not submit access request.");
-            });
-        });
-    }
-    if (cancelSubscriptionButton) {
-        cancelSubscriptionButton.addEventListener("click", async (event) => {
-            event.preventDefault();
-            const response = await fetch("/cancel-subscription", { method: "POST" });
-            if (!response.ok) {
-                showError("Could not cancel subscription.");
-                return;
-            }
-            showError("Subscription cancelled. Access will remain until current period ends.");
-            setTimeout(() => window.location.reload(), 1200);
-        });
-    }
+}
 
-    if (dashboardTab) {
-        window.igOnToolPaneOpened = (key, pane) => {
-            refreshToolPaneData(key);
-            const primary = pane && pane.querySelector
-                ? pane.querySelector(".tool-pane-primary")
-                : null;
-            if (primary && typeof primary.focus === "function") {
-                setTimeout(() => primary.focus(), 30);
-            }
-        };
+const payButton = document.getElementById("pay-btn");
+const cancelSubscriptionButton = document.getElementById("cancel-subscription");
+if (payButton) {
+    payButton.addEventListener("click", (event) => {
+        event.preventDefault();
+        startPayment();
+    });
+}
+if (refreshPlansButton) {
+    refreshPlansButton.addEventListener("click", (event) => {
+        event.preventDefault();
+        refreshPlans().catch((error) => {
+            showError(error && error.message ? error.message : "Could not load plans.");
+        });
+    });
+}
+if (requestAccessButton) {
+    requestAccessButton.addEventListener("click", (event) => {
+        event.preventDefault();
+        requestAccess().catch((error) => {
+            showError(error && error.message ? error.message : "Could not submit access request.");
+        });
+    });
+}
+if (cancelSubscriptionButton) {
+    cancelSubscriptionButton.addEventListener("click", async (event) => {
+        event.preventDefault();
+        const response = await fetch("/cancel-subscription", { method: "POST" });
+        if (!response.ok) {
+            showError("Could not cancel subscription.");
+            return;
+        }
+        showError("Subscription cancelled. Access will remain until current period ends.");
+        setTimeout(() => window.location.reload(), 1200);
+    });
+}
 
-        dashboardTab.addEventListener("click", () => {
+if (dashboardTab) {
+    window.igOnToolPaneOpened = (key, pane) => {
+        refreshToolPaneData(key);
+        const primary = pane && pane.querySelector
+            ? pane.querySelector(".tool-pane-primary")
+            : null;
+        if (primary && typeof primary.focus === "function") {
+            setTimeout(() => primary.focus(), 30);
+        }
+    };
+
+    dashboardTab.addEventListener("click", () => {
+        if (typeof window.closeTool === "function") {
+            window.closeTool();
+        }
+        activateTab("dashboard");
+    });
+
+    if (threatScanTab) {
+        threatScanTab.addEventListener("click", () => {
             if (typeof window.closeTool === "function") {
                 window.closeTool();
             }
-            activateTab("dashboard");
+            activateTab("threat-scan");
         });
+    }
+    if (startButton) {
+        startButton.addEventListener("click", () => {
+            if (rawEmailInput) {
+                rawEmailInput.scrollIntoView({ behavior: "smooth", block: "center" });
+                setTimeout(() => rawEmailInput.focus(), 160);
+            }
+            activateTab("threat-scan");
+            trackEvent("start_clicked", { destination: "email_input" });
+        });
+    }
+    if (fillExampleButton) {
+        fillExampleButton.addEventListener("click", () => {
+            if (rawEmailInput) {
+                rawEmailInput.value = EXAMPLE_EMAIL;
+                rawEmailInput.focus();
+                rawEmailInput.setSelectionRange(rawEmailInput.value.length, rawEmailInput.value.length);
+            }
+            if (domainInput && !domainInput.value.trim()) {
+                domainInput.value = "example.com";
+            }
+            if (analysisModeInput) {
+                analysisModeInput.value = "content";
+            }
+            trackEvent("example_prefill_used", { source: "homepage_scan" });
+        });
+    }
+    if (accessButton) {
+        accessButton.addEventListener("click", (event) => {
+            event.preventDefault();
+            handleGetAccess();
+        });
+    }
+    if (fixNowButton) {
+        fixNowButton.addEventListener("click", () => {
+            const payload = new FormData();
+            payload.set("event", "rewrite_clicked");
+            fetch("/track", { method: "POST", body: payload }).catch(() => null);
 
-        if (threatScanTab) {
-            threatScanTab.addEventListener("click", () => {
-                if (typeof window.closeTool === "function") {
-                    window.closeTool();
-                }
-                activateTab("threat-scan");
-            });
-        }
-        if (startButton) {
-            startButton.addEventListener("click", () => {
-                if (rawEmailInput) {
-                    rawEmailInput.scrollIntoView({ behavior: "smooth", block: "center" });
-                    setTimeout(() => rawEmailInput.focus(), 160);
-                }
-                activateTab("threat-scan");
-                trackEvent("start_clicked", { destination: "email_input" });
-            });
-        }
-        if (accessButton) {
-            accessButton.addEventListener("click", (event) => {
-                event.preventDefault();
-                handleGetAccess();
-            });
-        }
-        if (fixNowButton) {
-            fixNowButton.addEventListener("click", () => {
-                const payload = new FormData();
-                payload.set("event", "rewrite_clicked");
-                fetch("/track", { method: "POST", body: payload }).catch(() => null);
-
-                pendingAction = "fix";
-                runPendingAction();
-            });
-        }
-        if (riskFixNowButton) {
-            riskFixNowButton.addEventListener("click", () => {
-                trackEvent("fix_clicked", { source: "risk_fix_now" });
-                pendingAction = "fix";
-                runPendingAction();
-            });
-        }
-        if (riskFixAsyncButton) {
-            riskFixAsyncButton.addEventListener("click", () => {
-                trackEvent("fix_async_clicked", { source: "risk_fix_async" });
-                runRewriteAsync().catch((error) => {
-                    showError(error && error.message ? error.message : "Could not queue async rewrite.");
-                });
-            });
-        }
-        if (postFixAccessButton) {
-            postFixAccessButton.addEventListener("click", () => {
-                if (!isAuthenticated) {
-                    openPricingModal();
-                    trackEvent("post_fix_access_clicked", { state: "anon" });
-                    return;
-                }
-                trackEvent("post_fix_access_clicked", { state: "authenticated" });
-                runSeedAuto().catch(() => {
-                    window.location.href = "/seed-inbox";
-                });
-            });
-        }
-        if (useFixedButton) {
-            useFixedButton.addEventListener("click", useFixedVersion);
-        }
-        if (sendGmailButton) {
-            sendGmailButton.addEventListener("click", openInGmail);
-        }
-        if (restoreOriginalButton) {
-            restoreOriginalButton.addEventListener("click", restoreOriginalDraft);
-        }
-        if (editManualButton) {
-            editManualButton.addEventListener("click", editManually);
-        }
-        if (feedbackInboxButton) {
-            feedbackInboxButton.addEventListener("click", () => sendFeedback("inbox"));
-        }
-        if (feedbackSpamButton) {
-            feedbackSpamButton.addEventListener("click", () => sendFeedback("spam"));
-        }
-        if (feedbackPromotionsButton) {
-            feedbackPromotionsButton.addEventListener("click", () => sendFeedback("promotions"));
-        }
-        if (saveFixButton) {
-            saveFixButton.addEventListener("click", () => {
-                pendingAction = "save-fix";
-                saveCurrentFix().catch((error) => {
-                    showError(error && error.message ? error.message : "Could not save this fix.");
-                });
-            });
-        }
-        if (runDiagnosisButton) {
-            runDiagnosisButton.addEventListener("click", () => {
-                runCampaignDiagnosis().catch((error) => {
-                    showError(error && error.message ? error.message : "Could not diagnose campaign.");
-                });
-            });
-        }
-        if (submitAsyncButton) {
-            submitAsyncButton.addEventListener("click", () => {
-                runAnalyzeAsync().catch((error) => {
-                    showError(error && error.message ? error.message : "Could not queue async scan.");
-                });
-            });
-        }
-        if (runBlacklistCheckButton) {
-            runBlacklistCheckButton.addEventListener("click", () => {
-                runBlacklistCheck().catch((error) => {
-                    showError(error && error.message ? error.message : "Could not check domain risk.");
-                });
-            });
-        }
-        if (saveSeedTestButton) {
-            saveSeedTestButton.addEventListener("click", () => {
-                saveSeedTest().catch((error) => {
-                    showError(error && error.message ? error.message : "Could not save seed test.");
-                });
-            });
-        }
-        if (runSeedAutoButton) {
-            runSeedAutoButton.addEventListener("click", () => {
-                runSeedAuto().catch((error) => {
-                    showError(error && error.message ? error.message : "Could not run automated seed test.");
-                });
-            });
-        }
-        if (runSeedSyncButton) {
-            runSeedSyncButton.addEventListener("click", () => {
-                runSeedSync().catch((error) => {
-                    showError(error && error.message ? error.message : "Could not run instant seed probe.");
-                });
-            });
-        }
-        if (runBulkScanButton) {
-            runBulkScanButton.addEventListener("click", () => {
-                runBulkScan().catch((error) => {
-                    showError(error && error.message ? error.message : "Could not run bulk scan.");
-                });
-            });
-        }
-        if (createApiKeyButton) {
-            createApiKeyButton.addEventListener("click", () => {
-                createApiKey().catch((error) => {
-                    showError(error && error.message ? error.message : "Could not create API key.");
-                });
-            });
-        }
-        if (listApiKeysButton) {
-            listApiKeysButton.addEventListener("click", () => {
-                listApiKeys().catch((error) => {
-                    showError(error && error.message ? error.message : "Could not load API keys.");
-                });
-            });
-        }
-        if (revokeApiKeyButton) {
-            revokeApiKeyButton.addEventListener("click", () => {
-                revokeApiKey().catch((error) => {
-                    showError(error && error.message ? error.message : "Could not revoke API key.");
-                });
-            });
-        }
-        if (createTeamButton) {
-            createTeamButton.addEventListener("click", () => {
-                createTeam().catch((error) => {
-                    showError(error && error.message ? error.message : "Could not create team.");
-                });
-            });
-        }
-        if (listTeamsButton) {
-            listTeamsButton.addEventListener("click", () => {
-                listTeams().catch((error) => {
-                    showError(error && error.message ? error.message : "Could not load teams.");
-                });
-            });
-        }
-        if (addTeamMemberButton) {
-            addTeamMemberButton.addEventListener("click", () => {
-                addTeamMember().catch((error) => {
-                    showError(error && error.message ? error.message : "Could not add team member.");
-                });
-            });
-        }
-        if (refreshOutcomeStatsButton) {
-            refreshOutcomeStatsButton.addEventListener("click", () => {
-                refreshOutcomeStats().catch((error) => {
-                    showError(error && error.message ? error.message : "Could not load outcome stats.");
-                });
-            });
-        }
-        if (refreshJobsButton) {
-            refreshJobsButton.addEventListener("click", () => {
-                refreshJobs().catch((error) => {
-                    showError(error && error.message ? error.message : "Could not load async jobs.");
-                });
-            });
-        }
-        if (leadCaptureContinueButton) {
-            leadCaptureContinueButton.addEventListener("click", () => {
-                continueWithLeadCapture().catch((error) => {
-                    showError(error && error.message ? error.message : "Could not save your email.");
-                });
-            });
-        }
-        if (leadCaptureCloseButton) {
-            leadCaptureCloseButton.addEventListener("click", () => {
-                hideLeadCaptureModal();
-            });
-        }
-        if (authSignInButton) {
-            authSignInButton.addEventListener("click", () => handleAuthAction("signin"));
-        }
-        if (authCreateButton) {
-            authCreateButton.addEventListener("click", () => handleAuthAction("create"));
-        }
-        if (authCloseButton) {
-            authCloseButton.addEventListener("click", () => handleAuthAction("close"));
-        }
-        if (authModal) {
-            authModal.addEventListener("click", (event) => {
-                const target = event.target;
-                if (!(target instanceof HTMLElement)) {
-                    return;
-                }
-                if (target.id === "auth-modal") {
-                    handleAuthAction("close");
-                    return;
-                }
-                if (target.id === "auth-signin") {
-                    handleAuthAction("signin");
-                    return;
-                }
-                if (target.id === "auth-create") {
-                    handleAuthAction("create");
-                    return;
-                }
-                if (target.id === "auth-close") {
-                    handleAuthAction("close");
-                }
-            });
-        }
-        if (leadCaptureModal) {
-            leadCaptureModal.addEventListener("click", (event) => {
-                const target = event.target;
-                if (!(target instanceof HTMLElement)) {
-                    return;
-                }
-                if (target.id === "lead-capture-modal") {
-                    hideLeadCaptureModal();
-                    return;
-                }
-                if (target.id === "lead-capture-continue") {
-                    continueWithLeadCapture().catch((error) => {
-                        showError(error && error.message ? error.message : "Could not save your email.");
-                    });
-                    return;
-                }
-                if (target.id === "lead-capture-close") {
-                    hideLeadCaptureModal();
-                }
-            });
-        }
-
-        if (form) {
-            form.addEventListener("submit", async (event) => {
-                event.preventDefault();
-                if (!canUserScan()) {
-                    return;
-                }
-                pendingAction = "analyze";
-                if (needsLeadCaptureGate("analyze")) {
-                    showLeadCaptureModal();
-                    return;
-                }
-                if (needsAuthGate("analyze")) {
-                    if (isAuthenticated) {
-                        showError("You reached your monthly free plan scan limit. Upgrade is required for more scans.");
-                        return;
-                    }
-                    showAuthModal();
-                    return;
-                }
-                runPendingAction();
-            });
-        }
-
-        if (rawEmailInput) {
-            rawEmailInput.addEventListener("input", () => {
-                const value = String(rawEmailInput.value || "").trim();
-                if (!emailPastedTracked && value.length >= 20) {
-                    emailPastedTracked = true;
-                    trackEvent("email_pasted", {
-                        length_bucket: value.length >= 300 ? "300_plus" : value.length >= 120 ? "120_299" : "20_119",
-                    });
-                }
-            });
-        }
-
-        document.querySelectorAll("details.secondary-options, details.advanced-block").forEach((detailsNode) => {
-            detailsNode.addEventListener("toggle", () => {
-                if (detailsNode.open && !advancedOpenedTracked) {
-                    advancedOpenedTracked = true;
-                    trackEvent("advanced_opened", {
-                        section: detailsNode.classList.contains("advanced-block") ? "why_flagged" : "scan_options",
-                    });
-                }
+            pendingAction = "fix";
+            runPendingAction();
+        });
+    }
+    if (riskFixNowButton) {
+        riskFixNowButton.addEventListener("click", () => {
+            trackEvent("fix_clicked", { source: "risk_fix_now" });
+            pendingAction = "fix";
+            runPendingAction();
+        });
+    }
+    if (riskFixAsyncButton) {
+        riskFixAsyncButton.addEventListener("click", () => {
+            trackEvent("fix_async_clicked", { source: "risk_fix_async" });
+            runRewriteAsync().catch((error) => {
+                showError(error && error.message ? error.message : "Could not queue async rewrite.");
             });
         });
     }
+    if (postFixAccessButton) {
+        postFixAccessButton.addEventListener("click", () => {
+            if (!isAuthenticated) {
+                openPricingModal();
+                trackEvent("post_fix_access_clicked", { state: "anon" });
+                return;
+            }
+            trackEvent("post_fix_access_clicked", { state: "authenticated" });
+            runSeedAuto().catch(() => {
+                window.location.href = "/seed-inbox";
+            });
+        });
+    }
+    if (useFixedButton) {
+        useFixedButton.addEventListener("click", useFixedVersion);
+    }
+    if (sendGmailButton) {
+        sendGmailButton.addEventListener("click", openInGmail);
+    }
+    if (restoreOriginalButton) {
+        restoreOriginalButton.addEventListener("click", restoreOriginalDraft);
+    }
+    if (editManualButton) {
+        editManualButton.addEventListener("click", editManually);
+    }
+    if (feedbackInboxButton) {
+        feedbackInboxButton.addEventListener("click", () => sendFeedback("inbox"));
+    }
+    if (feedbackSpamButton) {
+        feedbackSpamButton.addEventListener("click", () => sendFeedback("spam"));
+    }
+    if (feedbackPromotionsButton) {
+        feedbackPromotionsButton.addEventListener("click", () => sendFeedback("promotions"));
+    }
+    if (saveFixButton) {
+        saveFixButton.addEventListener("click", () => {
+            pendingAction = "save-fix";
+            saveCurrentFix().catch((error) => {
+                showError(error && error.message ? error.message : "Could not save this fix.");
+            });
+        });
+    }
+    if (runDiagnosisButton) {
+        runDiagnosisButton.addEventListener("click", () => {
+            runCampaignDiagnosis().catch((error) => {
+                showError(error && error.message ? error.message : "Could not diagnose campaign.");
+            });
+        });
+    }
+    if (submitAsyncButton) {
+        submitAsyncButton.addEventListener("click", () => {
+            runAnalyzeAsync().catch((error) => {
+                showError(error && error.message ? error.message : "Could not queue async scan.");
+            });
+        });
+    }
+    if (runBlacklistCheckButton) {
+        runBlacklistCheckButton.addEventListener("click", () => {
+            runBlacklistCheck().catch((error) => {
+                showError(error && error.message ? error.message : "Could not check domain risk.");
+            });
+        });
+    }
+    if (saveSeedTestButton) {
+        saveSeedTestButton.addEventListener("click", () => {
+            saveSeedTest().catch((error) => {
+                showError(error && error.message ? error.message : "Could not save seed test.");
+            });
+        });
+    }
+    if (runSeedAutoButton) {
+        runSeedAutoButton.addEventListener("click", () => {
+            runSeedAuto().catch((error) => {
+                showError(error && error.message ? error.message : "Could not run automated seed test.");
+            });
+        });
+    }
+    if (runSeedSyncButton) {
+        runSeedSyncButton.addEventListener("click", () => {
+            runSeedSync().catch((error) => {
+                showError(error && error.message ? error.message : "Could not run instant seed probe.");
+            });
+        });
+    }
+    if (runBulkScanButton) {
+        runBulkScanButton.addEventListener("click", () => {
+            runBulkScan().catch((error) => {
+                showError(error && error.message ? error.message : "Could not run bulk scan.");
+            });
+        });
+    }
+    if (createApiKeyButton) {
+        createApiKeyButton.addEventListener("click", () => {
+            createApiKey().catch((error) => {
+                showError(error && error.message ? error.message : "Could not create API key.");
+            });
+        });
+    }
+    if (listApiKeysButton) {
+        listApiKeysButton.addEventListener("click", () => {
+            listApiKeys().catch((error) => {
+                showError(error && error.message ? error.message : "Could not load API keys.");
+            });
+        });
+    }
+    if (revokeApiKeyButton) {
+        revokeApiKeyButton.addEventListener("click", () => {
+            revokeApiKey().catch((error) => {
+                showError(error && error.message ? error.message : "Could not revoke API key.");
+            });
+        });
+    }
+    if (createTeamButton) {
+        createTeamButton.addEventListener("click", () => {
+            createTeam().catch((error) => {
+                showError(error && error.message ? error.message : "Could not create team.");
+            });
+        });
+    }
+    if (listTeamsButton) {
+        listTeamsButton.addEventListener("click", () => {
+            listTeams().catch((error) => {
+                showError(error && error.message ? error.message : "Could not load teams.");
+            });
+        });
+    }
+    if (addTeamMemberButton) {
+        addTeamMemberButton.addEventListener("click", () => {
+            addTeamMember().catch((error) => {
+                showError(error && error.message ? error.message : "Could not add team member.");
+            });
+        });
+    }
+    if (refreshOutcomeStatsButton) {
+        refreshOutcomeStatsButton.addEventListener("click", () => {
+            refreshOutcomeStats().catch((error) => {
+                showError(error && error.message ? error.message : "Could not load outcome stats.");
+            });
+        });
+    }
+    if (refreshJobsButton) {
+        refreshJobsButton.addEventListener("click", () => {
+            refreshJobs().catch((error) => {
+                showError(error && error.message ? error.message : "Could not load async jobs.");
+            });
+        });
+    }
+    if (leadCaptureContinueButton) {
+        leadCaptureContinueButton.addEventListener("click", () => {
+            continueWithLeadCapture().catch((error) => {
+                showError(error && error.message ? error.message : "Could not save your email.");
+            });
+        });
+    }
+    if (leadCaptureCloseButton) {
+        leadCaptureCloseButton.addEventListener("click", () => {
+            hideLeadCaptureModal();
+        });
+    }
+    if (authSignInButton) {
+        authSignInButton.addEventListener("click", () => handleAuthAction("signin"));
+    }
+    if (authCreateButton) {
+        authCreateButton.addEventListener("click", () => handleAuthAction("create"));
+    }
+    if (authCloseButton) {
+        authCloseButton.addEventListener("click", () => handleAuthAction("close"));
+    }
+    if (authModal) {
+        authModal.addEventListener("click", (event) => {
+            const target = event.target;
+            if (!(target instanceof HTMLElement)) {
+                return;
+            }
+            if (target.id === "auth-modal") {
+                handleAuthAction("close");
+                return;
+            }
+            if (target.id === "auth-signin") {
+                handleAuthAction("signin");
+                return;
+            }
+            if (target.id === "auth-create") {
+                handleAuthAction("create");
+                return;
+            }
+            if (target.id === "auth-close") {
+                handleAuthAction("close");
+            }
+        });
+    }
+    if (leadCaptureModal) {
+        leadCaptureModal.addEventListener("click", (event) => {
+            const target = event.target;
+            if (!(target instanceof HTMLElement)) {
+                return;
+            }
+            if (target.id === "lead-capture-modal") {
+                hideLeadCaptureModal();
+                return;
+            }
+            if (target.id === "lead-capture-continue") {
+                continueWithLeadCapture().catch((error) => {
+                    showError(error && error.message ? error.message : "Could not save your email.");
+                });
+                return;
+            }
+            if (target.id === "lead-capture-close") {
+                hideLeadCaptureModal();
+            }
+        });
+    }
 
-    magnetic(submitButton);
-    magnetic(useFixedButton);
-    initializeLoopCounters();
-    setupNextAction();
-    setupParallax();
+    if (form) {
+        form.addEventListener("submit", async (event) => {
+            event.preventDefault();
+            if (!canUserScan()) {
+                return;
+            }
+            pendingAction = "analyze";
+            if (needsLeadCaptureGate("analyze")) {
+                showLeadCaptureModal();
+                return;
+            }
+            if (needsAuthGate("analyze")) {
+                if (isAuthenticated) {
+                    showError("You reached your monthly free plan scan limit. Upgrade is required for more scans.");
+                    return;
+                }
+                showAuthModal();
+                return;
+            }
+            runPendingAction();
+        });
+    }
 
-    setIdleState();
-    activateTab("dashboard");
-    refreshAuthStatus().then(() => {
-        resumePendingAfterAuthIfNeeded();
-        openAuthModalFromQueryIfNeeded();
-        refreshSeedTests().catch(() => null);
-        if (isAuthenticated) {
-            listApiKeys().catch(() => null);
-            listTeams().catch(() => null);
-            refreshOutcomeStats().catch(() => null);
-        }
-        refreshJobs().catch(() => null);
+    if (rawEmailInput) {
+        rawEmailInput.addEventListener("input", () => {
+            const value = String(rawEmailInput.value || "").trim();
+            if (!emailPastedTracked && value.length >= 20) {
+                emailPastedTracked = true;
+                trackEvent("email_pasted", {
+                    length_bucket: value.length >= 300 ? "300_plus" : value.length >= 120 ? "120_299" : "20_119",
+                });
+            }
+        });
+    }
+
+    document.querySelectorAll("details.secondary-options, details.advanced-block").forEach((detailsNode) => {
+        detailsNode.addEventListener("toggle", () => {
+            if (detailsNode.open && !advancedOpenedTracked) {
+                advancedOpenedTracked = true;
+                trackEvent("advanced_opened", {
+                    section: detailsNode.classList.contains("advanced-block") ? "why_flagged" : "scan_options",
+                });
+            }
+        });
     });
+}
+
+magnetic(submitButton);
+magnetic(useFixedButton);
+initializeLoopCounters();
+setupNextAction();
+setupParallax();
+
+setIdleState();
+activateTab("dashboard");
+refreshAuthStatus().then(() => {
+    resumePendingAfterAuthIfNeeded();
+    openAuthModalFromQueryIfNeeded();
+    refreshSeedTests().catch(() => null);
+    if (isAuthenticated) {
+        listApiKeys().catch(() => null);
+        listTeams().catch(() => null);
+        refreshOutcomeStats().catch(() => null);
+    }
+    refreshJobs().catch(() => null);
+});

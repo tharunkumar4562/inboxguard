@@ -124,7 +124,61 @@
         <p id="winCounter" class="micro">Emails improved: 0</p>
         <p id="streak" class="micro">🔥 0 improvements in a row</p>
 
-        <section class="scan-panel card">
+        <section id="feature-grid-panel" class="card">
+          <section id="feature-grid" class="feature-grid">
+            <h2 class="feature-grid-title">Choose a tool to get started</h2>
+          
+                    <!-- Scan Email -->
+                    <div class="feature-card">
+                      <div class="feature-cost">1 token</div>
+                      <h3 class="feature-title">Scan Email</h3>
+                      <p class="feature-description">Check if your email will land in inbox or spam across Gmail, Outlook, and other providers.</p>
+                      <button class="feature-open-btn" onclick="activateTab('threat-scan'); document.getElementById('raw-email').focus();">Open Tool</button>
+                    </div>
+
+                    <!-- Campaign Debugger -->
+                    <div class="feature-card">
+                      <div class="feature-cost">2 tokens</div>
+                      <h3 class="feature-title">Campaign Debugger</h3>
+                      <p class="feature-description">Diagnose why your emails are failing. Analyze metrics and find the exact issue.</p>
+                      <button class="feature-open-btn" onclick="openTool('campaign-debugger');">Open Tool</button>
+                    </div>
+
+                    <!-- Domain Check -->
+                    <div class="feature-card">
+                      <div class="feature-cost">1 token</div>
+                      <h3 class="feature-title">Domain Check</h3>
+                      <p class="feature-description">Check if your domain is blacklisted on major blocklists. Essential before campaign launch.</p>
+                      <button class="feature-open-btn" onclick="openTool('blacklist');">Open Tool</button>
+                    </div>
+
+                    <!-- Seed Testing -->
+                    <div class="feature-card">
+                      <div class="feature-cost">5 tokens</div>
+                      <h3 class="feature-title">Seed Testing</h3>
+                      <p class="feature-description">Send test emails to seed inboxes and track delivery across providers in real-time.</p>
+                      <button class="feature-open-btn" onclick="openTool('seed');">Open Tool</button>
+                    </div>
+
+                    <!-- Bulk Scan -->
+                    <div class="feature-card">
+                      <div class="feature-cost">3 tokens</div>
+                      <h3 class="feature-title">Bulk Scan</h3>
+                      <p class="feature-description">Upload CSV of emails and scan them all at once. Great for testing variations.</p>
+                      <button class="feature-open-btn" onclick="openTool('bulk');">Open Tool</button>
+                    </div>
+
+                    <!-- API + Team -->
+                    <div class="feature-card">
+                      <div class="feature-cost">Custom</div>
+                      <h3 class="feature-title">API + Team</h3>
+                      <p class="feature-description">Integrate InboxGuard into your workflow. Manage teams and collaborate securely.</p>
+                      <button class="feature-open-btn" onclick="openTool('ops');">Open Tool</button>
+                    </div>
+          </section>
+        </section>
+
+        <section class="scan-panel card hidden">
           <form id="risk-form" class="scan-form">
             <label class="input-label" for="raw-email">Paste The Email You Plan To Send</label>
             <textarea id="raw-email" name="raw_email" rows="8" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Paste your email (subject + message)
@@ -134,6 +188,7 @@ Subject: Quick question
 
 Hi John,
 I noticed your recent post and had one short idea to improve reply rates."></textarea>
+            <button type="button" id="fill-example" class="example-btn">Use example email</button>
 
             <details class="secondary-options">
               <summary>Advanced options</summary>
