@@ -68,18 +68,24 @@
         <nav>
           <button id="tab-dashboard" class="nav-item active" type="button">Home</button>
           <button id="tab-threat-scan" class="nav-item" type="button">Scan Email</button>
+          <p class="nav-group-label">Tools</p>
+          <button class="nav-item tool-nav-btn" type="button" data-tool="campaign">Campaign Debugger</button>
+          <button class="nav-item tool-nav-btn" type="button" data-tool="blacklist">Domain Check</button>
+          <button class="nav-item tool-nav-btn" type="button" data-tool="seed">Seed Testing</button>
+          <button class="nav-item tool-nav-btn" type="button" data-tool="bulk">Bulk Scan</button>
+          <button class="nav-item tool-nav-btn" type="button" data-tool="ops">API + Team</button>
+          <button class="nav-item tool-nav-btn" type="button" data-tool="insights">Operator Insights</button>
+
+          <p class="nav-group-label">Data</p>
           <button class="nav-item" type="button" onclick="window.location.href='/saved-fixes'">Saved Fixes</button>
           <button class="nav-item" type="button" onclick="window.location.href='/inbox-tips'">Inbox Tips</button>
           <button class="nav-item" type="button" onclick="window.location.href='/results'">Results</button>
           <button class="nav-item" type="button" onclick="window.location.href='/reports'">Reports</button>
-          <p class="nav-group-label">Workspaces</p>
-          <button class="nav-item tool-nav-btn" type="button" data-tool-toggle="campaign">Campaign Debugger</button>
-          <button class="nav-item tool-nav-btn" type="button" data-tool-toggle="blacklist">Blacklist Checker</button>
-          <button class="nav-item tool-nav-btn" type="button" data-tool-toggle="seed">Seed Inbox</button>
-          <button class="nav-item tool-nav-btn" type="button" data-tool-toggle="bulk">Bulk Scan</button>
-          <button class="nav-item tool-nav-btn" type="button" data-tool-toggle="ops">API + Team Ops</button>
-          <button class="nav-item tool-nav-btn" type="button" data-tool-toggle="insights">Operator Insights</button>
-          <button class="nav-item tool-nav-btn" type="button" data-tool-toggle="trust">Trust + About</button>
+
+          <p class="nav-group-label">System</p>
+          <button class="nav-item" type="button" onclick="window.location.href='/about'">About</button>
+          <button class="nav-item" type="button" onclick="window.location.href='/privacy'">Privacy</button>
+          <button class="nav-item" type="button" onclick="window.location.href='/terms'">Terms</button>
         </nav>
 
         <a id="profile-link" class="profile-link hidden" href="/profile" aria-label="Open profile">
@@ -558,7 +564,7 @@ I noticed your recent post and had one short idea to improve reply rates."></tex
           </div>
         </section>
 
-        <section class="card tool-pane" id="trust-social-proof" data-tool-pane="trust" style="margin-top: 12px;">
+        <section class="card" id="trust-social-proof" style="margin-top: 12px;">
           <h3>Trusted by teams who send before sunrise</h3>
           <p class="micro">Tested emails: 12,483 | Avg inbox improvement after fix: +37% (tracked outcomes).</p>
           <p class="micro">"InboxGuard caught what our QA missed and saved a full campaign run."</p>
@@ -569,7 +575,7 @@ I noticed your recent post and had one short idea to improve reply rates."></tex
           <p class="micro" style="margin-top: 10px;">Read deliverability guides on <a href="/blog" class="link-action">the InboxGuard blog</a>.</p>
         </section>
 
-        <div class="tool-pane tool-links" data-tool-pane="trust" style="margin-top: 14px; display: flex; flex-wrap: wrap; gap: 12px; color: #94a3b8; font-size: 0.92rem;">
+        <div style="margin-top: 14px; display: flex; flex-wrap: wrap; gap: 12px; color: #94a3b8; font-size: 0.92rem;">
           <a href="/about" class="link-action">About</a>
           <a href="/privacy" class="link-action">Privacy</a>
           <a href="/terms" class="link-action">Terms</a>
@@ -613,36 +619,72 @@ I noticed your recent post and had one short idea to improve reply rates."></tex
       </div>
     </div>
 
+    <div id="toolWorkspaceBackdrop" class="tool-workspace-backdrop hidden" aria-hidden="true"></div>
+
     <script>
       (function () {
-        const buttons = Array.from(document.querySelectorAll(".tool-nav-btn"));
-        const panes = Array.from(document.querySelectorAll(".tool-pane"));
+        const buttons = Array.from(document.querySelectorAll('.tool-nav-btn'));
+        const panes = Array.from(document.querySelectorAll('.tool-pane'));
+        const backdrop = document.getElementById('toolWorkspaceBackdrop');
 
-        function setActiveTool(key) {
-          const active = String(key || "").trim().toLowerCase();
-          panes.forEach((pane) => {
-            const paneKey = String(pane.getAttribute("data-tool-pane") || "").toLowerCase();
-            pane.classList.toggle("active", Boolean(active) && paneKey === active);
-          });
-          buttons.forEach((button) => {
-            const buttonKey = String(button.getAttribute("data-tool-toggle") || "").toLowerCase();
-            button.classList.toggle("active", Boolean(active) && buttonKey === active);
-          });
+        function closePanes() {
+          panes.forEach((pane) => pane.classList.remove('active'));
+          buttons.forEach((btn) => btn.classList.remove('active'));
+          if (backdrop) backdrop.classList.add('hidden');
+          document.body.style.overflow = '';
+        }
+
+        function openPane(key) {
+          closePanes();
+          const pane = panes.find((item) => item.getAttribute('data-tool-pane') === key);
+          const btn = buttons.find((item) => item.getAttribute('data-tool') === key);
+          if (!pane || !btn) return;
+          pane.classList.add('active');
+          btn.classList.add('active');
+          if (backdrop) backdrop.classList.remove('hidden');
+          document.body.style.overflow = 'hidden';
+          const firstInput = pane.querySelector('input,select,textarea,button');
+          if (firstInput && typeof firstInput.focus === 'function') {
+            setTimeout(() => firstInput.focus(), 60);
+          }
         }
 
         buttons.forEach((button) => {
-          button.addEventListener("click", function () {
-            const key = this.getAttribute("data-tool-toggle") || "";
-            const isActive = this.classList.contains("active");
-            setActiveTool(isActive ? "" : key);
+          button.addEventListener('click', () => {
+            const key = button.getAttribute('data-tool') || '';
+            const open = button.classList.contains('active');
+            if (open) {
+              closePanes();
+            } else {
+              openPane(key);
+            }
           });
         });
 
-        window.igOpenToolPane = setActiveTool;
-        setActiveTool("");
+        panes.forEach((pane) => {
+          if (pane.querySelector('.tool-pane-close')) return;
+          const close = document.createElement('button');
+          close.type = 'button';
+          close.className = 'tool-pane-close';
+          close.textContent = 'Close';
+          close.addEventListener('click', closePanes);
+          pane.insertBefore(close, pane.firstChild);
+        });
+
+        if (backdrop) {
+          backdrop.addEventListener('click', closePanes);
+        }
+
+        document.addEventListener('keydown', (event) => {
+          if (event.key === 'Escape') {
+            closePanes();
+          }
+        });
+
+        window.igOpenToolPane = openPane;
       })();
     </script>
 
-    <script src="/static/js/app.js?v=20260404-micro3"></script>
+    <script src="/static/js/app.js?v=20260404-micro2"></script>
   </body>
 </html>

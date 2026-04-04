@@ -19,13 +19,13 @@
     <meta property="og:description" content="{{ meta_description }}" />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="{{ canonical_url }}" />
-    <meta property="og:image" content="https://inboxguard.me/static/logo.svg" />
+    <meta property="og:image" content="https://inboxguard.me/static/thumbnail-1200x630.png" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="{{ page_title }}" />
     <meta name="twitter:description" content="{{ meta_description }}" />
-    <meta name="twitter:image" content="https://inboxguard.me/static/logo.svg" />
-    <link rel="icon" type="image/svg+xml" href="/static/logo.svg" />
-    <link rel="apple-touch-icon" href="/static/logo.svg" />
+    <meta name="twitter:image" content="https://inboxguard.me/static/thumbnail-1200x630.png" />
+    <link rel="icon" href="/static/favicon-48.png" type="image/png" sizes="48x48" />
+    <link rel="icon" href="/static/favicon.svg" type="image/svg+xml" sizes="any" />
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -35,9 +35,14 @@
   <body class="bg-ink text-slate-100 min-h-screen antialiased">
     <main class="mx-auto max-w-3xl px-5 py-10 md:py-14">
       <div class="mb-10 flex items-center justify-between border-b border-slate-800/70 pb-4">
-        <a href="/" style="display:flex;align-items:center;gap:8px;text-decoration:none;color:inherit;">
-          <img src="/static/logo.svg" width="28" height="28" alt="InboxGuard" />
-          <span style="font-weight:600;font-size:16px">InboxGuard</span>
+        <a href="/" class="logo-wrap no-underline">
+          <svg class="logo-svg" viewBox="0 0 32 32" aria-hidden="true">
+            <path d="M16 3 L26 8 L26 16 C26 22 22 27 16 29 C10 27 6 22 6 16 L6 8 Z" fill="none" stroke="#3B82F6" stroke-width="2"></path>
+            <rect x="10" y="11" width="12" height="8" rx="1.5" fill="none" stroke="#93C5FD" stroke-width="1.8"></rect>
+            <path d="M10.8 12 L16 15.8 L21.2 12" fill="none" stroke="#93C5FD" stroke-width="1.4"></path>
+            <path d="M21 22.5 l2 2 l4 -4" fill="none" stroke="#22C55E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+          </svg>
+          <span class="logo-text">INBOXGUARD</span>
         </a>
       </div>
 

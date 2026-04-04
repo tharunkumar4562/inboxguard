@@ -229,7 +229,7 @@ nav {
 }
 
 .nav-group-label {
-    margin: 8px 6px 0;
+    margin: 8px 8px 0;
     color: #64748b;
     font-size: 0.72rem;
     font-weight: 700;
@@ -291,8 +291,8 @@ nav {
 
 .tool-nav-btn.active {
     border-color: #3b82f6;
-    background: rgba(59, 130, 246, 0.14);
     color: #bfdbfe;
+    background: rgba(59, 130, 246, 0.16);
 }
 
 .nav-item span {
@@ -309,7 +309,13 @@ nav {
 
 .main-area {
     padding: 22px;
-    position: relative;
+}
+
+.tool-workspace-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(2, 6, 23, 0.62);
+    z-index: 65;
 }
 
 .tool-pane {
@@ -319,26 +325,38 @@ nav {
 .tool-pane.active {
     display: block;
     position: fixed;
-    top: 82px;
-    right: 20px;
-    width: min(420px, calc(100vw - 36px));
-    max-height: calc(100vh - 102px);
+    top: 66px;
+    left: calc(278px + ((100vw - 298px) - min(1024px, (100vw - 298px))) / 2);
+    width: min(1024px, calc(100vw - 298px));
+    right: auto;
+    bottom: 20px;
+    z-index: 70;
     overflow: auto;
-    z-index: 35;
     margin-top: 0 !important;
-    box-shadow: 0 18px 40px rgba(2, 6, 23, 0.55);
-    border-color: #334155;
-    background: #0f1a2f;
+    border: 1px solid #334155;
+    border-radius: 16px;
+    background: #0f1d33;
+    box-shadow: 0 24px 48px rgba(2, 6, 23, 0.55);
 }
 
-.tool-pane.active .micro {
-    color: #93a7bf;
+.tool-pane-close {
+    position: sticky;
+    top: 0;
+    margin-left: auto;
+    display: inline-flex;
+    border: 1px solid #334155;
+    background: #0f172a;
+    color: #cbd5e1;
+    border-radius: 999px;
+    padding: 6px 12px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+    z-index: 2;
 }
 
-.tool-links.active {
-    gap: 10px;
-    align-items: center;
-    justify-content: flex-start;
+.tool-pane-close:hover {
+    background: #16243d;
 }
 
 .profile-shell {
@@ -1410,10 +1428,10 @@ select {
     }
 
     .tool-pane.active {
-        position: static;
-        width: 100%;
-        max-height: none;
-        margin-top: 12px !important;
+        left: 12px;
+        right: 12px;
+        top: 14px;
+        bottom: 14px;
     }
 }
 
