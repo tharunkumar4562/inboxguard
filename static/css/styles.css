@@ -20,35 +20,46 @@
     }
 }
 
-/* Modal Styles */
-.modal {
+/* Pricing Modal */
+#pricing-modal.modal-overlay {
     position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.7);
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(6px);
     display: flex;
-    justify-content: center;
     align-items: center;
+    justify-content: center;
     z-index: 9999;
+    padding: 20px;
 }
 
-.modal.hidden {
-    display: none;
-}
-
-.modal-content {
+#pricing-modal .modal-card {
+    width: 100%;
+    max-width: 420px;
+    max-height: 90vh;
+    overflow-y: auto;
     background: #0f172a;
-    padding: 30px;
-    border-radius: 12px;
-    width: 400px;
-    color: white;
-    text-align: center;
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+    animation: modalIn 0.25s ease;
     position: relative;
+    text-align: center;
 }
 
-.modal-close {
+@keyframes modalIn {
+    from {
+        opacity: 0;
+        transform: scale(0.95) translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+#pricing-modal .modal-close {
     position: absolute;
     top: 10px;
     right: 10px;
@@ -60,20 +71,44 @@
     padding: 0 5px;
 }
 
-.modal-close:hover {
+#pricing-modal .modal-close:hover {
     color: #e5e7eb;
 }
 
-.modal-content h2 {
+#pricing-modal .modal-card h2 {
     margin: 0 0 15px 0;
     font-size: 24px;
 }
 
-.modal-content .price {
+#pricing-modal .modal-card .price {
     font-size: 28px;
     color: #22c55e;
     margin: 10px 0 20px 0;
     font-weight: bold;
+}
+
+#pricing-modal .modal-card .pricing-features {
+    list-style: none;
+    padding: 0;
+    margin: 20px 0;
+    text-align: left;
+}
+
+#pricing-modal .modal-card .pricing-features li {
+    padding: 8px 0;
+    border-bottom: 1px solid #1f2937;
+    color: #e5e7eb;
+}
+
+#pricing-modal .modal-card .pricing-features li:last-child {
+    border-bottom: none;
+}
+
+#pricing-modal .modal-card .pricing-note {
+    margin: -12px 0 16px 0;
+    color: #94a3b8;
+    font-size: 0.92rem;
+    line-height: 1.45;
 }
 
 .pricing-note {

@@ -1590,6 +1590,32 @@ def _get_session_user(request: Request):
     }
 
 
+def _build_me_payload(request: Request) -> dict[str, Any]:
+    user = _get_session_user(request)
+    if not user:
+        return {"user": None}
+
+    usage = _get_usage(int(user["id"]))
+    plan = "pro" if bool(user.get("pro", False)) and str(user.get("status", "inactive")).lower() == "active" else "free"
+    remaining_credits = max(FREE_USER_SCAN_LIMIT - int(usage.get("scans_used", 0)), 0)
+
+    return {
+        "user": {
+            "id": int(user["id"]),
+            "email": user["email"],
+            "name": user["name"] or _display_name_from_email(user["email"]),
+            "avatar_url": user["picture"] or _avatar_url_for_email(user["email"]),
+            "plan": plan,
+            "credits": None if plan == "pro" else remaining_credits,
+            "credits_label": "Unlimited" if plan == "pro" else str(remaining_credits),
+            "unlimited": plan == "pro",
+            "status": str(user.get("status", "inactive")),
+            "subscription_id": str(user.get("subscription_id", "")),
+            "usage": usage,
+        }
+    }
+
+
 def _display_name_from_email(email: str) -> str:
     local = (email or "").split("@", 1)[0].replace(".", " ").replace("_", " ").strip()
     if not local:
@@ -1628,10 +1654,12 @@ def _auth_status_payload(request: Request) -> dict:
         "pro": False,
         "status": "inactive",
         "subscription_id": "",
+        "plan": "free",
     }
     if user:
         usage = _get_usage(user["id"])
         is_pro = bool(user.get("pro", False))
+        plan = "pro" if is_pro and str(user.get("status", "inactive")).lower() == "active" else "free"
         payload.update(
             {
                 "user_scans_used": usage["scans_used"],
@@ -1641,6 +1669,7 @@ def _auth_status_payload(request: Request) -> dict:
                 "pro": is_pro,
                 "status": str(user.get("status", "inactive")),
                 "subscription_id": str(user.get("subscription_id", "")),
+                "plan": plan,
             }
         )
     return payload
@@ -1969,6 +1998,11 @@ async def razorpay_webhook(request: Request, x_razorpay_signature: str | None = 
 @app.get("/auth/status")
 def auth_status(request: Request):
     return _auth_status_payload(request)
+
+
+@app.get("/me")
+def me(request: Request):
+    return _build_me_payload(request)
 
 
 @app.get("/config")
@@ -2821,7 +2855,7 @@ def _run_analysis_request(
     else:
         anon_used = _get_anon_scans_used(request)
         if anon_used >= ANON_SCAN_LIMIT:
-            raise HTTPException(status_code=401, detail="AUTH_REQUIRED")
+            raise HTTPException(status_code=402, detail="FREE_PLAN_LIMIT_REACHED")
 
     track_event("analyze_request", {"mode": mode, "auth": "user" if user else "anon"})
 

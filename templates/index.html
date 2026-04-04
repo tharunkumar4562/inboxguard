@@ -107,10 +107,10 @@
           </div>
         </header>
         
-        <div id="pricing-modal" class="modal hidden">
-          <div class="modal-content">
-            <button class="modal-close" onclick="closePricingModal()">×</button>
-            <h2>Stop guessing before you send</h2>
+        <div id="pricing-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="pricing-modal-title" onclick="closePricingModal()">
+          <div class="modal-card" onclick="event.stopPropagation()">
+            <button class="modal-close" type="button" onclick="closePricingModal()">×</button>
+            <h2 id="pricing-modal-title">Stop guessing before you send</h2>
             <p class="pricing-note">Most emails do not fail because of infra. They fail because of small mistakes that show up at scale.</p>
             <p class="pricing-note">InboxGuard catches that before you hit send.</p>
             <p class="price">$12 / month</p>
