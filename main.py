@@ -29,7 +29,15 @@ from authlib.integrations.starlette_client import OAuth
 
 from analyzer import analyze_email
 from analytics import get_dashboard_data, track_event
-from correction_engine import get_learning_profile, record_feedback, rewrite_email_text
+from correction_engine import (
+    build_style_variants_with_guard,
+    enforce_rewrite_constraints,
+    extract_rewrite_intent,
+    generate_mode_candidate,
+    get_learning_profile,
+    record_feedback,
+    rewrite_email_text,
+)
 from utils import build_email_from_raw, extract_domain_from_text
 
 app = FastAPI(title="InboxGuard")
@@ -3357,39 +3365,138 @@ def rewrite_email(
     email_intent = str(before_summary.get("email_type", "cold outreach"))
 
     before_score = int(before_summary.get("final_score", before_summary.get("score", 0)))
-    style_variants = {
-        "safe": rewrite_email_text(original, issue_titles, intent_type=email_intent, rewrite_style="safe"),
-        "balanced": rewrite_email_text(original, issue_titles, intent_type=email_intent, rewrite_style="balanced"),
-        "aggressive": rewrite_email_text(original, issue_titles, intent_type=email_intent, rewrite_style="aggressive"),
-    }
-
-    rewritten = style_variants.get(style, "")
-    if len(rewritten.strip()) < 20:
-        rewritten = original
-
-    after = analyze_email(rewritten, clean_domain, rewritten, mode)
-    after_summary = after.get("summary", {})
-    after_score = int(after_summary.get("final_score", after_summary.get("score", 0)))
-
-    score_delta = after_score - before_score
-
     from_band = str(before_summary.get("risk_band", "Needs Review"))
-    to_band = str(after_summary.get("risk_band", "Needs Review"))
 
-    rewrite_outcome = _rewrite_outcome(style, from_band, to_band, score_delta)
-    if _contains_risky_tokens(rewritten):
-        rewrite_outcome = "failed_fix"
+    intent_profile = extract_rewrite_intent(original, intent_type=email_intent)
+    style_variants = build_style_variants_with_guard(original, issue_titles, email_intent)
 
-    other_styles = [name for name in ("safe", "balanced", "aggressive") if name != style]
+    selected_style = style
+    rewritten = ""
+    after_summary: dict[str, Any] = {}
+    after_score = before_score
+    score_delta = 0
+    to_band = from_band
+    rewrite_outcome = "neutral"
+    collapse_detected = False
+    validation_attempts: list[dict[str, Any]] = []
+
+    strategy_order = [style]
+    if style != "aggressive":
+        strategy_order.append("aggressive")
+
+    best_candidate: dict[str, Any] | None = None
+
+    for strategy in strategy_order:
+        for attempt in range(1, 4):
+            candidate = (
+                style_variants.get(strategy, "")
+                if attempt == 1
+                else generate_mode_candidate(intent_profile, strategy, original, issue_titles, attempt=attempt)
+            )
+
+            constraint_eval = enforce_rewrite_constraints(candidate, strategy)
+            constrained_text = str(constraint_eval.get("text", "")).strip()
+            constraint_valid = bool(constraint_eval.get("valid", False))
+            constraint_reasons = constraint_eval.get("reasons", [])
+
+            if len(constrained_text) < 20:
+                validation_attempts.append(
+                    {
+                        "style": strategy,
+                        "attempt": attempt,
+                        "accepted": False,
+                        "reason": "too_short",
+                    }
+                )
+                continue
+
+            analyzed = analyze_email(constrained_text, clean_domain, constrained_text, mode)
+            summary = analyzed.get("summary", {})
+            candidate_score = int(summary.get("final_score", summary.get("score", 0)) or 0)
+            candidate_band = str(summary.get("risk_band", "Needs Review"))
+            candidate_delta = candidate_score - before_score
+
+            hard_fail = _contains_risky_tokens(constrained_text) or not constraint_valid
+            accepted = (not hard_fail) and _style_acceptance(strategy, from_band, candidate_band, candidate_delta)
+
+            attempt_row = {
+                "style": strategy,
+                "attempt": attempt,
+                "accepted": accepted,
+                "score": candidate_score,
+                "risk_band": candidate_band,
+                "score_delta": candidate_delta,
+                "constraint_valid": constraint_valid,
+                "constraint_reasons": constraint_reasons,
+            }
+            validation_attempts.append(attempt_row)
+
+            if not hard_fail:
+                if best_candidate is None:
+                    best_candidate = {
+                        "style": strategy,
+                        "text": constrained_text,
+                        "summary": summary,
+                        "score": candidate_score,
+                        "band": candidate_band,
+                        "delta": candidate_delta,
+                    }
+                else:
+                    current_rank = _risk_rank(candidate_band)
+                    best_rank = _risk_rank(str(best_candidate.get("band", from_band)))
+                    if current_rank < best_rank or (current_rank == best_rank and candidate_score > int(best_candidate.get("score", 0))):
+                        best_candidate = {
+                            "style": strategy,
+                            "text": constrained_text,
+                            "summary": summary,
+                            "score": candidate_score,
+                            "band": candidate_band,
+                            "delta": candidate_delta,
+                        }
+
+            if accepted:
+                selected_style = strategy
+                rewritten = constrained_text
+                after_summary = summary
+                after_score = candidate_score
+                score_delta = candidate_delta
+                to_band = candidate_band
+                rewrite_outcome = _rewrite_outcome(strategy, from_band, candidate_band, candidate_delta)
+                break
+
+        if rewritten:
+            break
+
+    if not rewritten:
+        if best_candidate:
+            selected_style = str(best_candidate.get("style", style))
+            rewritten = str(best_candidate.get("text", original))
+            after_summary = dict(best_candidate.get("summary", {}))
+            after_score = int(best_candidate.get("score", before_score))
+            score_delta = int(best_candidate.get("delta", 0))
+            to_band = str(best_candidate.get("band", from_band))
+            rewrite_outcome = "neutral"
+        else:
+            rewritten = original
+            after_summary = before_summary
+            after_score = before_score
+            score_delta = 0
+            to_band = from_band
+            rewrite_outcome = "failed_fix"
+
+    other_styles = [name for name in ("safe", "balanced", "aggressive") if name != selected_style]
     collapse_detected = any(
         _similarity_ratio(rewritten, style_variants.get(name, "")) > 0.82 for name in other_styles
     )
-    if collapse_detected and rewrite_outcome != "failed_fix":
+    if collapse_detected and rewrite_outcome not in {"failed_fix", "improved"}:
         rewrite_outcome = "neutral"
+
+    if _contains_risky_tokens(rewritten):
+        rewrite_outcome = "failed_fix"
 
     logger.info(
         "Rewrite mode=%s from_band=%s to_band=%s score_delta=%s",
-        style,
+        selected_style,
         from_band,
         to_band,
         score_delta,
@@ -3399,7 +3506,7 @@ def rewrite_email(
         "rewrite_request",
         {
             "mode": mode,
-            "rewrite_style": style,
+            "rewrite_style": selected_style,
             "score_delta": score_delta,
             "from_risk_band": from_band,
             "to_risk_band": to_band,
@@ -3408,13 +3515,14 @@ def rewrite_email(
     )
 
     rewrite_changes = _summarize_rewrite_changes(original, rewritten, issue_titles)
-    rewrite_changes.insert(0, f"Mode applied: {style.title()}.")
+    rewrite_changes.insert(0, f"Mode applied: {selected_style.title()}.")
     if rewrite_outcome == "neutral":
         rewrite_changes.insert(1, "No major risk shift detected, but bulk-style patterns were still reduced.")
     elif rewrite_outcome == "failed_fix":
         rewrite_changes.insert(1, "Could not safely remove all risky pressure signals without changing message intent.")
 
     limitations = _rewrite_limitations(mode, score_delta, from_band, to_band)
+    limitations.insert(0, "Rewrite engine uses intent extraction + constraints + up to 3 validation retries per strategy.")
     if collapse_detected:
         limitations.insert(0, "Rewrite styles were too similar for this draft; selected mode may need manual refinement.")
     if rewrite_outcome == "failed_fix":
@@ -3428,7 +3536,8 @@ def rewrite_email(
         "ok": True,
         "original_text": original,
         "rewritten_text": rewritten,
-        "rewrite_style": style,
+        "rewrite_style": selected_style,
+        "requested_rewrite_style": style,
         "from_risk_band": from_band,
         "to_risk_band": to_band,
         "from_score": before_score,
@@ -3443,6 +3552,8 @@ def rewrite_email(
         "rewritten_subject": rewritten_subject,
         "rewritten_body": rewritten_body,
         "subject_changed": subject_changed,
+        "intent": intent_profile,
+        "validation_attempts": validation_attempts,
         "learning_profile": get_learning_profile(),
         "before_summary": before_summary,
         "after_summary": after_summary,

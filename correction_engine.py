@@ -2,8 +2,9 @@ import json
 import re
 import threading
 from datetime import datetime, timezone
+from difflib import SequenceMatcher
 from pathlib import Path
-from typing import Dict, List
+from typing import Any, Dict, List
 
 BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR / "data"
@@ -19,6 +20,12 @@ SPAM_LINE_PATTERNS = [
     r"\blimited\s+time\b",
     r"\burgent\b",
     r"\bact\s+now\b",
+]
+
+BLOCKED_REWRITE_PHRASES = [
+    "apply now",
+    "limited time",
+    "click here",
 ]
 
 
@@ -821,3 +828,186 @@ def rewrite_email_text(
         final_text = f"Subject: {sanitized_subject}\n\n{final_text}"
 
     return final_text
+
+
+def extract_rewrite_intent(original_text: str, intent_type: str = "") -> Dict[str, str]:
+    parsed = _extract_subject_and_body(original_text or "")
+    subject = parsed.get("subject", "")
+    body = parsed.get("body", "")
+    low = f"{subject}\n{body}".lower()
+
+    normalized_type = (intent_type or "").strip().lower()
+    if any(token in low for token in ["loan", "funding", "repayment", "study abroad"]):
+        intent_label = "education loan"
+    elif any(token in low for token in ["hackathon", "internship", "student"]):
+        intent_label = "student outreach"
+    elif any(token in low for token in ["saas", "product", "platform", "workflow"]):
+        intent_label = "saas outreach"
+    elif normalized_type:
+        intent_label = normalized_type
+    else:
+        intent_label = "outreach"
+
+    goal = "get reply"
+    if re.search(r"\b(apply|register|enroll)\b", low):
+        goal = "get user to apply"
+    elif re.search(r"\b(book|schedule|chat|call|reply)\b", low):
+        goal = "get user to reply"
+    elif re.search(r"\b(click|visit|view|check out)\b", low):
+        goal = "get user to click"
+
+    value_line = _extract_core_value(body)
+    value_line = _normalize_line(value_line)
+    if not value_line:
+        value_line = f"A relevant update related to {_derive_context_hint(original_text)}."
+
+    return {
+        "type": intent_label,
+        "goal": goal,
+        "value": value_line,
+        "audience": _extract_audience_hint(original_text),
+        "anchor": _extract_offer_anchor(subject, _extract_body_lines(body), _derive_context_hint(original_text)),
+    }
+
+
+def _contains_bullets(text: str) -> bool:
+    return bool(re.search(r"(?m)^\s*[-*•]\s+", text or ""))
+
+
+def _remove_all_bullets(text: str) -> str:
+    lines = (text or "").splitlines()
+    cleaned = [re.sub(r"^\s*[-*•]\s+", "", line).strip() for line in lines]
+    return "\n".join([line for line in cleaned if line]).strip()
+
+
+def _contains_blocked_phrase(text: str) -> bool:
+    low = (text or "").lower()
+    return any(phrase in low for phrase in BLOCKED_REWRITE_PHRASES)
+
+
+def _strip_blocked_phrases(text: str) -> str:
+    out = text or ""
+    for phrase in BLOCKED_REWRITE_PHRASES:
+        out = re.sub(rf"(?i)\b{re.escape(phrase)}\b", "", out)
+    return _sanitize_rewrite_text(out)
+
+
+def _ensure_conversational_question(text: str) -> str:
+    compact = (text or "").strip()
+    if not compact:
+        return compact
+    if "?" in compact:
+        return compact
+
+    lines = [line.strip() for line in compact.splitlines() if line.strip()]
+    question = "Open to a quick chat?"
+    if lines and re.match(r"^(hey|hi|hello|dear)\b", lines[0], flags=re.IGNORECASE):
+        lines.append(question)
+        return "\n\n".join(lines)
+    return f"{compact}\n\n{question}"
+
+
+def enforce_rewrite_constraints(text: str, style: str) -> Dict[str, Any]:
+    cleaned = _sanitize_rewrite_text(text or "")
+    if _contains_bullets(cleaned):
+        cleaned = _remove_all_bullets(cleaned)
+
+    cleaned = _strip_blocked_phrases(cleaned)
+    cleaned = _ensure_conversational_question(cleaned)
+
+    max_words = 140
+    if style == "aggressive":
+        max_words = 60
+    elif style == "balanced":
+        max_words = 90
+
+    words = cleaned.split()
+    if len(words) > max_words:
+        cleaned = " ".join(words[:max_words]).strip()
+        if not cleaned.endswith((".", "?", "!")):
+            cleaned += "?" if style == "aggressive" else "."
+
+    valid = True
+    reasons: List[str] = []
+    if _contains_blocked_phrase(cleaned):
+        valid = False
+        reasons.append("blocked_phrase")
+    if style == "aggressive" and len(cleaned.split()) > 60:
+        valid = False
+        reasons.append("aggressive_word_limit")
+    if "?" not in cleaned:
+        valid = False
+        reasons.append("missing_question")
+
+    return {"text": cleaned, "valid": valid, "reasons": reasons}
+
+
+def generate_mode_candidate(intent: Dict[str, str], style: str, original_text: str, detected_issues: List[str] | None = None, attempt: int = 1) -> str:
+    # Safe mode keeps more source structure; balanced/aggressive are intent-first templates.
+    if style == "safe":
+        return rewrite_email_text(
+            original_text,
+            detected_issues=detected_issues,
+            intent_type=intent.get("type", "outreach"),
+            rewrite_style="safe",
+        )
+
+    if style == "balanced":
+        value = intent.get("value", "Thought this might be relevant.")
+        audience = intent.get("audience", "teams")
+        soft_tail = "Open to a quick chat?" if attempt <= 1 else "Would it help if I shared a quick version?"
+        return _sanitize_rewrite_text(
+            "\n".join(
+                [
+                    "Hey {{first_name}},",
+                    "",
+                    f"Quick note for {audience}.",
+                    value,
+                    "Thought this might be relevant.",
+                    soft_tail,
+                ]
+            )
+        )
+
+    question = _extract_pain_point(original_text)
+    audience = intent.get("audience", "teams")
+    anchor = intent.get("anchor", intent.get("type", "this area"))
+    tail = "Worth a quick look?" if attempt <= 1 else "Want me to send the quick version?"
+    return _sanitize_rewrite_text(
+        "\n".join(
+            [
+                "Hey {{first_name}},",
+                "",
+                f"Quick question - {question}",
+                f"We've been helping {audience} with {anchor} recently.",
+                tail,
+            ]
+        )
+    )
+
+
+def style_similarity(a: str, b: str) -> float:
+    return SequenceMatcher(None, a or "", b or "").ratio()
+
+
+def build_style_variants_with_guard(original_text: str, detected_issues: List[str] | None, intent_type: str) -> Dict[str, str]:
+    intent = extract_rewrite_intent(original_text, intent_type=intent_type)
+    variants = {
+        "safe": enforce_rewrite_constraints(generate_mode_candidate(intent, "safe", original_text, detected_issues, attempt=1), "safe")["text"],
+        "balanced": enforce_rewrite_constraints(generate_mode_candidate(intent, "balanced", original_text, detected_issues, attempt=1), "balanced")["text"],
+        "aggressive": enforce_rewrite_constraints(generate_mode_candidate(intent, "aggressive", original_text, detected_issues, attempt=1), "aggressive")["text"],
+    }
+
+    if style_similarity(variants["safe"], variants["balanced"]) > 0.8:
+        variants["balanced"] = enforce_rewrite_constraints(
+            generate_mode_candidate(intent, "balanced", original_text, detected_issues, attempt=2),
+            "balanced",
+        )["text"]
+
+    if style_similarity(variants["balanced"], variants["aggressive"]) > 0.6:
+        variants["aggressive"] = enforce_rewrite_constraints(
+            generate_mode_candidate(intent, "aggressive", original_text, detected_issues, attempt=2),
+            "aggressive",
+        )["text"]
+
+    return variants
