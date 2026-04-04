@@ -309,6 +309,8 @@ nav {
 
 .main-area {
     padding: 22px;
+    position: relative;
+    overflow: hidden;
 }
 
 .tool-workspace-backdrop {
@@ -317,16 +319,25 @@ nav {
 
 .tool-pane {
     display: none;
-    position: relative;
-    width: 100%;
-    margin-top: 12px !important;
+    position: absolute;
+    top: 74px;
+    right: 22px;
+    left: 22px;
+    bottom: 18px;
+    overflow-y: auto;
+    margin-top: 0 !important;
     border: 1px solid rgba(148, 163, 184, 0.26);
     background: #0b1220;
     box-shadow: 0 18px 40px rgba(0, 0, 0, 0.32);
+    z-index: 35;
 }
 
 .tool-pane.active {
     display: block;
+}
+
+.main-area.tool-panel-open> :not(.topbar):not(.tool-pane):not(#pricing-modal) {
+    display: none !important;
 }
 
 .tool-pane-head {
@@ -1440,7 +1451,10 @@ select {
     }
 
     .tool-pane.active {
-        width: 100%;
+        top: 12px;
+        right: 12px;
+        left: 12px;
+        bottom: 12px;
     }
 }
 

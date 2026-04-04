@@ -683,10 +683,14 @@ I noticed your recent post and had one short idea to improve reply rates."></tex
         const buttons = Array.from(document.querySelectorAll('.tool-nav-btn'));
         const panes = Array.from(document.querySelectorAll('.tool-pane'));
         const closeButtons = Array.from(document.querySelectorAll('[data-tool-close]'));
+        const mainArea = document.querySelector('.main-area');
 
         function closePanes() {
           panes.forEach((pane) => pane.classList.remove('active'));
           buttons.forEach((btn) => btn.classList.remove('active'));
+          if (mainArea) {
+            mainArea.classList.remove('tool-panel-open');
+          }
         }
 
         function openPane(key) {
@@ -699,10 +703,12 @@ I noticed your recent post and had one short idea to improve reply rates."></tex
           }
           pane.classList.add('active');
           btn.classList.add('active');
+          if (mainArea) {
+            mainArea.classList.add('tool-panel-open');
+          }
           if (typeof window.igOnToolPaneOpened === 'function') {
             window.igOnToolPaneOpened(key, pane);
           }
-          pane.scrollIntoView({ behavior: 'smooth', block: 'start' });
           const firstInput = pane.querySelector('input,select,textarea,button');
           if (firstInput && typeof firstInput.focus === 'function') {
             setTimeout(() => firstInput.focus(), 60);
@@ -735,6 +741,6 @@ I noticed your recent post and had one short idea to improve reply rates."></tex
       })();
     </script>
 
-    <script src="/static/js/app.js?v=20260404-micro8"></script>
+    <script src="/static/js/app.js?v=20260404-micro9"></script>
   </body>
 </html>
