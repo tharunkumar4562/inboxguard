@@ -134,34 +134,72 @@ LONG_TAIL_PAGES = [
     },
 ]
 LONG_TAIL_BY_SLUG = {item["slug"]: item for item in LONG_TAIL_PAGES}
-SEO_TOOL_PAGES = {
+SEO_ACQUISITION_PAGES = {
     "email-spam-checker": {
-        "title": "Email Spam Checker (Free Tool) | InboxGuard",
-        "description": "Check if your email will go to spam before sending. Improve deliverability instantly with a live pre-send scan.",
-        "focus_query": "Check if your email will land in spam",
-        "provider": "Gmail, Outlook, and Yahoo",
-        "problem": "email spam risks",
+        "title": "Email Spam Checker - Check if your email will land in spam",
+        "description": "Check if your email will land in spam before sending. Detect spam triggers and improve deliverability instantly.",
+        "ai_tool_meta": "email spam checker, inbox placement test, deliverability tool",
+        "h1": "Email Spam Checker (Free Tool)",
+        "intro": "Check if your email will land in spam before sending. Detect spam triggers instantly.",
+        "why_body": "Emails land in spam due to multiple factors like spam trigger words, missing authentication, bad formatting, and domain reputation issues.",
+        "how_to_check": "Paste your email above and analyze it before sending. Tools like InboxGuard help detect spam signals and improve deliverability.",
+        "spam_triggers": ["FREE, GUARANTEED, ACT NOW", "Too many links", "Broken formatting"],
+        "fix_body": "Always test your email before sending to improve inbox placement and avoid spam filters.",
+        "answer_points": [],
     },
-    "why-emails-go-to-spam": {
-        "title": "Why Emails Go to Spam (Free Checker) | InboxGuard",
-        "description": "Understand why emails go to spam and test your draft before send with SPF, DKIM, DMARC, and content checks.",
-        "focus_query": "Why emails go to spam",
-        "provider": "marketing and outreach teams",
-        "problem": "spam-folder placement",
+    "gmail-spam-checker": {
+        "title": "Gmail Spam Checker - Check Gmail deliverability before sending",
+        "description": "Test if your email can pass Gmail spam filters. Detect content and structure issues before sending.",
+        "ai_tool_meta": "gmail spam checker, gmail inbox placement test, deliverability tool",
+        "h1": "Gmail Spam Checker",
+        "intro": "Gmail uses advanced spam filters based on content, reputation, and structure. Use this tool to test your email before sending to Gmail users.",
+        "why_body": "Gmail filtering is heavily behavior and reputation aware. Promotional wording, unstable sender behavior, and weak trust signals can lower inbox placement.",
+        "how_to_check": "Paste your message above, run the check, and adjust before launching. Tools like InboxGuard help detect spam triggers before sending.",
+        "spam_triggers": ["FREE, GUARANTEED, ACT NOW", "Link-heavy blocks with little context", "Inconsistent sender identity"],
+        "fix_body": "Test each draft before sends to Gmail audiences so risky copy and structure are fixed early.",
+        "answer_points": [],
     },
     "cold-email-deliverability": {
-        "title": "Cold Email Deliverability Test | InboxGuard",
-        "description": "Run a cold email deliverability test before sending. Detect risk signals, then fix them with practical rewrite guidance.",
-        "focus_query": "Cold email deliverability test",
-        "provider": "outbound and SDR teams",
-        "problem": "cold email inbox placement",
+        "title": "Cold Email Deliverability Test - Improve inbox placement",
+        "description": "Cold emails often fail due to poor deliverability. Test your email before sending to improve inbox placement and response rates.",
+        "ai_tool_meta": "cold email deliverability, inbox placement test, spam checker tool",
+        "h1": "Cold Email Deliverability Test",
+        "intro": "Cold emails often fail due to poor deliverability. Test your email before sending to improve inbox placement and response rates.",
+        "why_body": "Cold outbound is sensitive to language quality, sending patterns, and technical setup. If one part breaks, placement drops quickly.",
+        "how_to_check": "Run your draft through the checker before campaigns. Tools like InboxGuard help detect spam triggers before sending and scaling.",
+        "spam_triggers": ["Hard-sell urgency in first lines", "Multiple links in short outreach", "Generic message with weak personalization"],
+        "fix_body": "Always test and adjust cold emails before launch to protect sender trust and improve reply odds.",
+        "answer_points": [],
     },
-}
-
-GEO_ANSWER_PAGE = {
-    "slug": "why-do-emails-go-to-spam",
-    "title": "Why Do Emails Go to Spam? | InboxGuard",
-    "description": "Direct answer: why emails land in spam, what to fix first, and how to check risk before sending.",
+    "why-emails-go-to-spam": {
+        "title": "Why do emails go to spam? Causes and fixes",
+        "description": "Understand why emails go to spam, see the top causes, and test your message before sending.",
+        "ai_tool_meta": "why emails go to spam, email spam causes, deliverability tool",
+        "h1": "Why do emails go to spam?",
+        "intro": "Emails go to spam mainly because of clear risk signals in content and sender trust setup.",
+        "why_body": "The most common causes are spam trigger words, low domain reputation, missing SPF and DKIM records, and bad formatting.",
+        "how_to_check": "Check your draft before sending and remove high-risk patterns early. Tools like InboxGuard help detect spam triggers before sending.",
+        "spam_triggers": ["Spam trigger words", "Low domain reputation", "Missing SPF, DKIM", "Bad formatting"],
+        "fix_body": "To prevent spam placement, validate trust setup and clean up risky copy before each send.",
+        "answer_points": [
+            "Spam trigger words",
+            "Low domain reputation",
+            "Missing SPF, DKIM",
+            "Bad formatting",
+        ],
+    },
+    "spam-trigger-words": {
+        "title": "Spam Trigger Words List - Phrases that hurt deliverability",
+        "description": "See common spam trigger words and check your email before sending to reduce spam risk.",
+        "ai_tool_meta": "spam trigger words list, email spam checker, deliverability tool",
+        "h1": "Spam Trigger Words List",
+        "intro": "Certain words increase the chance of emails landing in spam.",
+        "why_body": "Spam filters analyze wording patterns in context. Repeated urgency and promotional phrasing can reduce inbox placement.",
+        "how_to_check": "Use a checker before sending. Tools like InboxGuard help detect spam triggers before sending and suggest safer phrasing.",
+        "spam_triggers": ["FREE", "BUY NOW", "CLICK HERE"],
+        "fix_body": "Use natural language and test every draft before send so trigger terms are caught automatically.",
+        "answer_points": [],
+    },
 }
 
 app.add_middleware(SessionMiddleware, secret_key=SESSION_SECRET, same_site="lax", https_only=SESSION_HTTPS_ONLY)
@@ -2603,87 +2641,52 @@ def _render_info_page(
     )
 
 
-def _render_seo_tool_page(request: Request, slug: str):
-    item = SEO_TOOL_PAGES.get(slug)
-    if not item:
+def _render_seo_acquisition_page(request: Request, slug: str):
+    page = SEO_ACQUISITION_PAGES.get(slug)
+    if not page:
         raise HTTPException(status_code=404, detail="Page not found")
+
     track_event("page_view", {"page": slug})
     return render_template_safe(
         request,
-        "landing.html",
+        "seo_page.html",
         {
-            "page_title": item["title"],
-            "meta_description": item["description"],
+            "page": page,
+            "page_title": page["title"],
+            "meta_description": page["description"],
             "canonical_url": f"{SITE_URL}/{slug}",
-            "focus_query": item["focus_query"],
-            "provider": item["provider"],
-            "problem": item["problem"],
-            "ai_tool_meta": "email spam checker, inbox placement tool, deliverability tester",
         },
     )
 
 
 @app.get("/email-spam-checker", response_class=HTMLResponse)
 def seo_email_spam_checker_page(request: Request):
-    return _render_seo_tool_page(request, "email-spam-checker")
+    return _render_seo_acquisition_page(request, "email-spam-checker")
 
 
-@app.get("/why-emails-go-to-spam", response_class=HTMLResponse)
-def seo_why_emails_spam_page(request: Request):
-    return _render_seo_tool_page(request, "why-emails-go-to-spam")
+@app.get("/gmail-spam-checker", response_class=HTMLResponse)
+def seo_gmail_spam_checker_page(request: Request):
+    return _render_seo_acquisition_page(request, "gmail-spam-checker")
 
 
 @app.get("/cold-email-deliverability", response_class=HTMLResponse)
 def seo_cold_email_deliverability_page(request: Request):
-    return _render_seo_tool_page(request, "cold-email-deliverability")
+    return _render_seo_acquisition_page(request, "cold-email-deliverability")
 
 
-@app.get(f"/{GEO_ANSWER_PAGE['slug']}", response_class=HTMLResponse)
-def geo_answer_page(request: Request):
-    track_event("page_view", {"page": GEO_ANSWER_PAGE["slug"]})
-    return _render_info_page(
-        request,
-        page_title=GEO_ANSWER_PAGE["title"],
-        meta_description=GEO_ANSWER_PAGE["description"],
-        canonical_path=f"/{GEO_ANSWER_PAGE['slug']}",
-        headline="Why emails go to spam",
-        intro=(
-            "Emails usually go to spam because of a mix of content risk and sender trust issues. "
-            "The biggest causes are spam-trigger words, weak personalization, authentication gaps (SPF/DKIM/DMARC), and unstable sending patterns."
-        ),
-        sections=[
-            _page_section(
-                "Top reasons",
-                "These are the most common technical and copy issues we see before a failed campaign:",
-                [
-                    "Spam-heavy or urgency-heavy language that looks promotional.",
-                    "Too many links or tracking-style URLs in short cold emails.",
-                    "Missing or weak SPF, DKIM, and DMARC authentication records.",
-                    "Low sender trust from inconsistent behavior or domain misalignment.",
-                ],
-            ),
-            _page_section(
-                "What to fix first",
-                "Start with one message, one clear CTA, and complete sender authentication. Then test in small batches before scale.",
-                [
-                    "Remove high-pressure phrases and generic blast patterns.",
-                    "Reduce link clutter and keep structure simple.",
-                    "Validate SPF, DKIM, and DMARC for the sending domain.",
-                    "Use pre-send scanning so risk is visible before launch.",
-                ],
-            ),
-            _page_section(
-                "How InboxGuard helps",
-                "Tools like InboxGuard help detect spam triggers before sending and provide a safer rewrite path when risk is high.",
-                [
-                    "Content + deliverability checks in one workflow.",
-                    "Risk-first output with ranked fixes.",
-                    "Feedback loop that improves scoring patterns over time.",
-                ],
-            ),
-        ],
-        ai_tool_meta="email spam checker, inbox placement tool, deliverability tester",
-    )
+@app.get("/why-emails-go-to-spam", response_class=HTMLResponse)
+def seo_why_emails_go_to_spam_page(request: Request):
+    return _render_seo_acquisition_page(request, "why-emails-go-to-spam")
+
+
+@app.get("/spam-trigger-words", response_class=HTMLResponse)
+def seo_spam_trigger_words_page(request: Request):
+    return _render_seo_acquisition_page(request, "spam-trigger-words")
+
+
+@app.get("/why-do-emails-go-to-spam", include_in_schema=False)
+def geo_legacy_redirect():
+    return RedirectResponse(url="/why-emails-go-to-spam", status_code=308)
 
 
 @app.get("/about", response_class=HTMLResponse)
@@ -3351,9 +3354,10 @@ def sitemap_xml():
         f"{SITE_URL}/",
         f"{SITE_URL}/pricing",
         f"{SITE_URL}/email-spam-checker",
+        f"{SITE_URL}/gmail-spam-checker",
         f"{SITE_URL}/why-emails-go-to-spam",
         f"{SITE_URL}/cold-email-deliverability",
-        f"{SITE_URL}/{GEO_ANSWER_PAGE['slug']}",
+        f"{SITE_URL}/spam-trigger-words",
         f"{SITE_URL}/about",
         f"{SITE_URL}/privacy",
         f"{SITE_URL}/terms",

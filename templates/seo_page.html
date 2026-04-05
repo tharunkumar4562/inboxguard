@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-WXGNG9TEFK"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag("js", new Date());
+      gtag("config", "G-WXGNG9TEFK");
+    </script>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{{ page.title }}</title>
+    <meta name="description" content="{{ page.description }}" />
+    <meta name="robots" content="index, follow" />
+    <meta name="ai-tool" content="{{ page.ai_tool_meta }}" />
+    <meta property="og:title" content="{{ page.h1 }}" />
+    <meta property="og:description" content="{{ page.description }}" />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="{{ canonical_url }}" />
+    <meta property="og:image" content="https://inboxguard.me/static/thumbnail-1200x630.png" />
+    <meta property="og:site_name" content="InboxGuard" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="{{ page.h1 }}" />
+    <meta name="twitter:description" content="{{ page.description }}" />
+    <meta name="twitter:image" content="https://inboxguard.me/static/thumbnail-1200x630.png" />
+    <link rel="canonical" href="{{ canonical_url }}" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/static/css/styles.css" />
+  </head>
+  <body class="bg-ink text-slate-100 min-h-screen antialiased">
+    <main class="relative overflow-hidden">
+      <div class="page-glow"></div>
+      <section class="mx-auto max-w-5xl px-5 py-8 md:py-10">
+        <header class="mb-8 flex items-center justify-between gap-4 border-b border-slate-800/70 pb-4">
+          <div class="logo-wrap">
+            <svg class="logo-svg" viewBox="0 0 32 32" aria-hidden="true">
+              <path d="M16 3 L26 8 L26 16 C26 22 22 27 16 29 C10 27 6 22 6 16 L6 8 Z" fill="none" stroke="#3B82F6" stroke-width="2"></path>
+              <rect x="10" y="11" width="12" height="8" rx="1.5" fill="none" stroke="#93C5FD" stroke-width="1.8"></rect>
+              <path d="M10.8 12 L16 15.8 L21.2 12" fill="none" stroke="#93C5FD" stroke-width="1.4"></path>
+              <path d="M21 22.5 l2 2 l4 -4" fill="none" stroke="#22C55E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+            </svg>
+            <span class="logo-text">INBOXGUARD</span>
+          </div>
+          <a href="/access" class="login-link">Unlock Safe Sending</a>
+        </header>
+
+        <h1 class="max-w-4xl text-4xl font-bold leading-tight md:text-6xl">{{ page.h1 }}</h1>
+        <p class="mt-4 max-w-3xl text-base text-slate-300 md:text-xl">{{ page.intro }}</p>
+        <p class="mt-3 max-w-3xl text-sm text-slate-300">
+          Most emails fail not because of content quality, but because of hidden spam triggers, poor structure, and domain issues.
+        </p>
+
+        <div id="tool" class="mt-8">
+          <section class="rounded-3xl border border-blue-500/35 bg-slate-900/70 p-6 shadow-2xl shadow-blue-950/30 md:p-8">
+            <form id="risk-form" class="space-y-4">
+              <input id="analysis-mode" name="analysis_mode" type="hidden" value="full" />
+              <p class="text-2xl font-bold uppercase tracking-[0.04em] text-slate-100">Paste your email (Ctrl + V)</p>
+              <p class="text-sm font-medium text-red-100/90">Most emails fail silently. Check before you send.</p>
+              <div id="paste-mode-wrap" class="space-y-3">
+                <div>
+                  <textarea id="raw-email" name="raw_email" rows="7" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" class="w-full rounded-2xl border border-slate-700 bg-slate-950/70 p-4 text-base text-slate-100 outline-none ring-0 transition focus:border-blue-500" placeholder="sender@example.com&#10;Subject: Your email subject&#10;&#10;Hi [Name],&#10;&#10;Your message starts here..."></textarea>
+                </div>
+                <p class="text-sm text-slate-300">Paste mode analyzes your raw email only.</p>
+                <div class="form-divider" aria-hidden="true">OR</div>
+                <button id="switch-to-manual" type="button" class="w-full text-left text-sm font-semibold text-blue-200 transition hover:text-blue-100">Enter details manually -&gt;</button>
+              </div>
+              <div id="manual-mode-wrap" class="hidden space-y-3">
+                <p class="structured-label">Manual mode</p>
+                <div>
+                  <label for="email-quick" class="mb-2 block text-sm text-slate-400">Subject</label>
+                  <input id="email-quick" name="email" type="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" class="w-full rounded-2xl border border-slate-700 bg-slate-950/70 p-4 text-sm text-slate-100 outline-none ring-0 transition focus:border-blue-500" placeholder="Subject line" />
+                </div>
+                <div>
+                  <label for="domain" class="mb-2 block text-sm text-slate-400">Domain</label>
+                  <input id="domain" name="domain" type="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" class="w-full rounded-2xl border border-slate-700 bg-slate-950/70 p-3 text-sm text-slate-100 outline-none transition focus:border-blue-500" placeholder="yourdomain.com" />
+                </div>
+                <div>
+                  <label for="manual-body" class="mb-2 block text-sm text-slate-400">Email body (optional)</label>
+                  <textarea id="manual-body" rows="4" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" class="w-full rounded-2xl border border-slate-700 bg-slate-950/70 p-3 text-sm text-slate-100 outline-none transition focus:border-blue-500" placeholder="Paste email body"></textarea>
+                </div>
+                <button id="switch-to-paste" type="button" class="w-full text-left text-sm font-semibold text-blue-200 transition hover:text-blue-100">Use paste mode instead -&gt;</button>
+              </div>
+              <p class="pt-2 text-sm text-slate-200">Takes 5 seconds. No setup needed.</p>
+              <button type="submit" id="run-check" class="my-3 w-full rounded-2xl bg-blue-600 px-6 py-4 text-lg font-bold text-white shadow-lg shadow-blue-900/40 transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60">
+                Check Deliverability Risk -&gt;
+              </button>
+              <p class="pb-3 text-center text-xs text-slate-400">No signup required • No data stored</p>
+            </form>
+          </section>
+        </div>
+
+        <section id="result" class="hidden mt-5 rounded-3xl border border-slate-700 bg-slate-900/85 p-6 shadow-2xl">
+          <p class="text-sm text-slate-300">Analysis complete. Scroll for prioritized issues and fixes.</p>
+        </section>
+
+        <section class="mt-10 space-y-8">
+          <article class="rounded-2xl border border-slate-800/80 bg-slate-900/40 p-5">
+            <h2 class="text-2xl font-semibold">Why emails go to spam</h2>
+            <p class="mt-2 text-slate-300">{{ page.why_body }}</p>
+            {% if page.answer_points %}
+            <ul class="mt-3 list-disc space-y-1 pl-6 text-slate-200">
+              {% for point in page.answer_points %}
+              <li>{{ point }}</li>
+              {% endfor %}
+            </ul>
+            {% endif %}
+          </article>
+
+          <article class="rounded-2xl border border-slate-800/80 bg-slate-900/40 p-5">
+            <h2 class="text-2xl font-semibold">How to check before sending</h2>
+            <p class="mt-2 text-slate-300">{{ page.how_to_check }}</p>
+          </article>
+
+          <article class="rounded-2xl border border-slate-800/80 bg-slate-900/40 p-5">
+            <h2 class="text-2xl font-semibold">Common spam triggers</h2>
+            <ul class="mt-3 list-disc space-y-1 pl-6 text-slate-200">
+              {% for trigger in page.spam_triggers %}
+              <li>{{ trigger }}</li>
+              {% endfor %}
+            </ul>
+          </article>
+
+          <article class="rounded-2xl border border-slate-800/80 bg-slate-900/40 p-5">
+            <h2 class="text-2xl font-semibold">Fix your email before sending</h2>
+            <p class="mt-2 text-slate-300">{{ page.fix_body }}</p>
+          </article>
+
+          <article class="rounded-2xl border border-blue-500/35 bg-gradient-to-r from-blue-600/20 to-indigo-600/20 p-5">
+            <h3 class="text-xl font-semibold">Related tools</h3>
+            <ul class="mt-3 list-disc space-y-1 pl-6 text-blue-100">
+              <li><a href="/email-spam-checker" class="hover:text-white">Email Spam Checker</a></li>
+              <li><a href="/cold-email-deliverability" class="hover:text-white">Cold Email Test</a></li>
+              <li><a href="/gmail-spam-checker" class="hover:text-white">Gmail Spam Checker</a></li>
+            </ul>
+            <div class="mt-4 border-t border-blue-300/30 pt-4">
+              <p class="text-sm text-slate-100">Want full ranked fixes and rewrite guidance?</p>
+              <a href="/pricing" class="mt-2 inline-flex rounded-xl bg-blue-600 px-4 py-2 font-semibold text-white transition hover:bg-blue-700">See plans and unlock full report</a>
+            </div>
+          </article>
+        </section>
+      </section>
+    </main>
+
+    <script src="/static/js/app.js"></script>
+  </body>
+</html>
