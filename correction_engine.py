@@ -1,4 +1,5 @@
 import json
+import os
 import re
 import threading
 from datetime import datetime, timezone
@@ -7,7 +8,7 @@ from pathlib import Path
 from typing import Any, Dict, List
 
 BASE_DIR = Path(__file__).resolve().parent
-DATA_DIR = BASE_DIR / "data"
+DATA_DIR = Path(os.getenv("INBOXGUARD_DATA_DIR", str(BASE_DIR / "data"))).expanduser()
 FEEDBACK_FILE = DATA_DIR / "rewrite_feedback.json"
 MODEL_FILE = DATA_DIR / "rewrite_model.json"
 _LOCK = threading.Lock()
@@ -48,6 +49,60 @@ def _default_feedback_payload() -> Dict:
     }
 
 
+def _extract_patterns(text: str) -> List[str]:
+    body = str(text or "")
+    low = body.lower()
+    patterns: List[str] = []
+    if "http://" in low or "https://" in low or "www." in low:
+        patterns.append("has_links")
+    if len(body.split()) < 60:
+        patterns.append("short_length")
+    if any(term in low for term in ("apply now", "click here", "book a demo", "schedule a call", "register now")):
+        patterns.append("aggressive_cta")
+    if "?" in body:
+        patterns.append("has_question")
+    if body.count("!") >= 3:
+        patterns.append("high_exclamation")
+    return patterns
+
+
+def _compute_pattern_weight(success: int, fail: int) -> int:
+    total = max(1, int(success) + int(fail))
+    score = ((int(success) - int(fail)) / total) * 6.0
+    return int(round(max(-6.0, min(6.0, score))))
+
+
+def _rebuild_model_from_events(events: List[Dict[str, Any]]) -> Dict[str, Any]:
+    model = _default_model()
+    pattern_stats: Dict[str, Dict[str, int]] = {}
+
+    for event in events:
+        outcome = str(event.get("outcome", "not_sure")).strip().lower()
+        if outcome not in {"inbox", "spam", "not_sure"}:
+            outcome = "not_sure"
+
+        model["total_feedback"] = int(model.get("total_feedback", 0)) + 1
+        model["sample_size"] = int(model.get("sample_size", 0)) + 1
+        model[outcome] = int(model.get(outcome, 0)) + 1
+
+        text = str(event.get("rewritten_text", "") or event.get("original_text", "") or "")
+        if not text:
+            continue
+
+        for pattern in _extract_patterns(text):
+            slot = pattern_stats.setdefault(pattern, {"success": 0, "fail": 0, "weight": 0})
+            if outcome == "inbox":
+                slot["success"] += 1
+            elif outcome == "spam":
+                slot["fail"] += 1
+
+    for pattern, slot in pattern_stats.items():
+        slot["weight"] = _compute_pattern_weight(slot.get("success", 0), slot.get("fail", 0))
+
+    model["patterns"] = pattern_stats
+    return model
+
+
 def _ensure_file(path: Path, payload: Dict) -> None:
     if path.exists():
         return
@@ -72,32 +127,6 @@ def _write_json(path: Path, payload: Dict) -> None:
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     payload["updated_at"] = datetime.now(timezone.utc).isoformat()
     path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
-
-
-def _extract_learning_patterns(text: str) -> List[str]:
-    body = str(text or "")
-    low = body.lower()
-    patterns: List[str] = []
-    if "http://" in low or "https://" in low or "www." in low:
-        patterns.append("has_links")
-    if len(body.split()) < 60:
-        patterns.append("short_length")
-    if any(term in low for term in ("apply now", "click here", "book a demo", "schedule a call", "register now")):
-        patterns.append("aggressive_cta")
-    if "?" in body:
-        patterns.append("has_question")
-    if body.count("!") >= 3:
-        patterns.append("high_exclamation")
-    return patterns
-
-
-def _recompute_pattern_weight(success: int, fail: int) -> int:
-    total = max(0, int(success) + int(fail))
-    if total == 0:
-        return 0
-    # Map net performance into a small bounded adjustment to avoid score instability.
-    score = ((int(success) - int(fail)) / total) * 6.0
-    return max(-4, min(4, int(round(score))))
 
 
 def get_learning_profile() -> Dict:
@@ -150,6 +179,8 @@ def record_feedback(event: Dict) -> Dict:
         "outcome": outcome,
         "from_risk_band": str(event.get("from_risk_band", ""))[:60],
         "to_risk_band": str(event.get("to_risk_band", ""))[:60],
+        "original_text": str(event.get("original_text", ""))[:4000],
+        "rewritten_text": str(event.get("rewritten_text", ""))[:4000],
         "original_len": len(str(event.get("original_text", ""))),
         "rewritten_len": len(str(event.get("rewritten_text", ""))),
     }
@@ -162,32 +193,7 @@ def record_feedback(event: Dict) -> Dict:
             del events[:-2000]
         _write_json(FEEDBACK_FILE, feedback_data)
 
-        model = _read_json(MODEL_FILE, _default_model())
-        model["total_feedback"] = int(model.get("total_feedback", 0)) + 1
-        model["sample_size"] = int(model.get("sample_size", model.get("total_feedback", 0)) or 0) + 1
-        model[outcome] = int(model.get(outcome, 0)) + 1
-
-        # Train lightweight pattern weights from real outcomes so scoring can adapt over time.
-        source_text = str(event.get("rewritten_text") or event.get("original_text") or "")
-        pattern_names = _extract_learning_patterns(source_text)
-        pattern_store = model.setdefault("patterns", {})
-        if not isinstance(pattern_store, dict):
-            pattern_store = {}
-            model["patterns"] = pattern_store
-
-        for pattern in pattern_names:
-            bucket = pattern_store.setdefault(pattern, {"success": 0, "fail": 0, "weight": 0})
-            if not isinstance(bucket, dict):
-                bucket = {"success": 0, "fail": 0, "weight": 0}
-                pattern_store[pattern] = bucket
-
-            if outcome == "inbox":
-                bucket["success"] = int(bucket.get("success", 0)) + 1
-            elif outcome == "spam":
-                bucket["fail"] = int(bucket.get("fail", 0)) + 1
-
-            bucket["weight"] = _recompute_pattern_weight(int(bucket.get("success", 0)), int(bucket.get("fail", 0)))
-
+        model = _rebuild_model_from_events(events)
         _write_json(MODEL_FILE, model)
 
     return {

@@ -1,11 +1,13 @@
 import json
+import os
 import re
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 
 BASE_DIR = Path(__file__).resolve().parent
-MODEL_FILE = BASE_DIR / "data" / "rewrite_model.json"
+DATA_DIR = Path(os.getenv("INBOXGUARD_DATA_DIR", str(BASE_DIR / "data"))).expanduser()
+MODEL_FILE = DATA_DIR / "rewrite_model.json"
 
 
 # Penalty-first model: start at 100 and subtract risk.
