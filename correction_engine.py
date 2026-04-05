@@ -1,5 +1,6 @@
 import json
 import re
+import os
 import threading
 from datetime import datetime, timezone
 from difflib import SequenceMatcher
@@ -7,7 +8,7 @@ from pathlib import Path
 from typing import Any, Dict, List
 
 BASE_DIR = Path(__file__).resolve().parent
-DATA_DIR = BASE_DIR / "data"
+DATA_DIR = Path(os.getenv("INBOXGUARD_DATA_DIR", str(BASE_DIR / "data"))).expanduser()
 FEEDBACK_FILE = DATA_DIR / "rewrite_feedback.json"
 MODEL_FILE = DATA_DIR / "rewrite_model.json"
 _LOCK = threading.Lock()

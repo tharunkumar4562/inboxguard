@@ -12,20 +12,19 @@
     </script>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>{{ page_title or "InboxGuard | Email Spam Checker and Deliverability Guard" }}</title>
-    <meta name="description" content="{{ meta_description or 'InboxGuard checks inbox placement, spam risk, SPF, DKIM, and DMARC before you send.' }}" />
+    <title>{{ page_title or "InboxGuard | Fix risky emails before you send" }}</title>
+    <meta name="description" content="{{ meta_description or 'InboxGuard detects deliverability threats before email send.' }}" />
     <meta name="application-name" content="InboxGuard" />
     <meta name="robots" content="index,follow,max-image-preview:large" />
-    <meta name="keywords" content="email spam checker, email deliverability, inbox placement, cold email checker, SPF DKIM DMARC, spam score analyzer, email risk checker" />
     <link rel="canonical" href="{{ canonical_url or 'https://inboxguard.me/' }}" />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="InboxGuard" />
-    <meta property="og:title" content="{{ page_title or 'InboxGuard | Email Spam Checker and Deliverability Guard' }}" />
+    <meta property="og:title" content="{{ page_title or 'InboxGuard | Fix risky emails before you send' }}" />
     <meta property="og:description" content="{{ meta_description or 'Find out why emails that look fine still land in spam, then fix them before sending.' }}" />
     <meta property="og:url" content="{{ canonical_url or 'https://inboxguard.me/' }}" />
     <meta property="og:image" content="https://inboxguard.me/static/logo.svg" />
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="{{ page_title or 'InboxGuard | Email Spam Checker and Deliverability Guard' }}" />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="{{ page_title or 'InboxGuard | Fix risky emails before you send' }}" />
     <meta name="twitter:description" content="{{ meta_description or 'Find out why emails that look fine still land in spam, then fix them before sending.' }}" />
     <meta name="twitter:image" content="https://inboxguard.me/static/logo.svg" />
     <link rel="icon" href="/static/favicon-48.png" type="image/png" sizes="48x48" />
@@ -55,15 +54,6 @@
             "target": "https://inboxguard.me/?q={search_term_string}",
             "query-input": "required name=search_term_string"
           }
-        },
-        {
-          "@context": "https://schema.org",
-          "@type": "WebApplication",
-          "name": "InboxGuard",
-          "applicationCategory": "BusinessApplication",
-          "operatingSystem": "Web",
-          "url": "https://inboxguard.me",
-          "description": "Email spam checker and deliverability guard for cold outreach and campaign review."
         }
       ]
     </script>

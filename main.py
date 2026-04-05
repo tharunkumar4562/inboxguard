@@ -25,10 +25,10 @@ from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse,
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
+from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 from jinja2 import TemplateNotFound, TemplateError
 from authlib.integrations.starlette_client import OAuth
-from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 
 from analyzer import analyze_email
 from analytics import get_dashboard_data, track_event
@@ -49,6 +49,8 @@ logger = logging.getLogger("inboxguard")
 BASE_DIR = Path(__file__).resolve().parent
 STATIC_DIR = BASE_DIR / "static"
 TEMPLATES_DIR = BASE_DIR / "templates"
+DATA_DIR = Path(os.getenv("INBOXGUARD_DATA_DIR", str(BASE_DIR / "data"))).expanduser()
+IS_PRODUCTION = os.getenv("RAILWAY_ENVIRONMENT", "").strip().lower() == "production" or os.getenv("RENDER", "").strip().lower() == "true"
 
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
@@ -56,11 +58,9 @@ templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 SITE_URL = os.getenv("INBOXGUARD_SITE_URL", "https://inboxguard.me")
 ADMIN_TOKEN = os.getenv("INBOXGUARD_ADMIN_TOKEN", "")
 SESSION_SECRET = os.getenv("INBOXGUARD_SESSION_SECRET", "change-me-in-production")
-SESSION_COOKIE_MAX_AGE = int(os.getenv("INBOXGUARD_SESSION_COOKIE_MAX_AGE", str(60 * 60 * 24 * 30)))
-SESSION_HTTPS_ONLY_DEFAULT = "1" if os.getenv("RAILWAY_ENVIRONMENT") or os.getenv("RAILWAY_STATIC_URL") else "0"
-SESSION_HTTPS_ONLY = os.getenv("INBOXGUARD_SESSION_HTTPS_ONLY", SESSION_HTTPS_ONLY_DEFAULT).strip().lower() in {"1", "true", "yes"}
-PROXY_TRUSTED_HOSTS = os.getenv("INBOXGUARD_PROXY_TRUSTED_HOSTS", "*").strip() or "*"
-AUTH_DB_FILE = BASE_DIR / "data" / "auth.db"
+SESSION_HTTPS_ONLY = os.getenv("INBOXGUARD_SESSION_HTTPS_ONLY", "1" if IS_PRODUCTION else "0").strip().lower() in {"1", "true", "yes"}
+SESSION_MAX_AGE_SECONDS = int(os.getenv("INBOXGUARD_SESSION_MAX_AGE_SECONDS", str(60 * 60 * 24 * 30)))
+AUTH_DB_FILE = DATA_DIR / "auth.db"
 ANON_SCAN_LIMIT = int(os.getenv("INBOXGUARD_ANON_SCAN_LIMIT", "3"))
 FREE_USER_SCAN_LIMIT = int(os.getenv("INBOXGUARD_FREE_USER_SCAN_LIMIT", "50"))
 GOOGLE_OAUTH_ENABLED = os.getenv("INBOXGUARD_GOOGLE_OAUTH_ENABLED", "0").strip().lower() in {"1", "true", "yes"}
@@ -114,6 +114,33 @@ BLOG_POSTS = {
             "Keep links minimal and avoid promo-heavy structure.",
         ],
     },
+    "spf-dkim-dmarc-explained": {
+        "title": "SPF, DKIM, and DMARC Explained Without the Jargon",
+        "summary": "A plain-English guide to the three DNS checks that decide inbox trust.",
+        "body": [
+            "SPF proves which servers may send on your domain's behalf.",
+            "DKIM signs the message so receivers can verify it was not altered.",
+            "DMARC ties alignment together and tells inbox providers what to do when authentication fails.",
+        ],
+    },
+    "cold-email-spam-triggers": {
+        "title": "Cold Email Spam Triggers That Hurt Deliverability",
+        "summary": "The message patterns and sending habits that most often push a cold email into spam.",
+        "body": [
+            "Too many links, too much urgency, and too many promises are high-risk combinations.",
+            "Generic intros and weak targeting make the message look automated.",
+            "Inbox trust improves when the message is short, specific, and easy to opt into.",
+        ],
+    },
+    "email-deliverability-checklist": {
+        "title": "Email Deliverability Checklist Before a Send",
+        "summary": "A pre-send checklist for SPF, DKIM, DMARC, content risk, and list hygiene.",
+        "body": [
+            "Confirm the domain is authenticated and aligned.",
+            "Remove spam phrases, pressure language, and excessive links.",
+            "Check that the audience is targeted and the unsubscribe path is obvious.",
+        ],
+    },
 }
 LONG_TAIL_PAGES = [
     {
@@ -134,16 +161,34 @@ LONG_TAIL_PAGES = [
         "problem": "email deliverability audit",
         "query": "Hostinger email deliverability audit",
     },
+    {
+        "slug": "gmail-promotions-tab-fix",
+        "provider": "Gmail",
+        "problem": "Promotions tab placement",
+        "query": "How to keep marketing emails out of Gmail Promotions",
+    },
+    {
+        "slug": "outlook-spam-folder-fix",
+        "provider": "Outlook",
+        "problem": "spam folder placement",
+        "query": "How to fix Outlook spam folder placement",
+    },
+    {
+        "slug": "newsletter-inbox-placement-audit",
+        "provider": "Newsletter teams",
+        "problem": "inbox placement",
+        "query": "Newsletter inbox placement audit",
+    },
 ]
 LONG_TAIL_BY_SLUG = {item["slug"]: item for item in LONG_TAIL_PAGES}
 
-app.add_middleware(ProxyHeadersMiddleware, trusted_hosts=PROXY_TRUSTED_HOSTS)
+app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")
 app.add_middleware(
     SessionMiddleware,
     secret_key=SESSION_SECRET,
     same_site="lax",
     https_only=SESSION_HTTPS_ONLY,
-    max_age=SESSION_COOKIE_MAX_AGE,
+    max_age=SESSION_MAX_AGE_SECONDS,
 )
 
 oauth = OAuth()
@@ -2046,14 +2091,21 @@ def log_template_environment() -> None:
         _ensure_auth_db()
         template_files = sorted([p.name for p in TEMPLATES_DIR.glob("*.html")]) if TEMPLATES_DIR.exists() else []
         logger.warning(
-            "Startup paths base=%s templates=%s static=%s templates_exists=%s static_exists=%s template_files=%s",
+            "Startup paths base=%s data=%s templates=%s static=%s templates_exists=%s static_exists=%s template_files=%s session_https_only=%s session_max_age=%s",
             BASE_DIR,
+            DATA_DIR,
             TEMPLATES_DIR,
             STATIC_DIR,
             TEMPLATES_DIR.exists(),
             STATIC_DIR.exists(),
             template_files,
+            SESSION_HTTPS_ONLY,
+            SESSION_MAX_AGE_SECONDS,
         )
+        if IS_PRODUCTION and DATA_DIR == BASE_DIR / "data":
+            logger.warning(
+                "Persistent storage is using the app directory. Set INBOXGUARD_DATA_DIR to a mounted volume path so auth, analytics, and learning data survive redeploys."
+            )
     except Exception:
         logger.exception("Failed to log template/static startup diagnostics")
 
@@ -2083,8 +2135,8 @@ def home(request: Request):
         request,
         "index.html",
         {
-            "page_title": "InboxGuard | Email Spam Checker and Deliverability Guard",
-            "meta_description": "Check inbox placement, spam risk, SPF, DKIM, and DMARC before you send. Fix risky drafts and protect your domain.",
+            "page_title": "InboxGuard | Last check before you hit send.",
+            "meta_description": "Know if your email will land in inbox before sending. Fix risky drafts before you hit send and protect your domain.",
             "canonical_url": f"{SITE_URL}/",
             "focus_query": "why did my email go to spam",
         },
@@ -3141,8 +3193,8 @@ def programmatic_page(request: Request, slug: str):
             request,
             "index.html",
             {
-                "page_title": "Email Deliverability Audit | Spam Checker | InboxGuard",
-                "meta_description": "Run a fast email spam check and deliverability audit before sending.",
+                "page_title": "Email Deliverability Audit | InboxGuard",
+                "meta_description": "Run a fast email deliverability audit before sending.",
                 "canonical_url": f"{SITE_URL}/",
                 "focus_query": "email deliverability audit",
             },
@@ -3151,10 +3203,10 @@ def programmatic_page(request: Request, slug: str):
 
     track_event("page_view", {"page": f"p/{slug}"})
 
-    title = f"{item['query']} | Email Spam Checker | InboxGuard"
+    title = f"{item['query']} | InboxGuard"
     description = (
         f"{item['provider']} users: diagnose {item['problem']} with SPF/DKIM/DMARC checks, "
-        "header-alignment analysis, copy risk diagnostics, and deliverability fixes before you send."
+        "header-alignment analysis, and copy risk diagnostics before you send."
     )
 
     return render_template_safe(

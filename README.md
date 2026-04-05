@@ -80,6 +80,30 @@ For Railway, this repo now includes both `Procfile` and `railway.json` so the ap
 
 If Railway shows "Application not found", verify you are opening the current service domain from the active project/environment in Railway dashboard.
 
+## Production Persistence
+
+InboxGuard uses signed cookie sessions for auth, plus SQLite and JSON files for user, analytics, and learning state. On Railway, redeploys will wipe local container storage unless you mount a volume.
+
+Set these production variables:
+
+- `INBOXGUARD_SESSION_SECRET` - keep this stable across deploys
+- `INBOXGUARD_SESSION_HTTPS_ONLY=1` - enable secure cookies in production
+- `INBOXGUARD_SESSION_MAX_AGE_SECONDS=2592000` - keep sessions alive for 30 days
+- `INBOXGUARD_DATA_DIR` - point to a mounted persistent volume path for `auth.db`, `analytics.json`, `rewrite_feedback.json`, and `rewrite_model.json`
+
+The checkout flow creates a fresh Razorpay subscription on demand from the plan ID, then relies on webhooks to mark the user active in the database.
+
+## Growth Surface
+
+This app already exposes a basic growth/SEO foundation:
+
+- Programmatic landing pages under `/p/...`
+- Blog routes under `/blog/...`
+- `robots.txt` and `sitemap.xml`
+- Open Graph and canonical tags on the main templates
+
+The next growth steps are to add more long-tail pages around deliverability, spam triggers, SPF, DKIM, and DMARC, then keep those pages in the sitemap so search engines and AI answer engines can surface them.
+
 After deployment, share your `onrender.com` or Railway URL for outreach.
 
 Suggested pitch:

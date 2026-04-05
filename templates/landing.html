@@ -12,36 +12,24 @@
     </script>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>{{ page_title or 'InboxGuard | Email Spam Checker and Deliverability Guard' }}</title>
-    <meta name="description" content="{{ meta_description or 'InboxGuard checks inbox placement, spam risk, SPF, DKIM, and DMARC before you send.' }}" />
-    <meta name="keywords" content="email spam checker, deliverability checker, cold email checker, inbox placement, SPF DKIM DMARC, spam score analyzer" />
+    <title>{{ page_title }}</title>
+    <meta name="description" content="{{ meta_description }}" />
     <link rel="canonical" href="{{ canonical_url }}" />
-    <meta property="og:title" content="{{ page_title or 'InboxGuard | Email Spam Checker and Deliverability Guard' }}" />
-    <meta property="og:description" content="{{ meta_description or 'InboxGuard checks inbox placement, spam risk, SPF, DKIM, and DMARC before you send.' }}" />
+    <meta property="og:title" content="{{ page_title }}" />
+    <meta property="og:description" content="{{ meta_description }}" />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="{{ canonical_url }}" />
     <meta property="og:image" content="https://inboxguard.me/static/thumbnail-1200x630.png" />
     <meta property="og:site_name" content="InboxGuard" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="{{ page_title or 'InboxGuard | Email Spam Checker and Deliverability Guard' }}" />
-    <meta name="twitter:description" content="{{ meta_description or 'InboxGuard checks inbox placement, spam risk, SPF, DKIM, and DMARC before you send.' }}" />
+    <meta name="twitter:title" content="{{ page_title }}" />
+    <meta name="twitter:description" content="{{ meta_description }}" />
     <meta name="twitter:image" content="https://inboxguard.me/static/thumbnail-1200x630.png" />
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="/static/css/styles.css" />
-    <script type="application/ld+json">
-      {
-        "@context": "https://schema.org",
-        "@type": "WebApplication",
-        "name": "InboxGuard",
-        "applicationCategory": "BusinessApplication",
-        "operatingSystem": "Web",
-        "url": "{{ canonical_url }}",
-        "description": "{{ meta_description or 'InboxGuard checks inbox placement, spam risk, SPF, DKIM, and DMARC before you send.' }}"
-      }
-    </script>
   </head>
   <body class="bg-ink text-slate-100 min-h-screen antialiased">
     <main class="relative overflow-hidden">

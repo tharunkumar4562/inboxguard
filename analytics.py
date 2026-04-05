@@ -1,4 +1,5 @@
 import json
+import os
 import threading
 from datetime import datetime, timezone
 from pathlib import Path
@@ -6,7 +7,7 @@ from typing import Any, Dict
 
 
 BASE_DIR = Path(__file__).resolve().parent
-DATA_DIR = BASE_DIR / "data"
+DATA_DIR = Path(os.getenv("INBOXGUARD_DATA_DIR", str(BASE_DIR / "data"))).expanduser()
 ANALYTICS_FILE = DATA_DIR / "analytics.json"
 _LOCK = threading.Lock()
 
