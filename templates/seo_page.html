@@ -25,7 +25,6 @@
     <meta name="twitter:description" content="{{ page.description }}" />
     <meta name="twitter:image" content="https://inboxguard.me/static/thumbnail-1200x630.png" />
     <link rel="canonical" href="{{ canonical_url }}" />
-    <link rel="icon" href="/static/brand-icon.svg" type="image/svg+xml" sizes="any" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
@@ -38,7 +37,13 @@
       <section class="mx-auto max-w-5xl px-5 py-8 md:py-10">
         <header class="mb-8 flex items-center justify-between gap-4 border-b border-slate-800/70 pb-4">
           <div class="logo-wrap">
-            <img src="/static/brand-wordmark.svg" alt="InboxGuard" class="brand-wordmark" style="height:38px;width:auto;display:block;" />
+            <svg class="logo-svg" viewBox="0 0 32 32" aria-hidden="true">
+              <path d="M16 3 L26 8 L26 16 C26 22 22 27 16 29 C10 27 6 22 6 16 L6 8 Z" fill="none" stroke="#3B82F6" stroke-width="2"></path>
+              <rect x="10" y="11" width="12" height="8" rx="1.5" fill="none" stroke="#93C5FD" stroke-width="1.8"></rect>
+              <path d="M10.8 12 L16 15.8 L21.2 12" fill="none" stroke="#93C5FD" stroke-width="1.4"></path>
+              <path d="M21 22.5 l2 2 l4 -4" fill="none" stroke="#22C55E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+            </svg>
+            <span class="logo-text">INBOXGUARD</span>
           </div>
           <a href="/access" class="login-link">Unlock Safe Sending</a>
         </header>
