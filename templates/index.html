@@ -765,18 +765,19 @@ I noticed your recent post and had one short idea to improve reply rates."></tex
             <input id="access-request-email" type="email" placeholder="you@company.com" class="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-slate-100" />
           </div>
         </div>
+        <p class="pricing-note" style="margin-top:8px;">Selected plan: <strong id="selected-plan-name">Growth Monthly</strong></p>
         <label for="inline-plan-type" class="pricing-note" style="display:block; margin-top:8px;">Choose plan</label>
         <select id="inline-plan-type" class="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-slate-100" style="margin-top:6px;">
-          <option value="monthly">Monthly Pro</option>
-          <option value="annual">Annual Pro</option>
-          <option value="trial">Trial Pro</option>
-          <option value="usage">Usage-Based</option>
+          <option value="monthly">Growth Monthly</option>
+          <option value="annual">Growth Annual</option>
+          <option value="trial">Starter (Free Trial)</option>
+          <option value="usage">Usage-Based (Pay Per Scan)</option>
         </select>
         <select id="plan-type" class="hidden" aria-hidden="true" tabindex="-1">
-          <option value="monthly" selected>Monthly Pro</option>
-          <option value="annual">Annual Pro</option>
-          <option value="trial">Trial Pro</option>
-          <option value="usage">Usage-Based</option>
+          <option value="monthly" selected>Growth Monthly</option>
+          <option value="annual">Growth Annual</option>
+          <option value="trial">Starter (Free Trial)</option>
+          <option value="usage">Usage-Based (Pay Per Scan)</option>
         </select>
         <button id="refresh-plans" type="button" class="secondary-btn" style="margin-top:8px;">Refresh Plans</button>
         <ul id="plans-output" class="compact-list" style="margin-top:8px;">

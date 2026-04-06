@@ -167,6 +167,8 @@ const refreshJobsButton = document.getElementById("refresh-jobs");
 const outcomeStatsListNode = document.getElementById("outcome-stats-list");
 const jobListNode = document.getElementById("job-list");
 const inlinePlanTypeInput = document.getElementById("inline-plan-type");
+const hiddenPlanTypeInput = document.getElementById("plan-type");
+const selectedPlanNameNode = document.getElementById("selected-plan-name");
 const refreshPlansButton = document.getElementById("refresh-plans");
 const plansOutputNode = document.getElementById("plans-output");
 const requestAccessButton = document.getElementById("request-access");
@@ -209,6 +211,46 @@ let leadCaptureEmail = localStorage.getItem("ig_lead_capture_email") || "";
 let leadCaptureSaved = localStorage.getItem("ig_lead_capture_saved") === "1";
 let pendingPlanChoice = "monthly";
 let userActionCount = 0;
+
+const PLAN_OPTION_LABELS = {
+    monthly: "Growth Monthly",
+    annual: "Growth Annual",
+    trial: "Starter (Free Trial)",
+    usage: "Usage-Based (Pay Per Scan)",
+};
+
+function normalizePlanChoice(plan) {
+    const value = String(plan || "monthly").toLowerCase();
+    if (value === "growth") {
+        return "monthly";
+    }
+    if (value === "free" || value === "starter") {
+        return "trial";
+    }
+    if (Object.prototype.hasOwnProperty.call(PLAN_OPTION_LABELS, value)) {
+        return value;
+    }
+    return "monthly";
+}
+
+function planDisplayName(plan) {
+    const normalized = normalizePlanChoice(plan);
+    return PLAN_OPTION_LABELS[normalized] || "Growth Monthly";
+}
+
+function syncPlanSelection(plan) {
+    const normalized = normalizePlanChoice(plan);
+    pendingPlanChoice = normalized;
+    if (inlinePlanTypeInput) {
+        inlinePlanTypeInput.value = normalized;
+    }
+    if (hiddenPlanTypeInput) {
+        hiddenPlanTypeInput.value = normalized;
+    }
+    if (selectedPlanNameNode) {
+        selectedPlanNameNode.textContent = planDisplayName(normalized);
+    }
+}
 
 const APP_LOOP_WINS_KEY = "ig_wins";
 const APP_LOOP_STREAK_KEY = "ig_streak";
@@ -1708,7 +1750,9 @@ async function refreshPlans() {
     keys.forEach((key) => {
         const item = plans[key] || {};
         const li = document.createElement("li");
-        li.textContent = `${key}: ${String(item.display_price || item.price || "n/a")}`;
+        const planKey = String(key || "").toLowerCase();
+        const displayName = planDisplayName(planKey);
+        li.textContent = `${displayName}: ${String(item.display_price || item.price || "n/a")}`;
         plansOutputNode.appendChild(li);
     });
 }
@@ -2931,6 +2975,7 @@ async function handleRequestAccess() {
 function openPricingModal() {
     const modal = document.getElementById("pricing-modal");
     if (modal) {
+        syncPlanSelection(pendingPlanChoice);
         modal.style.display = "flex";
         modal.classList.remove("hidden");
         document.body.classList.add("modal-open");
@@ -2950,28 +2995,20 @@ function closePricingModal() {
 }
 
 function handleGetAccess() {
-    if (inlinePlanTypeInput) {
-        inlinePlanTypeInput.value = pendingPlanChoice;
-    }
+    syncPlanSelection(pendingPlanChoice);
     openPricingModal();
 }
 
 function handlePlanClick(plan) {
     const selected = String(plan || "growth").toLowerCase();
     if (selected === "free") {
-        pendingPlanChoice = "trial";
-        if (inlinePlanTypeInput) {
-            inlinePlanTypeInput.value = pendingPlanChoice;
-        }
+        syncPlanSelection("trial");
         openPricingModal();
-        showSuccess("Free plan selected. Continue in the pricing modal.");
+        showSuccess("Starter plan selected. Continue in the pricing modal.");
         return;
     }
 
-    pendingPlanChoice = "monthly";
-    if (inlinePlanTypeInput) {
-        inlinePlanTypeInput.value = pendingPlanChoice;
-    }
+    syncPlanSelection("monthly");
 
     if (!isAuthenticated) {
         showAuthModal();
@@ -3004,7 +3041,7 @@ function refreshLockedFeatures() {
 
 function showUpgradeModal({ title, subtitle, plan } = {}) {
     if (plan === "growth") {
-        pendingPlanChoice = "monthly";
+        syncPlanSelection("monthly");
     }
     const paywall = document.getElementById("paywall");
     if (!paywall) {
@@ -3203,6 +3240,12 @@ function wireUiEvents() {
         });
     }
 
+    if (inlinePlanTypeInput) {
+        inlinePlanTypeInput.addEventListener("change", () => {
+            syncPlanSelection(inlinePlanTypeInput.value || "monthly");
+        });
+    }
+
     if (requestAccessButton) {
         requestAccessButton.addEventListener("click", (event) => {
             event.preventDefault();
@@ -3308,6 +3351,7 @@ function wireUiEvents() {
         accessButton.addEventListener("click", (event) => {
             event.preventDefault();
             console.log("Get Access clicked");
+            syncPlanSelection("monthly");
             handleGetAccess();
         });
     }
