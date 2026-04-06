@@ -2959,15 +2959,25 @@ function handleGetAccess() {
 function handlePlanClick(plan) {
     const selected = String(plan || "growth").toLowerCase();
     if (selected === "free") {
-        openTool("scan");
+        pendingPlanChoice = "trial";
+        if (inlinePlanTypeInput) {
+            inlinePlanTypeInput.value = pendingPlanChoice;
+        }
+        openPricingModal();
+        showSuccess("Free plan selected. Continue in the pricing modal.");
         return;
     }
 
     pendingPlanChoice = "monthly";
+    if (inlinePlanTypeInput) {
+        inlinePlanTypeInput.value = pendingPlanChoice;
+    }
+
     if (!isAuthenticated) {
         showAuthModal();
         return;
     }
+
     trackEvent("payment_started", { plan: selected });
     handleGetAccess();
 }
@@ -3129,7 +3139,7 @@ async function startPayment() {
         const options = {
             key: data.key,
             amount: data.amount,
-            currency: data.currency || "USD",
+            currency: data.currency || "INR",
             subscription_id: data.subscription_id,
             name: "InboxGuard",
             description: `${data.display_price || "$12"} / month`,
