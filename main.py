@@ -221,22 +221,6 @@ SEO_ACQUISITION_PAGES = {
 
 app.add_middleware(SessionMiddleware, secret_key=SESSION_SECRET, same_site="lax", https_only=SESSION_HTTPS_ONLY)
 
-
-@app.exception_handler(StarletteHTTPException)
-async def handle_http_exception(request: Request, exc: StarletteHTTPException):
-    if exc.status_code != 404:
-        return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
-
-    accept_header = str(request.headers.get("accept", "")).lower()
-    path = str(request.url.path or "")
-    is_browser_navigation = request.method == "GET" and ("text/html" in accept_header or "*/*" in accept_header)
-    is_api_like_path = path.startswith(("/static/", "/api/", "/auth/", "/docs", "/redoc", "/openapi.json"))
-
-    if is_browser_navigation and not is_api_like_path:
-        return RedirectResponse(url="/", status_code=307)
-
-    return JSONResponse(status_code=404, content={"detail": exc.detail or "Not found"})
-
 oauth = OAuth()
 GOOGLE_AUTH_CONFIGURED = bool(GOOGLE_OAUTH_ENABLED and GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET)
 if GOOGLE_AUTH_CONFIGURED:
@@ -2194,6 +2178,38 @@ def render_template_safe(request: Request, template_name: str, context: dict, st
         ),
         status_code=503,
     )
+
+
+@app.exception_handler(StarletteHTTPException)
+async def http_exception_handler(request: Request, exc: StarletteHTTPException):
+    if exc.status_code != 404:
+        return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
+
+    path = request.url.path or "/"
+    accept = str(request.headers.get("accept", "")).lower()
+    wants_html = request.method.upper() == "GET" and "text/html" in accept
+    is_static_or_asset = path.startswith("/static/") or "." in path.rsplit("/", 1)[-1]
+    api_like_prefixes = (
+        "/auth",
+        "/api",
+        "/plans",
+        "/tokens",
+        "/create-",
+        "/seed",
+        "/bulk",
+        "/blacklist",
+        "/track",
+        "/webhook",
+        "/razorpay",
+        "/health",
+    )
+    is_api_like = path.startswith(api_like_prefixes)
+
+    if wants_html and not is_static_or_asset and not is_api_like:
+        return RedirectResponse(url="/", status_code=307)
+
+    detail = exc.detail if exc.detail is not None else "Not Found"
+    return JSONResponse(status_code=404, content={"detail": detail})
 
 
 @app.on_event("startup")
