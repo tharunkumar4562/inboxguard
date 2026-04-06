@@ -961,19 +961,22 @@ function openAuthModalFromQueryIfNeeded() {
     window.history.replaceState({}, document.title, cleanUrl);
 }
 
-function applyInitialTabFromQuery() {
+function routeEntryFromQueryIfNeeded() {
     const params = new URLSearchParams(window.location.search);
-    const tab = String(params.get("tab") || "").toLowerCase();
-    if (tab === "scan") {
-        activateTab("threat-scan");
-        if (rawEmailInput) {
-            setTimeout(() => rawEmailInput.focus(), 120);
-        }
+    const entry = String(params.get("entry") || "").toLowerCase();
+    if (entry !== "scan") {
         return;
     }
-    if (tab === "home" || tab === "dashboard") {
-        activateTab("dashboard");
+
+    activateTab("threat-scan");
+    if (rawEmailInput) {
+        setTimeout(() => rawEmailInput.focus(), 120);
     }
+
+    params.delete("entry");
+    const qs = params.toString();
+    const cleanUrl = `${window.location.pathname}${qs ? `?${qs}` : ""}${window.location.hash}`;
+    window.history.replaceState({}, document.title, cleanUrl);
 }
 
 function onAuthSuccess(source) {
@@ -3622,11 +3625,11 @@ setupParallax();
 
 setIdleState();
 showHome();
-applyInitialTabFromQuery();
 refreshAuthStatus().then(() => {
     loadUser().catch(() => null);
     refreshHomeLiveStats().catch(() => null);
     resumePendingAfterAuthIfNeeded();
+    routeEntryFromQueryIfNeeded();
     openAuthModalFromQueryIfNeeded();
     refreshSeedTests().catch(() => null);
     if (isAuthenticated) {
