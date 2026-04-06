@@ -2111,6 +2111,27 @@ def _display_name_from_email(email: str) -> str:
     return " ".join(word.capitalize() for word in local.split() if word)
 
 
+def _is_crawler_request(request: Request) -> bool:
+    user_agent = str(request.headers.get("user-agent", "")).lower()
+    crawler_markers = (
+        "bot",
+        "spider",
+        "crawler",
+        "googlebot",
+        "bingbot",
+        "duckduckbot",
+        "slurp",
+        "baiduspider",
+        "yandex",
+        "facebookexternalhit",
+        "twitterbot",
+        "linkedinbot",
+        "whatsapp",
+        "telegrambot",
+    )
+    return any(marker in user_agent for marker in crawler_markers)
+
+
 def _avatar_url_for_email(email: str) -> str:
     digest = hashlib.md5((email or "").strip().lower().encode("utf-8")).hexdigest()
     return f"https://www.gravatar.com/avatar/{digest}?d=identicon&s=120"
@@ -2268,35 +2289,33 @@ def google_site_verification():
 
 @app.get("/", response_class=HTMLResponse)
 def landing(request: Request):
-    first_seen = str(request.cookies.get("ig_seen_app_entry", "0")).strip() == "1"
-    target = "/app" if first_seen else "/app?entry=scan"
-    response = RedirectResponse(url=target, status_code=302)
-    if not first_seen:
-        response.set_cookie(
-            key="ig_seen_app_entry",
-            value="1",
-            max_age=60 * 60 * 24 * 365,
-            samesite="lax",
-            secure=SESSION_HTTPS_ONLY,
+    force_landing = str(request.query_params.get("view", "")).strip().lower() == "landing"
+    if force_landing or _is_crawler_request(request):
+        track_event("page_view", {"page": "landing"})
+        return render_template_safe(
+            request,
+            "landing.html",
+            {
+                "page_title": "InboxGuard - Check if your email will land in inbox before sending",
+                "meta_description": "InboxGuard predicts whether your email will land in inbox or spam before you send it. Fix issues and protect your domain.",
+                "canonical_url": f"{SITE_URL}/",
+            },
         )
-        track_event("page_view", {"page": "entry_first_redirect", "target": target})
-    else:
-        track_event("page_view", {"page": "entry_return_redirect", "target": target})
-    return response
 
-
-@app.get("/landing", response_class=HTMLResponse)
-def public_landing_page(request: Request):
-    track_event("page_view", {"page": "landing"})
-    return render_template_safe(
-        request,
-        "landing.html",
-        {
-            "page_title": "InboxGuard - Check if your email will land in inbox before sending",
-            "meta_description": "InboxGuard predicts whether your email will land in inbox or spam before you send it. Fix issues and protect your domain.",
-            "canonical_url": f"{SITE_URL}/",
-        },
+    seen_cookie = str(request.cookies.get("ig_seen_app", "")).strip()
+    first_visit = seen_cookie != "1"
+    target = "/app?tab=threat-scan" if first_visit else "/app"
+    response = RedirectResponse(url=target, status_code=302)
+    response.set_cookie(
+        "ig_seen_app",
+        "1",
+        max_age=31536000,
+        path="/",
+        samesite="lax",
+        secure=SESSION_HTTPS_ONLY,
+        httponly=False,
     )
+    return response
 
 
 @app.get("/app", response_class=HTMLResponse)

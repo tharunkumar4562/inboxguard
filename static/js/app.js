@@ -961,22 +961,19 @@ function openAuthModalFromQueryIfNeeded() {
     window.history.replaceState({}, document.title, cleanUrl);
 }
 
-function routeEntryFromQueryIfNeeded() {
+function openEntryFromQueryIfNeeded() {
     const params = new URLSearchParams(window.location.search);
-    const entry = String(params.get("entry") || "").toLowerCase();
-    if (entry !== "scan") {
-        return;
+    const tab = String(params.get("tab") || "").toLowerCase();
+    if (tab === "threat-scan" || tab === "scan") {
+        activateTab("threat-scan");
+        if (rawEmailInput) {
+            setTimeout(() => rawEmailInput.focus(), 120);
+        }
+        params.delete("tab");
+        const query = params.toString();
+        const cleanUrl = `${window.location.pathname}${query ? `?${query}` : ""}${window.location.hash}`;
+        window.history.replaceState({}, document.title, cleanUrl);
     }
-
-    activateTab("threat-scan");
-    if (rawEmailInput) {
-        setTimeout(() => rawEmailInput.focus(), 120);
-    }
-
-    params.delete("entry");
-    const qs = params.toString();
-    const cleanUrl = `${window.location.pathname}${qs ? `?${qs}` : ""}${window.location.hash}`;
-    window.history.replaceState({}, document.title, cleanUrl);
 }
 
 function onAuthSuccess(source) {
@@ -3629,7 +3626,6 @@ refreshAuthStatus().then(() => {
     loadUser().catch(() => null);
     refreshHomeLiveStats().catch(() => null);
     resumePendingAfterAuthIfNeeded();
-    routeEntryFromQueryIfNeeded();
     openAuthModalFromQueryIfNeeded();
     refreshSeedTests().catch(() => null);
     if (isAuthenticated) {
@@ -3641,6 +3637,7 @@ refreshAuthStatus().then(() => {
     loadUserTokens().catch(() => null);
     refreshLockedFeatures();
     refreshPricingContext();
+    openEntryFromQueryIfNeeded();
 });
 
 document.addEventListener("DOMContentLoaded", () => {
