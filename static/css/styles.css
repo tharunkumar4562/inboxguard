@@ -351,13 +351,6 @@ body {
     line-height: 1;
 }
 
-.brand {
-    margin: 0;
-    font-size: 1.1rem;
-    font-weight: 800;
-    letter-spacing: 0.06em;
-}
-
 .sub {
     margin: 2px 0 0;
     color: #94a3b8;
