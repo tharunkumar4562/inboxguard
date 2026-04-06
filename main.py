@@ -25,6 +25,7 @@ from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse,
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.sessions import SessionMiddleware
 from jinja2 import TemplateNotFound, TemplateError
 from authlib.integrations.starlette_client import OAuth
@@ -219,6 +220,22 @@ SEO_ACQUISITION_PAGES = {
 }
 
 app.add_middleware(SessionMiddleware, secret_key=SESSION_SECRET, same_site="lax", https_only=SESSION_HTTPS_ONLY)
+
+
+@app.exception_handler(StarletteHTTPException)
+async def handle_http_exception(request: Request, exc: StarletteHTTPException):
+    if exc.status_code != 404:
+        return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
+
+    accept_header = str(request.headers.get("accept", "")).lower()
+    path = str(request.url.path or "")
+    is_browser_navigation = request.method == "GET" and ("text/html" in accept_header or "*/*" in accept_header)
+    is_api_like_path = path.startswith(("/static/", "/api/", "/auth/", "/docs", "/redoc", "/openapi.json"))
+
+    if is_browser_navigation and not is_api_like_path:
+        return RedirectResponse(url="/", status_code=307)
+
+    return JSONResponse(status_code=404, content={"detail": exc.detail or "Not found"})
 
 oauth = OAuth()
 GOOGLE_AUTH_CONFIGURED = bool(GOOGLE_OAUTH_ENABLED and GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET)
