@@ -18,6 +18,11 @@ def _default_payload() -> Dict[str, Any]:
             "cta_clicks": 0,
             "access_requests": 0,
             "analyze_requests": 0,
+            "analyze_clicked": 0,
+            "rewrite_clicked": 0,
+            "signup_completed": 0,
+            "payment_started": 0,
+            "payment_success": 0,
             "mode_content": 0,
             "mode_full": 0,
         },
@@ -84,6 +89,14 @@ def track_event(event: str, meta: Dict[str, Any] | None = None) -> None:
                 counters["mode_full"] = int(counters.get("mode_full", 0)) + 1
             else:
                 counters["mode_content"] = int(counters.get("mode_content", 0)) + 1
+        elif event_name in {
+            "analyze_clicked",
+            "rewrite_clicked",
+            "signup_completed",
+            "payment_started",
+            "payment_success",
+        }:
+            counters[event_name] = int(counters.get(event_name, 0)) + 1
 
         events.append(
             {
@@ -113,10 +126,23 @@ def get_dashboard_data() -> Dict[str, Any]:
         mode_content_pct = 0.0
         mode_full_pct = 0.0
 
+    by_event = data.get("by_event", {})
+    visitors = int(counters.get("page_views", 0))
+    analyze_clicked = int(by_event.get("analyze_clicked", counters.get("analyze_clicked", 0)))
+    rewrite_clicked = int(by_event.get("rewrite_clicked", counters.get("rewrite_clicked", 0)))
+    signup_completed = int(by_event.get("signup_completed", counters.get("signup_completed", 0)))
+    payment_started = int(by_event.get("payment_started", counters.get("payment_started", 0)))
+    payment_success = int(by_event.get("payment_success", counters.get("payment_success", 0)))
+
+    def _safe_pct(part: int, whole: int) -> float:
+        if whole <= 0:
+            return 0.0
+        return round((part / whole) * 100, 2)
+
     return {
         "counters": counters,
         "by_page": data.get("by_page", {}),
-        "by_event": data.get("by_event", {}),
+        "by_event": by_event,
         "events": list(reversed(data.get("events", [])[-30:])),
         "updated_at": data.get("updated_at", ""),
         "mode_summary": {
@@ -124,5 +150,18 @@ def get_dashboard_data() -> Dict[str, Any]:
             "full": mode_full,
             "content_pct": mode_content_pct,
             "full_pct": mode_full_pct,
+        },
+        "funnel": {
+            "visitors": visitors,
+            "analyze_clicked": analyze_clicked,
+            "rewrite_clicked": rewrite_clicked,
+            "signup_completed": signup_completed,
+            "payment_started": payment_started,
+            "payment_success": payment_success,
+            "analyze_rate": _safe_pct(analyze_clicked, visitors),
+            "signup_rate": _safe_pct(signup_completed, analyze_clicked),
+            "checkout_rate": _safe_pct(payment_started, signup_completed),
+            "payment_success_rate": _safe_pct(payment_success, payment_started),
+            "visitor_to_paid_rate": _safe_pct(payment_success, visitors),
         },
     }

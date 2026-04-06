@@ -1998,3 +1998,21 @@ select {
     border-radius: 10px;
     padding: 8px 10px;
 }
+
+.plan-label.plan-free {
+    background: rgba(100, 116, 139, 0.24);
+    border-color: rgba(148, 163, 184, 0.32);
+    color: #e2e8f0;
+}
+
+.plan-label.plan-pro {
+    background: rgba(37, 99, 235, 0.26);
+    border-color: rgba(96, 165, 250, 0.46);
+    color: #dbeafe;
+}
+
+.plan-label.plan-team {
+    background: rgba(180, 83, 9, 0.28);
+    border-color: rgba(251, 191, 36, 0.42);
+    color: #fef3c7;
+}

@@ -191,6 +191,8 @@ let isAuthenticated = false;
 let userState = {
     tokens: 0,
     plan: "free",
+    planBadgeClass: "plan-free",
+    featureAccess: {},
 };
 let anonymousScansUsed = Number(localStorage.getItem("ig_anon_scans_used") || "0");
 let anonymousScansLimit = Number(localStorage.getItem("ig_anon_scans_limit") || "3");
@@ -278,6 +280,17 @@ function trackEvent(eventName, params) {
     }
     const safeParams = params && typeof params === "object" ? params : {};
     window.gtag("event", eventName, safeParams);
+}
+
+function track(eventName, data = {}) {
+    const safeData = data && typeof data === "object" ? data : {};
+    trackEvent(eventName, safeData);
+
+    fetch("/track", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ event: eventName, data: safeData }),
+    }).catch(() => null);
 }
 
 function sleep(ms) {
@@ -766,6 +779,9 @@ async function refreshAuthStatus() {
         userScansUsed = Number(data && data.user_scans_used ? data.user_scans_used : 0);
         userScansLimit = Number(data && data.user_scans_limit ? data.user_scans_limit : 50);
         currentUserStatus = String(data && data.status ? data.status : "inactive").toLowerCase();
+        userState.plan = String(data && data.plan ? data.plan : "free").toLowerCase();
+        userState.planBadgeClass = String(data && data.plan_badge && data.plan_badge.class ? data.plan_badge.class : "plan-free");
+        userState.featureAccess = data && data.feature_access && typeof data.feature_access === "object" ? data.feature_access : {};
         leadCaptureSaved = Boolean(data && data.lead_email_captured);
         leadCaptureEmail = String(data && data.lead_email ? data.lead_email : leadCaptureEmail);
 
@@ -873,6 +889,7 @@ function onAuthSuccess(source) {
     isAuthenticated = true;
     hideAuthModal();
     updateProfileNav();
+    track("signup_completed", { source: source || "auth_modal" });
 
     const payload = new FormData();
     payload.set("event", "access_request");
@@ -1049,6 +1066,23 @@ function showHome() {
 }
 
 function openTool(tool) {
+    const toolFeatureMap = {
+        "campaign-debugger": "campaign_debugger",
+        seed: "seed_testing",
+        bulk: "bulk_scan",
+        ops: "api_team",
+    };
+    const requiredFeature = toolFeatureMap[String(tool || "")];
+    if (requiredFeature && isAuthenticated) {
+        const allowed = Boolean(userState.featureAccess && userState.featureAccess[requiredFeature]);
+        if (!allowed) {
+            track("payment_started", { trigger: "locked_feature", feature: requiredFeature, source: "tool_open" });
+            openPricingModal();
+            showError("This feature is available on paid plans. Upgrade to unlock it.");
+            return;
+        }
+    }
+
     hideAllViews();
     homeSections.forEach((node) => node.classList.add("hidden"));
     if (toolPanel) {
@@ -2268,7 +2302,7 @@ async function runAnalyze() {
     const domainText = domainInput ? domainInput.value.trim() : "";
     const mode = analysisModeInput ? analysisModeInput.value : "content";
 
-    trackEvent("analyze_clicked", {
+    track("analyze_clicked", {
         analysis_mode: mode,
         has_domain: Boolean(domainText),
     });
@@ -2848,13 +2882,19 @@ async function loadUserTokens() {
         const data = await res.json();
         const tokens = Number(data.tokens || 0);
         const plan = String(data.plan || userState.plan || "free").toLowerCase();
+        const badgeClass = String(data.plan_badge && data.plan_badge.class ? data.plan_badge.class : (plan === "team" ? "plan-team" : plan === "pro" ? "plan-pro" : "plan-free"));
+        userState.plan = plan;
+        userState.planBadgeClass = badgeClass;
+        userState.featureAccess = data && data.feature_access && typeof data.feature_access === "object" ? data.feature_access : userState.featureAccess;
 
         if (tokenBadge && tokenCount) {
             tokenBadge.classList.remove("hidden");
             tokenCount.textContent = String(tokens);
         }
         if (planLabel) {
-            planLabel.textContent = plan === "pro" ? "PRO" : "FREE";
+            planLabel.textContent = plan === "team" ? "TEAM" : plan === "pro" ? "PRO" : "FREE";
+            planLabel.classList.remove("plan-free", "plan-pro", "plan-team");
+            planLabel.classList.add(badgeClass);
         }
 
         updateTokenMessaging(tokens);
@@ -2983,6 +3023,8 @@ async function startPayment() {
             ? String(inlinePlanTypeInput.value || "monthly")
             : "monthly";
 
+        track("payment_started", { source: "pricing_modal", plan: selectedPlan });
+
         const response = await fetch("/create-subscription", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -3033,6 +3075,7 @@ async function startPayment() {
                 name: currentUserName || "",
             },
             handler: function () {
+                track("payment_success", { source: "razorpay_handler", plan: selectedPlan });
                 closePricingModal();
                 showError("Payment submitted. Waiting for webhook confirmation before access changes.");
                 setTimeout(() => {
@@ -3209,15 +3252,14 @@ function wireUiEvents() {
 
     if (fixNowButton) {
         fixNowButton.addEventListener("click", () => {
-            const payload = new FormData();
-            payload.set("event", "rewrite_clicked");
-            fetch("/track", { method: "POST", body: payload }).catch(() => null);
+            track("rewrite_clicked", { source: "fix_now" });
             pendingAction = "fix";
             runPendingAction();
         });
     }
     if (riskFixNowButton) {
         riskFixNowButton.addEventListener("click", () => {
+            track("rewrite_clicked", { source: "risk_fix_now" });
             trackEvent("fix_clicked", { source: "risk_fix_now" });
             pendingAction = "fix";
             runPendingAction();
