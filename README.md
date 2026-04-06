@@ -57,7 +57,7 @@ Set an environment variable before launch/deploy:
 
 To restrict the dashboard to only your account, also set:
 
-`INBOXGUARD_ADMIN_EMAIL=you@example.com`
+`INBOXGUARD_ADMIN_EMAIL=tharunkumarmalepati3@gmail.com`
 
 Open dashboard with:
 
