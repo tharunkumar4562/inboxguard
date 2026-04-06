@@ -3129,7 +3129,7 @@ async function startPayment() {
         const options = {
             key: data.key,
             amount: data.amount,
-            currency: data.currency || "INR",
+            currency: data.currency || "USD",
             subscription_id: data.subscription_id,
             name: "InboxGuard",
             description: `${data.display_price || "$12"} / month`,
