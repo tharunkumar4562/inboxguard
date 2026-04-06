@@ -28,11 +28,8 @@
     <meta name="twitter:description" content="{{ meta_description or 'Find out why emails that look fine still land in spam, then fix them before sending.' }}" />
     <meta name="twitter:image" content="https://inboxguard.me/static/branding/logo.png" />
     <meta name="theme-color" content="#0f172a" />
-    <link rel="icon" href="/static/branding/logo.png" />
-    <link rel="icon" type="image/png" sizes="32x32" href="/static/branding/logo.png" />
-    <link rel="icon" type="image/png" sizes="16x16" href="/static/branding/logo.png" />
-    <link rel="icon" type="image/svg+xml" sizes="any" href="/static/branding/logo.png" />
-    <link rel="apple-touch-icon" sizes="180x180" href="/static/branding/logo.png" />
+    <link rel="icon" type="image/png" href="/static/branding/logo.png" />
+    <link rel="shortcut icon" href="/static/branding/logo.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
@@ -65,13 +62,11 @@
     <div class="app-shell">
       <aside class="sidebar">
         <div class="brand-wrap">
-          <div class="brand-lockup" aria-label="InboxGuard">
+          <div class="brand" aria-label="InboxGuard">
             <img src="/static/branding/logo.png" class="logo-icon" alt="InboxGuard logo" />
-            <div>
-              <p class="logo-text">InboxGuard</p>
-              <p class="sub">Fix Before You Send</p>
-            </div>
+            <span class="logo-text">InboxGuard</span>
           </div>
+          <p class="sub">Fix Before You Send</p>
         </div>
         <nav>
           <button id="tab-dashboard" class="nav-item active" type="button">Home</button>
@@ -107,10 +102,10 @@
 
       <main class="main-area">
         <header class="topbar">
-          <h1 class="topbar-brand" aria-label="InboxGuard">
+          <div class="brand topbar-brand" aria-label="InboxGuard">
             <img src="/static/branding/logo.png" class="logo-icon" alt="InboxGuard logo" />
             <span class="logo-text">InboxGuard</span>
-          </h1>
+          </div>
           <div class="topbar-actions">
             <div id="token-display" class="token-badge hidden">
               🔋 <span id="token-count">0</span>

@@ -331,7 +331,7 @@ body {
     padding: 8px 10px;
 }
 
-.brand-lockup {
+.brand {
     display: flex;
     align-items: center;
     gap: 10px;
@@ -346,9 +346,8 @@ body {
 .logo-text {
     margin: 0;
     font-size: 20px;
-    font-weight: 700;
-    color: #f8fafc;
-    letter-spacing: -0.02em;
+    font-weight: 600;
+    color: #e5e7eb;
     line-height: 1;
 }
 
@@ -885,10 +884,6 @@ nav {
     align-items: center;
     gap: 10px;
     margin: 0;
-    font-size: 1.9rem;
-    font-weight: 800;
-    line-height: 1.1;
-    letter-spacing: -0.01em;
 }
 
 .domain-risk-alert {
