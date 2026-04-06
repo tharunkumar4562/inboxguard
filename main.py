@@ -4377,9 +4377,19 @@ def _verify_admin_token(token: str) -> None:
         raise HTTPException(status_code=403, detail="Forbidden")
 
 
+def _verify_admin_access(request: Request, token: str = "") -> None:
+    if ADMIN_TOKEN:
+        _verify_admin_token(token)
+        return
+
+    user = _get_session_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="AUTH_REQUIRED")
+
+
 @app.get("/admin", response_class=HTMLResponse)
 def admin_dashboard(request: Request, token: str = ""):
-    _verify_admin_token(token)
+    _verify_admin_access(request, token)
     metrics = get_dashboard_data()
     return render_template_safe(
         request,
@@ -4394,8 +4404,8 @@ def admin_dashboard(request: Request, token: str = ""):
 
 
 @app.get("/admin/revenue")
-def admin_revenue(token: str = ""):
-    _verify_admin_token(token)
+def admin_revenue(request: Request, token: str = ""):
+    _verify_admin_access(request, token)
     _ensure_auth_db_ready()
     conn = _auth_db_conn()
     try:
@@ -4416,8 +4426,8 @@ def admin_revenue(token: str = ""):
 
 
 @app.get("/admin/churn")
-def admin_churn(token: str = ""):
-    _verify_admin_token(token)
+def admin_churn(request: Request, token: str = ""):
+    _verify_admin_access(request, token)
     _ensure_auth_db_ready()
     conn = _auth_db_conn()
     try:
