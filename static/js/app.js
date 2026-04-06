@@ -207,6 +207,7 @@ let advancedOpenedTracked = false;
 let pendingAuthRedirectPath = "";
 let leadCaptureEmail = localStorage.getItem("ig_lead_capture_email") || "";
 let leadCaptureSaved = localStorage.getItem("ig_lead_capture_saved") === "1";
+let pendingPlanChoice = "monthly";
 
 const APP_LOOP_WINS_KEY = "ig_wins";
 const APP_LOOP_STREAK_KEY = "ig_streak";
@@ -1057,6 +1058,19 @@ function showHome() {
 }
 
 function openTool(tool) {
+    const advancedTools = new Set(["campaign-debugger", "seed", "bulk"]);
+    const status = String(window.userStatus || currentUserStatus || "inactive").toLowerCase();
+    const hasPaidAccess = Boolean(window.userIsPro) && status === "active";
+    if (advancedTools.has(String(tool || "").toLowerCase()) && !hasPaidAccess) {
+        showError("Advanced tools are locked. Upgrade to unlock full deliverability analysis.");
+        showHome();
+        const pricingSection = document.getElementById("home-pricing-cta");
+        if (pricingSection) {
+            pricingSection.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+        return;
+    }
+
     hideAllViews();
     homeSections.forEach((node) => node.classList.add("hidden"));
     if (toolPanel) {
@@ -2925,7 +2939,17 @@ function closePricingModal() {
     document.body.classList.remove("modal-open");
 }
 
-function handleGetAccess() {
+function handleGetAccess(plan) {
+    const requestedPlan = String(plan || "monthly").toLowerCase();
+    const mappedPlan = requestedPlan === "pro" || requestedPlan === "growth"
+        ? "monthly"
+        : requestedPlan === "team" || requestedPlan === "scale"
+            ? "usage"
+            : "monthly";
+    pendingPlanChoice = mappedPlan;
+    if (inlinePlanTypeInput) {
+        inlinePlanTypeInput.value = mappedPlan;
+    }
     openPricingModal();
 }
 
@@ -2974,7 +2998,7 @@ function showPaywall() {
         body.textContent = "Get Access to run your next check before the next campaign goes out.";
     }
     if (button) {
-        button.textContent = "Get Access";
+        button.textContent = "Unlock Full Analysis";
     }
 }
 
@@ -2996,8 +3020,8 @@ async function startPayment() {
         }
 
         const selectedPlan = inlinePlanTypeInput
-            ? String(inlinePlanTypeInput.value || "monthly")
-            : "monthly";
+            ? String(inlinePlanTypeInput.value || pendingPlanChoice || "monthly")
+            : String(pendingPlanChoice || "monthly");
 
         const response = await fetch("/create-subscription", {
             method: "POST",
