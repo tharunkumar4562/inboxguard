@@ -97,6 +97,24 @@ ASYNC_ANALYSIS_JOBS: dict[str, dict[str, Any]] = {}
 ASYNC_JOB_STORE: dict[str, dict[str, Any]] = {}
 
 
+@app.middleware("http")
+async def redirect_www(request: Request, call_next):
+    host = str(request.headers.get("host", "")).strip().lower()
+    if host.startswith("www."):
+        target_host = host.replace("www.", "", 1)
+        target_url = request.url.replace(netloc=target_host)
+        return RedirectResponse(url=str(target_url), status_code=301)
+    return await call_next(request)
+
+
+@app.middleware("http")
+async def add_cache_headers(request: Request, call_next):
+    response = await call_next(request)
+    if request.url.path.startswith("/static/"):
+        response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+    return response
+
+
 def _admin_email_allowlist() -> set[str]:
     raw = os.getenv("INBOXGUARD_ADMIN_EMAILS", "").strip()
     emails = {ADMIN_EMAIL} if ADMIN_EMAIL else set()
