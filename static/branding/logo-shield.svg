@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 768 768" role="img" aria-label="InboxGuard shield logo">
+  <defs>
+    <linearGradient id="shieldGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0D4BB5" />
+      <stop offset="100%" stop-color="#33D2A5" />
+    </linearGradient>
+    <linearGradient id="waveGrad" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0%" stop-color="#0C4EC2" />
+      <stop offset="100%" stop-color="#2CC9A8" />
+    </linearGradient>
+    <clipPath id="innerShieldClip">
+      <path d="M384 188 550 250 530 418 384 570 238 418 218 250Z" />
+    </clipPath>
+  </defs>
+
+  <rect x="130" y="130" width="508" height="508" rx="76" fill="#F3F3F6" />
+
+  <path d="M384 160 572 230 552 428 384 604 216 428 196 230Z" fill="none" stroke="url(#shieldGrad)" stroke-width="30" stroke-linejoin="round" />
+  <path d="M384 196 548 256 528 420 384 570 240 420 220 256Z" fill="#FFFFFF" />
+
+  <g clip-path="url(#innerShieldClip)">
+    <path d="M236 322 384 268 532 322 532 452 384 604 236 452Z" fill="#F8F8F8" />
+
+    <!-- stylized g / curved-3 hybrid -->
+    <path d="M384 300c-78 0-142 64-142 142s64 142 142 142c35 0 69-13 94-35l-26-30c-18 15-43 24-68 24-56 0-101-45-101-101s45-101 101-101c34 0 65 16 84 44h-86v40h126c1-7 2-14 2-22 0-88-58-163-126-163z" fill="#0E4EB5" />
+    <path d="M338 412 474 292 506 325 370 445z" fill="#FFFFFF" />
+  </g>
+
+  <path d="M265 458c-13 37-13 78 0 114 18 50 57 90 106 108" fill="none" stroke="url(#waveGrad)" stroke-width="20" stroke-linecap="round" />
+
+  <path d="M490 292c20 3 38 15 50 32" fill="none" stroke="#21B8B3" stroke-width="14" stroke-linecap="round" />
+  <circle cx="534" cy="266" r="9" fill="#FFFFFF" />
+  <circle cx="552" cy="292" r="9" fill="#FFFFFF" />
+</svg>
