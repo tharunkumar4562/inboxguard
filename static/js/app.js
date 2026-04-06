@@ -961,21 +961,19 @@ function openAuthModalFromQueryIfNeeded() {
     window.history.replaceState({}, document.title, cleanUrl);
 }
 
-function openScanFromQueryIfNeeded() {
+function applyInitialTabFromQuery() {
     const params = new URLSearchParams(window.location.search);
-    const shouldOpenScan = params.get("first_scan") === "1";
-    if (!shouldOpenScan) {
+    const tab = String(params.get("tab") || "").toLowerCase();
+    if (tab === "scan") {
+        activateTab("threat-scan");
+        if (rawEmailInput) {
+            setTimeout(() => rawEmailInput.focus(), 120);
+        }
         return;
     }
-
-    openTool("scan");
-    if (rawEmailInput) {
-        rawEmailInput.scrollIntoView({ behavior: "smooth", block: "center" });
-        setTimeout(() => rawEmailInput.focus(), 120);
+    if (tab === "home" || tab === "dashboard") {
+        activateTab("dashboard");
     }
-
-    const cleanUrl = window.location.pathname + window.location.hash;
-    window.history.replaceState({}, document.title, cleanUrl);
 }
 
 function onAuthSuccess(source) {
@@ -3624,12 +3622,12 @@ setupParallax();
 
 setIdleState();
 showHome();
+applyInitialTabFromQuery();
 refreshAuthStatus().then(() => {
     loadUser().catch(() => null);
     refreshHomeLiveStats().catch(() => null);
     resumePendingAfterAuthIfNeeded();
     openAuthModalFromQueryIfNeeded();
-    openScanFromQueryIfNeeded();
     refreshSeedTests().catch(() => null);
     if (isAuthenticated) {
         listApiKeys().catch(() => null);

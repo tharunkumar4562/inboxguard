@@ -2268,31 +2268,27 @@ def google_site_verification():
 
 @app.get("/", response_class=HTMLResponse)
 def landing(request: Request):
-    first_visit_cookie = str(request.cookies.get("ig_first_visit_done", "")).strip()
     user_agent = str(request.headers.get("user-agent", "")).lower()
-    is_bot = any(marker in user_agent for marker in ("bot", "crawler", "spider", "slurp", "bingpreview", "facebookexternalhit"))
+    is_crawler = any(token in user_agent for token in ("bot", "crawl", "spider", "slurp", "bingpreview"))
 
-    if not first_visit_cookie and not is_bot:
-        redirect = RedirectResponse(url="/app?first_scan=1", status_code=307)
-        redirect.set_cookie(
-            key="ig_first_visit_done",
-            value="1",
-            max_age=60 * 60 * 24 * 365,
-            httponly=False,
-            samesite="lax",
+    if is_crawler:
+        track_event("page_view", {"page": "landing"})
+        return render_template_safe(
+            request,
+            "landing.html",
+            {
+                "page_title": "InboxGuard - Check if your email will land in inbox before sending",
+                "meta_description": "InboxGuard predicts whether your email will land in inbox or spam before you send it. Fix issues and protect your domain.",
+                "canonical_url": f"{SITE_URL}/",
+            },
         )
-        return redirect
 
-    track_event("page_view", {"page": "landing"})
-    return render_template_safe(
-        request,
-        "landing.html",
-        {
-            "page_title": "InboxGuard - Check if your email will land in inbox before sending",
-            "meta_description": "InboxGuard predicts whether your email will land in inbox or spam before you send it. Fix issues and protect your domain.",
-            "canonical_url": f"{SITE_URL}/",
-        },
-    )
+    first_visit_done = request.cookies.get("ig_first_visit_done") == "1"
+    target = "/app?tab=home" if first_visit_done else "/app?tab=scan"
+    response = RedirectResponse(url=target, status_code=307)
+    if not first_visit_done:
+        response.set_cookie("ig_first_visit_done", "1", max_age=60 * 60 * 24 * 365, httponly=False, samesite="lax")
+    return response
 
 
 @app.get("/app", response_class=HTMLResponse)
