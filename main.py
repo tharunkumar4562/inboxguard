@@ -54,7 +54,7 @@ templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
 SITE_URL = os.getenv("INBOXGUARD_SITE_URL", "https://inboxguard.me")
 ADMIN_TOKEN = os.getenv("INBOXGUARD_ADMIN_TOKEN", "")
-ADMIN_EMAIL = os.getenv("INBOXGUARD_ADMIN_EMAIL", "").strip().lower()
+ADMIN_EMAIL = os.getenv("INBOXGUARD_ADMIN_EMAIL", "tharunkumarmalepati3@gmail.com").strip().lower()
 SESSION_SECRET = os.getenv("INBOXGUARD_SESSION_SECRET", "change-me-in-production")
 SESSION_HTTPS_ONLY = os.getenv("INBOXGUARD_SESSION_HTTPS_ONLY", "0").strip().lower() in {"1", "true", "yes"}
 AUTH_DB_FILE = BASE_DIR / "data" / "auth.db"
@@ -4371,19 +4371,16 @@ async def request_access(request: Request, email: str = Form("")):
     return JSONResponse({"ok": True})
 
 
-def _verify_admin_token(token: str) -> None:
+def _verify_admin_access(request: Request, token: str) -> None:
     if not ADMIN_TOKEN:
         raise HTTPException(status_code=404, detail="Not found")
     if token != ADMIN_TOKEN:
         raise HTTPException(status_code=403, detail="Forbidden")
-
-
-def _verify_admin_access(request: Request, token: str) -> None:
-    _verify_admin_token(token)
-    if ADMIN_EMAIL:
-        user = _get_session_user(request)
-        if not user or str(user.get("email", "")).strip().lower() != ADMIN_EMAIL:
-            raise HTTPException(status_code=403, detail="Forbidden")
+    user = _get_session_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="AUTH_REQUIRED")
+    if str(user.get("email", "")).strip().lower() != ADMIN_EMAIL:
+        raise HTTPException(status_code=403, detail="Forbidden")
 
 
 @app.get("/admin", response_class=HTMLResponse)
@@ -4398,6 +4395,7 @@ def admin_dashboard(request: Request, token: str = ""):
             "canonical_url": f"{SITE_URL}/admin",
             "meta_description": "Private InboxGuard metrics dashboard.",
             "metrics": metrics,
+            "admin_email": ADMIN_EMAIL,
         },
     )
 
@@ -4405,6 +4403,23 @@ def admin_dashboard(request: Request, token: str = ""):
 @app.get("/admin/revenue")
 def admin_revenue(request: Request, token: str = ""):
     _verify_admin_access(request, token)
+    _ensure_auth_db_ready()
+    conn = _auth_db_conn()
+    try:
+        rows = conn.execute("SELECT amount, status FROM payments").fetchall()
+    finally:
+        conn.close()
+
+    paid_rows = [row for row in rows if str(row["status"] or "").lower() == "paid"]
+    total_revenue_paise = sum(int(row["amount"] or 0) for row in paid_rows)
+    total_revenue_inr = total_revenue_paise / 100.0
+    return JSONResponse(
+        {
+            "total_revenue_paise": total_revenue_paise,
+            "total_revenue_inr": total_revenue_inr,
+            "total_payments": len(paid_rows),
+        }
+    )
     _ensure_auth_db_ready()
     conn = _auth_db_conn()
     try:
@@ -4433,6 +4448,17 @@ def admin_churn(request: Request, token: str = ""):
         rows = conn.execute("SELECT status FROM users").fetchall()
     finally:
         conn.close()
+
+    total_users = len(rows)
+    cancelled = sum(1 for row in rows if str(row["status"] or "inactive").lower() == "cancelled")
+    churn_rate = (cancelled / total_users) if total_users else 0.0
+    return JSONResponse(
+        {
+            "total_users": total_users,
+            "cancelled_users": cancelled,
+            "churn_rate": churn_rate,
+        }
+    )
 
     total_users = len(rows)
     cancelled = sum(1 for row in rows if str(row["status"] or "inactive").lower() == "cancelled")
