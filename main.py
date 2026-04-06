@@ -2267,23 +2267,39 @@ def google_site_verification():
 
 
 @app.get("/", response_class=HTMLResponse)
-def home(request: Request):
-    track_event("page_view", {"page": "home"})
+def landing(request: Request):
+    track_event("page_view", {"page": "landing"})
     return render_template_safe(
         request,
-        "index.html",
+        "landing.html",
         {
-            "page_title": "InboxGuard | Last check before you hit send.",
-            "meta_description": "Know if your email will land in inbox before sending. Fix risky drafts before you hit send and protect your domain.",
+            "page_title": "InboxGuard - Check if your email will land in inbox before sending",
+            "meta_description": "InboxGuard predicts whether your email will land in inbox or spam before you send it. Fix issues and protect your domain.",
             "canonical_url": f"{SITE_URL}/",
-            "focus_query": "why did my email go to spam",
         },
     )
 
 
+@app.get("/app", response_class=HTMLResponse)
+def app_dashboard(request: Request):
+    track_event("page_view", {"page": "app"})
+    response = render_template_safe(
+        request,
+        "index.html",
+        {
+            "page_title": "InboxGuard App | Last check before you hit send.",
+            "meta_description": "Know if your email will land in inbox before sending. Fix risky drafts before you hit send and protect your domain.",
+            "canonical_url": f"{SITE_URL}/app",
+            "focus_query": "why did my email go to spam",
+        },
+    )
+    response.headers["X-Robots-Tag"] = "noindex, nofollow"
+    return response
+
+
 @app.get("/login", response_class=HTMLResponse)
 def login_page(request: Request):
-    return RedirectResponse(url="/?auth=1", status_code=303)
+    return RedirectResponse(url="/app?auth=1", status_code=303)
 
 
 @app.get("/access", response_class=HTMLResponse)

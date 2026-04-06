@@ -1,167 +1,260 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-WXGNG9TEFK"></script>
-    <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 
-      gtag('config', 'G-WXGNG9TEFK');
-    </script>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>{{ page_title }}</title>
-    <meta name="description" content="{{ meta_description }}" />
-    <link rel="canonical" href="{{ canonical_url }}" />
-    <meta property="og:title" content="{{ page_title }}" />
-    <meta property="og:description" content="{{ meta_description }}" />
-    <meta property="og:type" content="website" />
-    <meta property="og:url" content="{{ canonical_url }}" />
-    <meta property="og:image" content="https://inboxguard.me/static/thumbnail-1200x630.png" />
-    <meta property="og:site_name" content="InboxGuard" />
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="{{ page_title }}" />
-    <meta name="twitter:description" content="{{ meta_description }}" />
-    <meta name="twitter:image" content="https://inboxguard.me/static/thumbnail-1200x630.png" />
-    <link rel="icon" type="image/png" href="/static/branding/logo.png" />
-    <link rel="shortcut icon" href="/static/branding/logo.png" />
-    {% if ai_tool_meta %}
-    <meta name="ai-tool" content="{{ ai_tool_meta }}" />
-    {% endif %}
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="/static/css/styles.min.css?v=20260406-seo-fix-1" />
-  </head>
-  <body class="bg-ink text-slate-100 min-h-screen antialiased">
-    <main class="relative overflow-hidden">
-      <div class="page-glow"></div>
-      <section class="mx-auto max-w-5xl px-5 py-8 md:py-10">
-        <header class="mb-10 flex items-center justify-between gap-4 border-b border-slate-800/70 pb-4">
-          <div class="logo-wrap">
-            <img src="/static/branding/logo.png" alt="InboxGuard" style="display:block; width: 172px; max-width: 100%;" />
-          </div>
-          <a href="/access" class="login-link">Unlock Safe Sending</a>
-        </header>
+  <title>InboxGuard - Check if your email will land in inbox before sending</title>
+  <meta name="description" content="InboxGuard predicts whether your email will land in inbox or spam before you send it. Fix issues and protect your domain."/>
 
-        <h1 class="mt-6 max-w-4xl text-4xl font-bold leading-tight md:text-6xl">
-          {{ focus_query }}
-        </h1>
-        <p class="mt-4 max-w-3xl text-base text-slate-300 md:text-xl">
-          {{ provider }} users: fix {{ problem }} before your next campaign send. Run a live risk check with SPF, DKIM, DMARC, header alignment, and sending behavior diagnostics.
-        </p>
+  <link rel="canonical" href="https://inboxguard.me/" />
 
-        <div class="mt-8">
-          <section class="rounded-3xl border border-blue-500/35 bg-slate-900/70 p-6 shadow-2xl shadow-blue-950/30 md:p-8">
-          <form id="risk-form" class="space-y-4">
-            <p class="text-2xl font-bold uppercase tracking-[0.04em] text-slate-100">PASTE YOUR EMAIL (Ctrl + V)</p>
-            <p class="text-sm font-medium text-red-100/90">Most emails fail silently. Check before you send.</p>
-            <div id="paste-mode-wrap" class="space-y-3">
-              <div>
-                <textarea id="raw-email" name="raw_email" rows="7" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" class="w-full rounded-2xl border border-slate-700 bg-slate-950/70 p-4 text-base text-slate-100 outline-none ring-0 transition focus:border-blue-500" placeholder="sender@example.com
-Subject: Your email subject
+  <meta property="og:title" content="InboxGuard - Email Deliverability Checker">
+  <meta property="og:description" content="Predict inbox vs spam before sending emails.">
+  <meta property="og:url" content="https://inboxguard.me">
+  <meta property="og:type" content="website">
 
-Hi [Name],
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "InboxGuard",
+    "applicationCategory": "BusinessApplication",
+    "operatingSystem": "Web",
+    "description": "Check if your email will land in inbox before sending.",
+    "url": "https://inboxguard.me"
+  }
+  </script>
 
-Your message starts here..."></textarea>
-              </div>
-              <p class="text-sm text-slate-300">Paste mode analyzes your raw email only.</p>
-              <div class="form-divider" aria-hidden="true">OR</div>
-              <button id="switch-to-manual" type="button" class="w-full text-left text-sm font-semibold text-blue-200 transition hover:text-blue-100">Enter details manually -></button>
-            </div>
-            <div id="manual-mode-wrap" class="hidden space-y-3">
-              <p class="structured-label">Manual mode</p>
-              <div>
-                <label for="email-quick" class="mb-2 block text-sm text-slate-400">Subject</label>
-                <input id="email-quick" name="email" type="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" class="w-full rounded-2xl border border-slate-700 bg-slate-950/70 p-4 text-sm text-slate-100 outline-none ring-0 transition focus:border-blue-500" placeholder="Subject line" />
-              </div>
-              <div>
-                <label for="domain" class="mb-2 block text-sm text-slate-400">Domain</label>
-                <input id="domain" name="domain" type="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" class="w-full rounded-2xl border border-slate-700 bg-slate-950/70 p-3 text-sm text-slate-100 outline-none transition focus:border-blue-500" placeholder="yourdomain.com" />
-              </div>
-              <div>
-                <label for="manual-body" class="mb-2 block text-sm text-slate-400">Email body (optional)</label>
-                <textarea id="manual-body" rows="4" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" class="w-full rounded-2xl border border-slate-700 bg-slate-950/70 p-3 text-sm text-slate-100 outline-none transition focus:border-blue-500" placeholder="Paste email body"></textarea>
-              </div>
-              <button id="switch-to-paste" type="button" class="w-full text-left text-sm font-semibold text-blue-200 transition hover:text-blue-100">Use paste mode instead -></button>
-            </div>
-            <p class="pt-2 text-sm text-slate-200">Takes 5 seconds. No setup needed.</p>
-            <button type="submit" id="run-check" class="my-3 w-full rounded-2xl bg-blue-600 px-6 py-4 text-lg font-bold text-white shadow-lg shadow-blue-900/40 transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60">
-              Check Deliverability Risk ->
-            </button>
-            <p class="pb-3 text-center text-xs text-slate-400">No signup required • No data stored</p>
-          </form>
-          </section>
-        </div>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "What does InboxGuard do?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "InboxGuard analyzes email content before sending and predicts whether it will land in inbox or spam."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "How does InboxGuard detect spam risk?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "It checks for spam trigger words, formatting issues, and technical signals that affect deliverability."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Can InboxGuard guarantee inbox placement?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "No tool can guarantee inbox placement, but it significantly reduces the risk of emails going to spam."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Who should use InboxGuard?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Agencies, marketers, founders, and teams running email campaigns."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Is InboxGuard suitable for cold email campaigns?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes, it is designed to help cold email campaigns avoid spam filters and improve deliverability."
+        }
+      }
+    ]
+  }
+  </script>
 
-        <section id="result" class="hidden mt-5 rounded-3xl border border-slate-700 bg-slate-900/85 p-6 shadow-2xl">
-          <div class="flex flex-wrap items-end justify-between gap-3">
-            <div>
-              <p class="text-sm uppercase tracking-[0.16em] text-slate-400">Partial risk result</p>
-              <h3 class="mt-2 text-2xl font-bold">Risk Score: <span id="score" class="text-red-500">Calculating...</span></h3>
-              <p id="risk-band" class="mt-1 text-sm text-slate-300">You're likely safe, but some patterns may reduce inbox placement.</p>
-            </div>
-            <div id="risk-pill" class="rounded-full border border-red-500/60 bg-red-500/15 px-4 py-1 text-sm font-semibold text-red-100">High Risk</div>
-          </div>
+  <link rel="icon" type="image/png" href="/static/branding/logo.png" />
+  <link rel="stylesheet" href="/static/styles.min.css?v=20260406-seo-fix-2">
+  <style>
+    body { margin: 0; font-family: Inter, system-ui, -apple-system, Segoe UI, sans-serif; background: #0a1022; color: #e6edf9; line-height: 1.6; }
+    a { color: #9ec6ff; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .container { width: min(1100px, 92vw); margin: 0 auto; }
+    .nav { position: sticky; top: 0; z-index: 2; backdrop-filter: blur(8px); background: rgba(10,16,34,0.86); border-bottom: 1px solid rgba(120,140,180,0.25); }
+    .nav-inner { display: flex; justify-content: space-between; align-items: center; padding: 14px 0; }
+    .logo { display: flex; align-items: center; gap: 10px; font-size: 1.8rem; font-weight: 700; color: #ffffff; }
+    .logo img { width: 36px; height: 36px; }
+    .nav nav { display: flex; gap: 22px; font-size: 1rem; }
+    main { padding-bottom: 40px; }
+    .hero { padding: 52px 0 18px; }
+    .hero h1 { margin: 0; font-size: clamp(2rem, 4vw, 3.2rem); line-height: 1.2; color: #ffffff; }
+    .hero p { margin: 14px 0 0; max-width: 760px; font-size: 1.08rem; color: #c4d3ee; }
+    .cta { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 22px; }
+    .btn { display: inline-block; padding: 12px 20px; border-radius: 10px; font-weight: 600; text-decoration: none; }
+    .btn.primary { background: #2d74ff; color: #ffffff; }
+    .btn.secondary { border: 1px solid #3f5f97; color: #d5e3ff; }
+    .section { margin-top: 22px; padding: 22px; background: #0f1731; border: 1px solid rgba(120,140,180,0.2); border-radius: 14px; }
+    .section h2 { margin: 0 0 8px; font-size: 1.55rem; color: #ffffff; }
+    .section h3 { margin: 12px 0 4px; font-size: 1.1rem; color: #f1f6ff; }
+    .section p, .section li { color: #c9d7ef; }
+    .grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); margin-top: 10px; }
+    .card { padding: 14px; border-radius: 10px; background: #0b1228; border: 1px solid rgba(120,140,180,0.2); }
+    .faq { display: grid; gap: 8px; }
+    .faq-item { padding: 10px 0; border-bottom: 1px solid rgba(120,140,180,0.22); }
+    .faq-item:last-child { border-bottom: none; }
+    .center { text-align: center; }
+    .footer { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin: 36px auto 24px; color: #a8b8d6; }
+    .footer nav { display: flex; gap: 16px; }
+    @media (max-width: 760px) {
+      .nav-inner { flex-direction: column; align-items: flex-start; gap: 10px; }
+      .nav nav { gap: 14px; }
+      .footer { flex-direction: column; align-items: flex-start; }
+    }
+  </style>
+</head>
 
-          <div class="mt-4 h-3 w-full rounded-full bg-slate-800/80">
-            <div id="score-bar-fill" class="h-3 rounded-full bg-gradient-to-r from-emerald-400 via-yellow-400 to-red-500 transition-all duration-300" style="width: 0%"></div>
-          </div>
+<body>
 
-          <div id="problem-summary" class="mt-4 rounded-2xl border border-red-500/35 bg-red-500/10 p-4">
-            <p class="text-sm font-semibold text-red-100">What we detected</p>
-            <ul class="mt-2 space-y-1 text-sm text-red-50">
-              <li>- Authentication visibility is limited without full headers</li>
-              <li>- Some structural patterns can affect inbox placement</li>
-              <li>- Risk is based on provided content and metadata</li>
-            </ul>
-            <p class="mt-3 text-sm text-red-100/90">This is a trust-first estimate, not a hard failure verdict.</p>
-          </div>
+<header class="nav">
+  <div class="container nav-inner">
+    <div class="logo">
+      <img src="/static/branding/logo.png" alt="InboxGuard logo">
+      <span>InboxGuard</span>
+    </div>
+    <nav>
+      <a href="/pricing">Pricing</a>
+      <a href="/blog">Blog</a>
+      <a href="/app">Open App</a>
+    </nav>
+  </div>
+</header>
 
-          <div id="result-loading" class="mt-5 hidden rounded-2xl border border-blue-500/45 bg-blue-500/10 p-4 text-sm text-blue-100">
-            <span class="spinner"></span>
-            <span id="loading-step">Analyzing SPF...</span>
-          </div>
+<main>
 
-          <ul id="findings" class="mt-5 space-y-3">
-            <li class="finding-row medium">Your email has issues that can push it to spam. Fixes are locked.</li>
-          </ul>
+  <section class="hero container">
+    <h1>Check if your email will land in inbox before sending</h1>
+    <p>
+      InboxGuard analyzes your email content and detects spam risks before you hit send.
+    </p>
 
-          <p class="mt-4 text-sm font-semibold text-slate-200">Analysis confidence: Medium. Headers are not fully verifiable from partial content alone.</p>
+    <div class="cta">
+      <a href="/app" class="btn primary">Scan an Email</a>
+      <a href="/pricing" class="btn secondary">View Pricing</a>
+    </div>
+  </section>
 
-          <div id="score-breakdown-wrap" class="mt-5 hidden rounded-2xl border border-slate-700/80 bg-slate-950/55 p-4">
-            <p class="text-sm font-semibold text-slate-100">Score breakdown</p>
-            <ul id="score-breakdown" class="mt-2 space-y-2 text-sm text-slate-300"></ul>
-          </div>
+  <section class="section container">
+    <h2>What is an email spam checker?</h2>
+    <p>
+      An email spam checker analyzes email content before sending and predicts whether it will land in inbox or spam.
+      It identifies risky phrases, formatting issues, and technical signals that affect deliverability.
+    </p>
+  </section>
 
-          <div id="result-cta" class="mt-6 hidden rounded-2xl border border-blue-500/35 bg-gradient-to-r from-blue-600/15 to-indigo-600/20 p-5">
-            <p class="text-base font-semibold">Improve your email performance</p>
-            <p class="mt-1 text-sm text-slate-300">Unlock exact fixes tailored to your email.</p>
-            <ul class="mt-3 space-y-1 text-sm text-slate-200">
-              <li>- Improve reply rate</li>
-              <li>- Reduce spam triggers</li>
-              <li>- Strengthen trust signals</li>
-            </ul>
-            <a id="unlock-link" href="https://wa.me/?text=I%20want%20to%20unlock%20the%20full%20report%20for%20yourdomain.com" target="_blank" rel="noopener noreferrer" class="mt-4 inline-flex rounded-xl bg-blue-600 px-5 py-2.5 font-semibold text-white shadow-lg shadow-blue-900/40 transition hover:bg-blue-700">
-              Get Full Fix Report
-            </a>
-            <div class="mt-4 border-t border-slate-700/70 pt-4">
-              <p class="text-sm text-slate-200">Prefer email delivery? Enter email and your report request.</p>
-              <div class="mt-2 flex flex-col gap-2 sm:flex-row">
-                <input id="lead-email" type="email" placeholder="you@company.com" class="w-full rounded-xl border border-slate-700 bg-slate-950/70 px-3 py-2 text-sm text-slate-100 outline-none transition focus:border-blue-500" />
-                <a id="email-request-link" href="mailto:inboxguard.beta@gmail.com?subject=InboxGuard%20Full%20Fix%20Report%20Request&body=Domain:%20yourdomain.com%0AEmail:%20you@company.com" class="inline-flex items-center justify-center rounded-xl border border-blue-400/45 bg-slate-900 px-4 py-2 text-sm font-semibold text-blue-200 transition hover:border-blue-300 hover:text-blue-100">
-                  Send Report Request
-                </a>
-              </div>
-            </div>
-          </div>
-        </section>
-      </section>
-    </main>
+  <section class="section container">
+    <h2>How InboxGuard works</h2>
 
-    <script src="/static/js/app.js"></script>
-  </body>
+    <div class="grid">
+      <div class="card">
+        <h3>1. Analyze content</h3>
+        <p>Scan your email for spam triggers and risky language.</p>
+      </div>
+
+      <div class="card">
+        <h3>2. Detect risks</h3>
+        <p>Identify issues that may reduce inbox placement.</p>
+      </div>
+
+      <div class="card">
+        <h3>3. Fix before sending</h3>
+        <p>Improve your email before it damages your domain.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section container">
+    <h2>Who should use InboxGuard?</h2>
+    <ul>
+      <li>Cold email agencies</li>
+      <li>Marketing teams</li>
+      <li>Startup founders sending outreach</li>
+      <li>Anyone who relies on email deliverability</li>
+    </ul>
+  </section>
+
+  <section class="section container">
+    <h2>Email deliverability checks included</h2>
+
+    <div class="grid">
+      <div class="card">
+        <h3>Spam trigger detection</h3>
+        <p>Identify words and patterns that trigger spam filters.</p>
+      </div>
+
+      <div class="card">
+        <h3>Domain risk signals</h3>
+        <p>Check technical signals that affect inbox placement.</p>
+      </div>
+
+      <div class="card">
+        <h3>Pre-send validation</h3>
+        <p>Fix issues before launching campaigns.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section container">
+    <h2>Frequently asked questions</h2>
+
+    <div class="faq">
+      <div class="faq-item">
+        <h3>What does InboxGuard do?</h3>
+        <p>InboxGuard analyzes your email content before sending and predicts whether it will land in inbox or spam.</p>
+      </div>
+
+      <div class="faq-item">
+        <h3>How does InboxGuard detect spam risk?</h3>
+        <p>It checks for spam trigger words, formatting issues, and technical signals that affect deliverability.</p>
+      </div>
+
+      <div class="faq-item">
+        <h3>Can InboxGuard guarantee inbox placement?</h3>
+        <p>No tool can guarantee inbox placement, but InboxGuard significantly reduces the risk of emails going to spam.</p>
+      </div>
+
+      <div class="faq-item">
+        <h3>Who should use InboxGuard?</h3>
+        <p>Agencies, cold email teams, marketers, and founders who rely on email outreach.</p>
+      </div>
+
+      <div class="faq-item">
+        <h3>Is InboxGuard suitable for cold email campaigns?</h3>
+        <p>Yes. It is designed to help cold email campaigns avoid spam filters and improve inbox placement.</p>
+      </div>
+
+      <div class="faq-item">
+        <h3>Do I need technical knowledge to use it?</h3>
+        <p>No. The platform is designed for non-technical users and provides clear actionable feedback.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section container center">
+    <h2>Check your email before you send</h2>
+    <a href="/app" class="btn primary">Start Free Scan</a>
+  </section>
+
+</main>
+
+<footer class="footer container">
+  <p>© 2026 InboxGuard</p>
+  <nav>
+    <a href="/privacy">Privacy</a>
+    <a href="/terms">Terms</a>
+  </nav>
+</footer>
+
+</body>
 </html>
