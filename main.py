@@ -202,28 +202,6 @@ SEO_ACQUISITION_PAGES = {
     },
 }
 
-PROGRAMMATIC_KEYWORDS = [
-    "gmail spam checker",
-    "outlook spam checker",
-    "cold email spam checker",
-    "newsletter spam checker",
-    "sales email spam checker",
-    "email deliverability test",
-    "check email spam score",
-]
-
-
-def _slugify_keyword(value: str) -> str:
-    text = re.sub(r"[^a-z0-9\s-]", "", str(value or "").strip().lower())
-    text = re.sub(r"\s+", "-", text)
-    text = re.sub(r"-+", "-", text)
-    return text.strip("-")
-
-
-PROGRAMMATIC_KEYWORD_BY_SLUG = {
-    _slugify_keyword(keyword): keyword for keyword in PROGRAMMATIC_KEYWORDS if _slugify_keyword(keyword)
-}
-
 app.add_middleware(SessionMiddleware, secret_key=SESSION_SECRET, same_site="lax", https_only=SESSION_HTTPS_ONLY)
 
 oauth = OAuth()
@@ -921,34 +899,6 @@ PLAN_TOKENS = {
     "team": 2000,
 }
 
-PLAN_FEATURES = {
-    "free": {"scan_email", "rewrite_email", "domain_check"},
-    "pro": {
-        "scan_email",
-        "rewrite_email",
-        "domain_check",
-        "campaign_debugger",
-        "seed_testing",
-        "bulk_scan",
-        "api_team",
-    },
-    "team": {
-        "scan_email",
-        "rewrite_email",
-        "domain_check",
-        "campaign_debugger",
-        "seed_testing",
-        "bulk_scan",
-        "api_team",
-    },
-}
-
-PLAN_BADGES = {
-    "free": {"label": "FREE", "class": "plan-free"},
-    "pro": {"label": "PRO", "class": "plan-pro"},
-    "team": {"label": "TEAM", "class": "plan-team"},
-}
-
 FEATURE_COSTS = {
     "scan_email": 1,
     "campaign_debugger": 2,
@@ -1038,39 +988,6 @@ def _set_user_plan(user_id: int, plan: str, tokens: Optional[int] = None, trial_
         conn.commit()
     finally:
         conn.close()
-
-
-def _resolved_plan(user: Optional[dict[str, Any]]) -> str:
-    if not user:
-        return "free"
-    plan = str(user.get("plan") or "").strip().lower()
-    if not plan:
-        plan = "pro" if bool(user.get("pro")) else "free"
-    if plan not in PLAN_FEATURES:
-        plan = "pro" if bool(user.get("pro")) else "free"
-    return plan
-
-
-def _plan_badge(plan: str) -> dict[str, str]:
-    return PLAN_BADGES.get(plan, PLAN_BADGES["free"])
-
-
-def _has_feature_access(user: Optional[dict[str, Any]], feature: str) -> bool:
-    if not user:
-        return False
-    plan = _resolved_plan(user)
-    allowed = PLAN_FEATURES.get(plan, PLAN_FEATURES["free"])
-    return feature in allowed
-
-
-def _require_feature_access(request: Request, feature: str) -> dict[str, Any]:
-    user = _get_session_user(request)
-    if not user:
-        raise HTTPException(status_code=401, detail="AUTH_REQUIRED")
-    if not _has_feature_access(user, feature):
-        track_event("feature_blocked", {"feature": feature, "plan": _resolved_plan(user)})
-        raise HTTPException(status_code=403, detail="SUBSCRIPTION_REQUIRED")
-    return user
 
 
 def _get_promo_code(code: str) -> Optional[dict]:
@@ -2117,8 +2034,6 @@ def _get_session_user(request: Request):
         "name": str(request.session.get("user_name", "")).strip(),
         "picture": str(request.session.get("user_picture", "")).strip(),
         "pro": bool(db_user["pro"] if "pro" in db_user.keys() else 0),
-        "plan": str(db_user["plan"] if "plan" in db_user.keys() and db_user["plan"] else ("pro" if bool(db_user["pro"] if "pro" in db_user.keys() else 0) else "free")),
-        "tokens": int(db_user["tokens"] if "tokens" in db_user.keys() and db_user["tokens"] is not None else 0),
         "status": str(db_user["status"] if "status" in db_user.keys() and db_user["status"] else "inactive"),
         "subscription_id": str(db_user["subscription_id"] if "subscription_id" in db_user.keys() and db_user["subscription_id"] else ""),
     }
@@ -2160,25 +2075,12 @@ def _auth_status_payload(request: Request) -> dict:
         "user_scans_limit": FREE_USER_SCAN_LIMIT,
         "google_enabled": GOOGLE_AUTH_CONFIGURED,
         "pro": False,
-        "plan": "free",
-        "plan_badge": _plan_badge("free"),
-        "feature_access": {feature: False for feature in FEATURE_COSTS.keys()},
         "status": "inactive",
         "subscription_id": "",
     }
     if user:
         usage = _get_usage(user["id"])
-        plan = _resolved_plan(user)
-        is_pro = plan in {"pro", "team"}
-        feature_access = {
-            "scan_email": _has_feature_access(user, "scan_email"),
-            "rewrite_email": _has_feature_access(user, "rewrite_email"),
-            "domain_check": _has_feature_access(user, "domain_check"),
-            "campaign_debugger": _has_feature_access(user, "campaign_debugger"),
-            "seed_testing": _has_feature_access(user, "seed_testing"),
-            "bulk_scan": _has_feature_access(user, "bulk_scan"),
-            "api_team": _has_feature_access(user, "api_team"),
-        }
+        is_pro = bool(user.get("pro", False))
         payload.update(
             {
                 "user_scans_used": usage["scans_used"],
@@ -2186,9 +2088,6 @@ def _auth_status_payload(request: Request) -> dict:
                 "rewrite_clicked": usage["rewrite_clicked"],
                 "last_active": usage["last_active"],
                 "pro": is_pro,
-                "plan": plan,
-                "plan_badge": _plan_badge(plan),
-                "feature_access": feature_access,
                 "status": str(user.get("status", "inactive")),
                 "subscription_id": str(user.get("subscription_id", "")),
             }
@@ -2423,14 +2322,6 @@ async def create_subscription(request: Request, plan: str = Form("monthly")):
             "plan": selected_plan,
         },
     )
-    track_event(
-        "payment_started",
-        {
-            "user_id": str(user["id"]),
-            "provider": "razorpay",
-            "plan": selected_plan,
-        },
-    )
     return JSONResponse(
         status_code=200,
         content={
@@ -2482,10 +2373,7 @@ async def razorpay_webhook(request: Request, x_razorpay_signature: str | None = 
         sub = (payload.get("payload", {}) or {}).get("subscription", {}).get("entity", {}) or {}
         user_id = _apply_razorpay_subscription_state(sub, pro=True, status="active")
         if user_id > 0:
-            notes = sub.get("notes", {}) or {}
-            selected_plan = str(notes.get("plan", "")).strip().lower()
-            resolved_plan = "team" if selected_plan == "annual" else "pro"
-            _set_user_plan(user_id, resolved_plan, tokens=PLAN_TOKENS.get(resolved_plan, PLAN_TOKENS.get("pro", 500)))
+            _set_user_plan(user_id, "pro", tokens=PLAN_TOKENS.get("pro", 1000))
             track_event("pro_activated", {"user_id": str(user_id), "provider": "razorpay", "subscription_id": str(sub.get("id", "") or "")})
 
     elif event in {"payment.captured", "subscription.charged", "invoice.paid"}:
@@ -2497,8 +2385,6 @@ async def razorpay_webhook(request: Request, x_razorpay_signature: str | None = 
         subscription_id = str(entity.get("subscription_id", "") or subscription_entity.get("id", "") or "")
         user_id = _extract_user_id(notes) or _get_user_id_by_subscription_id(subscription_id)
         if user_id > 0:
-            selected_plan = str(notes.get("plan", "")).strip().lower()
-            resolved_plan = "team" if selected_plan == "annual" else "pro"
             _set_user_subscription_state(
                 user_id,
                 pro=True,
@@ -2508,7 +2394,7 @@ async def razorpay_webhook(request: Request, x_razorpay_signature: str | None = 
             )
             if subscription_entity:
                 _apply_razorpay_subscription_state(subscription_entity, pro=True, status="active")
-            _set_user_plan(user_id, resolved_plan, tokens=PLAN_TOKENS.get(resolved_plan, PLAN_TOKENS.get("pro", 500)))
+            _set_user_plan(user_id, "pro", tokens=PLAN_TOKENS.get("pro", 1000))
             _record_payment(
                 user_id=user_id,
                 amount=int(entity.get("amount", 0) or 0),
@@ -2518,7 +2404,6 @@ async def razorpay_webhook(request: Request, x_razorpay_signature: str | None = 
                 invoice_id=str(invoice_entity.get("id", "") or ""),
             )
             track_event("payment_captured", {"user_id": str(user_id), "provider": "razorpay", "subscription_id": subscription_id})
-            track_event("payment_success", {"user_id": str(user_id), "provider": "razorpay", "subscription_id": subscription_id})
 
     elif event == "invoice.payment_failed":
         invoice = (payload.get("payload", {}) or {}).get("invoice", {}).get("entity", {}) or {}
@@ -2588,21 +2473,11 @@ def get_tokens_info(request: Request):
         raise HTTPException(status_code=401, detail="Not authenticated")
     
     tokens = _get_user_tokens(int(user["id"]))
-    plan = _resolved_plan(user)
+    plan = str(user.get("plan") or "free").lower()
     
     return {
         "tokens": tokens,
         "plan": plan,
-        "plan_badge": _plan_badge(plan),
-        "feature_access": {
-            "scan_email": _has_feature_access(user, "scan_email"),
-            "rewrite_email": _has_feature_access(user, "rewrite_email"),
-            "domain_check": _has_feature_access(user, "domain_check"),
-            "campaign_debugger": _has_feature_access(user, "campaign_debugger"),
-            "seed_testing": _has_feature_access(user, "seed_testing"),
-            "bulk_scan": _has_feature_access(user, "bulk_scan"),
-            "api_team": _has_feature_access(user, "api_team"),
-        },
         "feature_costs": FEATURE_COSTS,
     }
 
@@ -2685,7 +2560,7 @@ def _build_user_profile(user: dict, include_saved_fixes: bool = False) -> dict:
     streak_days = _user_streak_days(user["id"])
     health_score = _health_score(usage, recent_results)
     tokens = _get_user_tokens(user["id"])
-    plan = _resolved_plan(user)
+    plan = str(user.get("plan") or "free").lower()
     
     profile = {
         "name": user["name"] or _display_name_from_email(user["email"]),
@@ -3027,11 +2902,11 @@ def seed_run(
     body_text: str = Form("InboxGuard seed probe"),
     wait_seconds: int = Form(5),
 ):
-    user = _require_feature_access(request, "seed_testing")
     token = (subject_token or "").strip() or f"IG-{secrets.token_hex(4)}"
     results = _run_seed_test(token, body_text, wait_seconds=wait_seconds)
     inbox_count = sum(1 for value in results.values() if value == "inbox")
     spam_count = sum(1 for value in results.values() if value == "spam")
+    user = _get_session_user(request)
     _save_seed_test(
         int(user["id"]) if user else None,
         campaign_name,
@@ -3059,14 +2934,14 @@ def create_seed_test(
     spam_count: int = Form(0),
     notes: str = Form(""),
 ):
-    user = _require_feature_access(request, "seed_testing")
+    user = _get_session_user(request)
     _save_seed_test(int(user["id"]) if user else None, campaign_name, provider, inbox_count, spam_count, notes)
     return {"ok": True}
 
 
 @app.get("/seed-tests")
 def list_seed_tests(request: Request):
-    user = _require_feature_access(request, "seed_testing")
+    user = _get_session_user(request)
     items = _recent_seed_tests(int(user["id"]) if user else None, limit=12)
     return {"ok": True, "items": items}
 
@@ -3085,7 +2960,9 @@ async def bulk_analyze(
     file: UploadFile = File(...),
     analysis_mode: str = Form("content"),
 ):
-    user = _require_feature_access(request, "bulk_scan")
+    user = _get_session_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="AUTH_REQUIRED")
 
     content = await file.read()
     text = content.decode("utf-8", errors="ignore")
@@ -3160,20 +3037,26 @@ def seed_inbox_page(request: Request):
 
 @app.post("/api-keys")
 def create_api_key(request: Request, name: str = Form("Primary key")):
-    user = _require_feature_access(request, "api_team")
+    user = _get_session_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="AUTH_REQUIRED")
     key = _create_api_key(int(user["id"]), name)
     return {"ok": True, "api_key": key, "warning": "Store this key now. It will not be shown again."}
 
 
 @app.get("/api-keys")
 def list_api_keys(request: Request):
-    user = _require_feature_access(request, "api_team")
+    user = _get_session_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="AUTH_REQUIRED")
     return {"ok": True, "items": _list_api_keys(int(user["id"]))}
 
 
 @app.post("/api-keys/revoke")
 def revoke_api_key(request: Request, key_id: int = Form(0)):
-    user = _require_feature_access(request, "api_team")
+    user = _get_session_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="AUTH_REQUIRED")
     if not _revoke_api_key(int(user["id"]), int(key_id)):
         raise HTTPException(status_code=404, detail="API key not found")
     return {"ok": True}
@@ -3207,14 +3090,18 @@ def analyze_via_api(
 
 @app.post("/teams")
 def create_team(request: Request, name: str = Form("My Team")):
-    user = _require_feature_access(request, "api_team")
+    user = _get_session_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="AUTH_REQUIRED")
     team_id = _create_team(int(user["id"]), name)
     return {"ok": True, "team_id": team_id}
 
 
 @app.post("/teams/member")
 def add_team_member(request: Request, team_id: int = Form(0), email: str = Form(""), role: str = Form("member")):
-    _require_feature_access(request, "api_team")
+    user = _get_session_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="AUTH_REQUIRED")
     row = _get_user_by_email((email or "").strip().lower())
     if not row:
         raise HTTPException(status_code=404, detail="User not found")
@@ -3227,7 +3114,9 @@ def add_team_member(request: Request, team_id: int = Form(0), email: str = Form(
 
 @app.get("/teams")
 def list_teams(request: Request):
-    user = _require_feature_access(request, "api_team")
+    user = _get_session_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="AUTH_REQUIRED")
     return {"ok": True, "items": _teams_for_user(int(user["id"]))}
 
 
@@ -3328,7 +3217,6 @@ def signup(request: Request, email: str = Form(""), password: str = Form("")):
     user_id = _create_user(clean_email, clean_password)
     _set_session_user(request, user_id, clean_email)
     track_event("access_request", {"target": "signup", "mode": "email_password"})
-    track_event("signup_completed", {"mode": "email_password"})
     return {"ok": True, "authenticated": True, "email": clean_email}
 
 
@@ -3446,27 +3334,6 @@ def programmatic_page(request: Request, slug: str):
     )
 
 
-@app.get("/tool/{slug}", response_class=HTMLResponse)
-def programmatic_tool_page(request: Request, slug: str):
-    keyword = PROGRAMMATIC_KEYWORD_BY_SLUG.get(slug)
-    if keyword is None:
-        raise HTTPException(status_code=404, detail="Page not found")
-
-    track_event("page_view", {"page": f"tool/{slug}"})
-    return render_template_safe(
-        request,
-        "seo_dynamic.html",
-        {
-            "keyword": keyword,
-            "slug": slug,
-            "page_title": f"{keyword.title()} | InboxGuard",
-            "meta_description": f"Use this {keyword} tool to check if your email will land in spam before sending.",
-            "canonical_url": f"{SITE_URL}/tool/{slug}",
-            "ai_tool_meta": f"{keyword}, email spam checker, deliverability tool",
-        },
-    )
-
-
 @app.get("/robots.txt", response_class=PlainTextResponse)
 def robots_txt():
     return PlainTextResponse(
@@ -3503,7 +3370,6 @@ def sitemap_xml():
     ]
     urls.extend([f"{SITE_URL}/blog/{slug}" for slug in BLOG_POSTS.keys()])
     urls.extend([f"{SITE_URL}/p/{item['slug']}" for item in LONG_TAIL_PAGES])
-    urls.extend([f"{SITE_URL}/tool/{slug}" for slug in PROGRAMMATIC_KEYWORD_BY_SLUG.keys()])
 
     body = [
         '<?xml version="1.0" encoding="UTF-8"?>',
@@ -3958,7 +3824,7 @@ def seed_run_async(
     subject_token: str = Form(""),
     body_text: str = Form("InboxGuard seed probe"),
 ):
-    user = _require_feature_access(request, "seed_testing")
+    user = _get_session_user(request)
     job_id = str(uuid4())
     token = (subject_token or "").strip() or f"IG-{job_id[:8]}"
     _set_job_runtime_state(
@@ -4038,25 +3904,21 @@ def seed_run_async(
 
 @app.post("/diagnose-campaign")
 def diagnose_campaign(
-    request: Request,
     open_rate: float = Form(0.0),
     reply_rate: float = Form(0.0),
     bounce_rate: float = Form(0.0),
     sent_count: int = Form(0),
 ):
-    _require_feature_access(request, "campaign_debugger")
     return _campaign_debugger_logic(open_rate, reply_rate, bounce_rate, sent_count)
 
 
 @app.post("/campaign-debugger")
-def campaign_debugger(request: Request, data: CampaignDebuggerInput):
-    _require_feature_access(request, "campaign_debugger")
+def campaign_debugger(data: CampaignDebuggerInput):
     return _campaign_debugger_logic(data.open_rate, data.reply_rate, data.bounce_rate, data.sent)
 
 
 @app.post("/seed-test")
 def seed_test(request: Request, data: SeedTestInput):
-    user = _require_feature_access(request, "seed_testing")
     campaign_name = str(data.campaign_name or "Seed Campaign").strip() or "Seed Campaign"
     subject = str(data.subject or "InboxGuard Seed Test").strip() or "InboxGuard Seed Test"
     body = str(data.body or "InboxGuard seed probe").strip() or "InboxGuard seed probe"
@@ -4073,6 +3935,7 @@ def seed_test(request: Request, data: SeedTestInput):
         "unknown": sum(1 for value in results.values() if value == "unknown"),
     }
 
+    user = _get_session_user(request)
     _save_seed_test(
         int(user["id"]) if user else None,
         campaign_name,
@@ -4471,55 +4334,20 @@ def submit_feedback(
 
 
 @app.post("/track")
-async def track(request: Request):
-    event = ""
-    target = ""
-    mode = ""
-    meta_payload: dict[str, Any] = {}
-
-    content_type = str(request.headers.get("content-type", "")).lower()
-    if "application/json" in content_type:
-        try:
-            body = await request.json()
-        except Exception:
-            body = {}
-        if isinstance(body, dict):
-            event = str(body.get("event", "") or "")
-            target = str(body.get("target", "") or "")
-            mode = str(body.get("mode", "") or "")
-            payload_meta = body.get("data") or body.get("meta")
-            if isinstance(payload_meta, dict):
-                meta_payload = payload_meta
-    else:
-        form = await request.form()
-        event = str(form.get("event", "") or "")
-        target = str(form.get("target", "") or "")
-        mode = str(form.get("mode", "") or "")
-
+def track(
+    request: Request,
+    event: str = Form(""),
+    target: str = Form(""),
+    mode: str = Form(""),
+):
     event_name = (event or "").strip().lower()
-    allowed_events = {
-        "cta_click",
-        "page_view",
-        "access_request",
-        "analyze_clicked",
-        "rewrite_clicked",
-        "signup_completed",
-        "payment_started",
-        "payment_success",
-    }
-    if event_name not in allowed_events:
-        return JSONResponse({"ok": True, "ignored": True})
+    if event_name not in {"cta_click", "page_view", "access_request", "rewrite_clicked"}:
+        return JSONResponse({"ok": True})
 
     meta = {
         "target": (target or "")[:120],
         "mode": (mode or "")[:20],
     }
-    for key, value in list(meta_payload.items())[:12]:
-        safe_key = str(key or "")[:40]
-        safe_value = str(value or "")[:160]
-        if safe_key:
-            meta[safe_key] = safe_value
-
     track_event(event_name, meta)
     if event_name == "rewrite_clicked":
         user = _get_session_user(request)
