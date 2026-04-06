@@ -25,6 +25,7 @@ const accessButton = document.getElementById("get-access-btn") || document.getEl
 const fillExampleButton = document.getElementById("fill-example");
 const tokenCostHintNode = document.getElementById("token-cost-hint");
 const tokenAfterHintNode = document.getElementById("token-after-hint");
+const tokenEmptyStateNode = document.getElementById("token-empty-state");
 
 const authModal = document.getElementById("auth-modal");
 const authSignInButton = document.getElementById("auth-signin");
@@ -2845,6 +2846,9 @@ async function loadUserTokens() {
             if (tokenBadge) {
                 tokenBadge.classList.add("hidden");
             }
+            if (tokenEmptyStateNode) {
+                tokenEmptyStateNode.classList.add("hidden");
+            }
             return;
         }
 
@@ -2862,6 +2866,11 @@ async function loadUserTokens() {
         }
         if (planLabel) {
             planLabel.textContent = plan === "pro" ? "PRO" : "FREE";
+        }
+
+        if (tokenEmptyStateNode) {
+            const shouldShowEmpty = plan !== "pro" && tokens <= 0;
+            tokenEmptyStateNode.classList.toggle("hidden", !shouldShowEmpty);
         }
 
         updateTokenMessaging(tokens);

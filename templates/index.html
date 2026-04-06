@@ -65,8 +65,13 @@
     <div class="app-shell">
       <aside class="sidebar">
         <div class="brand-wrap">
-          <img src="/static/branding/logo-wordmark.svg" alt="InboxGuard" style="display:block; width: 172px; max-width: 100%;" />
-          <p class="sub">Fix Before You Send</p>
+          <div class="brand-lockup" aria-label="InboxGuard">
+            <img src="/static/branding/icon-shield.svg" class="logo-icon" alt="InboxGuard logo" />
+            <div>
+              <p class="logo-text">InboxGuard</p>
+              <p class="sub">Fix Before You Send</p>
+            </div>
+          </div>
         </div>
         <nav>
           <button id="tab-dashboard" class="nav-item active" type="button">Home</button>
@@ -77,13 +82,15 @@
           <button class="nav-item tool-nav-btn" type="button" data-tool="seed">Seed Testing</button>
           <button class="nav-item tool-nav-btn" type="button" data-tool="bulk">Bulk Scan</button>
           <button class="nav-item tool-nav-btn" type="button" data-tool="ops">API + Team</button>
-          <button class="nav-item tool-nav-btn" type="button" data-tool="insights">Operator Insights</button>
 
-          <p class="nav-group-label">Data</p>
-          <button class="nav-item" type="button" onclick="window.location.href='/saved-fixes'">Saved Fixes</button>
-          <button class="nav-item" type="button" onclick="window.location.href='/inbox-tips'">Inbox Tips</button>
-          <button class="nav-item" type="button" onclick="window.location.href='/results'">Results</button>
-          <button class="nav-item" type="button" onclick="window.location.href='/reports'">Reports</button>
+          <details class="sidebar-more">
+            <summary>More</summary>
+            <button class="nav-item tool-nav-btn" type="button" data-tool="insights">Operator Insights</button>
+            <button class="nav-item" type="button" onclick="window.location.href='/saved-fixes'">Saved Fixes</button>
+            <button class="nav-item" type="button" onclick="window.location.href='/inbox-tips'">Inbox Tips</button>
+            <button class="nav-item" type="button" onclick="window.location.href='/results'">Results</button>
+            <button class="nav-item" type="button" onclick="window.location.href='/reports'">Reports</button>
+          </details>
 
           <p class="nav-group-label">System</p>
           <button class="nav-item" type="button" onclick="window.location.href='/about'">About</button>
@@ -100,14 +107,18 @@
 
       <main class="main-area">
         <header class="topbar">
-          <h1 style="display:flex;align-items:center;gap:10px;">
-            <img src="/static/branding/icon-shield.svg" width="30" height="30" alt="InboxGuard" style="display:block;" />
-            <span>InboxGuard</span>
+          <h1 class="topbar-brand" aria-label="InboxGuard">
+            <img src="/static/branding/icon-shield.svg" class="logo-icon" alt="InboxGuard logo" />
+            <span class="logo-text">InboxGuard</span>
           </h1>
           <div class="topbar-actions">
             <div id="token-display" class="token-badge hidden">
               🔋 <span id="token-count">0</span>
               <span id="plan-label" class="plan-label">FREE</span>
+            </div>
+            <div id="token-empty-state" class="token-empty-state hidden">
+              <p>You're out of tokens. Upgrade to continue scanning.</p>
+              <button type="button" class="btn-primary" onclick="handleGetAccess()">Upgrade Now</button>
             </div>
             <button id="admin-dashboard-btn" type="button" class="access-link hidden">Admin</button>
             <button id="start-btn" type="button" class="start-btn">Try with your email</button>
@@ -119,66 +130,75 @@
 
         <section class="hero-story card home-only">
           <h2>Stop guessing before you send</h2>
-          <p>Know if your email will land in inbox before sending.</p>
+          <p>Predict inbox placement. Fix spam triggers. Protect your domain.</p>
+          <div class="hero-actions">
+            <button class="primary-btn" type="button" onclick="openTool('scan')">Scan an Email</button>
+            <button class="secondary-btn" type="button" onclick="document.getElementById('core-tools').scrollIntoView({ behavior: 'smooth', block: 'start' })">See how it works</button>
+          </div>
           <p class="hero-note">Start with Scan Email and fix risk before it damages your domain.</p>
         </section>
 
         <section id="feature-grid-panel" class="card home-only">
-          <h2 class="section-title">Choose a tool to get started</h2>
-          <section id="feature-grid" class="feature-grid">
-          
-                    <!-- Scan Email -->
-                    <div class="feature-card">
-                      <div class="feature-cost">1 token</div>
-                      <h3 class="feature-title">📨 Scan Email</h3>
-                      <p class="feature-description">Check if your email will land in inbox or spam across Gmail, Outlook, and other providers.</p>
-                      <button class="feature-open-btn" onclick="openTool('scan');">Open</button>
-                    </div>
+          <h2 class="section-title">Command Center</h2>
 
-                    <!-- Campaign Debugger -->
-                    <div class="feature-card">
-                      <div class="feature-cost">2 tokens</div>
-                      <h3 class="feature-title">🧭 Campaign Debugger</h3>
-                      <p class="feature-description">Diagnose why your emails are failing. Analyze metrics and find the exact issue.</p>
-                      <button class="feature-open-btn" onclick="openTool('campaign-debugger');">Open</button>
-                    </div>
+          <section id="core-tools" class="feature-grid core-tools">
+            <article class="feature-card core-card">
+              <div class="feature-cost">1 token • Core Tool</div>
+              <h3 class="feature-title">📨 Scan Email</h3>
+              <p class="feature-description">Check if your email will land in inbox or spam across Gmail, Outlook, and other providers.</p>
+              <button class="feature-open-btn" onclick="openTool('scan');">Open</button>
+            </article>
 
-                    <!-- Domain Check -->
-                    <div class="feature-card">
-                      <div class="feature-cost">1 token</div>
-                      <h3 class="feature-title">🌐 Domain Check</h3>
-                      <p class="feature-description">Check if your domain is blacklisted on major blocklists. Essential before campaign launch.</p>
-                      <button class="feature-open-btn" onclick="openTool('blacklist');">Open</button>
-                    </div>
+            <article class="feature-card core-card">
+              <div class="feature-cost">2 tokens • Core Tool</div>
+              <h3 class="feature-title">🧭 Campaign Debugger</h3>
+              <p class="feature-description">Diagnose why your emails are failing. Analyze campaign signals and find the exact issue.</p>
+              <button class="feature-open-btn" onclick="openTool('campaign-debugger');">Open</button>
+            </article>
+          </section>
 
-                    <!-- Seed Testing -->
-                    <div class="feature-card">
-                      <div class="feature-cost">5 tokens</div>
-                      <h3 class="feature-title">🧪 Seed Testing</h3>
-                      <p class="feature-description">Send test emails to seed inboxes and track delivery across providers in real-time.</p>
-                      <button class="feature-open-btn" onclick="openTool('seed');">Open</button>
-                    </div>
+          <details class="secondary-tools-wrap" open>
+            <summary>Secondary tools</summary>
+            <section id="feature-grid" class="feature-grid secondary-tools">
+              <article class="feature-card secondary-card">
+                <div class="feature-cost">1 token</div>
+                <h3 class="feature-title">🌐 Domain Check</h3>
+                <p class="feature-description">Check if your domain is blacklisted on major blocklists before launch.</p>
+                <button class="feature-open-btn" onclick="openTool('blacklist');">Open</button>
+              </article>
 
-                    <!-- Bulk Scan -->
-                    <div class="feature-card">
-                      <div class="feature-cost">3 tokens</div>
-                      <h3 class="feature-title">📦 Bulk Scan</h3>
-                      <p class="feature-description">Upload CSV of emails and scan them all at once. Great for testing variations.</p>
-                      <button class="feature-open-btn" onclick="openTool('bulk');">Open</button>
-                    </div>
+              <article class="feature-card secondary-card">
+                <div class="feature-cost">5 tokens</div>
+                <h3 class="feature-title">🧪 Seed Testing</h3>
+                <p class="feature-description">Send test emails to seed inboxes and track delivery across providers.</p>
+                <button class="feature-open-btn" onclick="openTool('seed');">Open</button>
+              </article>
 
-                    <!-- API + Team -->
-                    <div class="feature-card">
-                      <div class="feature-cost">Custom</div>
-                      <h3 class="feature-title">👥 API + Team</h3>
-                      <p class="feature-description">Integrate InboxGuard into your workflow. Manage teams and collaborate securely.</p>
-                      <button class="feature-open-btn" onclick="openTool('ops');">Open</button>
-                    </div>
+              <article class="feature-card secondary-card">
+                <div class="feature-cost">3 tokens</div>
+                <h3 class="feature-title">📦 Bulk Scan</h3>
+                <p class="feature-description">Upload CSV emails and scan all variants at once.</p>
+                <button class="feature-open-btn" onclick="openTool('bulk');">Open</button>
+              </article>
+
+              <article class="feature-card secondary-card">
+                <div class="feature-cost">Custom</div>
+                <h3 class="feature-title">👥 API + Team</h3>
+                <p class="feature-description">Integrate InboxGuard into your workflow and manage secure team access.</p>
+                <button class="feature-open-btn" onclick="openTool('ops');">Open</button>
+              </article>
+            </section>
+          </details>
           </section>
         </section>
 
         <section class="card home-only" id="home-pricing-cta" style="margin-top: 12px;">
-          <h3>Need unlimited scans and team workflows?</h3>
+          <h3>Unlock Advanced Deliverability Tools</h3>
+          <ul class="pricing-value-list">
+            <li>Campaign Debugging</li>
+            <li>Seed Testing</li>
+            <li>Bulk Scanning</li>
+          </ul>
           <p class="micro">Upgrade when you are ready. Keep your domain safe before every campaign launch.</p>
           <button type="button" class="btn-primary" onclick="handleGetAccess()">Get Access</button>
         </section>
