@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1040 220" role="img" aria-label="InboxGuard wordmark">
+  <defs>
+    <linearGradient id="shieldFill" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0d4ec7"/>
+      <stop offset="55%" stop-color="#1486df"/>
+      <stop offset="100%" stop-color="#39d1a8"/>
+    </linearGradient>
+    <linearGradient id="accentFill" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0f3c9a"/>
+      <stop offset="100%" stop-color="#1fd3a8"/>
+    </linearGradient>
+  </defs>
+
+  <g transform="translate(20,14)">
+    <path d="M94 4 164 30c8 3 13 10 13 19v46c0 55-33 94-83 121C44 189 11 150 11 95V49c0-9 5-16 13-19z" fill="url(#shieldFill)"/>
+    <path d="M94 24 29 48v42c0 43 24 74 65 98 41-24 65-55 65-98V48z" fill="#ffffff"/>
+    <path d="M98 64c30 0 54 16 64 40" fill="none" stroke="#0e65b8" stroke-width="8" stroke-linecap="round"/>
+    <circle cx="180" cy="66" r="8" fill="#ffffff"/>
+    <circle cx="192" cy="80" r="6" fill="#ffffff"/>
+    <path d="M64 106c17-24 37-35 60-35 16 0 31 5 44 14l-53 50c-15 0-29-4-40-12l-16 17c18 14 39 21 62 21 27 0 51-10 70-30l8-8-15-15-8 8c-15 15-31 23-51 23-10 0-19-2-27-6l56-52-14-14c-17-12-36-19-56-19-29 0-55 14-75 41z" fill="url(#accentFill)"/>
+  </g>
+
+  <text x="280" y="142" font-family="Inter, Arial, sans-serif" font-size="116" font-weight="700" fill="#0b2f79">Inbox</text>
+  <text x="620" y="142" font-family="Inter, Arial, sans-serif" font-size="116" font-weight="700" fill="#2dbd9b">Guard</text>
+</svg>

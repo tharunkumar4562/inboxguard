@@ -22,13 +22,13 @@
     <meta property="og:title" content="{{ page_title or 'InboxGuard | Fix risky emails before you send' }}" />
     <meta property="og:description" content="{{ meta_description or 'Find out why emails that look fine still land in spam, then fix them before sending.' }}" />
     <meta property="og:url" content="{{ canonical_url or 'https://inboxguard.me/' }}" />
-    <meta property="og:image" content="https://inboxguard.me/static/logo.svg" />
+    <meta property="og:image" content="https://inboxguard.me/static/brand-wordmark.svg" />
     <meta name="twitter:card" content="summary" />
     <meta name="twitter:title" content="{{ page_title or 'InboxGuard | Fix risky emails before you send' }}" />
     <meta name="twitter:description" content="{{ meta_description or 'Find out why emails that look fine still land in spam, then fix them before sending.' }}" />
-    <meta name="twitter:image" content="https://inboxguard.me/static/logo.svg" />
+    <meta name="twitter:image" content="https://inboxguard.me/static/brand-wordmark.svg" />
     <link rel="icon" href="/static/favicon-48.png" type="image/png" sizes="48x48" />
-    <link rel="icon" href="/static/favicon.svg" type="image/svg+xml" sizes="any" />
+    <link rel="icon" href="/static/brand-icon.svg" type="image/svg+xml" sizes="any" />
     <link rel="apple-touch-icon" href="/static/favicon-48.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -42,7 +42,7 @@
           "@type": "Organization",
           "name": "InboxGuard",
           "url": "https://inboxguard.me",
-          "logo": "https://inboxguard.me/static/logo.svg"
+          "logo": "https://inboxguard.me/static/brand-wordmark.svg"
         },
         {
           "@context": "https://schema.org",
@@ -89,7 +89,7 @@
         </nav>
 
         <a id="profile-link" class="profile-link hidden" href="/profile" aria-label="Open profile">
-          <img id="profile-avatar" class="profile-avatar" src="/static/favicon-48.png" alt="Profile avatar" />
+          <img id="profile-avatar" class="profile-avatar" src="/static/brand-icon.svg" alt="Profile avatar" />
           <span id="profile-initial" class="profile-initial">U</span>
           <span class="profile-label">Profile</span>
         </a>
@@ -97,9 +97,8 @@
 
       <main class="main-area">
         <header class="topbar">
-          <h1 style="display:flex;align-items:center;gap:10px;">
-            <img src="/static/logo.svg" width="30" height="30" alt="InboxGuard" style="display:block;" />
-            <span>InboxGuard</span>
+          <h1>
+            <img src="/static/brand-wordmark.svg" alt="InboxGuard" class="brand-wordmark" style="height:42px;width:auto;display:block;" />
           </h1>
           <div class="topbar-actions">
             <div id="token-display" class="token-badge hidden">
