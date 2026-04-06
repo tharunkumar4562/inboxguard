@@ -4420,23 +4420,6 @@ def admin_revenue(request: Request, token: str = ""):
             "total_payments": len(paid_rows),
         }
     )
-    _ensure_auth_db_ready()
-    conn = _auth_db_conn()
-    try:
-        rows = conn.execute("SELECT amount, status FROM payments").fetchall()
-    finally:
-        conn.close()
-
-    paid_rows = [row for row in rows if str(row["status"] or "").lower() == "paid"]
-    total_revenue_paise = sum(int(row["amount"] or 0) for row in paid_rows)
-    total_revenue_inr = total_revenue_paise / 100.0
-    return JSONResponse(
-        {
-            "total_revenue_paise": total_revenue_paise,
-            "total_revenue_inr": total_revenue_inr,
-            "total_payments": len(paid_rows),
-        }
-    )
 
 
 @app.get("/admin/churn")
@@ -4448,17 +4431,6 @@ def admin_churn(request: Request, token: str = ""):
         rows = conn.execute("SELECT status FROM users").fetchall()
     finally:
         conn.close()
-
-    total_users = len(rows)
-    cancelled = sum(1 for row in rows if str(row["status"] or "inactive").lower() == "cancelled")
-    churn_rate = (cancelled / total_users) if total_users else 0.0
-    return JSONResponse(
-        {
-            "total_users": total_users,
-            "cancelled_users": cancelled,
-            "churn_rate": churn_rate,
-        }
-    )
 
     total_users = len(rows)
     cancelled = sum(1 for row in rows if str(row["status"] or "inactive").lower() == "cancelled")
