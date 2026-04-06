@@ -208,6 +208,7 @@ let pendingAuthRedirectPath = "";
 let leadCaptureEmail = localStorage.getItem("ig_lead_capture_email") || "";
 let leadCaptureSaved = localStorage.getItem("ig_lead_capture_saved") === "1";
 let pendingPlanChoice = "monthly";
+let userActionCount = 0;
 
 const APP_LOOP_WINS_KEY = "ig_wins";
 const APP_LOOP_STREAK_KEY = "ig_streak";
@@ -1058,11 +1059,15 @@ function showHome() {
 }
 
 function openTool(tool) {
-    const advancedTools = new Set(["campaign-debugger", "seed", "bulk"]);
+    const advancedTools = new Set(["campaign-debugger", "seed", "bulk", "ops"]);
     const status = String(window.userStatus || currentUserStatus || "inactive").toLowerCase();
     const hasPaidAccess = Boolean(window.userIsPro) && status === "active";
     if (advancedTools.has(String(tool || "").toLowerCase()) && !hasPaidAccess) {
-        showError("Advanced tools are locked. Upgrade to unlock full deliverability analysis.");
+        showUpgradeModal({
+            title: "You're losing emails to spam right now",
+            subtitle: "Upgrade to fix it before your next campaign",
+            plan: "growth",
+        });
         showHome();
         const pricingSection = document.getElementById("home-pricing-cta");
         if (pricingSection) {
@@ -1070,6 +1075,9 @@ function openTool(tool) {
         }
         return;
     }
+
+    userActionCount += 1;
+    refreshPricingContext();
 
     hideAllViews();
     homeSections.forEach((node) => node.classList.add("hidden"));
@@ -2888,6 +2896,8 @@ async function loadUserTokens() {
         }
 
         updateTokenMessaging(tokens);
+        refreshLockedFeatures();
+        refreshPricingContext();
     } catch (error) {
         // Keep UI responsive even if token endpoint is unavailable.
     }
@@ -2939,18 +2949,73 @@ function closePricingModal() {
     document.body.classList.remove("modal-open");
 }
 
-function handleGetAccess(plan) {
-    const requestedPlan = String(plan || "monthly").toLowerCase();
-    const mappedPlan = requestedPlan === "pro" || requestedPlan === "growth"
-        ? "monthly"
-        : requestedPlan === "team" || requestedPlan === "scale"
-            ? "usage"
-            : "monthly";
-    pendingPlanChoice = mappedPlan;
+function handleGetAccess() {
     if (inlinePlanTypeInput) {
-        inlinePlanTypeInput.value = mappedPlan;
+        inlinePlanTypeInput.value = pendingPlanChoice;
     }
     openPricingModal();
+}
+
+function handlePlanClick(plan) {
+    const selected = String(plan || "growth").toLowerCase();
+    if (selected === "free") {
+        openTool("scan");
+        return;
+    }
+
+    pendingPlanChoice = "monthly";
+    if (!isAuthenticated) {
+        showAuthModal();
+        return;
+    }
+    trackEvent("payment_started", { plan: selected });
+    handleGetAccess();
+}
+
+function refreshPricingContext() {
+    const pricingTitleNode = document.getElementById("pricing-title");
+    if (!pricingTitleNode) {
+        return;
+    }
+    if (userActionCount > 3) {
+        pricingTitleNode.textContent = "You're already using InboxGuard - unlock full power";
+        return;
+    }
+    pricingTitleNode.textContent = "Simple pricing. No guesswork.";
+}
+
+function refreshLockedFeatures() {
+    const status = String(window.userStatus || currentUserStatus || "inactive").toLowerCase();
+    const hasPaidAccess = Boolean(window.userIsPro) && status === "active";
+    document.querySelectorAll(".lockable").forEach((node) => {
+        node.classList.toggle("locked", !hasPaidAccess);
+    });
+}
+
+function showUpgradeModal({ title, subtitle, plan } = {}) {
+    if (plan === "growth") {
+        pendingPlanChoice = "monthly";
+    }
+    const paywall = document.getElementById("paywall");
+    if (!paywall) {
+        openPricingModal();
+        return;
+    }
+
+    paywall.classList.remove("hidden");
+    const titleNode = paywall.querySelector("h3");
+    const bodyNode = paywall.querySelector("p");
+    const buttonNode = paywall.querySelector("button");
+    if (titleNode) {
+        titleNode.textContent = title || "You're losing emails to spam right now";
+    }
+    if (bodyNode) {
+        bodyNode.textContent = subtitle || "Upgrade to fix it before your next campaign";
+    }
+    if (buttonNode) {
+        buttonNode.textContent = "Upgrade to Growth";
+    }
+    paywall.scrollIntoView({ behavior: "smooth", block: "center" });
 }
 
 function openToolPane(toolKey) {
@@ -2992,22 +3057,22 @@ function showPaywall() {
     const body = paywall.querySelector("p");
     const button = paywall.querySelector("button");
     if (title) {
-        title.textContent = "You've found your biggest risk. Fixing one email isn't enough.";
+        title.textContent = "You're losing emails to spam right now";
     }
     if (body) {
-        body.textContent = "Get Access to run your next check before the next campaign goes out.";
+        body.textContent = "Upgrade to fix it before your next campaign.";
     }
     if (button) {
-        button.textContent = "Unlock Full Analysis";
+        button.textContent = "Upgrade to Growth";
     }
 }
 
 function showUpgradeBlock() {
-    const paywall = document.getElementById("paywall");
-    showPaywall();
-    if (paywall) {
-        paywall.scrollIntoView({ behavior: "smooth", block: "center" });
-    }
+    showUpgradeModal({
+        title: "You're losing emails to spam right now",
+        subtitle: "Upgrade to fix it before your next campaign.",
+        plan: "growth",
+    });
 }
 
 async function startPayment() {
@@ -3020,8 +3085,8 @@ async function startPayment() {
         }
 
         const selectedPlan = inlinePlanTypeInput
-            ? String(inlinePlanTypeInput.value || pendingPlanChoice || "monthly")
-            : String(pendingPlanChoice || "monthly");
+            ? String(inlinePlanTypeInput.value || "monthly")
+            : "monthly";
 
         const response = await fetch("/create-subscription", {
             method: "POST",
@@ -3094,6 +3159,7 @@ window.handleGetAccess = handleGetAccess;
 window.handleUnlock = handleGetAccess;
 window.handleRequestAccess = handleRequestAccess;
 window.openToolPane = openToolPane;
+window.handlePlanClick = handlePlanClick;
 
 function wireUiEvents() {
     const pricingModal = document.getElementById("pricing-modal");
@@ -3425,6 +3491,8 @@ refreshAuthStatus().then(() => {
     }
     refreshJobs().catch(() => null);
     loadUserTokens().catch(() => null);
+    refreshLockedFeatures();
+    refreshPricingContext();
 });
 
 document.addEventListener("DOMContentLoaded", () => {

@@ -2144,17 +2144,6 @@ select {
     color: #b8c2d3;
 }
 
-.urgency {
-    margin: 0 auto 8px;
-    max-width: 680px;
-    color: #fecaca;
-    font-weight: 700;
-    background: rgba(127, 29, 29, 0.35);
-    border: 1px solid rgba(239, 68, 68, 0.5);
-    border-radius: 12px;
-    padding: 10px 12px;
-}
-
 .pricing-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
@@ -2176,8 +2165,9 @@ select {
 }
 
 .plan-card.highlight {
+    transform: scale(1.05);
     border: 1px solid rgba(59, 130, 246, 0.6);
-    box-shadow: 0 0 30px rgba(59, 130, 246, 0.2);
+    box-shadow: 0 0 40px rgba(59, 130, 246, 0.25);
 }
 
 .plan-card h3 {
@@ -2185,16 +2175,17 @@ select {
     font-size: 1.3rem;
 }
 
-.plan-card .badge {
-    display: inline-block;
-    margin-bottom: 10px;
-    padding: 4px 10px;
-    border-radius: 999px;
-    font-size: 0.75rem;
-    font-weight: 700;
+.highlight-title {
     color: #dbeafe;
-    background: rgba(59, 130, 246, 0.2);
-    border: 1px solid rgba(59, 130, 246, 0.45);
+}
+
+.plan-card .tag {
+    margin: 8px 0 0;
+    color: #93c5fd;
+    font-size: 0.82rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
 }
 
 .price {
@@ -2209,9 +2200,16 @@ select {
     color: #9ca3af;
 }
 
+.price .strike {
+    margin-right: 8px;
+    color: #64748b;
+    text-decoration: line-through;
+    font-size: 1rem;
+}
+
 .plan-card ul {
     margin: 14px 0 0;
-    padding-left: 0;
+    padding: 0;
     list-style: none;
     display: grid;
     gap: 8px;
@@ -2249,6 +2247,30 @@ select {
 .trust-block p {
     margin: 6px 0 0;
     color: #94a3b8;
+}
+
+.lockable {
+    position: relative;
+}
+
+.lockable.locked {
+    opacity: 0.4;
+    pointer-events: none;
+}
+
+.lockable.locked::after {
+    content: "Upgrade to unlock";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0, 0, 0, 0.7);
+    color: #e2e8f0;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
 }
 
 .modal-overlay {

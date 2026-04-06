@@ -116,7 +116,7 @@
               <button type="button" class="btn-primary upgrade-cta" onclick="handleGetAccess()">Upgrade Now</button>
             </div>
             <button id="admin-dashboard-btn" type="button" class="access-link hidden">Admin</button>
-            <button id="get-access-btn" type="button" class="access-link upgrade-cta">Start Fixing Emails</button>
+            <button id="get-access-btn" type="button" class="access-link upgrade-cta">Get Access</button>
           </div>
         </header>
 
@@ -143,7 +143,7 @@
               <button class="feature-open-btn" onclick="openTool('scan');">Open</button>
             </article>
 
-            <article class="feature-card core-card">
+            <article class="feature-card core-card lockable" data-plan-required="growth">
               <div class="feature-cost">2 tokens • Core Tool</div>
               <h3 class="feature-title">🧭 Campaign Debugger</h3>
               <p class="feature-description">Diagnose why your emails are failing. Analyze campaign signals and find the exact issue.</p>
@@ -161,14 +161,14 @@
                 <button class="feature-open-btn" onclick="openTool('blacklist');">Open</button>
               </article>
 
-              <article class="feature-card secondary-card">
+              <article class="feature-card secondary-card lockable" data-plan-required="growth">
                 <div class="feature-cost">5 tokens</div>
                 <h3 class="feature-title">🧪 Seed Testing</h3>
                 <p class="feature-description">Send test emails to seed inboxes and track delivery across providers.</p>
                 <button class="feature-open-btn" onclick="openTool('seed');">Open</button>
               </article>
 
-              <article class="feature-card secondary-card">
+              <article class="feature-card secondary-card lockable" data-plan-required="growth">
                 <div class="feature-cost">3 tokens</div>
                 <h3 class="feature-title">📦 Bulk Scan</h3>
                 <p class="feature-description">Upload CSV emails and scan all variants at once.</p>
@@ -187,53 +187,40 @@
         </section>
 
         <section class="pricing-section card home-only" id="home-pricing-cta">
-          <p class="urgency">Most campaigns fail due to hidden spam signals. Fix before sending.</p>
-          <h2>Fix deliverability before it kills your revenue</h2>
-          <p>Start free. Upgrade when your campaigns matter.</p>
+          <h2 id="pricing-title">Simple pricing. No guesswork.</h2>
+          <p>Start free. Upgrade when you're ready.</p>
 
           <div class="pricing-grid">
             <article class="plan-card">
               <h3>Free</h3>
-              <p class="price">₹0</p>
+              <p class="tag">Testing mode</p>
+              <p class="price">₹199<span>/month</span></p>
               <ul>
                 <li>✓ Limited scans</li>
-                <li>✓ Basic risk detection</li>
-                <li>✗ No campaign debugging</li>
-                <li>✗ No seed testing</li>
+                <li>✓ Basic analysis</li>
+                <li>✓ Token system</li>
               </ul>
-              <button type="button" onclick="openTool('scan')" class="plan-btn">Start Free</button>
+              <button type="button" onclick="handlePlanClick('free')" class="plan-btn">Get Started</button>
             </article>
 
             <article class="plan-card highlight">
-              <div class="badge">Most Popular</div>
-              <h3>Growth</h3>
-              <p class="price">₹999<span>/month</span></p>
+              <h3 class="highlight-title">Growth</h3>
+              <p class="tag">Most teams choose this</p>
+              <p class="price"><span class="strike">₹2999</span> ₹999 <span>/month</span></p>
               <ul>
-                <li>✓ Unlimited scans</li>
-                <li>✓ Campaign Debugger</li>
-                <li>✓ Domain + Spam analysis</li>
-                <li>✓ Priority processing</li>
+                <li>✓ Stop emails going to spam</li>
+                <li>✓ Catch hidden deliverability issues</li>
+                <li>✓ Protect your domain reputation</li>
+                <li>✓ Fix campaigns before sending</li>
               </ul>
-              <button type="button" onclick="handleGetAccess('pro')" class="plan-btn primary">Upgrade Now</button>
-            </article>
-
-            <article class="plan-card">
-              <h3>Scale</h3>
-              <p class="price">₹2499<span>/month</span></p>
-              <ul>
-                <li>✓ Everything in Growth</li>
-                <li>✓ Seed testing</li>
-                <li>✓ Bulk scan</li>
-                <li>✓ API + Team access</li>
-              </ul>
-              <button type="button" onclick="handleGetAccess('team')" class="plan-btn">Contact / Upgrade</button>
+              <button type="button" onclick="handlePlanClick('growth')" class="plan-btn primary">Upgrade to Growth</button>
             </article>
           </div>
+        </section>
 
-          <div class="trust-block">
-            <h3>Built for teams that care about inboxing</h3>
-            <p>No fake metrics. Real deliverability signals.</p>
-          </div>
+        <section class="trust-block card home-only" id="trust-block">
+          <h3>Built for teams that care about inboxing</h3>
+          <p>No fake metrics. Real deliverability signals.</p>
         </section>
 
         </section>
