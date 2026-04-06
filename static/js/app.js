@@ -210,13 +210,22 @@ let pendingAuthRedirectPath = "";
 let leadCaptureEmail = localStorage.getItem("ig_lead_capture_email") || "";
 let leadCaptureSaved = localStorage.getItem("ig_lead_capture_saved") === "1";
 let pendingPlanChoice = "monthly";
+let currentUserPlan = "free";
 let userActionCount = 0;
 
 const PLAN_OPTION_LABELS = {
+    free: "Free",
+    starter: "Starter ($2/month)",
     monthly: "Growth Monthly",
     annual: "Growth Annual",
-    trial: "Starter (Free Trial)",
     usage: "Usage-Based (Pay Per Scan)",
+};
+
+const PLAN_LEVELS = {
+    free: 0,
+    starter: 1,
+    monthly: 2,
+    annual: 2,
 };
 
 function normalizePlanChoice(plan) {
@@ -224,8 +233,11 @@ function normalizePlanChoice(plan) {
     if (value === "growth") {
         return "monthly";
     }
-    if (value === "free" || value === "starter") {
-        return "trial";
+    if (value === "pro") {
+        return "monthly";
+    }
+    if (value === "trial") {
+        return "starter";
     }
     if (Object.prototype.hasOwnProperty.call(PLAN_OPTION_LABELS, value)) {
         return value;
@@ -236,6 +248,28 @@ function normalizePlanChoice(plan) {
 function planDisplayName(plan) {
     const normalized = normalizePlanChoice(plan);
     return PLAN_OPTION_LABELS[normalized] || "Growth Monthly";
+}
+
+function planAccessLevel(plan) {
+    const normalized = normalizePlanChoice(plan);
+    return PLAN_LEVELS[normalized] ?? 0;
+}
+
+function getActivePlanForAccess() {
+    const normalizedPlan = normalizePlanChoice(window.userPlan || currentUserPlan || "free");
+    const status = String(window.userStatus || currentUserStatus || "inactive").toLowerCase();
+    if (normalizedPlan === "free") {
+        return "free";
+    }
+    if (status !== "active") {
+        return "free";
+    }
+    return normalizedPlan;
+}
+
+function hasPlanAccess(requiredPlan) {
+    const required = normalizePlanChoice(requiredPlan || "free");
+    return planAccessLevel(getActivePlanForAccess()) >= planAccessLevel(required);
 }
 
 function syncPlanSelection(plan) {
@@ -249,6 +283,10 @@ function syncPlanSelection(plan) {
     }
     if (selectedPlanNameNode) {
         selectedPlanNameNode.textContent = planDisplayName(normalized);
+    }
+    const payButton = document.getElementById("pay-btn");
+    if (payButton) {
+        payButton.textContent = normalized === "free" ? "Continue Free" : "Get Access";
     }
 }
 
@@ -812,6 +850,7 @@ async function refreshAuthStatus() {
         userScansUsed = Number(data && data.user_scans_used ? data.user_scans_used : 0);
         userScansLimit = Number(data && data.user_scans_limit ? data.user_scans_limit : 50);
         currentUserStatus = String(data && data.status ? data.status : "inactive").toLowerCase();
+        currentUserPlan = normalizePlanChoice(String(data && data.plan ? data.plan : (data && data.pro ? "monthly" : "free")));
         const isAdmin = Boolean(data && data.is_admin);
         leadCaptureSaved = Boolean(data && data.lead_email_captured);
         leadCaptureEmail = String(data && data.lead_email ? data.lead_email : leadCaptureEmail);
@@ -820,6 +859,7 @@ async function refreshAuthStatus() {
         window.currentUser = isAuthenticated;
         window.userIsPro = Boolean(data && data.pro);
         window.userStatus = currentUserStatus;
+        window.userPlan = currentUserPlan;
         window.currentUserEmail = currentUserEmail;
         window.currentUserName = currentUserName;
 
@@ -1101,14 +1141,19 @@ function showHome() {
 }
 
 function openTool(tool) {
-    const advancedTools = new Set(["campaign-debugger", "seed", "bulk", "ops"]);
-    const status = String(window.userStatus || currentUserStatus || "inactive").toLowerCase();
-    const hasPaidAccess = Boolean(window.userIsPro) && status === "active";
-    if (advancedTools.has(String(tool || "").toLowerCase()) && !hasPaidAccess) {
+    const key = String(tool || "").toLowerCase();
+    const requiredByTool = {
+        "campaign-debugger": "starter",
+        seed: "monthly",
+        bulk: "monthly",
+        ops: "monthly",
+    };
+    const requiredPlan = requiredByTool[key] || "free";
+    if (!hasPlanAccess(requiredPlan)) {
         showUpgradeModal({
             title: "You're losing emails to spam right now",
             subtitle: "Upgrade to fix it before your next campaign",
-            plan: "growth",
+            plan: requiredPlan === "starter" ? "starter" : "growth",
         });
         showHome();
         const pricingSection = document.getElementById("home-pricing-cta");
@@ -1740,7 +1785,8 @@ async function refreshPlans() {
         return;
     }
     plansOutputNode.innerHTML = "";
-    const keys = Object.keys(plans);
+    const displayOrder = ["free", "starter", "monthly", "annual", "usage"];
+    const keys = displayOrder.filter((key) => Object.prototype.hasOwnProperty.call(plans, key));
     if (!keys.length) {
         const li = document.createElement("li");
         li.textContent = "No plans returned by server.";
@@ -2892,7 +2938,9 @@ async function loadUser() {
             return;
         }
         const user = await response.json();
-        userState.plan = String(user.plan || (user.pro ? "pro" : "free"));
+        userState.plan = normalizePlanChoice(String(user.plan || (user.pro ? "monthly" : "free")));
+        currentUserPlan = userState.plan;
+        window.userPlan = currentUserPlan;
         if (typeof user.tokens === "number") {
             userState.tokens = Number(user.tokens);
             updateTokenMessaging(userState.tokens);
@@ -2924,18 +2972,26 @@ async function loadUserTokens() {
         }
         const data = await res.json();
         const tokens = Number(data.tokens || 0);
-        const plan = String(data.plan || userState.plan || "free").toLowerCase();
+        const plan = normalizePlanChoice(String(data.plan || userState.plan || "free"));
+        currentUserPlan = plan;
+        window.userPlan = plan;
 
         if (tokenBadge && tokenCount) {
             tokenBadge.classList.remove("hidden");
             tokenCount.textContent = String(tokens);
         }
         if (planLabel) {
-            planLabel.textContent = plan === "pro" ? "PRO" : "FREE";
+            const badgeMap = {
+                free: "FREE",
+                starter: "STARTER",
+                monthly: "GROWTH",
+                annual: "GROWTH",
+            };
+            planLabel.textContent = badgeMap[plan] || "FREE";
         }
 
         if (tokenEmptyStateNode) {
-            const shouldShowEmpty = plan !== "pro" && tokens <= 0;
+            const shouldShowEmpty = tokens <= 0;
             tokenEmptyStateNode.classList.toggle("hidden", !shouldShowEmpty);
         }
 
@@ -3002,9 +3058,18 @@ function handleGetAccess() {
 function handlePlanClick(plan) {
     const selected = String(plan || "growth").toLowerCase();
     if (selected === "free") {
-        syncPlanSelection("trial");
+        syncPlanSelection("free");
         openPricingModal();
-        showSuccess("Starter plan selected. Continue in the pricing modal.");
+        showSuccess("Free plan selected. No payment needed.");
+        return;
+    }
+
+    if (selected === "starter") {
+        syncPlanSelection("starter");
+        openPricingModal();
+        if (!isAuthenticated) {
+            showAuthModal();
+        }
         return;
     }
 
@@ -3032,16 +3097,17 @@ function refreshPricingContext() {
 }
 
 function refreshLockedFeatures() {
-    const status = String(window.userStatus || currentUserStatus || "inactive").toLowerCase();
-    const hasPaidAccess = Boolean(window.userIsPro) && status === "active";
     document.querySelectorAll(".lockable").forEach((node) => {
-        node.classList.toggle("locked", !hasPaidAccess);
+        const requiredPlan = String(node.getAttribute("data-plan-required") || "free").toLowerCase();
+        node.classList.toggle("locked", !hasPlanAccess(requiredPlan));
     });
 }
 
 function showUpgradeModal({ title, subtitle, plan } = {}) {
     if (plan === "growth") {
         syncPlanSelection("monthly");
+    } else if (plan === "starter") {
+        syncPlanSelection("starter");
     }
     const paywall = document.getElementById("paywall");
     if (!paywall) {
@@ -3081,12 +3147,12 @@ function canUserScan() {
     }
 
     const status = String(window.userStatus || currentUserStatus || "inactive").toLowerCase();
-    const hasAccess = Boolean(window.userIsPro) && status === "active";
-    if (hasAccess) {
+    const activePlan = getActivePlanForAccess();
+    if (status === "active" || activePlan === "free") {
         return true;
     }
 
-    if (status === "past_due") {
+    if (status === "past_due" && planAccessLevel(activePlan) > 0) {
         showError("Payment failed. Update your payment method to keep access.");
     }
 
@@ -3124,16 +3190,25 @@ function showUpgradeBlock() {
 
 async function startPayment() {
     try {
+        const selectedPlan = normalizePlanChoice(
+            inlinePlanTypeInput
+            ? String(inlinePlanTypeInput.value || "monthly")
+            : "monthly"
+        );
+
+        if (selectedPlan === "free") {
+            closePricingModal();
+            showSuccess("Free plan enabled. Start scanning.");
+            openTool("scan");
+            return;
+        }
+
         await refreshAuthStatus();
         if (!isAuthenticated) {
             showError("Session expired. Please sign in again.");
             showAuthModal();
             return;
         }
-
-        const selectedPlan = inlinePlanTypeInput
-            ? String(inlinePlanTypeInput.value || "monthly")
-            : "monthly";
 
         const response = await fetch("/create-subscription", {
             method: "POST",

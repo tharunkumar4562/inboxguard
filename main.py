@@ -911,6 +911,9 @@ def _google_client() -> Optional[Any]:
 
 PLAN_TOKENS = {
     "free": 10,
+    "starter": 30,
+    "monthly": 500,
+    "annual": 500,
     "pro": 500,
     "team": 2000,
 }
@@ -979,15 +982,16 @@ def _add_tokens(user_id: int, amount: int, reason: str = "manual") -> None:
 def _set_user_plan(user_id: int, plan: str, tokens: Optional[int] = None, trial_days: int = 0) -> None:
     """Set user plan and allocate tokens."""
     _ensure_auth_db_ready()
+    normalized_plan = _normalize_plan_key(plan)
     conn = _auth_db_conn()
     try:
         if tokens is None:
-            tokens = PLAN_TOKENS.get(plan, 10)
+            tokens = PLAN_TOKENS.get(normalized_plan, PLAN_TOKENS.get("free", 10))
         
         token_reset_at = None
         trial_ends = None
         
-        if plan == "pro" and trial_days > 0:
+        if _is_pro_plan(normalized_plan) and trial_days > 0:
             trial_ends = (datetime.now(timezone.utc) + timedelta(days=trial_days)).isoformat()
         else:
             # Set token reset to 30 days from now
@@ -999,7 +1003,7 @@ def _set_user_plan(user_id: int, plan: str, tokens: Optional[int] = None, trial_
             SET plan=?, tokens=?, token_reset_at=?, trial_ends=?
             WHERE id=?
             """,
-            (plan, tokens, token_reset_at, trial_ends, user_id),
+            (normalized_plan, tokens, token_reset_at, trial_ends, user_id),
         )
         conn.commit()
     finally:
@@ -1304,38 +1308,63 @@ def _is_email_like(value: str) -> bool:
     return bool(text and "@" in text and "." in text.split("@", 1)[-1])
 
 
+def _normalize_plan_key(value: str) -> str:
+    plan = str(value or "").strip().lower()
+    aliases = {
+        "growth": "monthly",
+        "pro": "monthly",
+        "starter_trial": "starter",
+        "trial": "starter",
+        "free_trial": "free",
+    }
+    plan = aliases.get(plan, plan)
+    if plan in {"free", "starter", "monthly", "annual", "usage"}:
+        return plan
+    return "monthly"
+
+
+def _is_pro_plan(plan: str) -> bool:
+    return _normalize_plan_key(plan) in {"monthly", "annual"}
+
+
 def _plan_catalog() -> dict[str, dict[str, Any]]:
     pro_plan_id = RAZORPAY_PRO_PLAN_ID or RAZORPAY_PLAN_ID
     starter_plan_id = RAZORPAY_STARTER_PLAN_ID or RAZORPAY_TRIAL_PLAN_ID or RAZORPAY_PLAN_ID
     return {
+        "free": {
+            "label": "Free",
+            "display_price": "$0",
+            "plan_id": "",
+            "trial_days": 0,
+        },
+        "starter": {
+            "label": "Starter",
+            "display_price": "$2",
+            "plan_id": starter_plan_id,
+            "trial_days": 0,
+        },
         "monthly": {
-            "label": "Monthly Pro",
+            "label": "Growth Monthly",
             "display_price": RAZORPAY_DISPLAY_PRICE_USD,
             "plan_id": pro_plan_id,
             "trial_days": 0,
         },
         "pro": {
-            "label": "Pro",
+            "label": "Growth",
             "display_price": RAZORPAY_DISPLAY_PRICE_USD,
             "plan_id": pro_plan_id,
             "trial_days": 0,
         },
-        "starter": {
-            "label": "Starter",
-            "display_price": "$199",
-            "plan_id": starter_plan_id,
-            "trial_days": 0,
-        },
         "annual": {
-            "label": "Annual Pro",
+            "label": "Growth Annual",
             "display_price": "$99",
             "plan_id": RAZORPAY_ANNUAL_PLAN_ID,
             "trial_days": 0,
         },
         "trial": {
-            "label": "Trial Pro",
+            "label": "Starter Trial",
             "display_price": "$0 now",
-            "plan_id": RAZORPAY_TRIAL_PLAN_ID or RAZORPAY_PLAN_ID,
+            "plan_id": starter_plan_id,
             "trial_days": max(0, TRIAL_DAYS),
         },
         "usage": {
@@ -2050,6 +2079,7 @@ def _get_session_user(request: Request):
         "name": str(request.session.get("user_name", "")).strip(),
         "picture": str(request.session.get("user_picture", "")).strip(),
         "pro": bool(db_user["pro"] if "pro" in db_user.keys() else 0),
+        "plan": _normalize_plan_key(str(db_user["plan"] if "plan" in db_user.keys() else "free")),
         "status": str(db_user["status"] if "status" in db_user.keys() and db_user["status"] else "inactive"),
         "subscription_id": str(db_user["subscription_id"] if "subscription_id" in db_user.keys() and db_user["subscription_id"] else ""),
     }
@@ -2091,13 +2121,15 @@ def _auth_status_payload(request: Request) -> dict:
         "user_scans_limit": FREE_USER_SCAN_LIMIT,
         "google_enabled": GOOGLE_AUTH_CONFIGURED,
         "pro": False,
+        "plan": "free",
         "is_admin": False,
         "status": "inactive",
         "subscription_id": "",
     }
     if user:
         usage = _get_usage(user["id"])
-        is_pro = bool(user.get("pro", False))
+        current_plan = _normalize_plan_key(str(user.get("plan", "free")))
+        is_pro = _is_pro_plan(current_plan) or bool(user.get("pro", False))
         payload.update(
             {
                 "user_scans_used": usage["scans_used"],
@@ -2105,6 +2137,7 @@ def _auth_status_payload(request: Request) -> dict:
                 "rewrite_clicked": usage["rewrite_clicked"],
                 "last_active": usage["last_active"],
                 "pro": is_pro,
+                "plan": current_plan,
                 "is_admin": _is_admin_email(user["email"]),
                 "status": str(user.get("status", "inactive")),
                 "subscription_id": str(user.get("subscription_id", "")),
@@ -2246,20 +2279,21 @@ async def create_subscription(request: Request, plan: str = Form("monthly")):
         payload = await request.json()
 
     plans = _plan_catalog()
-    selected_plan = str(payload.get("plan") or plan or "monthly").strip().lower()
-    aliases = {
-        "pro": "pro",
-        "starter": "starter",
-        "monthly": "monthly",
-        "annual": "annual",
-        "trial": "trial",
-        "usage": "usage",
-    }
-    selected_plan = aliases.get(selected_plan, "monthly")
+    selected_plan = _normalize_plan_key(str(payload.get("plan") or plan or "monthly"))
     if selected_plan not in plans:
         selected_plan = "monthly"
     plan_data = plans[selected_plan]
     plan_id = str(plan_data.get("plan_id") or "").strip()
+
+    if selected_plan == "free":
+        return JSONResponse(
+            status_code=200,
+            content={
+                "success": True,
+                "free_mode": True,
+                "message": "Free plan selected. No payment required.",
+            },
+        )
 
     if selected_plan == "usage":
         return JSONResponse(
@@ -2389,9 +2423,11 @@ async def razorpay_webhook(request: Request, x_razorpay_signature: str | None = 
 
     if event == "subscription.activated":
         sub = (payload.get("payload", {}) or {}).get("subscription", {}).get("entity", {}) or {}
-        user_id = _apply_razorpay_subscription_state(sub, pro=True, status="active")
+        notes = sub.get("notes", {}) or {}
+        selected_plan = _normalize_plan_key(str(notes.get("plan", "monthly")))
+        user_id = _apply_razorpay_subscription_state(sub, pro=_is_pro_plan(selected_plan), status="active")
         if user_id > 0:
-            _set_user_plan(user_id, "pro", tokens=PLAN_TOKENS.get("pro", 1000))
+            _set_user_plan(user_id, selected_plan, tokens=PLAN_TOKENS.get(selected_plan, PLAN_TOKENS.get("monthly", 500)))
             track_event("pro_activated", {"user_id": str(user_id), "provider": "razorpay", "subscription_id": str(sub.get("id", "") or "")})
 
     elif event in {"payment.captured", "subscription.charged", "invoice.paid"}:
@@ -2401,18 +2437,19 @@ async def razorpay_webhook(request: Request, x_razorpay_signature: str | None = 
         entity = payment_entity or invoice_entity or subscription_entity
         notes = entity.get("notes", {}) or {}
         subscription_id = str(entity.get("subscription_id", "") or subscription_entity.get("id", "") or "")
+        selected_plan = _normalize_plan_key(str(notes.get("plan", "monthly")))
         user_id = _extract_user_id(notes) or _get_user_id_by_subscription_id(subscription_id)
         if user_id > 0:
             _set_user_subscription_state(
                 user_id,
-                pro=True,
+                pro=_is_pro_plan(selected_plan),
                 status="active",
                 past_due_since="",
                 subscription_id=subscription_id or str(subscription_entity.get("id", "") or ""),
             )
             if subscription_entity:
-                _apply_razorpay_subscription_state(subscription_entity, pro=True, status="active")
-            _set_user_plan(user_id, "pro", tokens=PLAN_TOKENS.get("pro", 1000))
+                _apply_razorpay_subscription_state(subscription_entity, pro=_is_pro_plan(selected_plan), status="active")
+            _set_user_plan(user_id, selected_plan, tokens=PLAN_TOKENS.get(selected_plan, PLAN_TOKENS.get("monthly", 500)))
             _record_payment(
                 user_id=user_id,
                 amount=int(entity.get("amount", 0) or 0),
@@ -2491,7 +2528,7 @@ def get_tokens_info(request: Request):
         raise HTTPException(status_code=401, detail="Not authenticated")
     
     tokens = _get_user_tokens(int(user["id"]))
-    plan = str(user.get("plan") or "free").lower()
+    plan = _normalize_plan_key(str(user.get("plan") or "free"))
     
     return {
         "tokens": tokens,

@@ -143,7 +143,7 @@
               <button class="feature-open-btn" onclick="openTool('scan');">Open</button>
             </article>
 
-            <article class="feature-card core-card lockable" data-plan-required="growth">
+            <article class="feature-card core-card lockable" data-plan-required="starter">
               <div class="feature-cost">2 tokens • Core Tool</div>
               <h3 class="feature-title">🧭 Campaign Debugger</h3>
               <p class="feature-description">Diagnose why your emails are failing. Analyze campaign signals and find the exact issue.</p>
@@ -194,13 +194,25 @@
             <article class="plan-card">
               <h3>Free</h3>
               <p class="tag">Testing mode</p>
+              <p class="price">$0<span>/month</span></p>
+              <ul>
+                <li>✓ Scan Email</li>
+                <li>✓ Domain Check</li>
+                <li>✓ Small monthly token allowance</li>
+              </ul>
+              <button type="button" onclick="handlePlanClick('free')" class="plan-btn">Use Free Plan</button>
+            </article>
+
+            <article class="plan-card">
+              <h3>Starter</h3>
+              <p class="tag">For solo senders</p>
               <p class="price">$2<span>/month</span></p>
               <ul>
-                <li>✓ Limited scans</li>
-                <li>✓ Basic analysis</li>
-                <li>✓ Token system</li>
+                <li>✓ Everything in Free</li>
+                <li>✓ Campaign Debugger access</li>
+                <li>✓ More monthly tokens</li>
               </ul>
-              <button type="button" onclick="handlePlanClick('free')" class="plan-btn">Get Started</button>
+              <button type="button" onclick="handlePlanClick('starter')" class="plan-btn">Upgrade to Starter</button>
             </article>
 
             <article class="plan-card highlight">
@@ -216,6 +228,7 @@
               <button type="button" onclick="handlePlanClick('growth')" class="plan-btn primary">Upgrade to Growth</button>
             </article>
           </div>
+          <p class="micro" style="margin-top:8px;">All plans use tokens. The difference is monthly token allocation and unlocked tools.</p>
         </section>
 
         <section class="trust-block card home-only" id="trust-block">
@@ -768,15 +781,17 @@ I noticed your recent post and had one short idea to improve reply rates."></tex
         <p class="pricing-note" style="margin-top:8px;">Selected plan: <strong id="selected-plan-name">Growth Monthly</strong></p>
         <label for="inline-plan-type" class="pricing-note" style="display:block; margin-top:8px;">Choose plan</label>
         <select id="inline-plan-type" class="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-slate-100" style="margin-top:6px;">
+          <option value="free">Free</option>
+          <option value="starter">Starter ($2/month)</option>
           <option value="monthly">Growth Monthly</option>
           <option value="annual">Growth Annual</option>
-          <option value="trial">Starter (Free Trial)</option>
           <option value="usage">Usage-Based (Pay Per Scan)</option>
         </select>
         <select id="plan-type" class="hidden" aria-hidden="true" tabindex="-1">
+          <option value="free">Free</option>
+          <option value="starter">Starter ($2/month)</option>
           <option value="monthly" selected>Growth Monthly</option>
           <option value="annual">Growth Annual</option>
-          <option value="trial">Starter (Free Trial)</option>
           <option value="usage">Usage-Based (Pay Per Scan)</option>
         </select>
         <button id="refresh-plans" type="button" class="secondary-btn" style="margin-top:8px;">Refresh Plans</button>
