@@ -24,8 +24,11 @@
     <meta name="twitter:title" content="{{ page_title }}" />
     <meta name="twitter:description" content="{{ meta_description }}" />
     <meta name="twitter:image" content="https://inboxguard.me/static/thumbnail-1200x630.png" />
-    <link rel="icon" href="/static/favicon-48.png" type="image/png" sizes="48x48" />
-    <link rel="icon" href="/static/favicon.svg" type="image/svg+xml" sizes="any" />
+    <link rel="icon" href="/static/favicon/favicon.ico" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/static/favicon/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/static/favicon/favicon-16.png" />
+    <link rel="icon" type="image/svg+xml" sizes="any" href="/static/favicon/favicon.svg" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/static/favicon/apple-touch-icon.png" />
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -37,13 +40,7 @@
     <main class="mx-auto max-w-6xl px-5 py-8 md:py-10">
       <header class="mb-8 flex items-center justify-between gap-4 border-b border-slate-800/70 pb-4">
         <div class="logo-wrap">
-          <svg class="logo-svg" viewBox="0 0 32 32" aria-hidden="true">
-            <path d="M16 3 L26 8 L26 16 C26 22 22 27 16 29 C10 27 6 22 6 16 L6 8 Z" fill="none" stroke="#3B82F6" stroke-width="2"></path>
-            <rect x="10" y="11" width="12" height="8" rx="1.5" fill="none" stroke="#93C5FD" stroke-width="1.8"></rect>
-            <path d="M10.8 12 L16 15.8 L21.2 12" fill="none" stroke="#93C5FD" stroke-width="1.4"></path>
-            <path d="M21 22.5 l2 2 l4 -4" fill="none" stroke="#22C55E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
-          </svg>
-          <span class="logo-text">INBOXGUARD</span>
+          <img src="/static/branding/logo-wordmark.svg" alt="InboxGuard" style="display:block; width: 172px; max-width: 100%;" />
         </div>
         <a href="/" class="access-link">Back to scan</a>
       </header>

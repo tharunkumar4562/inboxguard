@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 220" role="img" aria-label="InboxGuard icon">
+  <defs>
+    <linearGradient id="shieldBlue" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0E4FB5" />
+      <stop offset="100%" stop-color="#1E7CF2" />
+    </linearGradient>
+    <linearGradient id="shieldTeal" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#23C1A9" />
+      <stop offset="100%" stop-color="#52D78A" />
+    </linearGradient>
+  </defs>
+
+  <rect width="220" height="220" rx="34" fill="#F3F5F7" />
+  <path d="M110 16L182 40V96c0 48-30 84-72 108C68 180 38 144 38 96V40Z" fill="url(#shieldBlue)" />
+  <path d="M110 34L168 54V97c0 38-24 67-58 89C76 164 52 135 52 97V54Z" fill="white" />
+  <path d="M110 26c20 10 44 14 66 16 10 1 18 3 24 6v34c0 15-3 28-9 40l-22 59c-18 20-39 35-59 47-40-24-66-59-66-108V40z" fill="url(#shieldTeal)" opacity="0.98" style="mix-blend-mode:multiply"/>
+  <path d="M95 84l32-17c14-7 30-7 44-1l-22 22a42 42 0 1 1-54 41l17-16a20 20 0 1 0 26-21l-35 19z" fill="#0C4EA1"/>
+  <path d="M177 76a34 34 0 0 1 11 21" fill="none" stroke="#1B8DB6" stroke-width="8" stroke-linecap="round"/>
+  <circle cx="193" cy="82" r="6" fill="#F5FAFF"/>
+  <circle cx="205" cy="67" r="7" fill="#F5FAFF"/>
+</svg>
