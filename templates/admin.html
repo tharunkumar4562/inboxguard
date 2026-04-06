@@ -20,35 +20,41 @@
     <link rel="stylesheet" href="/static/css/styles.css" />
   </head>
   <body class="bg-ink text-slate-100 min-h-screen antialiased">
-    <main class="mx-auto max-w-6xl px-5 py-8 md:py-10">
-      <header class="mb-8 border-b border-slate-800/70 pb-4">
-        <h1 class="text-3xl font-bold md:text-4xl">InboxGuard Admin Dashboard</h1>
-        <p class="mt-2 text-sm text-slate-300">Updated: {{ metrics.updated_at or "n/a" }}</p>
+    <main class="relative mx-auto max-w-6xl px-5 py-8 md:py-10">
+      <div class="page-glow"></div>
+      <header class="mb-8 flex items-center justify-between gap-4 border-b border-slate-800/70 pb-4">
+        <div class="logo-wrap">
+          <span class="logo-text">INBOXGUARD</span>
+        </div>
+        <div class="text-right">
+          <h1 class="text-2xl font-bold md:text-3xl">Admin Dashboard</h1>
+          <p class="mt-1 text-sm text-slate-300">{{ admin_email or 'admin' }} • Updated: {{ metrics.updated_at or 'n/a' }}</p>
+        </div>
       </header>
 
       <section class="grid grid-cols-1 gap-4 md:grid-cols-3">
-        <article class="rounded-2xl border border-slate-700 bg-slate-900/70 p-4">
+        <article class="rounded-2xl border border-slate-700 bg-slate-900/70 p-4 shadow-lg shadow-blue-950/20">
           <p class="text-xs uppercase tracking-[0.16em] text-slate-400">Views</p>
           <p class="mt-2 text-3xl font-bold">{{ metrics.counters.page_views or 0 }}</p>
         </article>
-        <article class="rounded-2xl border border-slate-700 bg-slate-900/70 p-4">
+        <article class="rounded-2xl border border-slate-700 bg-slate-900/70 p-4 shadow-lg shadow-blue-950/20">
           <p class="text-xs uppercase tracking-[0.16em] text-slate-400">CTA Clicks</p>
           <p class="mt-2 text-3xl font-bold">{{ metrics.counters.cta_clicks or 0 }}</p>
         </article>
-        <article class="rounded-2xl border border-slate-700 bg-slate-900/70 p-4">
+        <article class="rounded-2xl border border-slate-700 bg-slate-900/70 p-4 shadow-lg shadow-blue-950/20">
           <p class="text-xs uppercase tracking-[0.16em] text-slate-400">Access Requests</p>
           <p class="mt-2 text-3xl font-bold">{{ metrics.counters.access_requests or 0 }}</p>
         </article>
-        <article class="rounded-2xl border border-slate-700 bg-slate-900/70 p-4">
+        <article class="rounded-2xl border border-slate-700 bg-slate-900/70 p-4 shadow-lg shadow-blue-950/20">
           <p class="text-xs uppercase tracking-[0.16em] text-slate-400">Analyze Requests</p>
           <p class="mt-2 text-3xl font-bold">{{ metrics.counters.analyze_requests or 0 }}</p>
         </article>
-        <article class="rounded-2xl border border-slate-700 bg-slate-900/70 p-4">
+        <article class="rounded-2xl border border-slate-700 bg-slate-900/70 p-4 shadow-lg shadow-blue-950/20">
           <p class="text-xs uppercase tracking-[0.16em] text-slate-400">Content Mode</p>
           <p class="mt-2 text-3xl font-bold">{{ metrics.mode_summary.content or 0 }}</p>
           <p class="mt-1 text-xs text-slate-400">{{ metrics.mode_summary.content_pct or 0 }}%</p>
         </article>
-        <article class="rounded-2xl border border-slate-700 bg-slate-900/70 p-4">
+        <article class="rounded-2xl border border-slate-700 bg-slate-900/70 p-4 shadow-lg shadow-blue-950/20">
           <p class="text-xs uppercase tracking-[0.16em] text-slate-400">Full Mode</p>
           <p class="mt-2 text-3xl font-bold">{{ metrics.mode_summary.full or 0 }}</p>
           <p class="mt-1 text-xs text-slate-400">{{ metrics.mode_summary.full_pct or 0 }}%</p>

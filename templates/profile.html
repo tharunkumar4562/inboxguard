@@ -26,6 +26,9 @@
     <div class="profile-shell">
       <header class="profile-topbar">
         <a class="profile-back" href="/">Back to scan</a>
+        {% if profile.is_admin %}
+        <a class="profile-back" href="/admin">Admin dashboard</a>
+        {% endif %}
         <form method="post" action="/auth/logout">
           <button type="submit" class="profile-logout">Log out</button>
         </form>

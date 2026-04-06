@@ -38,6 +38,7 @@ const leadCaptureCloseButton = document.getElementById("lead-capture-close");
 const profileLink = document.getElementById("profile-link");
 const profileAvatar = document.getElementById("profile-avatar");
 const profileInitial = document.getElementById("profile-initial");
+const adminDashboardButton = document.getElementById("admin-dashboard-btn");
 
 const rawEmailInput = document.getElementById("raw-email");
 const domainInput = document.getElementById("domain");
@@ -766,6 +767,7 @@ async function refreshAuthStatus() {
         userScansUsed = Number(data && data.user_scans_used ? data.user_scans_used : 0);
         userScansLimit = Number(data && data.user_scans_limit ? data.user_scans_limit : 50);
         currentUserStatus = String(data && data.status ? data.status : "inactive").toLowerCase();
+        const isAdmin = Boolean(data && data.is_admin);
         leadCaptureSaved = Boolean(data && data.lead_email_captured);
         leadCaptureEmail = String(data && data.lead_email ? data.lead_email : leadCaptureEmail);
 
@@ -775,6 +777,11 @@ async function refreshAuthStatus() {
         window.userStatus = currentUserStatus;
         window.currentUserEmail = currentUserEmail;
         window.currentUserName = currentUserName;
+
+        if (adminDashboardButton) {
+            adminDashboardButton.classList.toggle("hidden", !isAuthenticated || !isAdmin);
+            adminDashboardButton.onclick = isAuthenticated && isAdmin ? () => window.location.href = "/admin" : null;
+        }
 
         localStorage.setItem("ig_anon_scans_used", String(anonymousScansUsed));
         localStorage.setItem("ig_anon_scans_limit", String(anonymousScansLimit));

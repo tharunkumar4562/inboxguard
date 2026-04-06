@@ -54,7 +54,7 @@ templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
 SITE_URL = os.getenv("INBOXGUARD_SITE_URL", "https://inboxguard.me")
 ADMIN_TOKEN = os.getenv("INBOXGUARD_ADMIN_TOKEN", "")
-ADMIN_EMAIL = os.getenv("INBOXGUARD_ADMIN_EMAIL", "tharunkumarmalepati3@gmail.com").strip().lower()
+ADMIN_EMAIL = os.getenv("INBOXGUARD_ADMIN_EMAIL", os.getenv("INBOXGUARD_ADMIN_ALLOWED_EMAIL", "")).strip().lower()
 SESSION_SECRET = os.getenv("INBOXGUARD_SESSION_SECRET", "change-me-in-production")
 SESSION_HTTPS_ONLY = os.getenv("INBOXGUARD_SESSION_HTTPS_ONLY", "0").strip().lower() in {"1", "true", "yes"}
 AUTH_DB_FILE = BASE_DIR / "data" / "auth.db"
@@ -94,6 +94,21 @@ BLACKLISTED_DOMAINS = {
 }
 ASYNC_ANALYSIS_JOBS: dict[str, dict[str, Any]] = {}
 ASYNC_JOB_STORE: dict[str, dict[str, Any]] = {}
+
+
+def _admin_email_allowlist() -> set[str]:
+    raw = os.getenv("INBOXGUARD_ADMIN_EMAILS", "").strip()
+    emails = {ADMIN_EMAIL} if ADMIN_EMAIL else set()
+    if raw:
+        emails.update({item.strip().lower() for item in raw.split(",") if item.strip()})
+    return {item for item in emails if item}
+
+
+def _is_admin_email(email: str) -> bool:
+    allowlist = _admin_email_allowlist()
+    if not allowlist:
+        return False
+    return str(email or "").strip().lower() in allowlist
 BLOG_POSTS = {
     "cold-email-spam-checklist": {
         "title": "Cold Email Spam Checklist Before You Send",
@@ -2076,6 +2091,7 @@ def _auth_status_payload(request: Request) -> dict:
         "user_scans_limit": FREE_USER_SCAN_LIMIT,
         "google_enabled": GOOGLE_AUTH_CONFIGURED,
         "pro": False,
+        "is_admin": False,
         "status": "inactive",
         "subscription_id": "",
     }
@@ -2089,6 +2105,7 @@ def _auth_status_payload(request: Request) -> dict:
                 "rewrite_clicked": usage["rewrite_clicked"],
                 "last_active": usage["last_active"],
                 "pro": is_pro,
+                "is_admin": _is_admin_email(user["email"]),
                 "status": str(user.get("status", "inactive")),
                 "subscription_id": str(user.get("subscription_id", "")),
             }
@@ -2576,6 +2593,7 @@ def _build_user_profile(user: dict, include_saved_fixes: bool = False) -> dict:
         "recent_results": recent_results,
         "tokens": tokens,
         "plan": plan,
+        "is_admin": _is_admin_email(user["email"]),
     }
     if include_saved_fixes:
         profile["saved_fixes"] = _recent_saved_fixes(user["id"], limit=8)
@@ -4371,21 +4389,26 @@ async def request_access(request: Request, email: str = Form("")):
     return JSONResponse({"ok": True})
 
 
-def _verify_admin_access(request: Request, token: str) -> None:
+def _verify_admin_access(request: Request, token: str = "") -> dict[str, Any]:
+    user = _get_session_user(request)
+    allowlist = _admin_email_allowlist()
+    if allowlist:
+        if not user or not _is_admin_email(user["email"]):
+            raise HTTPException(status_code=404, detail="Not found")
+        return user
+
     if not ADMIN_TOKEN:
         raise HTTPException(status_code=404, detail="Not found")
     if token != ADMIN_TOKEN:
         raise HTTPException(status_code=403, detail="Forbidden")
-    user = _get_session_user(request)
     if not user:
         raise HTTPException(status_code=401, detail="AUTH_REQUIRED")
-    if str(user.get("email", "")).strip().lower() != ADMIN_EMAIL:
-        raise HTTPException(status_code=403, detail="Forbidden")
+    return user
 
 
 @app.get("/admin", response_class=HTMLResponse)
 def admin_dashboard(request: Request, token: str = ""):
-    _verify_admin_access(request, token)
+    user = _verify_admin_access(request, token)
     metrics = get_dashboard_data()
     return render_template_safe(
         request,
@@ -4395,7 +4418,7 @@ def admin_dashboard(request: Request, token: str = ""):
             "canonical_url": f"{SITE_URL}/admin",
             "meta_description": "Private InboxGuard metrics dashboard.",
             "metrics": metrics,
-            "admin_email": ADMIN_EMAIL,
+            "admin_email": user["email"],
         },
     )
 
