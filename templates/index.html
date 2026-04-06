@@ -22,17 +22,17 @@
     <meta property="og:title" content="{{ page_title or 'InboxGuard | Fix risky emails before you send' }}" />
     <meta property="og:description" content="{{ meta_description or 'Find out why emails that look fine still land in spam, then fix them before sending.' }}" />
     <meta property="og:url" content="{{ canonical_url or 'https://inboxguard.me/' }}" />
-    <meta property="og:image" content="https://inboxguard.me/static/branding/logo-wordmark.svg" />
+    <meta property="og:image" content="https://inboxguard.me/static/branding/logo.png" />
     <meta name="twitter:card" content="summary" />
     <meta name="twitter:title" content="{{ page_title or 'InboxGuard | Fix risky emails before you send' }}" />
     <meta name="twitter:description" content="{{ meta_description or 'Find out why emails that look fine still land in spam, then fix them before sending.' }}" />
-    <meta name="twitter:image" content="https://inboxguard.me/static/branding/logo-wordmark.svg" />
+    <meta name="twitter:image" content="https://inboxguard.me/static/branding/logo.png" />
     <meta name="theme-color" content="#0f172a" />
-    <link rel="icon" href="/static/favicon/favicon.ico" />
-    <link rel="icon" type="image/png" sizes="32x32" href="/static/favicon/favicon-32.png" />
-    <link rel="icon" type="image/png" sizes="16x16" href="/static/favicon/favicon-16.png" />
-    <link rel="icon" type="image/svg+xml" sizes="any" href="/static/favicon/favicon.svg" />
-    <link rel="apple-touch-icon" sizes="180x180" href="/static/favicon/apple-touch-icon.png" />
+    <link rel="icon" href="/static/branding/logo.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/static/branding/logo.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/static/branding/logo.png" />
+    <link rel="icon" type="image/svg+xml" sizes="any" href="/static/branding/logo.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/static/branding/logo.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
@@ -45,7 +45,7 @@
           "@type": "Organization",
           "name": "InboxGuard",
           "url": "https://inboxguard.me",
-          "logo": "https://inboxguard.me/static/branding/logo-wordmark.svg"
+          "logo": "https://inboxguard.me/static/branding/logo.png"
         },
         {
           "@context": "https://schema.org",
@@ -66,7 +66,7 @@
       <aside class="sidebar">
         <div class="brand-wrap">
           <div class="brand-lockup" aria-label="InboxGuard">
-            <img src="/static/branding/icon-shield.svg" class="logo-icon" alt="InboxGuard logo" />
+            <img src="/static/branding/logo.png" class="logo-icon" alt="InboxGuard logo" />
             <div>
               <p class="logo-text">InboxGuard</p>
               <p class="sub">Fix Before You Send</p>
@@ -99,7 +99,7 @@
         </nav>
 
         <a id="profile-link" class="profile-link hidden" href="/profile" aria-label="Open profile">
-          <img id="profile-avatar" class="profile-avatar" src="/static/branding/icon-shield.svg" alt="Profile avatar" />
+          <img id="profile-avatar" class="profile-avatar" src="/static/branding/logo.png" alt="Profile avatar" />
           <span id="profile-initial" class="profile-initial">U</span>
           <span class="profile-label">Profile</span>
         </a>
@@ -108,7 +108,7 @@
       <main class="main-area">
         <header class="topbar">
           <h1 class="topbar-brand" aria-label="InboxGuard">
-            <img src="/static/branding/icon-shield.svg" class="logo-icon" alt="InboxGuard logo" />
+            <img src="/static/branding/logo.png" class="logo-icon" alt="InboxGuard logo" />
             <span class="logo-text">InboxGuard</span>
           </h1>
           <div class="topbar-actions">
@@ -118,11 +118,10 @@
             </div>
             <div id="token-empty-state" class="token-empty-state hidden">
               <p>You're out of tokens. Upgrade to continue scanning.</p>
-              <button type="button" class="btn-primary" onclick="handleGetAccess()">Upgrade Now</button>
+              <button type="button" class="btn-primary upgrade-cta" onclick="handleGetAccess()">Upgrade Now</button>
             </div>
             <button id="admin-dashboard-btn" type="button" class="access-link hidden">Admin</button>
-            <button id="start-btn" type="button" class="start-btn">Try with your email</button>
-            <button id="get-access-btn" type="button" class="access-link">Get Access</button>
+            <button id="get-access-btn" type="button" class="access-link upgrade-cta">Get Access</button>
           </div>
         </header>
 

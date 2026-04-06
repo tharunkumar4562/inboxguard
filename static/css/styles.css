@@ -338,9 +338,9 @@ body {
 }
 
 .logo-icon {
-    width: 28px;
-    height: 28px;
-    filter: drop-shadow(0 0 8px rgba(59, 130, 246, 0.4));
+    width: 32px;
+    height: 32px;
+    object-fit: contain;
 }
 
 .logo-text {
@@ -349,6 +349,7 @@ body {
     font-weight: 700;
     color: #f8fafc;
     letter-spacing: -0.02em;
+    line-height: 1;
 }
 
 .brand {
@@ -882,7 +883,7 @@ nav {
 .topbar-brand {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
     margin: 0;
     font-size: 1.9rem;
     font-weight: 800;
@@ -1060,6 +1061,20 @@ button.access-link {
 
 .access-link:focus-visible {
     box-shadow: 0 0 0 3px rgba(74, 222, 128, 0.28), 0 8px 24px rgba(34, 197, 94, 0.22);
+}
+
+.upgrade-cta {
+    background: linear-gradient(135deg, #22c55e, #16a34a) !important;
+    border-color: rgba(34, 197, 94, 0.72) !important;
+    box-shadow: 0 8px 25px rgba(34, 197, 94, 0.4) !important;
+    color: #f0fff5 !important;
+}
+
+.upgrade-cta:hover,
+.upgrade-cta:focus,
+.upgrade-cta:active {
+    background: linear-gradient(135deg, #16a34a, #15803d) !important;
+    box-shadow: 0 10px 28px rgba(34, 197, 94, 0.46) !important;
 }
 
 .token-badge {
@@ -2080,21 +2095,6 @@ select {
     align-items: center;
     gap: 10px;
     flex-wrap: wrap;
-}
-
-.start-btn {
-    border: 1px solid rgba(59, 130, 246, 0.4);
-    border-radius: 999px;
-    background: rgba(59, 130, 246, 0.15);
-    color: #dbeafe;
-    padding: 7px 14px;
-    font-size: 0.88rem;
-    font-weight: 700;
-    cursor: pointer;
-}
-
-.start-btn:hover {
-    background: rgba(59, 130, 246, 0.24);
 }
 
 .token-badge {
