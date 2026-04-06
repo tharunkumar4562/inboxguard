@@ -2268,6 +2268,21 @@ def google_site_verification():
 
 @app.get("/", response_class=HTMLResponse)
 def landing(request: Request):
+    first_visit_cookie = str(request.cookies.get("ig_first_visit_done", "")).strip()
+    user_agent = str(request.headers.get("user-agent", "")).lower()
+    is_bot = any(marker in user_agent for marker in ("bot", "crawler", "spider", "slurp", "bingpreview", "facebookexternalhit"))
+
+    if not first_visit_cookie and not is_bot:
+        redirect = RedirectResponse(url="/app?first_scan=1", status_code=307)
+        redirect.set_cookie(
+            key="ig_first_visit_done",
+            value="1",
+            max_age=60 * 60 * 24 * 365,
+            httponly=False,
+            samesite="lax",
+        )
+        return redirect
+
     track_event("page_view", {"page": "landing"})
     return render_template_safe(
         request,
