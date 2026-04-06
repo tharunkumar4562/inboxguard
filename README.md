@@ -55,9 +55,15 @@ Set an environment variable before launch/deploy:
 
 `INBOXGUARD_ADMIN_TOKEN=your-secret-token`
 
+To restrict the dashboard to only your account, also set:
+
+`INBOXGUARD_ADMIN_EMAIL=you@example.com`
+
 Open dashboard with:
 
 `/admin?token=your-secret-token`
+
+The dashboard will only load if you are signed in as the configured admin email.
 
 If token is missing, dashboard route returns `404`.
 

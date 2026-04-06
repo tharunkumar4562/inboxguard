@@ -54,6 +54,7 @@ templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
 SITE_URL = os.getenv("INBOXGUARD_SITE_URL", "https://inboxguard.me")
 ADMIN_TOKEN = os.getenv("INBOXGUARD_ADMIN_TOKEN", "")
+ADMIN_EMAIL = os.getenv("INBOXGUARD_ADMIN_EMAIL", "").strip().lower()
 SESSION_SECRET = os.getenv("INBOXGUARD_SESSION_SECRET", "change-me-in-production")
 SESSION_HTTPS_ONLY = os.getenv("INBOXGUARD_SESSION_HTTPS_ONLY", "0").strip().lower() in {"1", "true", "yes"}
 AUTH_DB_FILE = BASE_DIR / "data" / "auth.db"
@@ -4377,14 +4378,12 @@ def _verify_admin_token(token: str) -> None:
         raise HTTPException(status_code=403, detail="Forbidden")
 
 
-def _verify_admin_access(request: Request, token: str = "") -> None:
-    if ADMIN_TOKEN:
-        _verify_admin_token(token)
-        return
-
-    user = _get_session_user(request)
-    if not user:
-        raise HTTPException(status_code=401, detail="AUTH_REQUIRED")
+def _verify_admin_access(request: Request, token: str) -> None:
+    _verify_admin_token(token)
+    if ADMIN_EMAIL:
+        user = _get_session_user(request)
+        if not user or str(user.get("email", "")).strip().lower() != ADMIN_EMAIL:
+            raise HTTPException(status_code=403, detail="Forbidden")
 
 
 @app.get("/admin", response_class=HTMLResponse)
