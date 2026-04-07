@@ -1152,11 +1152,15 @@ function resumePendingAfterAuthIfNeeded() {
 function openAuthModalFromQueryIfNeeded() {
     const params = new URLSearchParams(window.location.search);
     const shouldOpen = params.get("auth") === "1";
+    const oauthError = params.get("oauth_error") === "1";
     if (!shouldOpen) {
         return;
     }
 
     showAuthModal();
+    if (oauthError) {
+        showError("Google sign-in failed. Please try again.");
+    }
     const cleanUrl = window.location.pathname + window.location.hash;
     window.history.replaceState({}, document.title, cleanUrl);
 }
