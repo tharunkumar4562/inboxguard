@@ -1,0 +1,28 @@
+<div class="brand-wrap">
+  <div class="brand" aria-label="InboxGuard">
+    <img src="/static/branding/logo.png" class="logo-icon" alt="InboxGuard logo" />
+    <span class="logo-text">InboxGuard</span>
+  </div>
+  <p class="sub">Fix Before You Send</p>
+</div>
+<nav>
+  <p class="nav-group-label">Core</p>
+  <button id="tab-threat-scan" class="nav-item {{ 'active' if current_page == 'app' else '' }}" type="button" onclick="window.location.href='/app?tab=threat-scan'">Scan Email</button>
+
+  <p class="nav-group-label">Create</p>
+  <button class="nav-item {{ 'active' if current_page == 'subject-generator' else '' }}" type="button" onclick="window.location.href='/subject-generator'">Subject Generator</button>
+
+  <p class="nav-group-label">Advanced</p>
+  <details class="sidebar-more" open>
+    <summary>Show advanced tools</summary>
+    <button class="nav-item tool-nav-btn advanced-tool" type="button" data-tool="campaign-debugger" onclick="window.location.href='/app?tool=campaign-debugger'">Campaign Debugger</button>
+    <button class="nav-item tool-nav-btn advanced-tool" type="button" data-tool="blacklist" onclick="window.location.href='/app?tool=blacklist'">Domain Check</button>
+    <button class="nav-item tool-nav-btn advanced-tool" type="button" data-tool="seed" onclick="window.location.href='/app?tool=seed'">Seed Testing</button>
+    <button class="nav-item tool-nav-btn advanced-tool" type="button" data-tool="bulk" onclick="window.location.href='/app?tool=bulk'">Bulk Scan</button>
+    <button class="nav-item tool-nav-btn advanced-tool" type="button" data-tool="ops" onclick="window.location.href='/app?tool=ops'">API + Team</button>
+  </details>
+
+  <p class="nav-group-label">System</p>
+  <button class="nav-item" type="button" onclick="window.location.href='/pricing'">Pricing</button>
+  <button class="nav-item" type="button" onclick="window.location.href='/profile'">Profile</button>
+</nav>

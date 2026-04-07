@@ -2785,6 +2785,7 @@ def app_dashboard(request: Request):
             "meta_description": "Know if your email will land in inbox before sending. Fix risky drafts before you hit send and protect your domain.",
             "canonical_url": f"{SITE_URL}/app",
             "focus_query": "why did my email go to spam",
+            "current_page": "app",
         },
     )
     response.headers["X-Robots-Tag"] = "noindex, nofollow"
@@ -2801,6 +2802,7 @@ def subject_generator_page(request: Request):
             "page_title": "InboxGuard Subject Generator | Write safer subject lines",
             "meta_description": "Generate product-aware subject lines with spam risk checks and body-fit scoring.",
             "canonical_url": f"{SITE_URL}/subject-generator",
+            "current_page": "subject-generator",
         },
     )
     response.headers["X-Robots-Tag"] = "noindex, nofollow"
@@ -4320,10 +4322,7 @@ def _run_analysis_request(
         if not _deduct_tokens(user_id, token_cost):
             raise HTTPException(status_code=402, detail="NO_TOKENS")
     else:
-        # Non-authenticated users: check anonymous scan limit
-        anon_used = _get_anon_scans_used(request)
-        if anon_used >= ANON_SCAN_LIMIT:
-            raise HTTPException(status_code=401, detail="AUTH_REQUIRED")
+        raise HTTPException(status_code=401, detail="AUTH_REQUIRED")
 
     track_event("analyze_request", {"mode": mode, "auth": "user" if user else "anon"})
 
@@ -4553,6 +4552,14 @@ def analyze_async(
     analysis_mode: str = Form("content"),
 ):
     user = _get_session_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="AUTH_REQUIRED")
+
+    user_id = int(user["id"])
+    token_cost = FEATURE_COSTS.get("scan_email", 1)
+    if _get_user_tokens(user_id) < token_cost:
+        raise HTTPException(status_code=402, detail="NO_TOKENS")
+
     job_id = str(uuid4())
     _set_job_runtime_state(
         job_id,
@@ -4564,7 +4571,7 @@ def analyze_async(
     )
     _record_async_job(
         job_id,
-        int(user["id"]) if user else None,
+        user_id,
         "queued",
         queue_name="analysis",
         retries=0,
@@ -4585,7 +4592,7 @@ def analyze_async(
         request,
         payload,
         queue_name="analysis",
-        api_user_id=int(user["id"]) if user else None,
+        api_user_id=user_id,
         max_retries=ASYNC_JOB_MAX_RETRIES,
         timeout_seconds=ASYNC_JOB_TIMEOUT_SECONDS,
     )

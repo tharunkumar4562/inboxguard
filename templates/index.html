@@ -120,30 +120,21 @@
           <p class="sub">Fix Before You Send</p>
         </div>
         <nav>
-          <button id="tab-dashboard" class="nav-item active" type="button">Home</button>
-          <button id="tab-threat-scan" class="nav-item" type="button">Scan Email</button>
+          <p class="nav-group-label">Core</p>
+          <button id="tab-threat-scan" class="nav-item active" type="button">Scan Email</button>
+
           <p class="nav-group-label">Create</p>
           <button class="nav-item" type="button" onclick="window.location.href='/subject-generator'">Subject Generator</button>
 
-          <p class="nav-group-label">Advanced tools</p>
+          <p class="nav-group-label">Advanced</p>
           <details class="sidebar-more">
             <summary>Show advanced tools</summary>
-            <button class="nav-item tool-nav-btn" type="button" data-tool="campaign-debugger">Campaign Debugger</button>
-            <button class="nav-item tool-nav-btn" type="button" data-tool="blacklist">Domain Check</button>
-            <button class="nav-item tool-nav-btn" type="button" data-tool="seed">Seed Testing</button>
-            <button class="nav-item tool-nav-btn" type="button" data-tool="bulk">Bulk Scan</button>
-            <button class="nav-item tool-nav-btn" type="button" data-tool="ops">API + Team</button>
-            <button class="nav-item tool-nav-btn" type="button" data-tool="insights">Operator Insights</button>
-            <button class="nav-item" type="button" onclick="window.location.href='/saved-fixes'">Saved Fixes</button>
-            <button class="nav-item" type="button" onclick="window.location.href='/inbox-tips'">Inbox Tips</button>
-            <button class="nav-item" type="button" onclick="window.location.href='/results'">Results</button>
-            <button class="nav-item" type="button" onclick="window.location.href='/reports'">Reports</button>
+            <button class="nav-item tool-nav-btn advanced-tool" type="button" data-tool="campaign-debugger">Campaign Debugger</button>
+            <button class="nav-item tool-nav-btn advanced-tool" type="button" data-tool="blacklist">Domain Check</button>
+            <button class="nav-item tool-nav-btn advanced-tool" type="button" data-tool="seed">Seed Testing</button>
+            <button class="nav-item tool-nav-btn advanced-tool" type="button" data-tool="bulk">Bulk Scan</button>
+            <button class="nav-item tool-nav-btn advanced-tool" type="button" data-tool="ops">API + Team</button>
           </details>
-
-          <p class="nav-group-label">System</p>
-          <button class="nav-item" type="button" onclick="window.location.href='/about'">About</button>
-          <button class="nav-item" type="button" onclick="window.location.href='/privacy'">Privacy</button>
-          <button class="nav-item" type="button" onclick="window.location.href='/terms'">Terms</button>
         </nav>
 
         <a id="profile-link" class="profile-link hidden" href="/profile" aria-label="Open profile">
@@ -319,7 +310,7 @@ Subject: Quick question
 
 Hi John,
 I noticed your recent post and had one short idea to improve reply rates."></textarea>
-            <button type="button" id="fill-example" class="example-btn">Use example email</button>
+            <button type="button" id="fill-example" class="btn-secondary">✨ Try Example Email</button>
 
             <p id="token-cost-hint" class="micro">This will cost 1 credit. Sign in to see your balance.</p>
             <p id="token-after-hint" class="micro hidden">Credits remaining: --</p>
@@ -950,6 +941,7 @@ I noticed your recent post and had one short idea to improve reply rates."></tex
       })();
     </script>
 
-    <script src="/static/js/app.js?v=20260407-theme-toggle-hardening-1"></script>
+    <script src="/static/js/flow.js?v=20260407-flow-controller-1"></script>
+    <script src="/static/js/app.js?v=20260407-flow-gates-1"></script>
   </body>
 </html>

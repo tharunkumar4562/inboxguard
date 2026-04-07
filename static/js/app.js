@@ -363,6 +363,20 @@ let currentUserPlan = "free";
 let userActionCount = 0;
 let appliedPromoState = null;
 
+function syncFlowUserState() {
+    if (!window.InboxGuardFlow || typeof window.InboxGuardFlow.updateFlowUser !== "function") {
+        return;
+    }
+    window.InboxGuardFlow.updateFlowUser(
+        isAuthenticated
+            ? {
+                tokens: Number(userState.tokens || 0),
+                plan: currentUserPlan || userState.plan || "free",
+            }
+            : null,
+    );
+}
+
 const PLAN_CHECKOUT_AMOUNTS_INR = {
     free: 0,
     starter: 200,
@@ -1088,6 +1102,7 @@ async function refreshAuthStatus() {
             localStorage.setItem("ig_lead_capture_email", leadCaptureEmail);
         }
         updateProfileNav();
+        syncFlowUserState();
 
     } catch (error) {
         // Keep UI operational even if auth status endpoint is temporarily unavailable.
@@ -1282,7 +1297,7 @@ async function continueWithLeadCapture() {
 async function continueWithGoogle() {
     stashPendingContext(pendingAction || "analyze");
     localStorage.setItem("ig_resume_after_auth", "1");
-    const next = encodeURIComponent("/");
+    const next = encodeURIComponent("/app");
     window.location.href = `/auth/google/login?next=${next}`;
 }
 
@@ -1398,6 +1413,13 @@ function openTool(tool) {
         bulk: "monthly",
         ops: "monthly",
     };
+
+    if (requiredByTool[key] && localStorage.getItem("ig_has_scanned") !== "1") {
+        showError("Run at least one scan first before opening advanced tools.");
+        activateTab("threat-scan");
+        return;
+    }
+
     const requiredPlan = requiredByTool[key] || "free";
     if (!hasPlanAccess(requiredPlan)) {
         showUpgradeModal({
@@ -2784,14 +2806,8 @@ async function showFixTransformation() {
 }
 
 async function runAnalyze() {
-    await refreshAuthStatus();
-
-    if (needsAuthGate("analyze")) {
-        if (isAuthenticated) {
-            showError("You reached your monthly free plan scan limit. Upgrade is required for more scans.");
-        } else {
-            showAuthModal();
-        }
+    const hasAccess = await ensureScanAccess();
+    if (!hasAccess) {
         return;
     }
 
@@ -2855,6 +2871,10 @@ async function runAnalyze() {
 
         latestSummary = summary;
         latestFindings = findings;
+        localStorage.setItem("ig_has_scanned", "1");
+        if (window.InboxGuardFlow && typeof window.InboxGuardFlow.markFlowScanCompleted === "function") {
+            window.InboxGuardFlow.markFlowScanCompleted();
+        }
 
         trackEvent("result_viewed", {
             risk: String(summary.risk_band || "unknown"),
@@ -3178,7 +3198,10 @@ async function saveSeedTest() {
 }
 
 async function runAnalyzeAsync() {
-    await refreshAuthStatus();
+    const hasAccess = await ensureScanAccess();
+    if (!hasAccess) {
+        return;
+    }
 
     const rawText = rawEmailInput ? rawEmailInput.value.trim() : "";
     if (rawText.length < 20) {
@@ -3225,6 +3248,10 @@ async function runAnalyzeAsync() {
             latestSummary = summary;
             latestFindings = findings;
             hasScanResult = true;
+            localStorage.setItem("ig_has_scanned", "1");
+            if (window.InboxGuardFlow && typeof window.InboxGuardFlow.markFlowScanCompleted === "function") {
+                window.InboxGuardFlow.markFlowScanCompleted();
+            }
             renderStatus(summary, signals, findings);
             renderDecisionEngine(summary, signals, findings, job.result.prediction || null);
             renderBreakdown(summary);
@@ -3374,6 +3401,8 @@ async function loadUserTokens() {
             if (tokenEmptyStateNode) {
                 tokenEmptyStateNode.classList.add("hidden");
             }
+            userState.tokens = 0;
+            syncFlowUserState();
             return;
         }
 
@@ -3409,9 +3438,41 @@ async function loadUserTokens() {
         updateTokenMessaging(tokens);
         refreshLockedFeatures();
         refreshPricingContext();
+        syncFlowUserState();
     } catch (error) {
         // Keep UI responsive even if token endpoint is unavailable.
     }
+}
+
+function fillExampleEmail() {
+    if (!rawEmailInput) {
+        return;
+    }
+    rawEmailInput.value = "Subject: Quick question\n\nHi John,\nI noticed your recent post and had one idea to improve reply rates without changing your offer.\nWould you be open to a quick review this week?";
+    rawEmailInput.focus();
+    showError("Example email loaded. Click Check Before Sending.");
+}
+
+window.fillExampleEmail = fillExampleEmail;
+
+async function ensureScanAccess() {
+    await refreshAuthStatus();
+    await loadUserTokens();
+
+    if (!isAuthenticated) {
+        pendingAction = "analyze";
+        stashPendingContext("analyze");
+        showAuthModal();
+        return false;
+    }
+
+    if (Number(userState.tokens || 0) < 1) {
+        showPaywall();
+        showError("No credits left. Upgrade to continue scanning.");
+        return false;
+    }
+
+    return true;
 }
 
 async function handleRequestAccess() {
@@ -3927,12 +3988,7 @@ function wireUiEvents() {
 
     if (fillExampleButton) {
         fillExampleButton.addEventListener("click", () => {
-            if (!rawEmailInput) {
-                return;
-            }
-            rawEmailInput.value = "Subject: Quick question about your outreach\n\nHi John,\nI noticed your recent post and had one short idea to improve reply rates without changing your offer.\nWould you be open to a quick review this week?\n\nBest,\nTharun";
-            rawEmailInput.focus();
-            showError("Example email loaded. Click Check Before Sending.");
+            fillExampleEmail();
         });
     }
 
@@ -4047,20 +4103,9 @@ function wireUiEvents() {
     if (form) {
         form.addEventListener("submit", async (event) => {
             event.preventDefault();
-            if (!canUserScan()) {
-                return;
-            }
             pendingAction = "analyze";
-            if (needsLeadCaptureGate("analyze")) {
-                showLeadCaptureModal();
-                return;
-            }
-            if (needsAuthGate("analyze")) {
-                if (isAuthenticated) {
-                    showError("You reached your monthly free plan scan limit. Upgrade is required for more scans.");
-                    return;
-                }
-                showAuthModal();
+            const hasAccess = await ensureScanAccess();
+            if (!hasAccess) {
                 return;
             }
             showScanCost();

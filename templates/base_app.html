@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{{ page_title or 'InboxGuard' }}</title>
+    <meta name="description" content="{{ meta_description or 'InboxGuard app shell.' }}" />
+    <link rel="canonical" href="{{ canonical_url or 'https://inboxguard.me/app' }}" />
+    <meta name="theme-color" content="#f8fafc" />
+    <script>
+      (function () {
+        try {
+          const savedTheme = localStorage.getItem("ig_theme");
+          const systemDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+          const theme = savedTheme === "dark" || savedTheme === "light" ? savedTheme : (systemDark ? "dark" : "light");
+          const root = document.documentElement;
+          root.dataset.theme = theme;
+          root.classList.toggle("dark", theme === "dark");
+          root.style.colorScheme = theme === "dark" ? "dark" : "light";
+          const meta = document.querySelector('meta[name="theme-color"]');
+          if (meta) {
+            meta.setAttribute("content", theme === "dark" ? "#0f172a" : "#f8fafc");
+          }
+        } catch (error) {
+        }
+      })();
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/static/css/styles.min.css?v=20260406-seo-fix-1" />
+    <link rel="stylesheet" href="/static/theme-overrides.css?v=20260407-light-default-1" />
+  </head>
+  <body class="bg-ink text-slate-100 min-h-screen antialiased">
+    <div class="app-shell">
+      <aside class="sidebar">
+        {% include 'components/sidebar.html' %}
+      </aside>
+
+      <main class="main-area">
+        <header class="topbar">
+          <div class="brand topbar-brand" aria-label="InboxGuard">
+            <img src="/static/branding/logo.png" class="logo-icon" alt="InboxGuard logo" />
+            <span class="logo-text">InboxGuard</span>
+          </div>
+          <div class="topbar-actions">
+            <button id="theme-toggle" type="button" class="access-link theme-toggle" data-theme-toggle aria-pressed="false">🌙 Dark</button>
+            <button id="get-access-btn" type="button" class="access-link upgrade-cta" onclick="window.location.href='/pricing'">Get Access</button>
+          </div>
+        </header>
+
+        {% block content %}{% endblock %}
+      </main>
+    </div>
+
+    <script src="/static/js/flow.js?v=20260407-flow-controller-1"></script>
+    <script src="/static/js/app.js?v=20260407-theme-toggle-hardening-2"></script>
+  </body>
+</html>

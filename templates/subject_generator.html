@@ -1,87 +1,7 @@
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>{{ page_title }}</title>
-    <meta name="description" content="{{ meta_description }}" />
-    <link rel="canonical" href="{{ canonical_url }}" />
-    <link rel="icon" type="image/png" href="/static/branding/logo.png" />
-    <link rel="shortcut icon" href="/static/branding/logo.png" />
-    <meta name="theme-color" content="#f8fafc" />
-    <script>
-      (function () {
-        try {
-          const savedTheme = localStorage.getItem("ig_theme");
-          const systemDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
-          const theme = savedTheme === "dark" || savedTheme === "light" ? savedTheme : (systemDark ? "dark" : "light");
-          const root = document.documentElement;
-          root.dataset.theme = theme;
-          root.classList.toggle("dark", theme === "dark");
-          root.style.colorScheme = theme === "dark" ? "dark" : "light";
-          const meta = document.querySelector('meta[name="theme-color"]');
-          if (meta) {
-            meta.setAttribute("content", theme === "dark" ? "#0f172a" : "#f8fafc");
-          }
-        } catch (error) {
-        }
-      })();
-    </script>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="/static/css/styles.min.css?v=20260406-seo-fix-1" />
-    <link rel="stylesheet" href="/static/theme-overrides.css?v=20260407-light-default-1" />
-    <style>
-      .subject-nav {
-        display: flex;
-        flex-wrap: wrap;
-        align-items: center;
-        justify-content: flex-end;
-        gap: 10px;
-      }
+{% extends "base_app.html" %}
 
-      .subject-nav-link {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        min-height: 36px;
-        padding: 0 12px;
-        border-radius: 999px;
-        border: 1px solid #d1d5db;
-        background: #f3f4f6;
-        color: #111827;
-        font-size: 0.9rem;
-        font-weight: 600;
-        text-decoration: none;
-      }
-
-      .subject-nav-link:hover {
-        background: #e5e7eb;
-        color: #111827;
-      }
-
-      .subject-nav .theme-toggle {
-        min-width: 98px;
-      }
-    </style>
-    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
-  </head>
-  <body class="bg-ink text-slate-100 min-h-screen antialiased">
-    <main class="mx-auto max-w-6xl px-5 py-8 md:py-10">
-      <header class="mb-6 flex items-center justify-between gap-4 border-b border-slate-800/70 pb-4">
-        <div class="logo-wrap">
-          <img src="/static/branding/logo.png" alt="InboxGuard" style="display:block; width: 172px; max-width: 100%;" />
-        </div>
-        <nav class="subject-nav" aria-label="Subject generator navigation">
-          <button id="theme-toggle" type="button" class="subject-nav-link theme-toggle" data-theme-toggle onclick="toggleInboxGuardTheme()" aria-pressed="false">🌙 Dark</button>
-          <a class="subject-nav-link" href="/app">Scan Email</a>
-          <a class="subject-nav-link" href="/pricing">Pricing</a>
-          <a class="subject-nav-link" href="/profile">Profile</a>
-        </nav>
-      </header>
-
-      <section class="card" style="padding: 22px;">
+{% block content %}
+      <section class="card" style="padding: 22px; margin: 20px;">
         <p class="workflow-step">Subject Line Intelligence</p>
         <h1 style="margin-top: 6px;">Write subject lines for a specific product and ICP</h1>
         <p class="micro">Generate short internal-looking subject lines and score them for fit, spam risk, and body alignment.</p>
@@ -163,8 +83,4 @@
           </ul>
         </div>
       </section>
-    </main>
-
-    <script src="/static/js/app.js?v=20260407-ux-hotfix-1"></script>
-  </body>
-</html>
+{% endblock %}
