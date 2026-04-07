@@ -27,8 +27,10 @@ function updateThemeToggleButtons(theme) {
 
 function applyTheme(theme, persist = true) {
     const normalized = normalizeTheme(theme);
-    document.documentElement.dataset.theme = normalized;
-    document.documentElement.style.colorScheme = normalized;
+    const root = document.documentElement;
+    root.dataset.theme = normalized;
+    root.classList.toggle("dark", normalized === "dark");
+    root.style.colorScheme = normalized;
     if (persist) {
         localStorage.setItem(THEME_STORAGE_KEY, normalized);
     }
@@ -37,7 +39,7 @@ function applyTheme(theme, persist = true) {
 }
 
 function toggleInboxGuardTheme() {
-    const currentTheme = normalizeTheme(document.documentElement.dataset.theme || localStorage.getItem(THEME_STORAGE_KEY));
+    const currentTheme = normalizeTheme(document.documentElement.classList.contains("dark") ? "dark" : document.documentElement.dataset.theme || localStorage.getItem(THEME_STORAGE_KEY));
     return applyTheme(currentTheme === "dark" ? "light" : "dark");
 }
 

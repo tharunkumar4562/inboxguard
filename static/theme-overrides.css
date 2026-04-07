@@ -1,5 +1,133 @@
+:root {
+  --bg: #f8fafc;
+  --card: #ffffff;
+  --text: #111827;
+  --text-secondary: #374151;
+  --border: #e5e7eb;
+  --primary: #2563eb;
+  --primary-hover: #1d4ed8;
+  --success: #16a34a;
+  --danger: #dc2626;
+  --radius: 12px;
+  --radius-sm: 8px;
+  --padding: 16px;
+  --shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+html.dark {
+  --bg: #0b1220;
+  --card: #111827;
+  --text: #f9fafb;
+  --text-secondary: #d1d5db;
+  --border: #1f2937;
+  --primary: #3b82f6;
+  --primary-hover: #2563eb;
+  --success: #22c55e;
+  --danger: #ef4444;
+  --shadow: 0 10px 26px rgba(0, 0, 0, 0.25);
+}
+
 html {
   color-scheme: light;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+}
+
+h1,
+h2,
+h3,
+label,
+legend {
+  color: var(--text);
+}
+
+p,
+span,
+.micro,
+.pricing-note,
+.sub,
+.workflow-step,
+.nav-group-label,
+.profile-email,
+.profile-small,
+.tab-feedback,
+.decision-scope,
+.risk-strip-body,
+.confidence-meter-detail {
+  color: var(--text-secondary);
+}
+
+.card,
+.tool-pane,
+.tool-pane-head,
+.modal-content,
+.modal-card,
+.profile-card,
+.profile-stat-card,
+.rewrite-proof,
+.usage-guide,
+.status-card,
+.paywall-section,
+.decision-overlay-card,
+.plan-card,
+.feature-card,
+.trust-block,
+.pricing-section,
+.pricing-section #home-pricing-cta {
+  background: var(--card);
+  border-color: var(--border);
+  color: var(--text);
+  box-shadow: var(--shadow);
+}
+
+.btn-primary,
+.primary-btn,
+.upgrade-cta,
+.plan-btn.primary,
+.feature-open-btn,
+.btn-action-primary {
+  background: var(--primary);
+  color: #ffffff;
+  border-color: var(--primary);
+}
+
+.btn-primary:hover,
+.primary-btn:hover,
+.upgrade-cta:hover,
+.plan-btn.primary:hover,
+.feature-open-btn:hover,
+.btn-action-primary:hover {
+  background: var(--primary-hover);
+}
+
+.btn-secondary,
+.secondary-btn,
+.tool-pane-head-close,
+.profile-back,
+.profile-logout,
+.theme-toggle,
+.access-link {
+  background: var(--card);
+  color: var(--text);
+  border-color: var(--border);
+}
+
+.input,
+input,
+textarea,
+select {
+  background: var(--card);
+  color: var(--text);
+  border-color: var(--border);
+}
+
+.sidebar {
+  background: var(--card);
+  border-right-color: var(--border);
+  color: var(--text);
 }
 
 html:not([data-theme="dark"]) body {

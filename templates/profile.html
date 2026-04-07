@@ -36,12 +36,14 @@
         const stored = localStorage.getItem(storageKey);
         const theme = stored === "dark" ? "dark" : "light";
         root.dataset.theme = theme;
+        root.classList.toggle("dark", theme === "dark");
         root.style.colorScheme = theme;
         localStorage.setItem(storageKey, theme);
         syncThemeButton(theme);
         window.toggleInboxGuardTheme = function () {
-          const nextTheme = (root.dataset.theme || "light") === "dark" ? "light" : "dark";
+          const nextTheme = root.classList.contains("dark") ? "light" : "dark";
           root.dataset.theme = nextTheme;
+          root.classList.toggle("dark", nextTheme === "dark");
           root.style.colorScheme = nextTheme;
           localStorage.setItem(storageKey, nextTheme);
           syncThemeButton(nextTheme);
