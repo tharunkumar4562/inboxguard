@@ -976,6 +976,18 @@ function openEntryFromQueryIfNeeded() {
     }
 }
 
+function openPendingScanFromStorage() {
+    const savedEmail = String(localStorage.getItem("pending_scan_email") || "").trim();
+    if (!savedEmail || !rawEmailInput) {
+        return;
+    }
+
+    rawEmailInput.value = savedEmail;
+    localStorage.removeItem("pending_scan_email");
+    activateTab("threat-scan");
+    setTimeout(() => rawEmailInput.focus(), 120);
+}
+
 function onAuthSuccess(source) {
     isAuthenticated = true;
     hideAuthModal();
@@ -3637,6 +3649,7 @@ refreshAuthStatus().then(() => {
     loadUserTokens().catch(() => null);
     refreshLockedFeatures();
     refreshPricingContext();
+    openPendingScanFromStorage();
     openEntryFromQueryIfNeeded();
 });
 

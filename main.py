@@ -2289,33 +2289,16 @@ def google_site_verification():
 
 @app.get("/", response_class=HTMLResponse)
 def landing(request: Request):
-    force_landing = str(request.query_params.get("view", "")).strip().lower() == "landing"
-    if force_landing or _is_crawler_request(request):
-        track_event("page_view", {"page": "landing"})
-        return render_template_safe(
-            request,
-            "landing.html",
-            {
-                "page_title": "InboxGuard - Check if your email will land in inbox before sending",
-                "meta_description": "InboxGuard predicts whether your email will land in inbox or spam before you send it. Fix issues and protect your domain.",
-                "canonical_url": f"{SITE_URL}/",
-            },
-        )
-
-    seen_cookie = str(request.cookies.get("ig_seen_app", "")).strip()
-    first_visit = seen_cookie != "1"
-    target = "/app?tab=threat-scan" if first_visit else "/app"
-    response = RedirectResponse(url=target, status_code=302)
-    response.set_cookie(
-        "ig_seen_app",
-        "1",
-        max_age=31536000,
-        path="/",
-        samesite="lax",
-        secure=SESSION_HTTPS_ONLY,
-        httponly=False,
+    track_event("page_view", {"page": "landing"})
+    return render_template_safe(
+        request,
+        "landing.html",
+        {
+            "page_title": "InboxGuard - Check if your email will land in inbox before sending",
+            "meta_description": "InboxGuard predicts whether your email will land in inbox or spam before you send it. Fix issues and protect your domain.",
+            "canonical_url": f"{SITE_URL}/",
+        },
     )
-    return response
 
 
 @app.get("/app", response_class=HTMLResponse)

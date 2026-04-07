@@ -95,6 +95,9 @@
     .btn { display: inline-block; padding: 12px 20px; border-radius: 10px; font-weight: 600; text-decoration: none; }
     .btn.primary { background: #2d74ff; color: #ffffff; }
     .btn.secondary { border: 1px solid #3f5f97; color: #d5e3ff; }
+    .scan-box { margin-top: 22px; padding: 18px; background: #0b1228; border: 1px solid rgba(120,140,180,0.24); border-radius: 14px; }
+    .scan-label { display: block; margin-bottom: 8px; font-weight: 600; color: #eef4ff; }
+    .scan-box textarea { width: 100%; min-height: 140px; padding: 14px; border-radius: 12px; border: 1px solid rgba(120,140,180,0.36); background: #091024; color: #eef4ff; resize: vertical; box-sizing: border-box; }
     .section { margin-top: 22px; padding: 22px; background: #0f1731; border: 1px solid rgba(120,140,180,0.2); border-radius: 14px; }
     .section h2 { margin: 0 0 8px; font-size: 1.55rem; color: #ffffff; }
     .section h3 { margin: 12px 0 4px; font-size: 1.1rem; color: #f1f6ff; }
@@ -125,7 +128,7 @@
     </div>
     <nav>
       <a href="/pricing">Pricing</a>
-      <a href="/app">Home</a>
+      <a href="/">Home</a>
       <a href="/app">Open App</a>
     </nav>
   </div>
@@ -139,9 +142,17 @@
       InboxGuard analyzes your email content and detects spam risks before you hit send.
     </p>
 
+    <div class="scan-box">
+      <label for="email-input" class="scan-label">Paste your email here</label>
+      <textarea id="email-input" rows="6" placeholder="Paste your email..."></textarea>
+      <div class="cta">
+        <button type="button" class="btn primary" onclick="startInlineScan()">Scan Email</button>
+        <a href="/pricing" class="btn secondary">View Pricing</a>
+      </div>
+    </div>
+
     <div class="cta">
-      <a href="/app" class="btn primary">Scan an Email</a>
-      <a href="/pricing" class="btn secondary">View Pricing</a>
+      <a href="/app" class="btn primary">Open App</a>
     </div>
   </section>
 
@@ -255,6 +266,18 @@
     <a href="/terms">Terms</a>
   </nav>
 </footer>
+
+<script>
+  function startInlineScan() {
+    const input = document.getElementById("email-input");
+    const email = String(input && input.value ? input.value : "").trim();
+    if (!email) {
+      return;
+    }
+    localStorage.setItem("pending_scan_email", email);
+    window.location.href = "/app?tab=threat-scan";
+  }
+</script>
 
 </body>
 </html>
