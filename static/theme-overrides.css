@@ -195,3 +195,174 @@ html:not([data-theme="dark"]) .paywall-section {
   background: linear-gradient(135deg, rgba(37, 99, 235, 0.08), rgba(34, 197, 94, 0.08));
   color: #111827;
 }
+
+html:not([data-theme="dark"]) .section {
+  background: #f8fafc;
+  padding: 60px 0;
+}
+
+html:not([data-theme="dark"]) .card,
+html:not([data-theme="dark"]) .modal-content,
+html:not([data-theme="dark"]) .modal-card,
+html:not([data-theme="dark"]) .plan-card,
+html:not([data-theme="dark"]) .feature-card,
+html:not([data-theme="dark"]) .tool-pane,
+html:not([data-theme="dark"]) .tool-pane-head,
+html:not([data-theme="dark"]) .profile-card,
+html:not([data-theme="dark"]) .profile-stat-card,
+html:not([data-theme="dark"]) .rewrite-proof,
+html:not([data-theme="dark"]) .usage-guide,
+html:not([data-theme="dark"]) .status-card,
+html:not([data-theme="dark"]) .paywall-section,
+html:not([data-theme="dark"]) .decision-overlay-card,
+html:not([data-theme="dark"]) .trust-block,
+html:not([data-theme="dark"]) .pricing-section,
+html:not([data-theme="dark"]) .pricing-section #home-pricing-cta {
+  background: #ffffff;
+  border-color: #e5e7eb;
+  color: #111827;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+html:not([data-theme="dark"]) .section h1,
+html:not([data-theme="dark"]) .section h2,
+html:not([data-theme="dark"]) .section h3,
+html:not([data-theme="dark"]) h1,
+html:not([data-theme="dark"]) h2,
+html:not([data-theme="dark"]) h3 {
+  color: #111827;
+}
+
+html:not([data-theme="dark"]) h1 { font-size: 32px; font-weight: 700; }
+html:not([data-theme="dark"]) h2 { font-size: 24px; font-weight: 600; }
+html:not([data-theme="dark"]) h3 { font-size: 18px; font-weight: 600; }
+
+html:not([data-theme="dark"]) p,
+html:not([data-theme="dark"]) .micro,
+html:not([data-theme="dark"]) .muted,
+html:not([data-theme="dark"]) .pricing-note,
+html:not([data-theme="dark"]) .sub,
+html:not([data-theme="dark"]) .workflow-step,
+html:not([data-theme="dark"]) .nav-group-label,
+html:not([data-theme="dark"]) .profile-email,
+html:not([data-theme="dark"]) .profile-small {
+  color: #374151;
+}
+
+html:not([data-theme="dark"]) .btn-primary,
+html:not([data-theme="dark"]) .primary-btn,
+html:not([data-theme="dark"]) .plan-btn.primary,
+html:not([data-theme="dark"]) .upgrade-cta,
+html:not([data-theme="dark"]) .feature-open-btn,
+html:not([data-theme="dark"]) .btn-action-primary {
+  background: #2563eb;
+  color: #ffffff;
+  border-color: #2563eb;
+  box-shadow: 0 10px 24px rgba(37, 99, 235, 0.24);
+}
+
+html:not([data-theme="dark"]) .btn-secondary,
+html:not([data-theme="dark"]) .secondary-btn,
+html:not([data-theme="dark"]) .tool-pane-head-close,
+html:not([data-theme="dark"]) .profile-back,
+html:not([data-theme="dark"]) .profile-logout,
+html:not([data-theme="dark"]) .theme-toggle {
+  background: #f3f4f6;
+  color: #111827;
+  border-color: #d1d5db;
+}
+
+html:not([data-theme="dark"]) .btn-secondary:hover,
+html:not([data-theme="dark"]) .secondary-btn:hover,
+html:not([data-theme="dark"]) .tool-pane-head-close:hover,
+html:not([data-theme="dark"]) .profile-back:hover,
+html:not([data-theme="dark"]) .profile-logout:hover,
+html:not([data-theme="dark"]) .theme-toggle:hover {
+  background: #e5e7eb;
+  color: #111827;
+}
+
+html:not([data-theme="dark"]) .plan-card {
+  padding: 24px;
+  border-radius: 16px;
+}
+
+html:not([data-theme="dark"]) .plan-card.highlight {
+  border: 2px solid #2563eb;
+  box-shadow: 0 14px 32px rgba(37, 99, 235, 0.12);
+  transform: none;
+}
+
+html:not([data-theme="dark"]) .plan-card .tag {
+  color: #2563eb;
+}
+
+html:not([data-theme="dark"]) .plan-card .price,
+html:not([data-theme="dark"]) .modal-content .price {
+  color: #2563eb;
+}
+
+html:not([data-theme="dark"]) .pricing-section {
+  background: #f8fafc;
+  padding: 60px 0;
+  box-shadow: none;
+}
+
+html:not([data-theme="dark"]) .pricing-grid {
+  gap: 18px;
+}
+
+html:not([data-theme="dark"]) .pricing-features li,
+html:not([data-theme="dark"]) .plan-card li {
+  border-bottom-color: #e5e7eb;
+  color: #374151;
+}
+
+html:not([data-theme="dark"]) .modal {
+  background: rgba(15, 23, 42, 0.14);
+}
+
+html:not([data-theme="dark"]) .modal-content,
+html:not([data-theme="dark"]) .modal-card {
+  border-radius: 16px;
+  max-width: 460px;
+  padding: 24px;
+  text-align: left;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.16);
+}
+
+html:not([data-theme="dark"]) .modal-content h2,
+html:not([data-theme="dark"]) .modal-card h3 {
+  font-size: 22px;
+  font-weight: 600;
+  color: #111827;
+}
+
+html:not([data-theme="dark"]) .modal-content .pricing-note,
+html:not([data-theme="dark"]) .modal-card .pricing-note,
+html:not([data-theme="dark"]) .modal-content .micro {
+  color: #6b7280;
+}
+
+html:not([data-theme="dark"]) .modal-content .pricing-features {
+  margin: 12px 0 16px;
+}
+
+html:not([data-theme="dark"]) .modal-content .btn-primary,
+html:not([data-theme="dark"]) .modal-content .primary-btn {
+  width: 100%;
+  margin-top: 8px;
+}
+
+html:not([data-theme="dark"]) .modal-content input,
+html:not([data-theme="dark"]) .modal-content select,
+html:not([data-theme="dark"]) .modal-content textarea {
+  background: #ffffff;
+  color: #111827;
+  border-color: #d1d5db;
+}
+
+html:not([data-theme="dark"]) .paywall-section {
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.07), rgba(37, 99, 235, 0.03));
+  border: 1px solid #dbeafe;
+}

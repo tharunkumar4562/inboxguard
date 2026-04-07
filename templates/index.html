@@ -586,7 +586,7 @@ I noticed your recent post and had one short idea to improve reply rates."></tex
           </div>
           <button id="cd-run" type="button" class="btn-tool-primary tool-pane-primary" style="margin-top: 10px;">Diagnose Campaign</button>
 
-          <div id="diagnosis-output" class="card hidden" style="margin-top: 12px; background: #0f1d31;">
+          <div id="diagnosis-output" class="card hidden" style="margin-top: 12px; background: #ffffff; border: 1px solid #e5e7eb;">
             <p id="diagnosis-primary" class="main-issue">-</p>
             <p id="diagnosis-confidence" class="micro">-</p>
             <p id="diagnosis-why" class="micro">-</p>
@@ -810,27 +810,24 @@ I noticed your recent post and had one short idea to improve reply rates."></tex
       <div class="modal-content">
         <button class="modal-close" onclick="closePricingModal()" aria-label="Close pricing modal">×</button>
         <h2 id="pricing-modal-title">Stop guessing before you send</h2>
-        <p class="pricing-note">Most emails do not fail because of infra. They fail because of small mistakes that show up at scale.</p>
-        <p class="pricing-note">InboxGuard catches that before you hit send.</p>
         <p class="price" id="checkout-price-label">$12 / month</p>
+        <p class="pricing-note">Catch deliverability risk before one bad batch hurts your domain.</p>
+        <button id="pay-btn" type="button" class="primary-btn">Upgrade Now</button>
         <p id="checkout-price-summary" class="pricing-note">Checkout total: ₹1,200</p>
-        <p class="pricing-note">Billed locally at checkout.</p>
         <ul class="pricing-features">
           <li>Avoid spam triggers before they burn your domain</li>
-          <li>Know if it is content or infra before testing</li>
-          <li>Stop wasting batches guessing what broke</li>
+          <li>Know whether the issue is content or infra</li>
+          <li>Protect inbox placement before the send</li>
         </ul>
-        <p class="pricing-note">Used before every campaign by people who care about deliverability.</p>
-        <p class="pricing-note">One bad batch can damage your domain reputation.</p>
         <div class="inline-fields" style="margin-top:8px;">
           <div>
             <label for="access-request-email" class="pricing-note" style="display:block; margin-bottom:4px;">Need enterprise or custom plan?</label>
-            <input id="access-request-email" type="email" placeholder="you@company.com" class="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-slate-100" />
+            <input id="access-request-email" type="email" placeholder="you@company.com" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900" />
           </div>
         </div>
         <p class="pricing-note" style="margin-top:8px;">Selected plan: <strong id="selected-plan-name">Growth Monthly</strong></p>
         <label for="inline-plan-type" class="pricing-note" style="display:block; margin-top:8px;">Choose plan</label>
-        <select id="inline-plan-type" class="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-slate-100" style="margin-top:6px;">
+        <select id="inline-plan-type" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900" style="margin-top:6px;">
           <option value="free">Free</option>
           <option value="starter">Starter ($2/month)</option>
           <option value="monthly">Growth Monthly</option>
@@ -847,16 +844,15 @@ I noticed your recent post and had one short idea to improve reply rates."></tex
         <button id="refresh-plans" type="button" class="secondary-btn" style="margin-top:8px;">Refresh Plans</button>
         <ul id="plans-output" class="compact-list" style="margin-top:8px;">
           <li>Plan details load from server when requested.</li>
-                <div style="margin-top:12px; padding-top:12px; border-top:1px solid rgba(255,255,255,0.1);">
-                  <label for="promo-code-input" class="pricing-note" style="display:block; margin-bottom:4px;">Have a promo code?</label>
-                  <div style="display:flex; gap:6px;">
-                    <input id="promo-code-input" type="text" placeholder="Enter code" class="flex-1 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-slate-100" autocomplete="off" />
-                    <button id="apply-promo-btn" type="button" class="secondary-btn">Apply</button>
-                  </div>
-                  <p id="promo-message" class="pricing-note" style="margin-top:4px; display:none;"></p>
-                </div>
+          <li style="margin-top:12px; padding-top:12px; border-top:1px solid #e5e7eb; list-style: none;">
+            <label for="promo-code-input" class="pricing-note" style="display:block; margin-bottom:4px;">Have a promo code?</label>
+            <div style="display:flex; gap:6px;">
+              <input id="promo-code-input" type="text" placeholder="Enter code" class="flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900" autocomplete="off" />
+              <button id="apply-promo-btn" type="button" class="secondary-btn">Apply</button>
+            </div>
+            <p id="promo-message" class="pricing-note" style="margin-top:4px; display:none;"></p>
+          </li>
         </ul>
-        <button id="pay-btn" type="button" class="primary-btn">Get Access</button>
         <button id="request-access" type="button" class="secondary-btn">Request Access</button>
         <button id="cancel-subscription" type="button" class="secondary-btn hidden">Cancel Subscription</button>
         <button onclick="closePricingModal()" class="secondary-btn">Cancel</button>
