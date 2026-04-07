@@ -204,6 +204,14 @@
         syncThemeButton(nextTheme);
       };
 
+      document.addEventListener("DOMContentLoaded", () => {
+        const button = document.querySelector("[data-theme-toggle]");
+        if (button && button.dataset.themeBound !== "1") {
+          button.addEventListener("click", window.toggleInboxGuardTheme);
+          button.dataset.themeBound = "1";
+        }
+      });
+
       if (!stored && typeof window.matchMedia === "function") {
         const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
         const syncSystemTheme = () => {
@@ -236,7 +244,7 @@
       <span>InboxGuard</span>
     </div>
     <nav>
-      <button type="button" class="theme-toggle" data-theme-toggle onclick="toggleInboxGuardTheme()" aria-pressed="false">🌙 Dark</button>
+      <button type="button" class="theme-toggle" data-theme-toggle aria-pressed="false">🌙 Dark</button>
       <a href="/pricing">Pricing</a>
       <a href="/app">Home</a>
       <a href="/app?tab=threat-scan" onclick="return startInlineScan();">Scan Free</a>

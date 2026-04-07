@@ -45,6 +45,18 @@ function updateThemeToggleButtons(theme) {
     });
 }
 
+function bindThemeToggleButtons() {
+    document.querySelectorAll("[data-theme-toggle]").forEach((button) => {
+        if (button.dataset.themeBound === "1") {
+            return;
+        }
+        button.addEventListener("click", () => {
+            toggleInboxGuardTheme();
+        });
+        button.dataset.themeBound = "1";
+    });
+}
+
 function applyTheme(theme, persist = true) {
     const normalized = normalizeTheme(theme);
     const root = document.documentElement;
@@ -68,6 +80,7 @@ function initTheme() {
     const storedTheme = getStoredTheme();
     const initialTheme = storedTheme || getSystemTheme();
     applyTheme(initialTheme, false);
+    bindThemeToggleButtons();
 
     if (!storedTheme && typeof window.matchMedia === "function") {
         const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
