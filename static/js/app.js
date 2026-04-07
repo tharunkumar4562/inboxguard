@@ -183,6 +183,8 @@ const jobListNode = document.getElementById("job-list");
 const inlinePlanTypeInput = document.getElementById("inline-plan-type");
 const hiddenPlanTypeInput = document.getElementById("plan-type");
 const selectedPlanNameNode = document.getElementById("selected-plan-name");
+const checkoutPriceLabelNode = document.getElementById("checkout-price-label");
+const checkoutPriceSummaryNode = document.getElementById("checkout-price-summary");
 const refreshPlansButton = document.getElementById("refresh-plans");
 const plansOutputNode = document.getElementById("plans-output");
 const requestAccessButton = document.getElementById("request-access");
@@ -226,6 +228,15 @@ let leadCaptureSaved = localStorage.getItem("ig_lead_capture_saved") === "1";
 let pendingPlanChoice = "monthly";
 let currentUserPlan = "free";
 let userActionCount = 0;
+let appliedPromoState = null;
+
+const PLAN_CHECKOUT_AMOUNTS_INR = {
+    free: 0,
+    starter: 200,
+    monthly: 1200,
+    annual: 9900,
+    usage: 2,
+};
 
 const PLAN_OPTION_LABELS = {
     free: "Free",
@@ -264,6 +275,57 @@ function planDisplayName(plan) {
     return PLAN_OPTION_LABELS[normalized] || "Growth Monthly";
 }
 
+function formatInr(amount) {
+    const value = Math.max(0, Number(amount || 0));
+    return new Intl.NumberFormat("en-IN", {
+        style: "currency",
+        currency: "INR",
+        maximumFractionDigits: 0,
+    }).format(value);
+}
+
+function planCheckoutAmount(plan) {
+    const normalized = normalizePlanChoice(plan);
+    return Number(PLAN_CHECKOUT_AMOUNTS_INR[normalized] || PLAN_CHECKOUT_AMOUNTS_INR.monthly || 0);
+}
+
+function renderCheckoutPrice(plan, promo = null) {
+    if (!checkoutPriceLabelNode && !checkoutPriceSummaryNode) {
+        return;
+    }
+
+    const baseAmount = planCheckoutAmount(plan);
+    const applied = promo && typeof promo === "object" ? promo : null;
+    const finalAmount = Number(applied && applied.final_amount_inr !== undefined ? applied.final_amount_inr : baseAmount);
+    const discountAmount = Number(applied && applied.discount_amount_inr !== undefined ? applied.discount_amount_inr : 0);
+
+    if (checkoutPriceLabelNode) {
+        checkoutPriceLabelNode.textContent = `${formatInr(finalAmount)}${plan === "annual" ? " / year" : plan === "usage" ? " / scan" : " / month"}`;
+    }
+
+    if (checkoutPriceSummaryNode) {
+        if (applied) {
+            const promoLabel = applied.type === "trial_extension"
+                ? `Trial extended by ${Number(applied.trial_extension_days || 0)} day${Number(applied.trial_extension_days || 0) === 1 ? "" : "s"}`
+                : `${formatInr(discountAmount)} off`;
+            checkoutPriceSummaryNode.textContent = `Checkout total: ${formatInr(finalAmount)} (${promoLabel})`;
+        } else {
+            checkoutPriceSummaryNode.textContent = `Checkout total: ${formatInr(baseAmount)}`;
+        }
+    }
+}
+
+function clearAppliedPromo(reason = "") {
+    appliedPromoState = null;
+    const promoMessage = document.getElementById("promo-message");
+    if (promoMessage) {
+        promoMessage.textContent = reason;
+        promoMessage.style.display = reason ? "block" : "none";
+        promoMessage.style.color = reason ? "#fca5a5" : "";
+    }
+    renderCheckoutPrice(pendingPlanChoice, null);
+}
+
 function planAccessLevel(plan) {
     const normalized = normalizePlanChoice(plan);
     return PLAN_LEVELS[normalized] ?? 0;
@@ -289,6 +351,9 @@ function hasPlanAccess(requiredPlan) {
 function syncPlanSelection(plan) {
     const normalized = normalizePlanChoice(plan);
     pendingPlanChoice = normalized;
+    if (appliedPromoState && normalizePlanChoice(appliedPromoState.plan || normalized) !== normalized) {
+        clearAppliedPromo("Promo cleared because the selected plan changed.");
+    }
     if (inlinePlanTypeInput) {
         inlinePlanTypeInput.value = normalized;
     }
@@ -302,6 +367,7 @@ function syncPlanSelection(plan) {
     if (payButton) {
         payButton.textContent = normalized === "free" ? "Continue Free" : "Get Access";
     }
+    renderCheckoutPrice(normalized, appliedPromoState && normalizePlanChoice(appliedPromoState.plan || normalized) === normalized ? appliedPromoState : null);
 }
 
 const APP_LOOP_WINS_KEY = "ig_wins";
@@ -3330,6 +3396,8 @@ async function startPayment() {
                 ? String(inlinePlanTypeInput.value || "monthly")
                 : "monthly"
         );
+        const promoInput = document.getElementById("promo-code-input");
+        const promoCode = String((appliedPromoState && appliedPromoState.code) || (promoInput && promoInput.value ? promoInput.value : "")).trim().toUpperCase();
 
         if (selectedPlan === "free") {
             closePricingModal();
@@ -3348,7 +3416,7 @@ async function startPayment() {
         const response = await fetch("/create-subscription", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ plan: selectedPlan }),
+            body: JSON.stringify({ plan: selectedPlan, promo_code: promoCode }),
         });
         const data = await response.json().catch(() => ({}));
 
@@ -3372,9 +3440,49 @@ async function startPayment() {
             return;
         }
 
+        if (data.free_mode) {
+            closePricingModal();
+            clearAppliedPromo();
+            showSuccess(data.message || "Promo applied. Access unlocked.");
+            openTool("scan");
+            return;
+        }
+
         if (data.short_url) {
             closePricingModal();
             window.location.href = String(data.short_url);
+            return;
+        }
+
+        if (data.checkout_type === "order" && data.order_id) {
+            if (typeof Razorpay === "undefined") {
+                showError("Payment system not available. Please try again.");
+                return;
+            }
+
+            const options = {
+                key: data.key,
+                amount: data.amount,
+                currency: data.currency || "INR",
+                order_id: data.order_id,
+                name: "InboxGuard",
+                description: `${data.display_price || formatInr(Number(data.amount || 0) / 100)} checkout`,
+                prefill: {
+                    email: currentUserEmail || "",
+                    name: currentUserName || "",
+                },
+                handler: function () {
+                    closePricingModal();
+                    clearAppliedPromo();
+                    showError("Payment submitted. Waiting for webhook confirmation before access changes.");
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 5000);
+                },
+            };
+
+            const rzp = new Razorpay(options);
+            rzp.open();
             return;
         }
 
@@ -3396,6 +3504,7 @@ async function startPayment() {
             },
             handler: function () {
                 closePricingModal();
+                clearAppliedPromo();
                 showError("Payment submitted. Waiting for webhook confirmation before access changes.");
                 setTimeout(() => {
                     window.location.reload();
@@ -3410,6 +3519,56 @@ async function startPayment() {
     }
 }
 
+async function applyPromo() {
+    const promoInput = document.getElementById("promo-code-input");
+    const promoMessage = document.getElementById("promo-message");
+    const code = String(promoInput && promoInput.value ? promoInput.value : "").trim().toUpperCase();
+    const plan = normalizePlanChoice(
+        inlinePlanTypeInput ? String(inlinePlanTypeInput.value || pendingPlanChoice || "monthly") : pendingPlanChoice
+    );
+
+    if (!code) {
+        clearAppliedPromo("Enter a promo code.");
+        return;
+    }
+
+    if (promoMessage) {
+        promoMessage.textContent = "Checking code...";
+        promoMessage.style.display = "block";
+        promoMessage.style.color = "#cbd5e1";
+    }
+
+    const response = await fetch("/promo/validate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code, plan }),
+    });
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok || !data.valid) {
+        appliedPromoState = null;
+        renderCheckoutPrice(plan, null);
+        if (promoMessage) {
+            promoMessage.textContent = String(data.reason || "Invalid promo code");
+            promoMessage.style.display = "block";
+            promoMessage.style.color = "#fca5a5";
+        }
+        return;
+    }
+
+    appliedPromoState = {
+        ...data.promo,
+        code,
+        plan,
+    };
+    renderCheckoutPrice(plan, appliedPromoState);
+    if (promoMessage) {
+        promoMessage.textContent = String(data.message || data.promo.summary || "Promo applied");
+        promoMessage.style.display = "block";
+        promoMessage.style.color = "#86efac";
+    }
+}
+
 window.openPricingModal = openPricingModal;
 window.closePricingModal = closePricingModal;
 window.handleGetAccess = handleGetAccess;
@@ -3417,6 +3576,7 @@ window.handleUnlock = handleGetAccess;
 window.handleRequestAccess = handleRequestAccess;
 window.openToolPane = openToolPane;
 window.handlePlanClick = handlePlanClick;
+window.applyPromo = applyPromo;
 
 function wireUiEvents() {
     const pricingModal = document.getElementById("pricing-modal");
@@ -3479,40 +3639,17 @@ function wireUiEvents() {
     }
 
     if (applyPromoBtn) {
-        applyPromoBtn.addEventListener("click", async () => {
-            const code = String(promoInput && promoInput.value ? promoInput.value : "").trim().toUpperCase();
-            if (!code) {
+        applyPromoBtn.addEventListener("click", async (event) => {
+            event.preventDefault();
+            try {
+                await applyPromo();
+            } catch (error) {
                 if (promoMessage) {
-                    promoMessage.textContent = "Enter a promo code";
+                    promoMessage.textContent = String(error && error.message ? error.message : "Could not validate promo code");
                     promoMessage.style.display = "block";
                     promoMessage.style.color = "#fca5a5";
                 }
-                return;
             }
-            const response = await fetch("/apply-promo", {
-                method: "POST",
-                headers: { "Content-Type": "application/x-www-form-urlencoded" },
-                body: `code=${encodeURIComponent(code)}`,
-            });
-            const data = await response.json().catch(() => ({}));
-            if (!response.ok) {
-                if (promoMessage) {
-                    promoMessage.textContent = String(data.message || "Invalid promo code");
-                    promoMessage.style.display = "block";
-                    promoMessage.style.color = "#fca5a5";
-                }
-                return;
-            }
-            if (promoMessage) {
-                promoMessage.textContent = String(data.message || "Promo applied!");
-                promoMessage.style.display = "block";
-                promoMessage.style.color = "#86efac";
-            }
-            if (promoInput) {
-                promoInput.value = "";
-            }
-            await loadUserTokens();
-            setTimeout(() => window.location.reload(), 1000);
         });
     }
 

@@ -13,7 +13,7 @@ import csv
 import io
 import imaplib
 import smtplib
-from typing import Any, Optional
+from typing import Any, Optional, cast
 from uuid import uuid4
 from email.message import EmailMessage
 import time
@@ -68,6 +68,9 @@ RAZORPAY_KEY = os.getenv("INBOXGUARD_RAZORPAY_KEY", os.getenv("RAZORPAY_KEY", ""
 RAZORPAY_SECRET = os.getenv("INBOXGUARD_RAZORPAY_SECRET", os.getenv("RAZORPAY_SECRET", "")).strip()
 RAZORPAY_WEBHOOK_SECRET = os.getenv("INBOXGUARD_RAZORPAY_WEBHOOK_SECRET", os.getenv("RAZORPAY_WEBHOOK_SECRET", "")).strip()
 RAZORPAY_AMOUNT_INR = int(os.getenv("INBOXGUARD_RAZORPAY_AMOUNT_INR", "1200"))
+RAZORPAY_STARTER_AMOUNT_INR = int(os.getenv("INBOXGUARD_RAZORPAY_STARTER_AMOUNT_INR", "200"))
+RAZORPAY_ANNUAL_AMOUNT_INR = int(os.getenv("INBOXGUARD_RAZORPAY_ANNUAL_AMOUNT_INR", "9900"))
+RAZORPAY_USAGE_AMOUNT_INR = int(os.getenv("INBOXGUARD_RAZORPAY_USAGE_AMOUNT_INR", "2"))
 RAZORPAY_DISPLAY_PRICE_USD = os.getenv("INBOXGUARD_RAZORPAY_DISPLAY_PRICE_USD", "$12").strip()
 RAZORPAY_PLAN_ID = os.getenv("INBOXGUARD_RAZORPAY_PLAN_ID", os.getenv("RAZORPAY_PLAN_ID", "")).strip()
 RAZORPAY_ANNUAL_PLAN_ID = os.getenv("INBOXGUARD_RAZORPAY_ANNUAL_PLAN_ID", os.getenv("RAZORPAY_ANNUAL_PLAN_ID", "")).strip()
@@ -817,23 +820,8 @@ def _ensure_token_system_tables() -> None:
     """Create tables for token system, promo codes, and subscriptions."""
     conn = _auth_db_conn()
     try:
-        # Promo codes table
-        conn.execute(
-            """
-            CREATE TABLE IF NOT EXISTS promo_codes (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                code TEXT UNIQUE NOT NULL,
-                discount_percent INTEGER NOT NULL DEFAULT 0,
-                tokens INTEGER NOT NULL DEFAULT 500,
-                duration_days INTEGER NOT NULL DEFAULT 30,
-                max_uses INTEGER NOT NULL DEFAULT 0,
-                used_count INTEGER NOT NULL DEFAULT 0,
-                expires_at TEXT,
-                created_at TEXT NOT NULL
-            )
-            """
-        )
-        # Promo usage tracking (prevent reuse per user)
+        _ensure_promo_code_tables(conn)
+        # Promo usage tracking (legacy table kept for compatibility with older installs)
         conn.execute(
             """
             CREATE TABLE IF NOT EXISTS promo_usage (
@@ -879,6 +867,38 @@ def _ensure_token_system_tables() -> None:
         conn.commit()
     finally:
         conn.close()
+
+
+def _ensure_promo_code_tables(conn: sqlite3.Connection) -> None:
+    existing_tables = {
+        str(row[0])
+        for row in conn.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()
+    }
+    if "promo_codes" in existing_tables:
+        columns = {str(column[1]) for column in conn.execute("PRAGMA table_info(promo_codes)").fetchall()}
+        required = {"id", "code", "type", "value", "max_uses", "used_count", "expires_at", "plan_scope", "active", "created_at"}
+        if not required.issubset(columns):
+            if "promo_codes_legacy" in existing_tables:
+                conn.execute("DROP TABLE IF EXISTS promo_codes")
+            else:
+                conn.execute("ALTER TABLE promo_codes RENAME TO promo_codes_legacy")
+            existing_tables.add("promo_codes_legacy")
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS promo_codes (
+            id TEXT PRIMARY KEY,
+            code TEXT UNIQUE NOT NULL,
+            type TEXT NOT NULL,
+            value INTEGER NOT NULL DEFAULT 0,
+            max_uses INTEGER NOT NULL DEFAULT 0,
+            used_count INTEGER NOT NULL DEFAULT 0,
+            expires_at TEXT,
+            plan_scope TEXT NOT NULL DEFAULT 'all',
+            active INTEGER NOT NULL DEFAULT 1,
+            created_at TEXT NOT NULL
+        )
+        """
+    )
 
 
 def _ensure_token_columns() -> None:
@@ -1100,6 +1120,30 @@ def _set_user_subscription_state(
         conn.close()
 
 
+def _ensure_payment_columns(conn: Optional[sqlite3.Connection] = None) -> None:
+    close_conn = False
+    if conn is None:
+        conn = _auth_db_conn()
+        close_conn = True
+    try:
+        columns = conn.execute("PRAGMA table_info(payments)").fetchall()
+        column_names = {str(column[1]) for column in columns}
+        additions = [
+            ("order_id", "TEXT"),
+            ("promo_code", "TEXT"),
+            ("plan", "TEXT"),
+            ("checkout_type", "TEXT NOT NULL DEFAULT 'subscription'"),
+            ("discount_amount", "INTEGER NOT NULL DEFAULT 0"),
+        ]
+        for column_name, ddl in additions:
+            if column_name not in column_names:
+                conn.execute(f"ALTER TABLE payments ADD COLUMN {column_name} {ddl}")
+        conn.commit()
+    finally:
+        if close_conn:
+            conn.close()
+
+
 def _record_payment(
     *,
     user_id: int,
@@ -1108,14 +1152,20 @@ def _record_payment(
     subscription_id: str = "",
     payment_id: str = "",
     invoice_id: str = "",
+    order_id: str = "",
+    promo_code: str = "",
+    plan: str = "",
+    checkout_type: str = "subscription",
+    discount_amount: int = 0,
 ) -> None:
     _ensure_auth_db_ready()
     conn = _auth_db_conn()
     try:
+        _ensure_payment_columns(conn)
         conn.execute(
             """
-            INSERT INTO payments(user_id, subscription_id, payment_id, invoice_id, amount, status, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO payments(user_id, subscription_id, payment_id, invoice_id, amount, status, created_at, order_id, promo_code, plan, checkout_type, discount_amount)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 user_id,
@@ -1125,6 +1175,11 @@ def _record_payment(
                 int(amount),
                 status,
                 _now_iso(),
+                order_id,
+                promo_code,
+                plan,
+                checkout_type,
+                int(discount_amount or 0),
             ),
         )
         conn.commit()
@@ -1338,99 +1393,208 @@ def _set_user_plan(user_id: int, plan: str, tokens: Optional[int] = None, trial_
         conn.close()
 
 
-def _get_promo_code(code: str) -> Optional[dict]:
-    """Fetch promo code details."""
+def _promo_plan_scope(plan: str) -> str:
+    normalized_plan = _normalize_plan_key(plan)
+    if normalized_plan in {"monthly", "annual"}:
+        return "growth"
+    return normalized_plan
+
+
+def _plan_checkout_amount_inr(plan: str) -> int:
+    normalized_plan = _normalize_plan_key(plan)
+    if normalized_plan == "free":
+        return 0
+    if normalized_plan == "starter":
+        return max(0, int(RAZORPAY_STARTER_AMOUNT_INR))
+    if normalized_plan == "annual":
+        return max(0, int(RAZORPAY_ANNUAL_AMOUNT_INR))
+    if normalized_plan == "usage":
+        return max(0, int(RAZORPAY_USAGE_AMOUNT_INR))
+    return max(0, int(RAZORPAY_AMOUNT_INR))
+
+
+def _format_inr(amount: int) -> str:
+    safe_amount = max(0, int(amount or 0))
+    return f"₹{safe_amount:,.0f}"
+
+
+def _get_promo_code(code: str) -> Optional[dict[str, Any]]:
     _ensure_auth_db_ready()
+    cleaned_code = str(code or "").strip().upper()
+    if not cleaned_code:
+        return None
     conn = _auth_db_conn()
     try:
         row = conn.execute(
-            "SELECT id, code, discount_percent, tokens, duration_days, max_uses, used_count, expires_at FROM promo_codes WHERE code=?",
-            (code.upper(),),
+            "SELECT id, code, type, value, max_uses, used_count, expires_at, plan_scope, active, created_at FROM promo_codes WHERE code=?",
+            (cleaned_code,),
         ).fetchone()
         if not row:
             return None
         return {
-            "id": int(row["id"]),
-            "code": str(row["code"]),
-            "discount_percent": int(row["discount_percent"]),
-            "tokens": int(row["tokens"]),
-            "duration_days": int(row["duration_days"]),
-            "max_uses": int(row["max_uses"]),
-            "used_count": int(row["used_count"]),
+            "id": str(row["id"] or ""),
+            "code": str(row["code"] or cleaned_code).upper(),
+            "type": str(row["type"] or "percentage").strip().lower(),
+            "value": int(row["value"] or 0),
+            "max_uses": int(row["max_uses"] or 0),
+            "used_count": int(row["used_count"] or 0),
             "expires_at": str(row["expires_at"] or ""),
+            "plan_scope": str(row["plan_scope"] or "all").strip().lower(),
+            "active": bool(int(row["active"] or 0)),
+            "created_at": str(row["created_at"] or ""),
         }
     finally:
         conn.close()
 
 
-def _create_promo_code(code: str, tokens: int = 500, discount_percent: int = 0, duration_days: int = 30, max_uses: int = 0, expires_at: Optional[str] = None) -> bool:
-    """Create a promo code. max_uses=0 means unlimited."""
+def _create_promo_code(
+    code: str,
+    *,
+    promo_type: str = "percentage",
+    value: int = 0,
+    max_uses: int = 0,
+    expires_at: Optional[str] = None,
+    plan_scope: str = "all",
+    active: bool = True,
+) -> str:
     _ensure_auth_db_ready()
+    promo_id = uuid4().hex
     conn = _auth_db_conn()
     try:
         conn.execute(
             """
-            INSERT INTO promo_codes(code, discount_percent, tokens, duration_days, max_uses, expires_at, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO promo_codes(id, code, type, value, max_uses, used_count, expires_at, plan_scope, active, created_at)
+            VALUES (?, ?, ?, ?, ?, 0, ?, ?, ?, ?)
             """,
-            (code.upper(), discount_percent, tokens, duration_days, max_uses, expires_at, _now_iso()),
+            (
+                promo_id,
+                str(code or "").strip().upper(),
+                str(promo_type or "percentage").strip().lower(),
+                max(0, int(value or 0)),
+                max(0, int(max_uses or 0)),
+                expires_at,
+                str(plan_scope or "all").strip().lower(),
+                1 if active else 0,
+                _now_iso(),
+            ),
         )
         conn.commit()
+        return promo_id
+    finally:
+        conn.close()
+
+
+def _promo_applies_to_plan(promo: dict[str, Any], plan: str) -> bool:
+    scope = str(promo.get("plan_scope") or "all").strip().lower()
+    if scope == "all":
         return True
-    except sqlite3.IntegrityError:
-        return False
+    return scope == _promo_plan_scope(plan)
+
+
+def _build_promo_quote(code: str, plan: str) -> dict[str, Any]:
+    promo = _get_promo_code(code)
+    if not promo:
+        return {"valid": False, "reason": "Invalid code"}
+
+    if not promo.get("active", False):
+        return {"valid": False, "reason": "Invalid code"}
+
+    expires_at = _safe_parse_iso(str(promo.get("expires_at") or ""))
+    if expires_at and expires_at < datetime.now(timezone.utc):
+        return {"valid": False, "reason": "Expired"}
+
+    max_uses = int(promo.get("max_uses") or 0)
+    used_count = int(promo.get("used_count") or 0)
+    if max_uses > 0 and used_count >= max_uses:
+        return {"valid": False, "reason": "Limit reached"}
+
+    if not _promo_applies_to_plan(promo, plan):
+        return {"valid": False, "reason": "Not applicable"}
+
+    base_amount = _plan_checkout_amount_inr(plan)
+    promo_type = str(promo.get("type") or "percentage").strip().lower()
+    promo_value = max(0, int(promo.get("value") or 0))
+    discount_amount = 0
+    trial_extension_days = 0
+
+    if promo_type == "percentage" and base_amount > 0:
+        discount_amount = int(round(base_amount * min(100, promo_value) / 100.0))
+    elif promo_type == "fixed" and base_amount > 0:
+        discount_amount = min(base_amount, promo_value)
+    elif promo_type == "trial_extension":
+        trial_extension_days = promo_value
+
+    final_amount = max(0, base_amount - discount_amount)
+    checkout_mode = "free" if final_amount <= 0 and promo_type != "trial_extension" else ("subscription" if promo_type == "trial_extension" else "order")
+
+    promo_payload = {
+        **promo,
+        "base_amount_inr": base_amount,
+        "discount_amount_inr": discount_amount,
+        "final_amount_inr": final_amount,
+        "trial_extension_days": trial_extension_days,
+        "checkout_mode": checkout_mode,
+        "summary": (
+            f"{promo_value}% off applied. Checkout total { _format_inr(final_amount) }"
+            if promo_type == "percentage"
+            else (
+                f"{_format_inr(discount_amount)} off applied. Checkout total { _format_inr(final_amount) }"
+                if promo_type == "fixed"
+                else f"Trial extended by {trial_extension_days} day{'s' if trial_extension_days != 1 else ''}."
+            )
+        ),
+        "applicable_plan": _normalize_plan_key(plan),
+    }
+    return {"valid": True, "promo": promo_payload}
+
+
+def _increment_promo_usage(promo_id: str) -> None:
+    if not promo_id:
+        return
+    _ensure_auth_db_ready()
+    conn = _auth_db_conn()
+    try:
+        conn.execute("UPDATE promo_codes SET used_count = used_count + 1 WHERE id=?", (promo_id,))
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def _consume_promo_usage(user_id: int, promo: dict[str, Any]) -> None:
+    promo_id = str(promo.get("id") or "").strip()
+    if not promo_id:
+        return
+    _ensure_auth_db_ready()
+    conn = _auth_db_conn()
+    try:
+        existing = conn.execute(
+            "SELECT id FROM promo_usage WHERE user_id=? AND promo_id=?",
+            (user_id, promo_id),
+        ).fetchone()
+        if existing:
+            return
+        conn.execute(
+            "INSERT INTO promo_usage(user_id, promo_id, used_at) VALUES (?, ?, ?)",
+            (user_id, promo_id, _now_iso()),
+        )
+        conn.commit()
     finally:
         conn.close()
 
 
 def _apply_promo_code(user_id: int, code: str) -> tuple[bool, str]:
-    """
-    Apply promo code to user. Returns (success, message).
-    """
-    _ensure_auth_db_ready()
-    
-    promo = _get_promo_code(code)
-    if not promo:
-        return False, "Invalid promo code"
-    
-    # Check if expired
-    if promo["expires_at"]:
-        expires = _safe_parse_iso(promo["expires_at"])
-        if expires and datetime.now(timezone.utc) > expires:
-            return False, "Promo code expired"
-    
-    # Check max uses
-    if promo["max_uses"] > 0 and promo["used_count"] >= promo["max_uses"]:
-        return False, "Promo code limit reached"
-    
-    # Check if user already used this promo
-    conn = _auth_db_conn()
-    try:
-        existing = conn.execute(
-            "SELECT id FROM promo_usage WHERE user_id=? AND promo_id=?",
-            (user_id, promo["id"]),
-        ).fetchone()
-        if existing:
-            return False, "You already used this promo code"
-        
-        # Apply promo
-        _set_user_plan(user_id, "pro", tokens=promo["tokens"], trial_days=promo["duration_days"])
-        _add_tokens(user_id, promo["tokens"], f"promo_{code}")
-        
-        # Record usage
-        conn.execute(
-            "INSERT INTO promo_usage(user_id, promo_id, used_at) VALUES (?, ?, ?)",
-            (user_id, promo["id"], _now_iso()),
-        )
-        conn.execute(
-            "UPDATE promo_codes SET used_count = used_count + 1 WHERE id=?",
-            (promo["id"],),
-        )
-        conn.commit()
-        
-        return True, f"Promo applied! You got {promo['tokens']} tokens"
-    finally:
-        conn.close()
+    quote = _build_promo_quote(code, "monthly")
+    if not quote.get("valid"):
+        return False, str(quote.get("reason") or "Invalid code")
+    promo = dict(quote.get("promo") or {})
+    promo_type = str(promo.get("type") or "percentage")
+    if promo_type == "trial_extension":
+        _set_user_plan(user_id, "monthly", tokens=PLAN_TOKENS.get("monthly", 500), trial_days=int(promo.get("trial_extension_days") or 0))
+    else:
+        _set_user_plan(user_id, "monthly", tokens=PLAN_TOKENS.get("monthly", 500))
+    _consume_promo_usage(user_id, promo)
+    _increment_promo_usage(str(promo.get("id") or ""))
+    return True, f"Promo applied: {promo.get('summary', 'Discount applied')}"
 
 
 
@@ -2681,6 +2845,9 @@ async def create_subscription(request: Request, plan: str = Form("monthly")):
         selected_plan = "monthly"
     plan_data = plans[selected_plan]
     plan_id = str(plan_data.get("plan_id") or "").strip()
+    promo_code = str(payload.get("promo_code") or payload.get("promoCode") or "").strip().upper()
+    promo_quote = _build_promo_quote(promo_code, selected_plan) if promo_code else {"valid": False}
+    promo = cast(dict[str, Any], promo_quote.get("promo") or {}) if promo_quote.get("valid") else cast(dict[str, Any], {})
 
     if selected_plan == "free":
         return JSONResponse(
@@ -2699,6 +2866,190 @@ async def create_subscription(request: Request, plan: str = Form("monthly")):
                 "success": True,
                 "usage_mode": True,
                 "message": "Usage-based plan enabled. API usage billing will apply per scan.",
+            },
+        )
+
+    if promo_code and not promo:
+        return JSONResponse(status_code=400, content={"success": False, "detail": str(promo_quote.get("reason") or "Invalid promo code")})
+
+    if promo.get("type") == "trial_extension":
+        if not plan_id:
+            return JSONResponse(
+                status_code=503,
+                content={
+                    "success": False,
+                    "detail": "Subscription not configured",
+                    "missing": [f"plan_id_for_{selected_plan}"],
+                    "plan": selected_plan,
+                },
+            )
+
+        subscription_payload = {
+            "plan_id": plan_id,
+            "customer_notify": 1,
+            "total_count": 12,
+            "notes": {
+                "user_id": str(user["id"]),
+                "email": user["email"],
+                "plan": selected_plan,
+                "promo_code": str(promo.get("code") or ""),
+                "promo_type": str(promo.get("type") or ""),
+                "promo_value": str(promo.get("value") or 0),
+            },
+        }
+        trial_days = int(plan_data.get("trial_days") or 0) + int(promo.get("trial_extension_days") or 0)
+        if trial_days > 0:
+            subscription_payload["start_at"] = int((datetime.now(timezone.utc) + timedelta(days=trial_days)).timestamp())
+
+        try:
+            async with httpx.AsyncClient(timeout=20.0) as client:
+                response = await client.post(
+                    "https://api.razorpay.com/v1/subscriptions",
+                    auth=(RAZORPAY_KEY, RAZORPAY_SECRET),
+                    json=subscription_payload,
+                )
+        except httpx.HTTPError as error:
+            logger.exception("Razorpay subscription creation failed: %s", error)
+            return JSONResponse(status_code=502, content={"success": False, "detail": "Could not create subscription"})
+
+        if response.status_code >= 400:
+            logger.warning("Razorpay subscription creation failed: status=%s body=%s", response.status_code, response.text)
+            return JSONResponse(status_code=502, content={"success": False, "detail": "Could not create subscription"})
+
+        data = response.json()
+        subscription_id = str(data.get("id", "")).strip()
+        if not subscription_id:
+            return JSONResponse(status_code=502, content={"success": False, "detail": "Could not create subscription"})
+
+        _increment_promo_usage(str(promo.get("id") or ""))
+        _consume_promo_usage(user["id"], promo)
+        _set_user_subscription_state(
+            user["id"],
+            pro=_is_pro_plan(selected_plan),
+            status="pending",
+            subscription_id=subscription_id,
+        )
+
+        track_event(
+            "checkout_started",
+            {
+                "user_id": str(user["id"]),
+                "email": user["email"],
+                "provider": "razorpay",
+                "type": "subscription",
+                "plan": selected_plan,
+                "promo_code": str(promo.get("code") or ""),
+            },
+        )
+        return JSONResponse(
+            status_code=200,
+            content={
+                "success": True,
+                "subscription_id": subscription_id,
+                "short_url": str(data.get("short_url", "") or ""),
+                "key": RAZORPAY_KEY,
+                "amount": int(RAZORPAY_AMOUNT_INR) * 100,
+                "currency": "INR",
+                "display_price": str(plan_data.get("display_price") or RAZORPAY_DISPLAY_PRICE_USD),
+                "charge_currency": "INR",
+                "plan": selected_plan,
+                "promo_code": str(promo.get("code") or ""),
+                "promo_applied": True,
+            },
+        )
+
+    if promo:
+        base_amount = int(promo.get("base_amount_inr") or _plan_checkout_amount_inr(selected_plan))
+        discount_amount = int(promo.get("discount_amount_inr") or 0)
+        final_amount = int(promo.get("final_amount_inr") or max(0, base_amount - discount_amount))
+        if final_amount <= 0:
+            _increment_promo_usage(str(promo.get("id") or ""))
+            _consume_promo_usage(user["id"], promo)
+            _set_user_subscription_state(
+                user["id"],
+                pro=_is_pro_plan(selected_plan),
+                status="active",
+            )
+            _set_user_plan(user["id"], selected_plan, tokens=PLAN_TOKENS.get(selected_plan, PLAN_TOKENS.get("monthly", 500)))
+            return JSONResponse(
+                status_code=200,
+                content={
+                    "success": True,
+                    "free_mode": True,
+                    "promo_applied": True,
+                    "plan": selected_plan,
+                    "display_price": _format_inr(final_amount),
+                    "final_amount": final_amount,
+                    "discount_amount": discount_amount,
+                    "message": "Promo covered the full checkout amount. Access unlocked without payment.",
+                },
+            )
+
+        order_payload = {
+            "amount": final_amount * 100,
+            "currency": "INR",
+            "receipt": f"ig-{user['id']}-{selected_plan}-{secrets.token_hex(4)}",
+            "notes": {
+                "user_id": str(user["id"]),
+                "email": user["email"],
+                "plan": selected_plan,
+                "promo_code": str(promo.get("code") or ""),
+                "promo_type": str(promo.get("type") or ""),
+                "promo_value": str(promo.get("value") or 0),
+                "base_amount_inr": str(base_amount),
+                "discount_amount_inr": str(discount_amount),
+                "final_amount_inr": str(final_amount),
+            },
+        }
+        try:
+            async with httpx.AsyncClient(timeout=20.0) as client:
+                response = await client.post(
+                    "https://api.razorpay.com/v1/orders",
+                    auth=(RAZORPAY_KEY, RAZORPAY_SECRET),
+                    json=order_payload,
+                )
+        except httpx.HTTPError as error:
+            logger.exception("Razorpay order creation failed: %s", error)
+            return JSONResponse(status_code=502, content={"success": False, "detail": "Could not create checkout order"})
+
+        if response.status_code >= 400:
+            logger.warning("Razorpay order creation failed: status=%s body=%s", response.status_code, response.text)
+            return JSONResponse(status_code=502, content={"success": False, "detail": "Could not create checkout order"})
+
+        order_data = response.json()
+        order_id = str(order_data.get("id", "")).strip()
+        if not order_id:
+            return JSONResponse(status_code=502, content={"success": False, "detail": "Could not create checkout order"})
+
+        _increment_promo_usage(str(promo.get("id") or ""))
+        _consume_promo_usage(user["id"], promo)
+        track_event(
+            "checkout_started",
+            {
+                "user_id": str(user["id"]),
+                "email": user["email"],
+                "provider": "razorpay",
+                "type": "order",
+                "plan": selected_plan,
+                "promo_code": str(promo.get("code") or ""),
+                "discount_amount": str(discount_amount),
+            },
+        )
+        return JSONResponse(
+            status_code=200,
+            content={
+                "success": True,
+                "checkout_type": "order",
+                "order_id": order_id,
+                "key": RAZORPAY_KEY,
+                "amount": final_amount * 100,
+                "currency": "INR",
+                "display_price": _format_inr(final_amount),
+                "base_amount": base_amount,
+                "discount_amount": discount_amount,
+                "promo_code": str(promo.get("code") or ""),
+                "plan": selected_plan,
+                "promo_applied": True,
             },
         )
 
@@ -2728,6 +3079,7 @@ async def create_subscription(request: Request, plan: str = Form("monthly")):
             "user_id": str(user["id"]),
             "email": user["email"],
             "plan": selected_plan,
+            "promo_code": promo_code,
         },
     }
     trial_days = int(plan_data.get("trial_days") or 0)
@@ -2827,13 +3179,19 @@ async def razorpay_webhook(request: Request, x_razorpay_signature: str | None = 
             _set_user_plan(user_id, selected_plan, tokens=PLAN_TOKENS.get(selected_plan, PLAN_TOKENS.get("monthly", 500)))
             track_event("pro_activated", {"user_id": str(user_id), "provider": "razorpay", "subscription_id": str(sub.get("id", "") or "")})
 
-    elif event in {"payment.captured", "subscription.charged", "invoice.paid"}:
+    elif event in {"payment.captured", "subscription.charged", "invoice.paid", "order.paid"}:
         payment_entity = (payload.get("payload", {}) or {}).get("payment", {}).get("entity", {}) or {}
         invoice_entity = (payload.get("payload", {}) or {}).get("invoice", {}).get("entity", {}) or {}
         subscription_entity = (payload.get("payload", {}) or {}).get("subscription", {}).get("entity", {}) or {}
-        entity = payment_entity or invoice_entity or subscription_entity
-        notes = entity.get("notes", {}) or {}
+        order_entity = (payload.get("payload", {}) or {}).get("order", {}).get("entity", {}) or {}
+        entity = payment_entity or invoice_entity or subscription_entity or order_entity
+        notes: dict[str, Any] = {}
+        for source in (order_entity, subscription_entity, invoice_entity, payment_entity):
+            source_notes = source.get("notes", {}) if isinstance(source, dict) else {}
+            if isinstance(source_notes, dict):
+                notes.update(source_notes)
         subscription_id = str(entity.get("subscription_id", "") or subscription_entity.get("id", "") or "")
+        order_id = str(payment_entity.get("order_id", "") or order_entity.get("id", "") or notes.get("order_id", "") or "")
         selected_plan = _normalize_plan_key(str(notes.get("plan", "monthly")))
         user_id = _extract_user_id(notes) or _get_user_id_by_subscription_id(subscription_id)
         if user_id > 0:
@@ -2854,8 +3212,22 @@ async def razorpay_webhook(request: Request, x_razorpay_signature: str | None = 
                 subscription_id=subscription_id,
                 payment_id=str(entity.get("id", "") or payment_entity.get("id", "") or ""),
                 invoice_id=str(invoice_entity.get("id", "") or ""),
+                order_id=order_id,
+                promo_code=str(notes.get("promo_code", "") or ""),
+                plan=selected_plan,
+                checkout_type="subscription" if subscription_id else "order",
+                discount_amount=int(notes.get("discount_amount_inr", 0) or 0),
             )
-            track_event("payment_captured", {"user_id": str(user_id), "provider": "razorpay", "subscription_id": subscription_id})
+            track_event(
+                "payment_captured",
+                {
+                    "user_id": str(user_id),
+                    "provider": "razorpay",
+                    "subscription_id": subscription_id,
+                    "order_id": order_id,
+                    "promo_code": str(notes.get("promo_code", "") or ""),
+                },
+            )
 
     elif event == "invoice.payment_failed":
         invoice = (payload.get("payload", {}) or {}).get("invoice", {}).get("entity", {}) or {}
@@ -2934,38 +3306,53 @@ def get_tokens_info(request: Request):
     }
 
 
+async def _read_promo_request_payload(request: Request) -> dict[str, Any]:
+    content_type = str(request.headers.get("content-type", "")).lower()
+    if "application/json" in content_type:
+        try:
+            data = await request.json()
+            return dict(data) if isinstance(data, dict) else {}
+        except Exception:
+            return {}
+    try:
+        form_data = await request.form()
+        return dict(form_data)
+    except Exception:
+        return {}
+
+
+async def _promo_quote_response(request: Request, *, mark_applied: bool = False) -> JSONResponse:
+    payload = await _read_promo_request_payload(request)
+    code = str(payload.get("code") or payload.get("promo_code") or "").strip().upper()
+    plan = str(payload.get("plan") or payload.get("selectedPlan") or "monthly").strip().lower()
+    quote = _build_promo_quote(code, plan)
+    if not quote.get("valid"):
+        return JSONResponse(status_code=400, content={"valid": False, "reason": str(quote.get("reason") or "Invalid code")})
+    promo = dict(quote.get("promo") or {})
+    return JSONResponse(
+        status_code=200,
+        content={
+            "valid": True,
+            "applied": mark_applied,
+            "promo": promo,
+            "message": str(promo.get("summary") or "Promo applied"),
+        },
+    )
+
+
+@app.post("/promo/validate")
+async def promo_validate(request: Request):
+    return await _promo_quote_response(request, mark_applied=False)
+
+
+@app.post("/promo/apply")
+async def promo_apply(request: Request):
+    return await _promo_quote_response(request, mark_applied=True)
+
+
 @app.post("/apply-promo")
-def apply_promo(request: Request, code: str = Form(...)):
-    """Apply promo code to user account."""
-    user = _get_session_user(request)
-    if not user:
-        raise HTTPException(status_code=401, detail="Not authenticated")
-    
-    success, message = _apply_promo_code(int(user["id"]), code)
-    
-    if success:
-        # Update session with new user data
-        updated_user = _get_user_by_id(int(user["id"]))
-        if updated_user:
-            _set_session_user(request, int(updated_user["id"]), str(updated_user["email"]))
-        
-        return JSONResponse(
-            status_code=200,
-            content={
-                "success": True,
-                "message": message,
-                "tokens": _get_user_tokens(int(user["id"])),
-                "plan": "pro",
-            },
-        )
-    else:
-        return JSONResponse(
-            status_code=400,
-            content={
-                "success": False,
-                "message": message,
-            },
-        )
+async def apply_promo(request: Request):
+    return await promo_apply(request)
 
 
 @app.post("/upgrade-test")
