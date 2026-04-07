@@ -4136,14 +4136,9 @@ async def auth_google_callback(request: Request):
     if client is None:
         raise HTTPException(status_code=503, detail="Google OAuth is not configured")
 
+    next_url = str(request.session.pop("auth_next", "/")).strip() or "/"
     try:
         token = await client.authorize_access_token(request)
-    except Exception as exc:
-        logger.exception("Google OAuth token exchange failed")
-        request.session.pop("auth_next", None)
-        return RedirectResponse(url="/login?mode=signin&oauth_error=token_exchange", status_code=303)
-
-    try:
         user_info = token.get("userinfo") if isinstance(token, dict) else None
         if not user_info:
             user_info = await client.userinfo(token=token)
@@ -4152,21 +4147,16 @@ async def auth_google_callback(request: Request):
         full_name = str((user_info or {}).get("name", "")).strip()
         picture = str((user_info or {}).get("picture", "")).strip()
         if not email:
-            logger.warning("Google OAuth callback missing email in userinfo payload")
-            request.session.pop("auth_next", None)
-            return RedirectResponse(url="/login?mode=signin&oauth_error=no_email", status_code=303)
+            raise ValueError("Google account email not available")
 
         user_id = _get_or_create_google_user(email)
         _set_session_user(request, user_id, email, name=full_name, picture=picture)
         track_event("access_request", {"target": "login", "mode": "google_oauth"})
-        next_url = str(request.session.pop("auth_next", "/") or "/")
-        if not next_url.startswith("/"):
-            next_url = "/"
         return RedirectResponse(url=next_url, status_code=303)
     except Exception:
-        logger.exception("Google OAuth callback failed after token exchange")
-        request.session.pop("auth_next", None)
-        return RedirectResponse(url="/login?mode=signin&oauth_error=callback_failed", status_code=303)
+        logger.exception("Google OAuth callback failed")
+        # Never show a raw 500 page on auth callback failures.
+        return RedirectResponse(url="/app?auth=1&oauth_error=1", status_code=303)
 
 
 @app.post("/auth/logout")
