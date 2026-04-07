@@ -129,7 +129,7 @@
     <nav>
       <a href="/pricing">Pricing</a>
       <a href="/">Home</a>
-      <a href="/app">Open App</a>
+      <a href="#scan-box" onclick="startInlineScan(); return false;">Scan Free</a>
     </nav>
   </div>
 </header>
@@ -142,7 +142,7 @@
       InboxGuard analyzes your email content and detects spam risks before you hit send.
     </p>
 
-    <div class="scan-box">
+    <div class="scan-box" id="scan-box">
       <label for="email-input" class="scan-label">Paste your email here</label>
       <textarea id="email-input" rows="6" placeholder="Paste your email..."></textarea>
       <div class="cta">
@@ -152,7 +152,7 @@
     </div>
 
     <div class="cta">
-      <a href="/app" class="btn primary">Open App</a>
+      <a href="#scan-box" class="btn primary" onclick="startInlineScan(); return false;">Scan Free</a>
     </div>
   </section>
 

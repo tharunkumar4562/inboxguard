@@ -2791,6 +2791,22 @@ def app_dashboard(request: Request):
     return response
 
 
+@app.get("/subject-generator", response_class=HTMLResponse)
+def subject_generator_page(request: Request):
+    track_event("page_view", {"page": "subject-generator"})
+    response = render_template_safe(
+        request,
+        "subject_generator.html",
+        {
+            "page_title": "InboxGuard Subject Generator | Write safer subject lines",
+            "meta_description": "Generate product-aware subject lines with spam risk checks and body-fit scoring.",
+            "canonical_url": f"{SITE_URL}/subject-generator",
+        },
+    )
+    response.headers["X-Robots-Tag"] = "noindex, nofollow"
+    return response
+
+
 @app.get("/login", response_class=HTMLResponse)
 def login_page(request: Request):
     return RedirectResponse(url="/app?auth=1", status_code=303)
@@ -3426,8 +3442,19 @@ def _build_user_profile(user: dict, include_saved_fixes: bool = False) -> dict:
 @app.get("/profile", response_class=HTMLResponse)
 def profile_page(request: Request):
     user = _get_session_user(request)
-    if not user:
-        return RedirectResponse(url="/?auth=1", status_code=303)
+    profile = _build_user_profile(user) if user else {
+        "name": "InboxGuard User",
+        "email": "",
+        "avatar_url": "/static/branding/logo.png",
+        "scans_used": 0,
+        "emails_scanned_count": 0,
+        "rewrite_clicked": 0,
+        "last_active": "—",
+        "health_score": 0,
+        "streak_days": 0,
+        "recent_results": [],
+        "is_admin": False,
+    }
 
     return render_template_safe(
         request,
@@ -3436,7 +3463,8 @@ def profile_page(request: Request):
             "page_title": "Your Profile | InboxGuard",
             "meta_description": "View your InboxGuard account profile and usage.",
             "canonical_url": f"{SITE_URL}/profile",
-            "profile": _build_user_profile(user),
+            "profile": profile,
+            "authenticated": bool(user),
         },
     )
 

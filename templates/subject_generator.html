@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{{ page_title }}</title>
+    <meta name="description" content="{{ meta_description }}" />
+    <link rel="canonical" href="{{ canonical_url }}" />
+    <link rel="icon" type="image/png" href="/static/branding/logo.png" />
+    <link rel="shortcut icon" href="/static/branding/logo.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/static/css/styles.min.css?v=20260406-seo-fix-1" />
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+  </head>
+  <body class="bg-ink text-slate-100 min-h-screen antialiased">
+    <main class="mx-auto max-w-6xl px-5 py-8 md:py-10">
+      <header class="mb-6 flex items-center justify-between gap-4 border-b border-slate-800/70 pb-4">
+        <div class="logo-wrap">
+          <img src="/static/branding/logo.png" alt="InboxGuard" style="display:block; width: 172px; max-width: 100%;" />
+        </div>
+        <nav class="flex flex-wrap items-center gap-3 text-sm text-slate-300">
+          <a class="access-link" href="/app">Scan Email</a>
+          <a class="access-link" href="/pricing">Pricing</a>
+          <a class="access-link" href="/profile">Profile</a>
+        </nav>
+      </header>
+
+      <section class="card" style="padding: 22px;">
+        <p class="workflow-step">Subject Line Intelligence</p>
+        <h1 style="margin-top: 6px;">Write subject lines for a specific product and ICP</h1>
+        <p class="micro">Generate short internal-looking subject lines and score them for fit, spam risk, and body alignment.</p>
+
+        <div class="inline-fields" style="margin-top: 12px;">
+          <div>
+            <label for="subject-product-name">Product</label>
+            <input id="subject-product-name" type="text" value="InboxGuard" autocomplete="off" />
+          </div>
+          <div>
+            <label for="subject-target-role">Target role</label>
+            <input id="subject-target-role" type="text" placeholder="Sales Head" autocomplete="off" />
+          </div>
+          <div>
+            <label for="subject-industry">Industry</label>
+            <input id="subject-industry" type="text" placeholder="SaaS" autocomplete="off" />
+          </div>
+          <div>
+            <label for="subject-goal">Goal</label>
+            <input id="subject-goal" type="text" placeholder="increase reply rate" autocomplete="off" />
+          </div>
+        </div>
+
+        <div class="inline-fields" style="margin-top: 10px;">
+          <div>
+            <label for="subject-email-type">Email type</label>
+            <select id="subject-email-type">
+              <option value="cold" selected>Cold</option>
+              <option value="followup">Follow-up</option>
+              <option value="warm">Warm</option>
+            </select>
+          </div>
+          <div>
+            <label for="subject-tone">Tone</label>
+            <select id="subject-tone">
+              <option value="internal" selected>Internal</option>
+              <option value="casual">Casual</option>
+              <option value="direct">Direct</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="margin-top: 10px;">
+          <label for="subject-context">Context</label>
+          <textarea id="subject-context" rows="3" placeholder="Sending cold outreach to SaaS sales teams..."></textarea>
+        </div>
+
+        <div style="margin-top: 10px;">
+          <label for="subject-body">Body snippet</label>
+          <textarea id="subject-body" rows="4" placeholder="Paste the email body so subject/body fit can be checked."></textarea>
+        </div>
+
+        <button id="generate-subjects" type="button" class="btn-primary" style="margin-top: 10px;">Generate Subject Lines</button>
+
+        <div id="subject-intel-summary" class="rewrite-proof" style="margin-top: 12px;">
+          <p class="rewrite-proof-title">Top pick</p>
+          <p id="subject-intel-top-pick" class="main-issue">Run generation to see the best subject.</p>
+          <p id="subject-intel-top-reason" class="micro">Subject/ICP fit will appear here.</p>
+        </div>
+
+        <div id="subject-intel-warning" class="rewrite-proof" style="margin-top: 10px;">
+          <p class="rewrite-proof-title">Warnings</p>
+          <ul id="subject-intel-warning-list" class="compact-list">
+            <li>Generate subjects to see body-match and spam-risk notes.</li>
+          </ul>
+        </div>
+
+        <div class="rewrite-proof" style="margin-top: 10px;">
+          <p class="rewrite-proof-title">Top picks</p>
+          <ul id="subject-intel-top-list" class="compact-list">
+            <li>High-performing subject suggestions will appear here.</li>
+          </ul>
+        </div>
+
+        <div class="rewrite-proof" style="margin-top: 10px;">
+          <p class="rewrite-proof-title">All generated options</p>
+          <ul id="subject-intel-all-list" class="compact-list">
+            <li>Generated subject lines will be scored and listed here.</li>
+          </ul>
+        </div>
+      </section>
+    </main>
+
+    <script src="/static/js/app.js"></script>
+  </body>
+</html>
