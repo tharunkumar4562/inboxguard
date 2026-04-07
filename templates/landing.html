@@ -238,7 +238,7 @@
     <nav>
       <button type="button" class="theme-toggle" data-theme-toggle onclick="toggleInboxGuardTheme()" aria-pressed="false">🌙 Dark</button>
       <a href="/pricing">Pricing</a>
-      <a href="#" onclick="window.scrollTo({ top: 0, behavior: 'smooth' }); return false;">Home</a>
+      <a href="/app">Home</a>
       <a href="#scan-box" onclick="startInlineScan(); return false;">Scan Free</a>
     </nav>
   </div>
@@ -381,10 +381,9 @@
   function startInlineScan() {
     const input = document.getElementById("email-input");
     const email = String(input && input.value ? input.value : "").trim();
-    if (!email) {
-      return;
+    if (email) {
+      localStorage.setItem("pending_scan_email", email);
     }
-    localStorage.setItem("pending_scan_email", email);
     window.location.href = "/app?tab=threat-scan";
   }
 </script>
