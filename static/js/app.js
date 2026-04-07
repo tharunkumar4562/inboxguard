@@ -89,6 +89,47 @@ window.toggleInboxGuardTheme = toggleInboxGuardTheme;
 window.applyInboxGuardTheme = applyTheme;
 initTheme();
 
+const uxState = {
+    screen: "home",
+    valueShown: false,
+    showPaywall: false,
+    hasMultipleCTAs: false,
+};
+
+function countPrimaryActions(container) {
+    if (!container) {
+        return 0;
+    }
+    const candidates = Array.from(container.querySelectorAll(".primary-btn, .btn-primary, .decision-cta, .plan-btn.primary, .upgrade-cta"));
+    return candidates.filter((node) => node && !node.classList.contains("hidden") && node.offsetParent !== null).length;
+}
+
+function enforceUX(state = {}) {
+    const current = {
+        ...uxState,
+        ...state,
+    };
+
+    if (current.screen === "home" && current.hasMultipleCTAs) {
+        console.warn("UX VIOLATION: Multiple primary CTAs on home screen");
+    }
+
+    if (current.showPaywall && !current.valueShown) {
+        console.warn("UX VIOLATION: Paywall before value");
+    }
+
+    if (current.screen === "result" && countPrimaryActions(resultSection) > 1) {
+        console.warn("UX VIOLATION: Multiple primary CTAs on result screen");
+    }
+
+    return current;
+}
+
+function updateUxState(nextState = {}) {
+    Object.assign(uxState, nextState);
+    enforceUX(uxState);
+}
+
 const resultSection = document.getElementById("result");
 const idleNote = document.getElementById("idle-note");
 const scanPanel = document.getElementById("scan-panel");
@@ -1324,6 +1365,12 @@ function showHome() {
         threatScanTab.classList.remove("active");
     }
     setTabFeedback("Choose a tool to get started.");
+    updateUxState({
+        screen: "home",
+        valueShown: false,
+        showPaywall: false,
+        hasMultipleCTAs: countPrimaryActions(homeView) > 1,
+    });
 }
 
 function openTool(tool) {
@@ -1474,6 +1521,73 @@ function setResultState() {
     if (progressBarNode) {
         progressBarNode.style.width = "100%";
     }
+    updateUxState({
+        screen: "result",
+        valueShown: true,
+        hasMultipleCTAs: countPrimaryActions(resultSection) > 1,
+    });
+}
+
+function getQuickFixPreview(summary = {}, findings = []) {
+    const firstFinding = Array.isArray(findings) && findings.length ? findings[0] : null;
+    const title = String(firstFinding && firstFinding.title ? firstFinding.title : "").toLowerCase();
+
+    if (title.includes("urgency") || title.includes("pressure") || title.includes("broadcast")) {
+        return {
+            before: '"Buy now limited offer"',
+            after: '"Quick question about your workflow"',
+        };
+    }
+
+    if (title.includes("link") || title.includes("image")) {
+        return {
+            before: '"Click here for the full details"',
+            after: '"Thought you might want a quick note on this"',
+        };
+    }
+
+    if (title.includes("personalization")) {
+        return {
+            before: '"Hi team"',
+            after: '"Hi {{first_name}},"',
+        };
+    }
+
+    const subject = String(summary.subject || "Quick question").trim();
+    return {
+        before: `"${subject || "Limited offer today"}"`,
+        after: '"Quick question about your workflow"',
+    };
+}
+
+function renderResultSummary(summary, findings) {
+    const scoreNode = document.getElementById("result-score");
+    const riskNode = document.getElementById("result-risk");
+    const issuesNode = document.getElementById("result-issues-list");
+    const previewBeforeNode = document.getElementById("result-preview-before");
+    const previewAfterNode = document.getElementById("result-preview-after");
+    if (!scoreNode || !riskNode || !issuesNode || !previewBeforeNode || !previewAfterNode) {
+        return;
+    }
+
+    const finalScore = Math.max(0, Math.min(100, Math.round(Number(summary.final_score || summary.score || 0))));
+    const band = String(summary.risk_band || "Needs Review");
+    const emoji = finalScore >= 85 ? "✅" : finalScore >= 70 ? "⚠️" : "❌";
+    scoreNode.textContent = `Inbox Score: ${finalScore}% ${emoji}`;
+    riskNode.textContent = `Risk Level: ${band.toUpperCase()}`;
+
+    const nonMeta = (findings || []).filter((f) => !String(f.title || "").toLowerCase().includes("analysis mode"));
+    issuesNode.innerHTML = "";
+    const items = nonMeta.length ? nonMeta.slice(0, 3).map((item) => String(item.title || item.issue || "Risk detected")) : ["Spam trigger words detected", "No personalization", "Suspicious phrasing"];
+    items.forEach((item) => {
+        const li = document.createElement("li");
+        li.textContent = item;
+        issuesNode.appendChild(li);
+    });
+
+    const preview = getQuickFixPreview(summary, findings);
+    previewBeforeNode.textContent = preview.before;
+    previewAfterNode.textContent = preview.after;
 }
 
 function startRealtimeScanSteps() {
@@ -3400,14 +3514,20 @@ function showUpgradeModal({ title, subtitle, plan } = {}) {
     const bodyNode = paywall.querySelector("p");
     const buttonNode = paywall.querySelector("button");
     if (titleNode) {
-        titleNode.textContent = title || "You're losing emails to spam right now";
+        titleNode.textContent = title || "You’re close to inbox.";
     }
     if (bodyNode) {
-        bodyNode.textContent = subtitle || "Upgrade to fix it before your next campaign";
+        bodyNode.textContent = subtitle || "Unlock full fix to remove the blockers and see the complete rewrite.";
     }
     if (buttonNode) {
-        buttonNode.textContent = "Upgrade to Growth";
+        buttonNode.textContent = "Unlock Full Fix";
     }
+    updateUxState({
+        screen: "result",
+        valueShown: true,
+        showPaywall: true,
+        hasMultipleCTAs: countPrimaryActions(paywall) > 1,
+    });
     paywall.scrollIntoView({ behavior: "smooth", block: "center" });
 }
 
@@ -3450,20 +3570,26 @@ function showPaywall() {
     const body = paywall.querySelector("p");
     const button = paywall.querySelector("button");
     if (title) {
-        title.textContent = "You're losing emails to spam right now";
+        title.textContent = "You’re close to inbox.";
     }
     if (body) {
-        body.textContent = "Upgrade to fix it before your next campaign.";
+        body.textContent = "Unlock full fix: full rewrite, campaign debugger, subject generator, and deliverability insights.";
     }
     if (button) {
-        button.textContent = "Upgrade to Growth";
+        button.textContent = "Unlock Full Fix";
     }
+    updateUxState({
+        screen: "result",
+        valueShown: true,
+        showPaywall: true,
+        hasMultipleCTAs: countPrimaryActions(paywall) > 1,
+    });
 }
 
 function showUpgradeBlock() {
     showUpgradeModal({
-        title: "You're losing emails to spam right now",
-        subtitle: "Upgrade to fix it before your next campaign.",
+        title: "You’re close to inbox.",
+        subtitle: "Unlock full fix to remove the blockers and see the complete rewrite.",
         plan: "growth",
     });
 }
