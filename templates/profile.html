@@ -21,10 +21,38 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="/static/css/styles.min.css?v=20260406-seo-fix-1" />
+    <link rel="stylesheet" href="/static/theme-overrides.css?v=20260407-light-default-1" />
+    <script>
+      (function () {
+        const storageKey = "ig_theme";
+        const root = document.documentElement;
+        function syncThemeButton(theme) {
+          const button = document.querySelector("[data-theme-toggle]");
+          if (button) {
+            button.textContent = theme === "dark" ? "☀ Light" : "🌙 Dark";
+            button.setAttribute("aria-pressed", theme === "dark" ? "true" : "false");
+          }
+        }
+        const stored = localStorage.getItem(storageKey);
+        const theme = stored === "dark" ? "dark" : "light";
+        root.dataset.theme = theme;
+        root.style.colorScheme = theme;
+        localStorage.setItem(storageKey, theme);
+        syncThemeButton(theme);
+        window.toggleInboxGuardTheme = function () {
+          const nextTheme = (root.dataset.theme || "light") === "dark" ? "light" : "dark";
+          root.dataset.theme = nextTheme;
+          root.style.colorScheme = nextTheme;
+          localStorage.setItem(storageKey, nextTheme);
+          syncThemeButton(nextTheme);
+        };
+      })();
+    </script>
   </head>
   <body>
     <div class="profile-shell">
       <header class="profile-topbar">
+        <button id="theme-toggle" type="button" class="profile-back theme-toggle" data-theme-toggle onclick="toggleInboxGuardTheme()" aria-pressed="false">🌙 Dark</button>
         <a class="profile-back" href="/app">Back to scan</a>
         {% if authenticated and profile.is_admin %}
         <a class="profile-back" href="/admin">Admin dashboard</a>

@@ -27,7 +27,7 @@
     <meta name="twitter:title" content="{{ page_title or 'InboxGuard | Fix risky emails before you send' }}" />
     <meta name="twitter:description" content="{{ meta_description or 'Find out why emails that look fine still land in spam, then fix them before sending.' }}" />
     <meta name="twitter:image" content="https://inboxguard.me/static/branding/logo.png" />
-    <meta name="theme-color" content="#0f172a" />
+    <meta name="theme-color" content="#f8fafc" />
     <link rel="icon" type="image/png" href="/static/branding/logo.png" />
     <link rel="shortcut icon" href="/static/branding/logo.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -35,6 +35,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
     <link rel="preload" href="/static/css/styles.min.css?v=20260406-seo-fix-1" as="style" />
     <link rel="stylesheet" href="/static/css/styles.min.css?v=20260406-seo-fix-1" />
+    <link rel="stylesheet" href="/static/theme-overrides.css?v=20260407-light-default-1" />
     <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
     <script type="application/ld+json">
       [
@@ -148,6 +149,7 @@
               <p>You're out of tokens. Upgrade to continue scanning.</p>
               <button type="button" class="btn-primary upgrade-cta" onclick="handleGetAccess()">Upgrade Now</button>
             </div>
+              <button id="theme-toggle" type="button" class="access-link theme-toggle" data-theme-toggle onclick="toggleInboxGuardTheme()" aria-pressed="false">🌙 Dark</button>
             <button id="admin-dashboard-btn" type="button" class="access-link hidden">Admin</button>
             <button id="get-access-btn" type="button" class="access-link upgrade-cta">Get Access</button>
           </div>

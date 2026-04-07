@@ -10,6 +10,49 @@ window.fetch = (input, init = {}) => {
     return nativeFetch(input, options);
 };
 
+const THEME_STORAGE_KEY = "ig_theme";
+
+function normalizeTheme(theme) {
+    return String(theme || "light").toLowerCase() === "dark" ? "dark" : "light";
+}
+
+function updateThemeToggleButtons(theme) {
+    const isDark = normalizeTheme(theme) === "dark";
+    document.querySelectorAll("[data-theme-toggle]").forEach((button) => {
+        button.textContent = isDark ? "☀ Light" : "🌙 Dark";
+        button.setAttribute("aria-pressed", isDark ? "true" : "false");
+        button.setAttribute("title", isDark ? "Switch to light mode" : "Switch to dark mode");
+    });
+}
+
+function applyTheme(theme, persist = true) {
+    const normalized = normalizeTheme(theme);
+    document.documentElement.dataset.theme = normalized;
+    document.documentElement.style.colorScheme = normalized;
+    if (persist) {
+        localStorage.setItem(THEME_STORAGE_KEY, normalized);
+    }
+    updateThemeToggleButtons(normalized);
+    return normalized;
+}
+
+function toggleInboxGuardTheme() {
+    const currentTheme = normalizeTheme(document.documentElement.dataset.theme || localStorage.getItem(THEME_STORAGE_KEY));
+    return applyTheme(currentTheme === "dark" ? "light" : "dark");
+}
+
+function initTheme() {
+    const storedTheme = localStorage.getItem(THEME_STORAGE_KEY);
+    applyTheme(storedTheme || "light", false);
+    if (!storedTheme) {
+        localStorage.setItem(THEME_STORAGE_KEY, "light");
+    }
+}
+
+window.toggleInboxGuardTheme = toggleInboxGuardTheme;
+window.applyInboxGuardTheme = applyTheme;
+initTheme();
+
 const resultSection = document.getElementById("result");
 const idleNote = document.getElementById("idle-note");
 const scanPanel = document.getElementById("scan-panel");

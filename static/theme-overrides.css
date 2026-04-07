@@ -1,0 +1,197 @@
+html {
+  color-scheme: light;
+}
+
+html:not([data-theme="dark"]) body {
+  background: linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%);
+  color: #111827;
+}
+
+html:not([data-theme="dark"]) .app-shell {
+  background: transparent;
+}
+
+html:not([data-theme="dark"]) .sidebar {
+  background: rgba(255, 255, 255, 0.92);
+  border-right-color: #e5e7eb;
+  color: #111827;
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.06);
+}
+
+html:not([data-theme="dark"]) .main-area {
+  color: #111827;
+}
+
+html:not([data-theme="dark"]) .topbar,
+html:not([data-theme="dark"]) .card,
+html:not([data-theme="dark"]) .tool-pane,
+html:not([data-theme="dark"]) .tool-pane-head,
+html:not([data-theme="dark"]) .modal-content,
+html:not([data-theme="dark"]) .modal-card,
+html:not([data-theme="dark"]) .profile-card,
+html:not([data-theme="dark"]) .profile-stat-card,
+html:not([data-theme="dark"]) .rewrite-proof,
+html:not([data-theme="dark"]) .usage-guide,
+html:not([data-theme="dark"]) .compact-list li,
+html:not([data-theme="dark"]) .status-card,
+html:not([data-theme="dark"]) .rewrite-box,
+html:not([data-theme="dark"]) .secondary-tools-wrap,
+html:not([data-theme="dark"]) .sidebar-more,
+html:not([data-theme="dark"]) .paywall-section,
+html:not([data-theme="dark"]) .decision-overlay-card,
+html:not([data-theme="dark"]) .plan-card,
+html:not([data-theme="dark"]) .feature-card,
+html:not([data-theme="dark"]) .hero-story,
+html:not([data-theme="dark"]) .pricing-section,
+html:not([data-theme="dark"]) .pricing-section #home-pricing-cta {
+  background: #ffffff;
+  border-color: #e5e7eb;
+  color: #111827;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
+}
+
+html:not([data-theme="dark"]) .hero-story {
+  background: radial-gradient(circle at top, rgba(37, 99, 235, 0.08), transparent 72%), linear-gradient(180deg, #ffffff, #f8fafc);
+}
+
+html:not([data-theme="dark"]) .hero-story h1,
+html:not([data-theme="dark"]) .hero-story h2,
+html:not([data-theme="dark"]) .section-title,
+html:not([data-theme="dark"]) .feature-title,
+html:not([data-theme="dark"]) .tool-pane-title,
+html:not([data-theme="dark"]) .profile-card h1,
+html:not([data-theme="dark"]) .modal-content h2,
+html:not([data-theme="dark"]) .modal-card h3 {
+  color: #111827;
+}
+
+html:not([data-theme="dark"]) .hero-story p,
+html:not([data-theme="dark"]) .feature-description,
+html:not([data-theme="dark"]) .pricing-note,
+html:not([data-theme="dark"]) .micro,
+html:not([data-theme="dark"]) .profile-email,
+html:not([data-theme="dark"]) .profile-small,
+html:not([data-theme="dark"]) .section p,
+html:not([data-theme="dark"]) .section li,
+html:not([data-theme="dark"]) .trust-block p,
+html:not([data-theme="dark"]) .compact-list li,
+html:not([data-theme="dark"]) .paywall-section p,
+html:not([data-theme="dark"]) .sub,
+html:not([data-theme="dark"]) .nav-group-label,
+html:not([data-theme="dark"]) .tab-feedback,
+html:not([data-theme="dark"]) .decision-scope,
+html:not([data-theme="dark"]) .risk-strip-body,
+html:not([data-theme="dark"]) .confidence-meter-detail,
+html:not([data-theme="dark"]) .workflow-step {
+  color: #374151;
+}
+
+html:not([data-theme="dark"]) .nav-item,
+html:not([data-theme="dark"]) .btn-secondary,
+html:not([data-theme="dark"]) .tool-pane-head-close,
+html:not([data-theme="dark"]) .profile-back,
+html:not([data-theme="dark"]) .profile-logout,
+html:not([data-theme="dark"]) .theme-toggle {
+  background: #ffffff;
+  color: #111827;
+  border-color: #d1d5db;
+}
+
+html:not([data-theme="dark"]) .nav-item.active,
+html:not([data-theme="dark"]) .tool-nav-btn.active {
+  background: #dbeafe;
+  color: #111827;
+  border-color: #93c5fd;
+}
+
+html:not([data-theme="dark"]) .tool-nav-btn,
+html:not([data-theme="dark"]) .hero-actions .secondary-btn,
+html:not([data-theme="dark"]) .secondary-tools-wrap,
+html:not([data-theme="dark"]) .sidebar-more,
+html:not([data-theme="dark"]) .token-empty-state,
+html:not([data-theme="dark"]) .topbar,
+html:not([data-theme="dark"]) .hero-story,
+html:not([data-theme="dark"]) .pricing-grid .plan-card,
+html:not([data-theme="dark"]) .scan-box,
+html:not([data-theme="dark"]) .section,
+html:not([data-theme="dark"]) .card {
+  color: #111827;
+}
+
+html:not([data-theme="dark"]) .tool-nav-btn,
+html:not([data-theme="dark"]) .sidebar-more,
+html:not([data-theme="dark"]) .token-empty-state,
+html:not([data-theme="dark"]) .hero-actions .secondary-btn,
+html:not([data-theme="dark"]) .pricing-note,
+html:not([data-theme="dark"]) .pricing-features li,
+html:not([data-theme="dark"]) .compact-list li,
+html:not([data-theme="dark"]) .status-card,
+html:not([data-theme="dark"]) .rewrite-proof,
+html:not([data-theme="dark"]) .usage-guide,
+html:not([data-theme="dark"]) .profile-stat-card,
+html:not([data-theme="dark"]) .modal-card,
+html:not([data-theme="dark"]) .tool-pane,
+html:not([data-theme="dark"]) .tool-pane-head,
+html:not([data-theme="dark"]) .paywall-section,
+html:not([data-theme="dark"]) .decision-overlay-card,
+html:not([data-theme="dark"]) .plan-card,
+html:not([data-theme="dark"]) .feature-card {
+  border-color: #e5e7eb;
+}
+
+html:not([data-theme="dark"]) .tool-pane {
+  background: #ffffff;
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.12);
+}
+
+html:not([data-theme="dark"]) .tool-pane-head {
+  background: #ffffff;
+}
+
+html:not([data-theme="dark"]) textarea,
+html:not([data-theme="dark"]) input,
+html:not([data-theme="dark"]) select {
+  background: #ffffff;
+  color: #111827;
+  border-color: #d1d5db;
+}
+
+html:not([data-theme="dark"]) .primary-btn,
+html:not([data-theme="dark"]) .btn-primary,
+html:not([data-theme="dark"]) .feature-open-btn,
+html:not([data-theme="dark"]) .plan-btn.primary,
+html:not([data-theme="dark"]) .upgrade-cta {
+  box-shadow: 0 10px 24px rgba(37, 99, 235, 0.24);
+}
+
+html:not([data-theme="dark"]) .access-link {
+  background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
+  color: #ffffff;
+}
+
+html:not([data-theme="dark"]) .token-badge,
+html:not([data-theme="dark"]) .plan-label {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border-color: #bfdbfe;
+}
+
+html:not([data-theme="dark"]) .theme-toggle {
+  min-width: 96px;
+  text-align: center;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
+}
+
+html:not([data-theme="dark"]) .risk-strip-neutral,
+html:not([data-theme="dark"]) .decision-overlay {
+  background: rgba(15, 23, 42, 0.05);
+}
+
+html:not([data-theme="dark"]) .modal {
+  background: rgba(15, 23, 42, 0.2);
+}
+
+html:not([data-theme="dark"]) .paywall-section {
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.08), rgba(34, 197, 94, 0.08));
+  color: #111827;
+}
