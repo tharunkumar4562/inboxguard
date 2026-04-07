@@ -239,7 +239,7 @@
       <button type="button" class="theme-toggle" data-theme-toggle onclick="toggleInboxGuardTheme()" aria-pressed="false">🌙 Dark</button>
       <a href="/pricing">Pricing</a>
       <a href="/app">Home</a>
-      <a href="#scan-box" onclick="startInlineScan(); return false;">Scan Free</a>
+      <a href="/app?tab=threat-scan" onclick="return startInlineScan();">Scan Free</a>
     </nav>
   </div>
 </header>
@@ -262,7 +262,7 @@
     </div>
 
     <div class="cta">
-      <a href="#scan-box" class="btn primary" onclick="startInlineScan(); return false;">Scan Free</a>
+      <a href="/app?tab=threat-scan" class="btn primary" onclick="return startInlineScan();">Scan Free</a>
     </div>
   </section>
 
@@ -385,6 +385,7 @@
       localStorage.setItem("pending_scan_email", email);
     }
     window.location.href = "/app?tab=threat-scan";
+    return false;
   }
 </script>
 
