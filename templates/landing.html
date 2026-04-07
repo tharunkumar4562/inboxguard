@@ -3,6 +3,25 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="theme-color" content="#f8fafc" />
+  <script>
+    (function () {
+      try {
+        const savedTheme = localStorage.getItem("ig_theme");
+        const systemDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+        const theme = savedTheme === "dark" || savedTheme === "light" ? savedTheme : (systemDark ? "dark" : "light");
+        const root = document.documentElement;
+        root.dataset.theme = theme;
+        root.classList.toggle("dark", theme === "dark");
+        root.style.colorScheme = theme === "dark" ? "dark" : "light";
+        const meta = document.querySelector('meta[name="theme-color"]');
+        if (meta) {
+          meta.setAttribute("content", theme === "dark" ? "#0f172a" : "#f8fafc");
+        }
+      } catch (error) {
+      }
+    })();
+  </script>
 
   <title>InboxGuard - Check if your email will land in inbox before sending</title>
   <meta name="description" content="InboxGuard predicts whether your email will land in inbox or spam before you send it. Fix issues and protect your domain."/>
@@ -121,6 +140,25 @@
     (function () {
       const storageKey = "ig_theme";
       const root = document.documentElement;
+      function getSystemTheme() {
+        if (typeof window.matchMedia !== "function") {
+          return "light";
+        }
+        return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+      }
+
+      function getStoredTheme() {
+        const value = localStorage.getItem(storageKey);
+        return value === "dark" || value === "light" ? value : null;
+      }
+
+      function syncThemeColor(theme) {
+        const themeColorMeta = document.querySelector('meta[name="theme-color"]');
+        if (themeColorMeta) {
+          themeColorMeta.setAttribute("content", theme === "dark" ? "#0f172a" : "#f8fafc");
+        }
+      }
+
       function syncThemeButton(theme) {
         const button = document.querySelector("[data-theme-toggle]");
         if (button) {
@@ -128,21 +166,42 @@
           button.setAttribute("aria-pressed", theme === "dark" ? "true" : "false");
         }
       }
-      const stored = localStorage.getItem(storageKey);
-      const theme = stored === "dark" ? "dark" : "light";
+      const stored = getStoredTheme();
+      const theme = stored || getSystemTheme();
       root.dataset.theme = theme;
       root.classList.toggle("dark", theme === "dark");
-      root.style.colorScheme = theme;
-      localStorage.setItem(storageKey, theme);
+      root.style.colorScheme = theme === "dark" ? "dark" : "light";
+      syncThemeColor(theme);
       syncThemeButton(theme);
       window.toggleInboxGuardTheme = function () {
         const nextTheme = root.classList.contains("dark") ? "light" : "dark";
         root.dataset.theme = nextTheme;
         root.classList.toggle("dark", nextTheme === "dark");
-        root.style.colorScheme = nextTheme;
+        root.style.colorScheme = nextTheme === "dark" ? "dark" : "light";
         localStorage.setItem(storageKey, nextTheme);
+        syncThemeColor(nextTheme);
         syncThemeButton(nextTheme);
       };
+
+      if (!stored && typeof window.matchMedia === "function") {
+        const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+        const syncSystemTheme = () => {
+          if (!getStoredTheme()) {
+            const systemTheme = mediaQuery.matches ? "dark" : "light";
+            root.dataset.theme = systemTheme;
+            root.classList.toggle("dark", systemTheme === "dark");
+            root.style.colorScheme = systemTheme === "dark" ? "dark" : "light";
+            syncThemeColor(systemTheme);
+            syncThemeButton(systemTheme);
+          }
+        };
+
+        if (typeof mediaQuery.addEventListener === "function") {
+          mediaQuery.addEventListener("change", syncSystemTheme);
+        } else if (typeof mediaQuery.addListener === "function") {
+          mediaQuery.addListener(syncSystemTheme);
+        }
+      }
     })();
   </script>
 </head>

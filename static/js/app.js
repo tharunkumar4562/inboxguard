@@ -12,8 +12,28 @@ window.fetch = (input, init = {}) => {
 
 const THEME_STORAGE_KEY = "ig_theme";
 
+function getSystemTheme() {
+    if (typeof window.matchMedia !== "function") {
+        return "light";
+    }
+    return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+}
+
+function getStoredTheme() {
+    const storedTheme = localStorage.getItem(THEME_STORAGE_KEY);
+    return storedTheme === "dark" || storedTheme === "light" ? storedTheme : null;
+}
+
 function normalizeTheme(theme) {
     return String(theme || "light").toLowerCase() === "dark" ? "dark" : "light";
+}
+
+function syncThemeColor(theme) {
+    const themeColorMeta = document.querySelector('meta[name="theme-color"]');
+    if (!themeColorMeta) {
+        return;
+    }
+    themeColorMeta.setAttribute("content", theme === "dark" ? "#0f172a" : "#f8fafc");
 }
 
 function updateThemeToggleButtons(theme) {
@@ -30,7 +50,8 @@ function applyTheme(theme, persist = true) {
     const root = document.documentElement;
     root.dataset.theme = normalized;
     root.classList.toggle("dark", normalized === "dark");
-    root.style.colorScheme = normalized;
+    root.style.colorScheme = normalized === "dark" ? "dark" : "light";
+    syncThemeColor(normalized);
     if (persist) {
         localStorage.setItem(THEME_STORAGE_KEY, normalized);
     }
@@ -39,15 +60,28 @@ function applyTheme(theme, persist = true) {
 }
 
 function toggleInboxGuardTheme() {
-    const currentTheme = normalizeTheme(document.documentElement.classList.contains("dark") ? "dark" : document.documentElement.dataset.theme || localStorage.getItem(THEME_STORAGE_KEY));
+    const currentTheme = normalizeTheme(document.documentElement.classList.contains("dark") ? "dark" : document.documentElement.dataset.theme || getStoredTheme() || getSystemTheme());
     return applyTheme(currentTheme === "dark" ? "light" : "dark");
 }
 
 function initTheme() {
-    const storedTheme = localStorage.getItem(THEME_STORAGE_KEY);
-    applyTheme(storedTheme || "light", false);
-    if (!storedTheme) {
-        localStorage.setItem(THEME_STORAGE_KEY, "light");
+    const storedTheme = getStoredTheme();
+    const initialTheme = storedTheme || getSystemTheme();
+    applyTheme(initialTheme, false);
+
+    if (!storedTheme && typeof window.matchMedia === "function") {
+        const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+        const syncSystemTheme = () => {
+            if (!getStoredTheme()) {
+                applyTheme(mediaQuery.matches ? "dark" : "light", false);
+            }
+        };
+
+        if (typeof mediaQuery.addEventListener === "function") {
+            mediaQuery.addEventListener("change", syncSystemTheme);
+        } else if (typeof mediaQuery.addListener === "function") {
+            mediaQuery.addListener(syncSystemTheme);
+        }
     }
 }
 
