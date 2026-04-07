@@ -366,3 +366,41 @@ html:not([data-theme="dark"]) .paywall-section {
   background: linear-gradient(135deg, rgba(37, 99, 235, 0.07), rgba(37, 99, 235, 0.03));
   border: 1px solid #dbeafe;
 }
+
+html:not([data-theme="dark"]) label,
+html:not([data-theme="dark"]) legend,
+html:not([data-theme="dark"]) .status-label,
+html:not([data-theme="dark"]) .rewrite-proof-title {
+  color: #111827;
+}
+
+html:not([data-theme="dark"]) .text-slate-100,
+html:not([data-theme="dark"]) .text-slate-200,
+html:not([data-theme="dark"]) .text-slate-300,
+html:not([data-theme="dark"]) .text-slate-400,
+html:not([data-theme="dark"]) .text-slate-500 {
+  color: #374151 !important;
+}
+
+html:not([data-theme="dark"]) .text-slate-900,
+html:not([data-theme="dark"]) .text-slate-950 {
+  color: #111827 !important;
+}
+
+html:not([data-theme="dark"]) .bg-slate-900,
+html:not([data-theme="dark"]) .bg-slate-950,
+html:not([data-theme="dark"]) .bg-slate-900\/70,
+html:not([data-theme="dark"]) .bg-slate-900\/80,
+html:not([data-theme="dark"]) .bg-slate-900\/85,
+html:not([data-theme="dark"]) .bg-slate-900\/40,
+html:not([data-theme="dark"]) .bg-slate-950\/50,
+html:not([data-theme="dark"]) .bg-slate-950\/70 {
+  background: #ffffff !important;
+}
+
+html:not([data-theme="dark"]) .border-slate-600,
+html:not([data-theme="dark"]) .border-slate-700,
+html:not([data-theme="dark"]) .border-slate-800,
+html:not([data-theme="dark"]) .border-slate-800\/80 {
+  border-color: #e5e7eb !important;
+}

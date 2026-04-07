@@ -13,6 +13,39 @@
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="/static/css/styles.min.css?v=20260406-seo-fix-1" />
     <link rel="stylesheet" href="/static/theme-overrides.css?v=20260407-light-default-1" />
+    <style>
+      .subject-nav {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 10px;
+      }
+
+      .subject-nav-link {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 36px;
+        padding: 0 12px;
+        border-radius: 999px;
+        border: 1px solid #d1d5db;
+        background: #f3f4f6;
+        color: #111827;
+        font-size: 0.9rem;
+        font-weight: 600;
+        text-decoration: none;
+      }
+
+      .subject-nav-link:hover {
+        background: #e5e7eb;
+        color: #111827;
+      }
+
+      .subject-nav .theme-toggle {
+        min-width: 98px;
+      }
+    </style>
     <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
   </head>
   <body class="bg-ink text-slate-100 min-h-screen antialiased">
@@ -21,11 +54,11 @@
         <div class="logo-wrap">
           <img src="/static/branding/logo.png" alt="InboxGuard" style="display:block; width: 172px; max-width: 100%;" />
         </div>
-        <nav class="flex flex-wrap items-center gap-3 text-sm text-slate-300">
-          <button id="theme-toggle" type="button" class="access-link theme-toggle" data-theme-toggle onclick="toggleInboxGuardTheme()" aria-pressed="false">🌙 Dark</button>
-          <a class="access-link" href="/app">Scan Email</a>
-          <a class="access-link" href="/pricing">Pricing</a>
-          <a class="access-link" href="/profile">Profile</a>
+        <nav class="subject-nav" aria-label="Subject generator navigation">
+          <button id="theme-toggle" type="button" class="subject-nav-link theme-toggle" data-theme-toggle onclick="toggleInboxGuardTheme()" aria-pressed="false">🌙 Dark</button>
+          <a class="subject-nav-link" href="/app">Scan Email</a>
+          <a class="subject-nav-link" href="/pricing">Pricing</a>
+          <a class="subject-nav-link" href="/profile">Profile</a>
         </nav>
       </header>
 
