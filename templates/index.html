@@ -122,16 +122,17 @@
         <nav>
           <button id="tab-dashboard" class="nav-item active" type="button">Home</button>
           <button id="tab-threat-scan" class="nav-item" type="button">Scan Email</button>
-          <p class="nav-group-label">Tools</p>
+          <p class="nav-group-label">Create</p>
           <button class="nav-item" type="button" onclick="window.location.href='/subject-generator'">Subject Generator</button>
-          <button class="nav-item tool-nav-btn" type="button" data-tool="campaign-debugger">Campaign Debugger</button>
-          <button class="nav-item tool-nav-btn" type="button" data-tool="blacklist">Domain Check</button>
-          <button class="nav-item tool-nav-btn" type="button" data-tool="seed">Seed Testing</button>
-          <button class="nav-item tool-nav-btn" type="button" data-tool="bulk">Bulk Scan</button>
-          <button class="nav-item tool-nav-btn" type="button" data-tool="ops">API + Team</button>
 
+          <p class="nav-group-label">Advanced tools</p>
           <details class="sidebar-more">
-            <summary>More</summary>
+            <summary>Show advanced tools</summary>
+            <button class="nav-item tool-nav-btn" type="button" data-tool="campaign-debugger">Campaign Debugger</button>
+            <button class="nav-item tool-nav-btn" type="button" data-tool="blacklist">Domain Check</button>
+            <button class="nav-item tool-nav-btn" type="button" data-tool="seed">Seed Testing</button>
+            <button class="nav-item tool-nav-btn" type="button" data-tool="bulk">Bulk Scan</button>
+            <button class="nav-item tool-nav-btn" type="button" data-tool="ops">API + Team</button>
             <button class="nav-item tool-nav-btn" type="button" data-tool="insights">Operator Insights</button>
             <button class="nav-item" type="button" onclick="window.location.href='/saved-fixes'">Saved Fixes</button>
             <button class="nav-item" type="button" onclick="window.location.href='/inbox-tips'">Inbox Tips</button>
@@ -176,17 +177,17 @@
         <section id="home">
 
         <section class="hero-story card home-only">
-          <h1>Check if your email will land in inbox before sending</h1>
-          <p>Predict inbox placement. Fix spam triggers. Protect your domain.</p>
+          <h1>Scan first, then fix, then upgrade when it matters</h1>
+          <p>Open the scan, check the risk, and keep the advanced tools out of the way until you need them.</p>
           <div class="hero-actions">
             <button class="primary-btn" type="button" onclick="openTool('scan')">Scan an Email</button>
-            <button class="secondary-btn" type="button" onclick="document.getElementById('core-tools').scrollIntoView({ behavior: 'smooth', block: 'start' })">See how it works</button>
+            <button class="secondary-btn" type="button" onclick="document.getElementById('scan-panel').scrollIntoView({ behavior: 'smooth', block: 'start' })">See the scan flow</button>
           </div>
           <p class="hero-note">Start with Scan Email and fix risk before it damages your domain.</p>
         </section>
 
         <section id="feature-grid-panel" class="card home-only">
-          <h2 class="section-title">Command Center</h2>
+          <h2 class="section-title">Core flow</h2>
 
           <section id="core-tools" class="feature-grid core-tools">
             <article class="feature-card core-card">
@@ -204,7 +205,7 @@
             </article>
           </section>
 
-          <details class="secondary-tools-wrap" open>
+          <details class="secondary-tools-wrap">
             <summary>Secondary tools</summary>
             <section id="feature-grid" class="feature-grid secondary-tools">
               <article class="feature-card secondary-card">

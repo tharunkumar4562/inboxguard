@@ -3958,7 +3958,7 @@ setupNextAction();
 setupParallax();
 
 setIdleState();
-showHome();
+openTool("scan");
 refreshAuthStatus().then(() => {
     loadUser().catch(() => null);
     refreshHomeLiveStats().catch(() => null);
