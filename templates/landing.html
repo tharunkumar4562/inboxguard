@@ -130,6 +130,27 @@
     .footer { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin: 36px auto 24px; color: #6b7280; }
     .footer nav { display: flex; gap: 16px; }
     .theme-toggle { border: 1px solid #cbd5e1; background: #ffffff; color: #111827; border-radius: 999px; padding: 8px 12px; font-weight: 700; cursor: pointer; }
+
+    html[data-theme="dark"] body { background: #0f172a; color: #e5e7eb; }
+    html[data-theme="dark"] a { color: #93c5fd; }
+    html[data-theme="dark"] .nav { background: rgba(15, 23, 42, 0.92); border-bottom-color: rgba(71, 85, 105, 0.5); }
+    html[data-theme="dark"] .logo,
+    html[data-theme="dark"] .hero h1,
+    html[data-theme="dark"] .section h2,
+    html[data-theme="dark"] .section h3,
+    html[data-theme="dark"] .scan-label { color: #e5e7eb; }
+    html[data-theme="dark"] .hero p,
+    html[data-theme="dark"] .section p,
+    html[data-theme="dark"] .section li,
+    html[data-theme="dark"] .footer { color: #cbd5e1; }
+    html[data-theme="dark"] .scan-box,
+    html[data-theme="dark"] .section,
+    html[data-theme="dark"] .card { background: #172033; border-color: #273244; box-shadow: 0 18px 30px rgba(2, 6, 23, 0.35); }
+    html[data-theme="dark"] .scan-box textarea { background: #0f172a; border-color: #334155; color: #e5e7eb; }
+    html[data-theme="dark"] .btn.secondary,
+    html[data-theme="dark"] .theme-toggle { background: #172033; color: #e5e7eb; border-color: #334155; }
+    html[data-theme="dark"] .btn.secondary:hover,
+    html[data-theme="dark"] .theme-toggle:hover { background: #223049; }
     @media (max-width: 760px) {
       .nav-inner { flex-direction: column; align-items: flex-start; gap: 10px; }
       .nav nav { gap: 14px; }
