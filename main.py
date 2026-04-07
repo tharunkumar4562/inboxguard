@@ -265,6 +265,301 @@ class SeedTestInput(BaseModel):
     wait_seconds: int = 6
 
 
+class SubjectLineInput(BaseModel):
+    product_name: str = "InboxGuard"
+    target_role: str = ""
+    industry: str = ""
+    goal: str = ""
+    email_type: str = "cold"
+    tone: str = "internal"
+    context: str = ""
+    body: str = ""
+
+
+def _tokenize_subject_text(value: str) -> set[str]:
+    tokens = re.findall(r"[a-z0-9]+", str(value or "").lower())
+    stop_words = {
+        "the", "and", "for", "with", "from", "that", "this", "your", "you", "are", "our", "can",
+        "will", "have", "has", "was", "were", "into", "about", "what", "when", "where", "how", "why",
+        "who", "want", "need", "need", "get", "make", "more", "less", "best", "new", "now", "out",
+        "email", "subject", "line", "lines", "check", "send", "sending",
+    }
+    return {token for token in tokens if token not in stop_words and len(token) > 1}
+
+
+def _subject_seed_data(payload: dict[str, str]) -> dict[str, str]:
+    product_name = str(payload.get("product_name") or "InboxGuard").strip() or "InboxGuard"
+    target_role = str(payload.get("target_role") or "").strip()
+    industry = str(payload.get("industry") or "").strip()
+    goal = str(payload.get("goal") or "").strip()
+    email_type = str(payload.get("email_type") or "cold").strip().lower()
+    tone = str(payload.get("tone") or "internal").strip().lower()
+    context = str(payload.get("context") or "").strip()
+    body = str(payload.get("body") or "").strip()
+    return {
+        "product_name": product_name,
+        "target_role": target_role,
+        "industry": industry,
+        "goal": goal,
+        "email_type": email_type,
+        "tone": tone,
+        "context": context,
+        "body": body,
+    }
+
+
+def _clean_phrase(value: str) -> str:
+    text = re.sub(r"\s+", " ", str(value or "").strip())
+    return text[:80]
+
+
+def _generate_subject_candidates(seed: dict[str, str]) -> list[dict[str, Any]]:
+    product_name = seed["product_name"]
+    target_role = seed["target_role"]
+    industry = seed["industry"]
+    goal = seed["goal"]
+    email_type = seed["email_type"]
+    tone = seed["tone"]
+    context = seed["context"]
+
+    role_hint = target_role.lower() if target_role else ""
+    industry_hint = industry.lower() if industry else ""
+    goal_hint = goal.lower() if goal else ""
+    context_hint = context.lower() if context else ""
+
+    product_map = {
+        "deliverability": ["inbox rate", "reply rates", "deliverability", "spam risk", "send health"],
+        "sales": ["pipeline", "reply rates", "follow-up", "booked calls", "outreach"],
+        "recruit": ["candidates", "pipeline", "responses", "screening", "shortlist"],
+        "ops": ["status", "audit", "checks", "review", "sync"],
+        "marketing": ["campaign", "response rate", "inbox rate", "launch", "results"],
+    }
+
+    base_internal = [
+        "reply rates",
+        "inbox rate",
+        "pipeline check",
+        "quick check",
+        "campaign note",
+    ]
+    base_curiosity = [
+        "worth a look?",
+        "quick question",
+        "check this",
+        "small fix",
+        "one thing",
+    ]
+    base_pain = [
+        "low replies?",
+        "spam risk",
+        "drop in replies",
+        "missing inboxes",
+        "deliverability issue",
+    ]
+    base_outcome = [
+        "+ inbox",
+        "better delivery",
+        "more replies",
+        "cleaner sends",
+        "fewer misses",
+    ]
+
+    role_bucket = "deliverability"
+    if any(word in role_hint for word in ["sales", "sales head", "ae", "account"]):
+        role_bucket = "sales"
+    elif any(word in role_hint for word in ["recruit", "talent", "hiring"]):
+        role_bucket = "recruit"
+    elif any(word in role_hint for word in ["marketing", "growth", "demand"]):
+        role_bucket = "marketing"
+    elif any(word in role_hint for word in ["ops", "operations", "revops", "founder", "ceo"]):
+        role_bucket = "ops"
+
+    bucket_words = product_map.get(role_bucket, product_map["deliverability"])
+    modifiers = []
+    if industry_hint:
+        modifiers.append(industry_hint.split()[0])
+    if goal_hint:
+        modifiers.append(goal_hint.split()[0])
+    if context_hint:
+        modifiers.append(context_hint.split()[0])
+
+    candidates: list[tuple[str, str]] = []
+    for subject in base_internal[:3]:
+        candidates.append(("internal", subject))
+    for subject in base_curiosity[:3]:
+        candidates.append(("curiosity", subject))
+    for subject in base_pain[:3]:
+        candidates.append(("pain", subject))
+    for subject in base_outcome[:3]:
+        candidates.append(("outcome", subject))
+
+    if email_type == "followup":
+        candidates.extend([
+            ("followup", "quick follow-up"),
+            ("followup", "worth revisiting?"),
+        ])
+
+    built: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for strategy, root in candidates:
+        parts = [root]
+        if tone in {"internal", "casual"} and strategy in {"internal", "curiosity"}:
+            if target_role:
+                parts = [f"{target_role}: {root}"]
+            elif industry:
+                parts = [f"{industry} {root}"]
+        elif strategy == "outcome" and goal:
+            parts = [f"{goal} - {root}"]
+        elif strategy == "pain" and modifiers:
+            parts = [f"{modifiers[0]} {root}"]
+
+        if product_name and strategy == "internal" and "InboxGuard" not in root:
+            parts.append(product_name)
+
+        subject = _clean_phrase(" ".join(parts))
+        if subject in seen:
+            continue
+        seen.add(subject)
+        built.append({"strategy": strategy, "subject": subject})
+
+    # ensure a few product-specific options exist
+    if product_name:
+        built.extend([
+            {"strategy": "product", "subject": _clean_phrase(f"{product_name} inbox rate")},
+            {"strategy": "product", "subject": _clean_phrase(f"{product_name} quick check")},
+            {"strategy": "product", "subject": _clean_phrase(f"{product_name} reply rates")},
+        ])
+
+    # Add role-aware / context-aware variants without going spammy.
+    for word in bucket_words[:3]:
+        variant = _clean_phrase(f"{word} {target_role}" if target_role else word)
+        if variant not in seen:
+            seen.add(variant)
+            built.append({"strategy": "role-fit", "subject": variant})
+
+    return built
+
+
+def _score_subject_line(subject: str, seed: dict[str, str], body_text: str) -> dict[str, Any]:
+    text = _clean_phrase(subject)
+    lowered = text.lower()
+    tokens = _tokenize_subject_text(text)
+    body_tokens = _tokenize_subject_text(body_text)
+    seed_tokens = _tokenize_subject_text(" ".join([seed.get("target_role", ""), seed.get("industry", ""), seed.get("goal", ""), seed.get("context", ""), seed.get("product_name", "")]))
+
+    length = len(text.split())
+    length_score = 10 if 1 <= length <= 3 else 8 if length == 4 else 6 if length == 5 else 4
+    if length > 6:
+        length_score -= min(3, length - 6)
+
+    spam_words = {
+        "free": 2.0,
+        "guaranteed": 2.5,
+        "act now": 2.5,
+        "urgent": 2.0,
+        "buy": 2.0,
+        "click here": 3.0,
+        "limited time": 2.0,
+        "risk-free": 2.5,
+        "money": 1.0,
+        "cheap": 1.5,
+    }
+    spam_penalty = 0.0
+    for phrase, penalty in spam_words.items():
+        if phrase in lowered:
+            spam_penalty += penalty
+
+    internal_words = {"reply", "pipeline", "inbox", "check", "review", "quick", "sync", "update", "status", "note"}
+    internal_bonus = 0.0
+    if any(word in lowered for word in internal_words):
+        internal_bonus += 1.8
+    if any(char.isdigit() for char in text):
+        internal_bonus += 0.4
+    if "?" in text:
+        internal_bonus += 0.4
+    if ":" in text:
+        internal_bonus += 0.3
+
+    body_overlap = len(tokens & body_tokens)
+    seed_overlap = len(tokens & seed_tokens)
+    match_score = min(2.5, body_overlap * 0.8 + seed_overlap * 0.6)
+
+    curiosity_bonus = 1.0 if text.endswith("?") or any(word in lowered for word in {"quick", "check", "look", "worth", "maybe"}) else 0.0
+    clarity_bonus = 1.0 if 1 <= length <= 4 else 0.5 if length <= 5 else 0.0
+    generic_penalty = 0.0
+    if lowered in {"hi", "hello", "quick question", "check this"}:
+        generic_penalty = 1.2
+
+    goal_text = str(seed.get("goal", "")).lower()
+    goal_bonus = 0.0
+    if goal_text:
+        for word in goal_text.split():
+            if len(word) > 3 and word in lowered:
+                goal_bonus += 0.4
+
+    raw_score = 4.5 + length_score + internal_bonus + match_score + curiosity_bonus + clarity_bonus + goal_bonus - spam_penalty - generic_penalty
+    score = round(max(0.0, min(10.0, raw_score)), 1)
+    tags = []
+    if any(word in lowered for word in {"reply", "inbox", "pipeline", "check", "quick"}):
+        tags.append("internal")
+    if "?" in text:
+        tags.append("curiosity")
+    if any(word in lowered for word in {"low", "risk", "issue", "fix", "spam"}):
+        tags.append("pain")
+    if any(word in lowered for word in {"more", "better", "+", "growth", "result"}):
+        tags.append("outcome")
+    if not tags:
+        tags.append("clean")
+
+    alignment = "strong" if match_score >= 1.8 else "moderate" if match_score >= 1.0 else "weak"
+    return {
+        "subject": text,
+        "score": score,
+        "tags": tags,
+        "length_words": length,
+        "alignment": alignment,
+        "notes": {
+            "spam_risk": "high" if spam_penalty >= 3.0 else "medium" if spam_penalty >= 1.5 else "low",
+            "body_match": alignment,
+            "internal_feel": "yes" if internal_bonus > 0 else "no",
+        },
+    }
+
+
+def _build_subject_line_intelligence(payload: dict[str, str]) -> dict[str, Any]:
+    seed = _subject_seed_data(payload)
+    generated = _generate_subject_candidates(seed)
+    scored = [_score_subject_line(item["subject"], seed, seed["body"] or seed.get("context", "")) | {"strategy": item["strategy"]} for item in generated]
+    scored.sort(key=lambda item: (float(item.get("score", 0.0)), -int(item.get("length_words", 99))), reverse=True)
+
+    top_picks = scored[:5]
+    warnings = []
+    if seed["body"]:
+        body_tokens = _tokenize_subject_text(seed["body"])
+        if body_tokens and all(len(_tokenize_subject_text(item["subject"]) & body_tokens) == 0 for item in top_picks[:3]):
+            warnings.append("Top subjects may not match the body closely enough.")
+    if any(item["notes"]["spam_risk"] == "high" for item in top_picks[:3]):
+        warnings.append("Avoid aggressive wording that looks promotional.")
+
+    return {
+        "input": seed,
+        "top_picks": top_picks,
+        "strategies": scored[:12],
+        "warnings": warnings,
+        "product_fit": {
+            "product_name": seed["product_name"],
+            "target_role": seed["target_role"],
+            "industry": seed["industry"],
+            "goal": seed["goal"],
+        },
+        "summary": {
+            "best_subject": top_picks[0]["subject"] if top_picks else "",
+            "best_score": top_picks[0]["score"] if top_picks else 0,
+            "best_reason": "Looks internal and stays close to the body" if top_picks else "No subject generated",
+        },
+    }
+
+
 def _auth_db_conn() -> sqlite3.Connection:
     AUTH_DB_FILE.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(str(AUTH_DB_FILE))
@@ -708,6 +1003,20 @@ def _get_user_id_by_subscription_id(subscription_id: str) -> int:
         return int(row["id"]) if row else 0
     finally:
         conn.close()
+
+
+@app.post("/subject-lines")
+def subject_lines(payload: SubjectLineInput):
+    data = _build_subject_line_intelligence(payload.model_dump())
+    track_event(
+        "subject_lines_generated",
+        {
+            "product": str(data.get("product_fit", {}).get("product_name", "InboxGuard")),
+            "role": str(data.get("product_fit", {}).get("target_role", "")),
+            "industry": str(data.get("product_fit", {}).get("industry", "")),
+        },
+    )
+    return {"ok": True, **data}
 
 
 def _safe_parse_iso(iso_value: str) -> Optional[datetime]:

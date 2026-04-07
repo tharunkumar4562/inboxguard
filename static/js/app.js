@@ -46,6 +46,7 @@ const domainInput = document.getElementById("domain");
 const analysisModeInput = document.getElementById("analysis-mode");
 const submitButton = document.getElementById("run-check");
 const submitAsyncButton = document.getElementById("run-check-async");
+const generateSubjectsButton = document.getElementById("generate-subjects");
 const loadingPanel = document.getElementById("result-loading");
 const loadingStep = document.getElementById("loading-step");
 const progressBarNode = document.getElementById("progressBar");
@@ -92,6 +93,19 @@ const predictionBandsNode = document.getElementById("prediction-bands");
 
 const fixNowButton = document.getElementById("fix-now");
 const rewriteStyleInput = document.getElementById("rewrite-style");
+const subjectProductNameInput = document.getElementById("subject-product-name");
+const subjectTargetRoleInput = document.getElementById("subject-target-role");
+const subjectIndustryInput = document.getElementById("subject-industry");
+const subjectGoalInput = document.getElementById("subject-goal");
+const subjectEmailTypeInput = document.getElementById("subject-email-type");
+const subjectToneInput = document.getElementById("subject-tone");
+const subjectContextInput = document.getElementById("subject-context");
+const subjectBodyInput = document.getElementById("subject-body");
+const subjectTopPickNode = document.getElementById("subject-intel-top-pick");
+const subjectTopReasonNode = document.getElementById("subject-intel-top-reason");
+const subjectWarningListNode = document.getElementById("subject-intel-warning-list");
+const subjectTopListNode = document.getElementById("subject-intel-top-list");
+const subjectAllListNode = document.getElementById("subject-intel-all-list");
 
 const workflowStateNode = document.getElementById("workflow-state");
 const workflowTitleNode = document.getElementById("workflow-title");
@@ -1700,6 +1714,100 @@ function renderPrediction(summary, prediction) {
         li.textContent = line;
         predictionBandsNode.appendChild(li);
     });
+}
+
+function renderSubjectIntel(data) {
+    if (!subjectTopPickNode || !subjectTopReasonNode || !subjectWarningListNode || !subjectTopListNode || !subjectAllListNode) {
+        return;
+    }
+
+    const topPicks = Array.isArray(data && data.top_picks ? data.top_picks : []) ? data.top_picks : [];
+    const strategies = Array.isArray(data && data.strategies ? data.strategies : []) ? data.strategies : [];
+    const warnings = Array.isArray(data && data.warnings ? data.warnings : []) ? data.warnings : [];
+    const best = topPicks[0] || null;
+
+    subjectTopPickNode.textContent = best ? `${best.subject} (${Number(best.score || 0).toFixed(1)}/10)` : "No subject generated yet.";
+    subjectTopReasonNode.textContent = best ? `${(best.tags || []).join(" • ") || "clean"} | ${best.alignment || "moderate"} body fit | ${best.notes && best.notes.spam_risk ? best.notes.spam_risk : "low"} spam risk` : "Fill the form to generate product-specific subject lines.";
+
+    subjectWarningListNode.innerHTML = "";
+    if (!warnings.length) {
+        const li = document.createElement("li");
+        li.textContent = "No major warnings. Top subjects look aligned with the provided context.";
+        subjectWarningListNode.appendChild(li);
+    } else {
+        warnings.forEach((warning) => {
+            const li = document.createElement("li");
+            li.textContent = String(warning);
+            subjectWarningListNode.appendChild(li);
+        });
+    }
+
+    subjectTopListNode.innerHTML = "";
+    topPicks.slice(0, 5).forEach((item, index) => {
+        const li = document.createElement("li");
+        li.textContent = `${index + 1}. ${item.subject} — ${Number(item.score || 0).toFixed(1)}/10 (${(item.tags || []).join(", ") || "clean"})`;
+        subjectTopListNode.appendChild(li);
+    });
+    if (!topPicks.length) {
+        const li = document.createElement("li");
+        li.textContent = "No options generated.";
+        subjectTopListNode.appendChild(li);
+    }
+
+    subjectAllListNode.innerHTML = "";
+    strategies.slice(0, 12).forEach((item) => {
+        const li = document.createElement("li");
+        li.textContent = `${item.strategy}: ${item.subject} | ${Number(item.score || 0).toFixed(1)}/10 | ${item.alignment || "moderate"} match`;
+        subjectAllListNode.appendChild(li);
+    });
+    if (!strategies.length) {
+        const li = document.createElement("li");
+        li.textContent = "Generated subject lines will appear here.";
+        subjectAllListNode.appendChild(li);
+    }
+}
+
+async function generateSubjectLines() {
+    if (!generateSubjectsButton) {
+        return;
+    }
+
+    const payload = {
+        product_name: String(subjectProductNameInput && subjectProductNameInput.value ? subjectProductNameInput.value : "InboxGuard").trim() || "InboxGuard",
+        target_role: String(subjectTargetRoleInput && subjectTargetRoleInput.value ? subjectTargetRoleInput.value : "").trim(),
+        industry: String(subjectIndustryInput && subjectIndustryInput.value ? subjectIndustryInput.value : "").trim(),
+        goal: String(subjectGoalInput && subjectGoalInput.value ? subjectGoalInput.value : "").trim(),
+        email_type: String(subjectEmailTypeInput && subjectEmailTypeInput.value ? subjectEmailTypeInput.value : "cold").trim(),
+        tone: String(subjectToneInput && subjectToneInput.value ? subjectToneInput.value : "internal").trim(),
+        context: String(subjectContextInput && subjectContextInput.value ? subjectContextInput.value : "").trim(),
+        body: String(subjectBodyInput && subjectBodyInput.value ? subjectBodyInput.value : "").trim() || String(rawEmailInput && rawEmailInput.value ? rawEmailInput.value : "").trim(),
+    };
+
+    generateSubjectsButton.disabled = true;
+    const previousLabel = generateSubjectsButton.textContent;
+    generateSubjectsButton.textContent = "Generating...";
+    try {
+        const response = await fetch("/subject-lines", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok || !data.ok) {
+            throw new Error(String(data.detail || data.error || "Could not generate subject lines."));
+        }
+        renderSubjectIntel(data);
+        trackEvent("subject_lines_generated", {
+            product: payload.product_name,
+            role: payload.target_role,
+            industry: payload.industry,
+        });
+    } catch (error) {
+        showError(error && error.message ? error.message : "Could not generate subject lines.");
+    } finally {
+        generateSubjectsButton.disabled = false;
+        generateSubjectsButton.textContent = previousLabel;
+    }
 }
 
 async function runSeedAuto() {
@@ -3530,6 +3638,7 @@ function wireUiEvents() {
     if (runSeedAutoButton) runSeedAutoButton.addEventListener("click", () => runSeedAuto().catch((error) => showError(error && error.message ? error.message : "Could not run automated seed test.")));
     if (runSeedSyncButton) runSeedSyncButton.addEventListener("click", () => runSeedSync().catch((error) => showError(error && error.message ? error.message : "Could not run instant seed probe.")));
     if (runBulkScanButton) runBulkScanButton.addEventListener("click", () => runBulkScan().catch((error) => showError(error && error.message ? error.message : "Could not run bulk scan.")));
+    if (generateSubjectsButton) generateSubjectsButton.addEventListener("click", () => generateSubjectLines().catch((error) => showError(error && error.message ? error.message : "Could not generate subject lines.")));
     if (createApiKeyButton) createApiKeyButton.addEventListener("click", () => createApiKey().catch((error) => showError(error && error.message ? error.message : "Could not create API key.")));
     if (listApiKeysButton) listApiKeysButton.addEventListener("click", () => listApiKeys().catch((error) => showError(error && error.message ? error.message : "Could not load API keys.")));
     if (revokeApiKeyButton) revokeApiKeyButton.addEventListener("click", () => revokeApiKey().catch((error) => showError(error && error.message ? error.message : "Could not revoke API key.")));
