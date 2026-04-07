@@ -31,6 +31,14 @@ html {
   color-scheme: light;
 }
 
+body.bg-ink {
+  background: var(--bg) !important;
+}
+
+body.text-slate-100 {
+  color: var(--text) !important;
+}
+
 body {
   background: var(--bg);
   color: var(--text);
@@ -529,6 +537,9 @@ html:not([data-theme="dark"]) .bg-slate-950\/70 {
 html:not([data-theme="dark"]) .border-slate-600,
 html:not([data-theme="dark"]) .border-slate-700,
 html:not([data-theme="dark"]) .border-slate-800,
-html:not([data-theme="dark"]) .border-slate-800\/80 {
+html:not([data-theme="dark"]) .border-slate-800\/70,
+html:not([data-theme="dark"]) .border-slate-800\/80,
+html:not([data-theme="dark"]) .border-slate-700\/70,
+html:not([data-theme="dark"]) .border-slate-700\/80 {
   border-color: #e5e7eb !important;
 }
