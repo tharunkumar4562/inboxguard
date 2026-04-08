@@ -1388,6 +1388,65 @@ select {
     gap: 12px;
 }
 
+.result-container {
+    margin-top: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.result-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    padding: 16px;
+    border-radius: 12px;
+}
+
+.risk-card {
+    border-left: 4px solid #ef4444;
+}
+
+.impact-card {
+    border-left: 4px solid #f59e0b;
+}
+
+.badge {
+    font-size: 12px;
+    font-weight: 700;
+    margin-bottom: 6px;
+}
+
+.badge.danger {
+    color: #ef4444;
+}
+
+.blur-box {
+    position: relative;
+    background: var(--bg-secondary);
+    padding: 12px;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.blur-box p {
+    filter: blur(4px);
+    margin: 0;
+}
+
+.blur-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to bottom, transparent, rgba(0, 0, 0, 0.58));
+}
+
+.result-cta {
+    text-align: center;
+}
+
+.cta-text {
+    margin-bottom: 10px;
+}
+
 .fade-in {
     animation: fadeIn 220ms ease;
 }

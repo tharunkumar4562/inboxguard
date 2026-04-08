@@ -223,6 +223,13 @@ const scoreBreakdownNode = document.getElementById("score-breakdown");
 const predictionHeadlineNode = document.getElementById("prediction-headline");
 const predictionDetailNode = document.getElementById("prediction-detail");
 const predictionBandsNode = document.getElementById("prediction-bands");
+const resultScreenNode = document.getElementById("result-screen");
+const riskTitleNode = document.getElementById("risk-title");
+const riskSummaryNode = document.getElementById("risk-summary");
+const riskReasonsNode = document.getElementById("risk-reasons");
+const riskImpactNode = document.getElementById("risk-impact");
+const fixPreviewTextNode = document.getElementById("fix-preview-text");
+const unlockFixButton = document.getElementById("unlock-fix-btn");
 
 const fixNowButton = document.getElementById("fix-now");
 const rewriteStyleInput = document.getElementById("rewrite-style");
@@ -2014,6 +2021,72 @@ function renderPrediction(summary, prediction) {
     });
 }
 
+function buildBiggestRiskPayload(summary = {}, findings = [], payload = null) {
+    if (payload && typeof payload === "object") {
+        const reasons = Array.isArray(payload.reasons) ? payload.reasons : [];
+        return {
+            title: String(payload.title || "Looks like mass outreach"),
+            summary: String(payload.summary || "Will likely be ignored quickly."),
+            reasons: reasons.length ? reasons.map((item) => String(item)) : ["Generic opening", "No specific insight", "No proof"],
+            impact: String(payload.impact || "Reply rate drops 30-50% and this can look like bulk outreach."),
+        };
+    }
+
+    const nonMeta = (findings || []).filter((f) => !String(f.title || "").toLowerCase().includes("analysis mode"));
+    const top = nonMeta[0] || {};
+    const title = String(top.title || "Looks like mass outreach");
+    const issue = String(top.issue || top.impact || "Will likely be ignored quickly");
+    const band = String(summary.risk_band || "").toLowerCase();
+
+    return {
+        title,
+        summary: issue || "Will likely be ignored quickly.",
+        reasons: [
+            title,
+            String(top.issue || "No specific insight"),
+            String(top.action || "No proof or credibility"),
+        ].filter((line) => String(line || "").trim()),
+        impact: band.includes("high")
+            ? "Reply rate can drop by 30-50%. This may look like bulk outreach and damage domain reputation over time."
+            : "This can still reduce replies and weaken trust if sent unchanged.",
+    };
+}
+
+function renderConversionResult(data, summary, findings) {
+    if (!resultScreenNode || !riskTitleNode || !riskSummaryNode || !riskReasonsNode || !riskImpactNode || !fixPreviewTextNode) {
+        return;
+    }
+
+    const biggestRisk = buildBiggestRiskPayload(summary, findings, data && data.biggest_risk ? data.biggest_risk : null);
+    const quickFix = getQuickFixPreview(summary, findings);
+    const preview = String((data && data.fix_preview) || quickFix.after || "Quick question about your workflow?");
+
+    resultScreenNode.classList.remove("hidden");
+    riskTitleNode.textContent = biggestRisk.title;
+    riskSummaryNode.textContent = biggestRisk.summary;
+    riskImpactNode.textContent = biggestRisk.impact;
+    fixPreviewTextNode.textContent = preview;
+
+    riskReasonsNode.innerHTML = "";
+    biggestRisk.reasons.slice(0, 3).forEach((reason) => {
+        const li = document.createElement("li");
+        li.textContent = reason;
+        riskReasonsNode.appendChild(li);
+    });
+
+    if (resultSection) {
+        Array.from(resultSection.children).forEach((child) => {
+            if (!(child instanceof HTMLElement)) {
+                return;
+            }
+            if (child.id === "result-screen") {
+                return;
+            }
+            child.classList.add("hidden");
+        });
+    }
+}
+
 function renderSubjectIntel(data) {
     if (!subjectTopPickNode || !subjectTopReasonNode || !subjectWarningListNode || !subjectTopListNode || !subjectAllListNode) {
         return;
@@ -2885,6 +2958,7 @@ async function runAnalyze() {
         renderDecisionEngine(summary, signals, findings, data.prediction || null);
         renderBreakdown(summary);
         renderPrediction(summary, data.prediction || null);
+        renderConversionResult(data, summary, findings);
 
         if (rewriteStyleInput) {
             rewriteStyleInput.value = getRecommendedRewriteStyle();
@@ -3256,6 +3330,7 @@ async function runAnalyzeAsync() {
             renderDecisionEngine(summary, signals, findings, job.result.prediction || null);
             renderBreakdown(summary);
             renderPrediction(summary, job.result.prediction || null);
+            renderConversionResult(job.result || {}, summary, findings);
             setResultState();
             if (resultSection) {
                 resultSection.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -3664,6 +3739,11 @@ function showPaywall() {
     });
 }
 
+function unlockFullFix() {
+    pendingAction = "fix";
+    runPendingAction();
+}
+
 function showUpgradeBlock() {
     showUpgradeModal({
         title: "You’re close to inbox.",
@@ -4027,6 +4107,27 @@ function wireUiEvents() {
             runSeedAuto().catch(() => {
                 window.location.href = "/seed-inbox";
             });
+        });
+    }
+
+    if (unlockFixButton) {
+        unlockFixButton.addEventListener("click", async () => {
+            await refreshAuthStatus();
+            await loadUserTokens();
+
+            if (!isAuthenticated) {
+                pendingAction = "fix";
+                showAuthModal();
+                return;
+            }
+
+            if (Number(userState.tokens || 0) <= 0) {
+                showError("This email will likely underperform. Fix it before sending.");
+                showPaywall();
+                return;
+            }
+
+            unlockFullFix();
         });
     }
 

@@ -4336,6 +4336,7 @@ def _run_analysis_request(
     )
     result["learning_profile"] = get_learning_profile()
     summary = result.get("summary", {}) if isinstance(result, dict) else {}
+    findings = result.get("partial_findings") or summary.get("findings") or []
     final_score = int(summary.get("final_score", summary.get("score", 0)) or 0)
     if user:
         stats = _score_outcome_stats(int(user["id"]))
@@ -4386,6 +4387,31 @@ def _run_analysis_request(
             "anonymous_scans_used": anon_scans,
             "anonymous_scans_limit": ANON_SCAN_LIMIT,
         }
+
+    top_finding = findings[0] if isinstance(findings, list) and findings else {}
+    risk_title = str(top_finding.get("title") or "Looks like mass outreach")
+    risk_issue = str(top_finding.get("issue") or top_finding.get("impact") or "Will likely be ignored quickly")
+    risk_action = str(top_finding.get("action") or "Add one specific observation about their business")
+    risk_band = str(summary.get("risk_band") or "")
+    high_risk = risk_band in {"High Spam-Risk Signals", "High Risk"}
+
+    result["biggest_risk"] = {
+        "title": risk_title,
+        "summary": risk_issue,
+        "reasons": [
+            risk_title,
+            risk_issue,
+            risk_action,
+        ],
+        "impact": "Reply rate drops 30-50% and this can damage domain reputation over time."
+        if high_risk
+        else "Likely to reduce replies and trust if sent unchanged.",
+    }
+
+    preview_subject = str(summary.get("subject") or "Quick question")
+    result["fix_preview"] = (
+        f"Noticed your team is sending high-volume outreach - quick question on {preview_subject.lower()}?"
+    )
     return result
 
 

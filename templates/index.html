@@ -361,6 +361,41 @@ I noticed your recent post and had one short idea to improve reply rates."></tex
 
         <!-- decision-engine-v2 -->
         <section id="result" class="dashboard-grid hidden scan-only">
+          <div id="result-screen" class="result-container hidden">
+            <div class="result-card risk-card">
+              <div class="badge danger">BIGGEST RISK</div>
+              <h2 id="risk-title">This email looks like mass outreach</h2>
+              <p id="risk-summary">It will likely be ignored within 3-5 seconds.</p>
+            </div>
+
+            <div class="result-card">
+              <h3>Why this happens</h3>
+              <ul id="risk-reasons">
+                <li>Generic opening line</li>
+                <li>No specific insight</li>
+                <li>No proof or credibility</li>
+              </ul>
+            </div>
+
+            <div class="result-card impact-card">
+              <h3>Impact</h3>
+              <p id="risk-impact">Reply rate drops by 30-50%. This looks like bulk outreach and can damage domain reputation over time.</p>
+            </div>
+
+            <div class="result-card fix-preview">
+              <h3>Better version (preview)</h3>
+              <div class="blur-box">
+                <p id="fix-preview-text">Noticed your SDR team is sending high-volume outreach - quick question on reply rates?</p>
+                <div class="blur-overlay"></div>
+              </div>
+            </div>
+
+            <div class="result-cta">
+              <p class="cta-text">Fix this email before you send it.</p>
+              <button id="unlock-fix-btn" class="primary-btn" type="button">Unlock Full Fix</button>
+            </div>
+          </div>
+
           <section class="card" id="decision-block">
             <div id="risk-strip" class="risk-strip risk-strip-neutral">
               <p id="risk-strip-title" class="risk-strip-title">SCAN REQUIRED</p>
