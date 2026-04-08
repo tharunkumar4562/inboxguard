@@ -57,6 +57,7 @@
     <link rel="preload" href="/static/css/styles.min.css?v=20260406-seo-fix-1" as="style" />
     <link rel="stylesheet" href="/static/css/styles.min.css?v=20260406-seo-fix-1" />
     <link rel="stylesheet" href="/static/theme-overrides.css?v=20260407-light-default-1" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
     <script type="application/ld+json">
       [
@@ -365,6 +366,11 @@ I noticed your recent post and had one short idea to improve reply rates."></tex
         <!-- decision-engine-v2 -->
         <section id="result" class="dashboard-grid hidden scan-only">
           <div id="result-screen" class="result-container hidden">
+            <div class="trust-bar">
+              <span>🔥 12,400+ emails analyzed</span>
+              <span>⭐ Used by cold email agencies</span>
+            </div>
+
             <div class="result-card risk-card">
               <div class="badge danger">BIGGEST RISK</div>
               <h2 id="risk-title">This email looks like mass outreach</h2>
@@ -385,6 +391,15 @@ I noticed your recent post and had one short idea to improve reply rates."></tex
               <p id="risk-impact">Reply rate drops by 30-50%. This looks like bulk outreach and can damage domain reputation over time.</p>
             </div>
 
+            <div class="result-card warning-card">
+              <h3>If you send this email</h3>
+              <p id="risk-warning-impact">
+                → It will likely be ignored<br />
+                → Domain reputation can drop over time<br />
+                → Future emails are more likely to land in spam
+              </p>
+            </div>
+
             <div class="result-card fix-preview">
               <h3>Better version (preview)</h3>
               <div class="blur-box">
@@ -396,6 +411,16 @@ I noticed your recent post and had one short idea to improve reply rates."></tex
             <div class="result-cta">
               <p class="cta-text">Fix this email before you send it.</p>
               <button id="unlock-fix-btn" class="primary-btn" type="button">Unlock Full Fix</button>
+              <button id="share-result-btn" class="btn-secondary" type="button" style="margin-top:10px;">📸 Copy Result Card</button>
+            </div>
+
+            <div class="email-capture">
+              <p>Get weekly deliverability tips</p>
+              <div class="email-capture-row">
+                <input id="result-capture-email" type="email" placeholder="Enter email" autocomplete="email" />
+                <button id="result-capture-submit" class="btn-secondary" type="button">Subscribe</button>
+              </div>
+              <p id="result-capture-status" class="micro hidden"></p>
             </div>
           </div>
 

@@ -228,8 +228,30 @@ const riskTitleNode = document.getElementById("risk-title");
 const riskSummaryNode = document.getElementById("risk-summary");
 const riskReasonsNode = document.getElementById("risk-reasons");
 const riskImpactNode = document.getElementById("risk-impact");
+const riskWarningImpactNode = document.getElementById("risk-warning-impact");
 const fixPreviewTextNode = document.getElementById("fix-preview-text");
 const unlockFixButton = document.getElementById("unlock-fix-btn");
+const shareResultButton = document.getElementById("share-result-btn");
+const resultCaptureEmailInput = document.getElementById("result-capture-email");
+const resultCaptureSubmitButton = document.getElementById("result-capture-submit");
+const resultCaptureStatusNode = document.getElementById("result-capture-status");
+
+const PAYWALL_VARIANT_KEY = "ig_paywall_variant";
+
+function getPaywallVariant() {
+    const existing = localStorage.getItem(PAYWALL_VARIANT_KEY);
+    if (existing === "A" || existing === "B") {
+        return existing;
+    }
+    const assigned = Math.random() < 0.5 ? "A" : "B";
+    localStorage.setItem(PAYWALL_VARIANT_KEY, assigned);
+    return assigned;
+}
+
+function getFreeScansLimitForCurrentUser() {
+    const variant = getPaywallVariant();
+    return variant === "B" ? 2 : 1;
+}
 
 const fixNowButton = document.getElementById("fix-now");
 const rewriteStyleInput = document.getElementById("rewrite-style");
@@ -2065,6 +2087,9 @@ function renderConversionResult(data, summary, findings) {
     riskTitleNode.textContent = biggestRisk.title;
     riskSummaryNode.textContent = biggestRisk.summary;
     riskImpactNode.textContent = biggestRisk.impact;
+    if (riskWarningImpactNode) {
+        riskWarningImpactNode.innerHTML = "→ It will likely be ignored<br />→ Domain reputation can drop over time<br />→ Future emails are more likely to land in spam";
+    }
     fixPreviewTextNode.textContent = preview;
 
     riskReasonsNode.innerHTML = "";
@@ -3541,6 +3566,14 @@ async function ensureScanAccess() {
         return false;
     }
 
+    const plan = String(currentUserPlan || userState.plan || "free").toLowerCase();
+    if (plan === "free") {
+        const freeLimit = getFreeScansLimitForCurrentUser();
+        if (Number(userScansUsed || 0) < freeLimit) {
+            return true;
+        }
+    }
+
     if (Number(userState.tokens || 0) < 1) {
         showPaywall();
         showError("No credits left. Upgrade to continue scanning.");
@@ -3742,6 +3775,69 @@ function showPaywall() {
 function unlockFullFix() {
     pendingAction = "fix";
     runPendingAction();
+}
+
+async function shareResultCard() {
+    if (!resultScreenNode) {
+        return;
+    }
+    if (typeof window.html2canvas !== "function") {
+        showError("Share tool is loading. Try again in a second.");
+        return;
+    }
+
+    const canvas = await window.html2canvas(resultScreenNode, { backgroundColor: null, scale: 2 });
+    const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
+    if (!blob) {
+        showError("Could not capture result image.");
+        return;
+    }
+
+    try {
+        if (navigator.clipboard && typeof window.ClipboardItem === "function") {
+            await navigator.clipboard.write([new window.ClipboardItem({ "image/png": blob })]);
+            showError("Copied! Share this result on X/Reddit.");
+            return;
+        }
+    } catch (error) {
+        // Fall through to download fallback.
+    }
+
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "inboxguard-result.png";
+    link.click();
+    URL.revokeObjectURL(url);
+    showError("Result image downloaded. Share it on X/Reddit.");
+}
+
+async function submitResultEmailCapture() {
+    if (!resultCaptureEmailInput || !resultCaptureStatusNode) {
+        return;
+    }
+
+    const email = String(resultCaptureEmailInput.value || "").trim().toLowerCase();
+    if (!email || !email.includes("@")) {
+        resultCaptureStatusNode.classList.remove("hidden");
+        resultCaptureStatusNode.textContent = "Enter a valid email address.";
+        return;
+    }
+
+    const payload = new FormData();
+    payload.set("email", email);
+    payload.set("source", "result_screen");
+
+    const response = await fetch("/lead-capture", { method: "POST", body: payload });
+    if (!response.ok) {
+        resultCaptureStatusNode.classList.remove("hidden");
+        resultCaptureStatusNode.textContent = "Could not save your email right now.";
+        return;
+    }
+
+    resultCaptureStatusNode.classList.remove("hidden");
+    resultCaptureStatusNode.textContent = "Subscribed. Weekly deliverability tips are on the way.";
+    resultCaptureEmailInput.value = "";
 }
 
 function showUpgradeBlock() {
@@ -4128,6 +4224,22 @@ function wireUiEvents() {
             }
 
             unlockFullFix();
+        });
+    }
+
+    if (shareResultButton) {
+        shareResultButton.addEventListener("click", () => {
+            shareResultCard().catch((error) => {
+                showError(error && error.message ? error.message : "Could not copy result card.");
+            });
+        });
+    }
+
+    if (resultCaptureSubmitButton) {
+        resultCaptureSubmitButton.addEventListener("click", () => {
+            submitResultEmailCapture().catch((error) => {
+                showError(error && error.message ? error.message : "Could not subscribe right now.");
+            });
         });
     }
 

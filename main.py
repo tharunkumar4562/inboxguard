@@ -61,6 +61,7 @@ SESSION_HTTPS_ONLY = os.getenv("INBOXGUARD_SESSION_HTTPS_ONLY", "0").strip().low
 AUTH_DB_FILE = BASE_DIR / "data" / "auth.db"
 ANON_SCAN_LIMIT = int(os.getenv("INBOXGUARD_ANON_SCAN_LIMIT", "3"))
 FREE_USER_SCAN_LIMIT = int(os.getenv("INBOXGUARD_FREE_USER_SCAN_LIMIT", "50"))
+FREE_SCANS_LIMIT = int(os.getenv("INBOXGUARD_FREE_SCANS_LIMIT", "2"))
 GOOGLE_OAUTH_ENABLED = os.getenv("INBOXGUARD_GOOGLE_OAUTH_ENABLED", "0").strip().lower() in {"1", "true", "yes"}
 GOOGLE_CLIENT_ID = os.getenv("INBOXGUARD_GOOGLE_CLIENT_ID", os.getenv("GOOGLE_CLIENT_ID", "")).strip()
 GOOGLE_CLIENT_SECRET = os.getenv("INBOXGUARD_GOOGLE_CLIENT_SECRET", os.getenv("GOOGLE_CLIENT_SECRET", "")).strip()
@@ -4313,14 +4314,15 @@ def _run_analysis_request(
     if user:
         user_id = int(user["id"])
         current_tokens = _get_user_tokens(user_id)
-        
-        # Check if user has enough tokens
-        if current_tokens < token_cost:
-            raise HTTPException(status_code=402, detail="NO_TOKENS")
-        
-        # Deduct tokens
-        if not _deduct_tokens(user_id, token_cost):
-            raise HTTPException(status_code=402, detail="NO_TOKENS")
+        user_plan = _normalize_plan_key(str(user.get("plan") or "free"))
+        scans_used = int(_get_usage(user_id).get("scans_used", 0))
+        free_scan_credit = user_plan == "free" and scans_used < FREE_SCANS_LIMIT
+
+        if not free_scan_credit:
+            if current_tokens < token_cost:
+                raise HTTPException(status_code=402, detail="NO_TOKENS")
+            if not _deduct_tokens(user_id, token_cost):
+                raise HTTPException(status_code=402, detail="NO_TOKENS")
     else:
         raise HTTPException(status_code=401, detail="AUTH_REQUIRED")
 
@@ -4363,7 +4365,8 @@ def _run_analysis_request(
             "authenticated": True,
             "user_scans_used": user_scans,
             "tokens_remaining": remaining_tokens,
-            "tokens_used": token_cost,
+            "tokens_used": 0 if free_scan_credit else token_cost,
+            "free_scans_limit": FREE_SCANS_LIMIT,
         }
     else:
         prediction = _predict_inbox_probability(final_score, None)
@@ -4583,7 +4586,10 @@ def analyze_async(
 
     user_id = int(user["id"])
     token_cost = FEATURE_COSTS.get("scan_email", 1)
-    if _get_user_tokens(user_id) < token_cost:
+    user_plan = _normalize_plan_key(str(user.get("plan") or "free"))
+    scans_used = int(_get_usage(user_id).get("scans_used", 0))
+    free_scan_credit = user_plan == "free" and scans_used < FREE_SCANS_LIMIT
+    if not free_scan_credit and _get_user_tokens(user_id) < token_cost:
         raise HTTPException(status_code=402, detail="NO_TOKENS")
 
     job_id = str(uuid4())

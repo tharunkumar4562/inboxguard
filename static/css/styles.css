@@ -1395,6 +1395,14 @@ select {
     gap: 16px;
 }
 
+.trust-bar {
+    display: flex;
+    gap: 20px;
+    font-size: 13px;
+    color: #9ca3af;
+    margin-bottom: 10px;
+}
+
 .result-card {
     background: var(--bg-card);
     border: 1px solid var(--border-subtle);
@@ -1408,6 +1416,10 @@ select {
 
 .impact-card {
     border-left: 4px solid #f59e0b;
+}
+
+.warning-card {
+    border-left: 4px solid #fb7185;
 }
 
 .badge {
@@ -1445,6 +1457,26 @@ select {
 
 .cta-text {
     margin-bottom: 10px;
+}
+
+.email-capture {
+    background: rgba(15, 23, 42, 0.5);
+    border: 1px solid var(--border-subtle);
+    border-radius: 12px;
+    padding: 14px;
+}
+
+.email-capture p {
+    margin: 0 0 10px;
+}
+
+.email-capture-row {
+    display: flex;
+    gap: 8px;
+}
+
+.email-capture-row input {
+    flex: 1;
 }
 
 .fade-in {
