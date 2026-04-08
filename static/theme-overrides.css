@@ -298,6 +298,19 @@ html:not([data-theme="dark"]) .feature-card {
   border-color: #e5e7eb;
 }
 
+html[data-theme="light"] .brand,
+html[data-theme="light"] .logo-text,
+html[data-theme="light"] .topbar-brand,
+html[data-theme="light"] .topbar-brand .logo-text,
+html[data-theme="light"] .sidebar .logo-text,
+html:not([data-theme="dark"]) .brand,
+html:not([data-theme="dark"]) .logo-text,
+html:not([data-theme="dark"]) .topbar-brand,
+html:not([data-theme="dark"]) .topbar-brand .logo-text,
+html:not([data-theme="dark"]) .sidebar .logo-text {
+  color: #111827 !important;
+}
+
 html:not([data-theme="dark"]) .tool-pane {
   background: #ffffff;
   box-shadow: 0 18px 40px rgba(15, 23, 42, 0.12);
