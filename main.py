@@ -56,7 +56,8 @@ templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 SITE_URL = os.getenv("INBOXGUARD_SITE_URL", "https://inboxguard.me")
 ADMIN_TOKEN = os.getenv("INBOXGUARD_ADMIN_TOKEN", "")
 ADMIN_EMAIL = os.getenv("INBOXGUARD_ADMIN_EMAIL", os.getenv("INBOXGUARD_ADMIN_ALLOWED_EMAIL", "")).strip().lower()
-SESSION_SECRET = os.getenv("INBOXGUARD_SESSION_SECRET", "change-me-in-production")
+SECRET_KEY = os.getenv("SECRET_KEY", os.getenv("INBOXGUARD_SESSION_SECRET", "change-me-in-production"))
+SESSION_MAX_AGE_SECONDS = int(os.getenv("INBOXGUARD_SESSION_MAX_AGE_SECONDS", str(60 * 60 * 24 * 7)))
 SESSION_HTTPS_ONLY = os.getenv("INBOXGUARD_SESSION_HTTPS_ONLY", "0").strip().lower() in {"1", "true", "yes"}
 AUTH_DB_FILE = BASE_DIR / "data" / "auth.db"
 ANON_SCAN_LIMIT = int(os.getenv("INBOXGUARD_ANON_SCAN_LIMIT", "3"))
@@ -241,7 +242,13 @@ SEO_ACQUISITION_PAGES = {
     },
 }
 
-app.add_middleware(SessionMiddleware, secret_key=SESSION_SECRET, same_site="lax", https_only=SESSION_HTTPS_ONLY)
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=SECRET_KEY,
+    same_site="lax",
+    https_only=SESSION_HTTPS_ONLY,
+    max_age=SESSION_MAX_AGE_SECONDS,
+)
 
 oauth = OAuth()
 GOOGLE_AUTH_CONFIGURED = bool(GOOGLE_OAUTH_ENABLED and GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET)

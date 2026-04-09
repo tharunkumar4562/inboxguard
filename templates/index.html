@@ -57,6 +57,7 @@
     <link rel="preload" href="/static/css/styles.min.css?v=20260406-seo-fix-1" as="style" />
     <link rel="stylesheet" href="/static/css/styles.min.css?v=20260406-seo-fix-1" />
     <link rel="stylesheet" href="/static/theme-overrides.css?v=20260408-logo-contrast-1" />
+    <link rel="stylesheet" href="/static/css/cookie-consent.css?v=20260410-cookie-consent-1" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
     <script type="application/ld+json">
@@ -141,6 +142,14 @@
           </details>
         </nav>
 
+        <div id="cookie-banner" class="cookie-banner hidden" role="dialog" aria-live="polite" aria-label="Cookie consent" aria-hidden="true">
+          <p>We use cookies to keep you signed in and improve your experience.</p>
+          <div class="cookie-banner__actions">
+            <button type="button" class="cookie-banner__button" data-cookie-accept>Accept</button>
+          </div>
+        </div>
+
+        <script src="/static/js/cookie-consent.js?v=20260410-cookie-consent-1"></script>
         <a id="profile-link" class="profile-link hidden" href="/profile" aria-label="Open profile">
           <img id="profile-avatar" class="profile-avatar" src="/static/branding/logo.png" alt="Profile avatar" />
           <span id="profile-initial" class="profile-initial">U</span>
