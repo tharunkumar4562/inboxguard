@@ -230,6 +230,11 @@ const riskReasonsNode = document.getElementById("risk-reasons");
 const riskImpactNode = document.getElementById("risk-impact");
 const riskWarningImpactNode = document.getElementById("risk-warning-impact");
 const fixPreviewTextNode = document.getElementById("fix-preview-text");
+const fixRecommendationsNode = document.getElementById("fix-recommendations");
+const impactEstimateNode = document.getElementById("impact-estimate");
+const variantInsightNode = document.getElementById("variant-insight");
+const variantLossNode = document.getElementById("variant-loss");
+const variantPatternNode = document.getElementById("variant-pattern");
 const unlockFixButton = document.getElementById("unlock-fix-btn");
 const shareResultButton = document.getElementById("share-result-btn");
 const resultCaptureEmailInput = document.getElementById("result-capture-email");
@@ -2082,6 +2087,10 @@ function renderConversionResult(data, summary, findings) {
     const biggestRisk = buildBiggestRiskPayload(summary, findings, data && data.biggest_risk ? data.biggest_risk : null);
     const quickFix = getQuickFixPreview(summary, findings);
     const preview = String((data && data.fix_preview) || quickFix.after || "Quick question about your workflow?");
+    const fixes = Array.isArray(data && data.fixes ? data.fixes : []) ? data.fixes : [];
+    const variants = data && typeof data.variants === "object" ? data.variants : {};
+    const impactLabel = String((data && data.impact_label) || "").trim();
+    const impactScore = Number(data && data.impact_score ? data.impact_score : 0);
 
     resultScreenNode.classList.remove("hidden");
     riskTitleNode.textContent = biggestRisk.title;
@@ -2091,6 +2100,11 @@ function renderConversionResult(data, summary, findings) {
         riskWarningImpactNode.innerHTML = "→ It will likely be ignored<br />→ Domain reputation can drop over time<br />→ Future emails are more likely to land in spam";
     }
     fixPreviewTextNode.textContent = preview;
+    if (impactEstimateNode) {
+        impactEstimateNode.textContent = impactLabel
+            ? `Estimated improvement: ${impactLabel} (impact score ${impactScore})`
+            : `Estimated improvement impact score: ${impactScore}`;
+    }
 
     riskReasonsNode.innerHTML = "";
     biggestRisk.reasons.slice(0, 3).forEach((reason) => {
@@ -2098,6 +2112,37 @@ function renderConversionResult(data, summary, findings) {
         li.textContent = reason;
         riskReasonsNode.appendChild(li);
     });
+
+    if (fixRecommendationsNode) {
+        fixRecommendationsNode.innerHTML = "";
+        if (!fixes.length) {
+            const li = document.createElement("li");
+            li.textContent = "No mapped fixes yet. Run another scan with full email context.";
+            fixRecommendationsNode.appendChild(li);
+        } else {
+            fixes.slice(0, 4).forEach((item) => {
+                const li = document.createElement("li");
+                const problem = String(item && item.data && item.data.problem ? item.data.problem : item.type || "Issue");
+                const fixData = item && item.data && item.data.fix ? item.data.fix : {};
+                const firstRewrite = Array.isArray(fixData.with) && fixData.with.length ? String(fixData.with[0]) : "";
+                const firstAdd = Array.isArray(fixData.add) && fixData.add.length ? String(fixData.add[0]) : "";
+                const firstVariant = Array.isArray(fixData.rewrite) && fixData.rewrite.length ? String(fixData.rewrite[0]) : "";
+                const action = firstRewrite || firstAdd || firstVariant || String(fixData.example || fixData.instruction || "Apply the top fix and rescan.");
+                li.textContent = `${problem}: ${action}`;
+                fixRecommendationsNode.appendChild(li);
+            });
+        }
+    }
+
+    if (variantInsightNode) {
+        variantInsightNode.textContent = String(variants.insight || "").trim() || "Insight variant will appear after scan.";
+    }
+    if (variantLossNode) {
+        variantLossNode.textContent = String(variants.loss || "").trim() || "Loss variant will appear after scan.";
+    }
+    if (variantPatternNode) {
+        variantPatternNode.textContent = String(variants.pattern || "").trim() || "Pattern variant will appear after scan.";
+    }
 
     if (resultSection) {
         Array.from(resultSection.children).forEach((child) => {
@@ -2917,6 +2962,7 @@ async function runAnalyze() {
         analysis_mode: mode,
         has_domain: Boolean(domainText),
     });
+    trackEvent("clicked_scan", { analysis_mode: mode, auth: isAuthenticated ? "user" : "anon" });
 
     if (rawText.length < 20) {
         showError("Paste the full email draft before scanning.");
@@ -2927,6 +2973,7 @@ async function runAnalyze() {
     const loadingTicker = startRealtimeScanSteps();
 
     try {
+        trackEvent("started_scan", { analysis_mode: mode, auth: isAuthenticated ? "user" : "anon" });
         const payload = new FormData();
         payload.set("raw_email", rawText);
         if (domainText) {
@@ -2958,6 +3005,7 @@ async function runAnalyze() {
         }
 
         const data = await response.json();
+        trackEvent("scan_completed", { analysis_mode: mode, auth: isAuthenticated ? "user" : "anon" });
         if (loadingTicker && typeof loadingTicker.stop === "function") {
             loadingTicker.stop();
         }
@@ -3560,9 +3608,13 @@ async function ensureScanAccess() {
     await loadUserTokens();
 
     if (!isAuthenticated) {
+        if (Number(anonymousScansUsed || 0) < 1) {
+            return true;
+        }
         pendingAction = "analyze";
         stashPendingContext("analyze");
         showAuthModal();
+        trackEvent("blocked_auth", { reason: "first_value_scan_limit" });
         return false;
     }
 
@@ -3714,6 +3766,7 @@ function showUpgradeModal({ title, subtitle, plan } = {}) {
         showPaywall: true,
         hasMultipleCTAs: countPrimaryActions(paywall) > 1,
     });
+    trackEvent("paywall_shown", { source: "upgrade_modal", plan: String(plan || "growth") });
     paywall.scrollIntoView({ behavior: "smooth", block: "center" });
 }
 
@@ -3770,6 +3823,7 @@ function showPaywall() {
         showPaywall: true,
         hasMultipleCTAs: countPrimaryActions(paywall) > 1,
     });
+    trackEvent("paywall_shown", { source: "scan_flow" });
 }
 
 function unlockFullFix() {

@@ -142,14 +142,6 @@
           </details>
         </nav>
 
-        <div id="cookie-banner" class="cookie-banner hidden" role="dialog" aria-live="polite" aria-label="Cookie consent" aria-hidden="true">
-          <p>We use cookies to keep you signed in and improve your experience.</p>
-          <div class="cookie-banner__actions">
-            <button type="button" class="cookie-banner__button" data-cookie-accept>Accept</button>
-          </div>
-        </div>
-
-        <script src="/static/js/cookie-consent.js?v=20260410-cookie-consent-1"></script>
         <a id="profile-link" class="profile-link hidden" href="/profile" aria-label="Open profile">
           <img id="profile-avatar" class="profile-avatar" src="/static/branding/logo.png" alt="Profile avatar" />
           <span id="profile-initial" class="profile-initial">U</span>
@@ -417,6 +409,28 @@ I noticed your recent post and had one short idea to improve reply rates."></tex
               </div>
             </div>
 
+            <div class="result-card">
+              <h3>Fix recommendations</h3>
+              <ul id="fix-recommendations">
+                <li>Run analysis to load mapped fixes.</li>
+              </ul>
+            </div>
+
+            <div class="result-card impact-card">
+              <h3>Estimated impact</h3>
+              <p id="impact-estimate">Estimated improvement impact score: 0</p>
+            </div>
+
+            <div class="result-card">
+              <h3>Rewrite variants</h3>
+              <p class="micro">Insight version</p>
+              <pre id="variant-insight" class="rewrite-box">Insight variant will appear after scan.</pre>
+              <p class="micro" style="margin-top:8px;">Loss version</p>
+              <pre id="variant-loss" class="rewrite-box">Loss variant will appear after scan.</pre>
+              <p class="micro" style="margin-top:8px;">Pattern version</p>
+              <pre id="variant-pattern" class="rewrite-box">Pattern variant will appear after scan.</pre>
+            </div>
+
             <div class="result-cta">
               <p class="cta-text">Fix this email before you send it.</p>
               <button id="unlock-fix-btn" class="primary-btn" type="button">Unlock Full Fix</button>
@@ -639,6 +653,15 @@ I noticed your recent post and had one short idea to improve reply rates."></tex
             <div id="nextAction" class="next-action">Try another email →</div>
           </section>
         </section>
+
+        <div id="cookie-banner" class="cookie-banner hidden" role="dialog" aria-live="polite" aria-label="Cookie consent" aria-hidden="true">
+          <p>We use cookies to keep you signed in and improve your experience.</p>
+          <div class="cookie-banner__actions">
+            <button type="button" class="cookie-banner__button" data-cookie-accept>Accept</button>
+          </div>
+        </div>
+
+        <script src="/static/js/cookie-consent.js?v=20260410-cookie-consent-1"></script>
 
         <section class="card tool-pane tool-blue" id="campaign-debugger" data-tool-pane="campaign-debugger" style="margin-top: 12px;">
           <div class="tool-pane-head">

@@ -41,6 +41,7 @@ from correction_engine import (
     record_feedback,
     rewrite_email_text,
 )
+from fix_engine import build_fix_engine_payload
 from utils import build_email_from_raw, extract_domain_from_text
 
 app = FastAPI(title="InboxGuard")
@@ -61,6 +62,7 @@ SESSION_MAX_AGE_SECONDS = int(os.getenv("INBOXGUARD_SESSION_MAX_AGE_SECONDS", st
 SESSION_HTTPS_ONLY = os.getenv("INBOXGUARD_SESSION_HTTPS_ONLY", "0").strip().lower() in {"1", "true", "yes"}
 AUTH_DB_FILE = BASE_DIR / "data" / "auth.db"
 ANON_SCAN_LIMIT = int(os.getenv("INBOXGUARD_ANON_SCAN_LIMIT", "3"))
+FIRST_VALUE_FREE_SCAN_LIMIT = int(os.getenv("INBOXGUARD_FIRST_VALUE_FREE_SCAN_LIMIT", "1"))
 FREE_USER_SCAN_LIMIT = int(os.getenv("INBOXGUARD_FREE_USER_SCAN_LIMIT", "50"))
 FREE_SCANS_LIMIT = int(os.getenv("INBOXGUARD_FREE_SCANS_LIMIT", "2"))
 GOOGLE_OAUTH_ENABLED = os.getenv("INBOXGUARD_GOOGLE_OAUTH_ENABLED", "0").strip().lower() in {"1", "true", "yes"}
@@ -2635,7 +2637,7 @@ def _auth_status_payload(request: Request) -> dict:
         "name": user["name"] if user else "",
         "avatar_url": user["picture"] if user else "",
         "anonymous_scans_used": anon_used,
-        "anonymous_scans_limit": ANON_SCAN_LIMIT,
+        "anonymous_scans_limit": FIRST_VALUE_FREE_SCAN_LIMIT,
         "lead_email_captured": bool(user) or bool(lead_email),
         "lead_email": lead_email,
         "user_scans_used": 0,
@@ -4095,6 +4097,7 @@ def signup(request: Request, email: str = Form(""), password: str = Form("")):
     user_id = _create_user(clean_email, clean_password)
     _set_session_user(request, user_id, clean_email)
     track_event("access_request", {"target": "signup", "mode": "email_password"})
+    track_event("signed_up", {"mode": "email_password"})
     return {"ok": True, "authenticated": True, "email": clean_email}
 
 
@@ -4114,6 +4117,7 @@ def login(request: Request, email: str = Form(""), password: str = Form("")):
 
     _set_session_user(request, int(row["id"]), clean_email)
     track_event("access_request", {"target": "login", "mode": "email_password"})
+    track_event("signed_in", {"mode": "email_password"})
     return {"ok": True, "authenticated": True, "email": clean_email}
 
 
@@ -4126,6 +4130,7 @@ def auth_email_continue(request: Request, email: str = Form("")):
     user_id = _get_or_create_google_user(clean_email)
     _set_session_user(request, user_id, clean_email)
     track_event("access_request", {"target": "continue", "mode": "email_only"})
+    track_event("signed_up", {"mode": "email_only"})
     return {"ok": True, "authenticated": True, "email": clean_email}
 
 
@@ -4317,7 +4322,9 @@ def _run_analysis_request(
 
     # TOKEN SYSTEM: Check and deduct tokens
     token_cost = FEATURE_COSTS.get("scan_email", 1)
+    free_scan_credit = False
     
+    free_anon_scan = False
     if user:
         user_id = int(user["id"])
         current_tokens = _get_user_tokens(user_id)
@@ -4331,9 +4338,14 @@ def _run_analysis_request(
             if not _deduct_tokens(user_id, token_cost):
                 raise HTTPException(status_code=402, detail="NO_TOKENS")
     else:
-        raise HTTPException(status_code=401, detail="AUTH_REQUIRED")
+        anon_used = _get_anon_scans_used(request)
+        free_anon_scan = anon_used < FIRST_VALUE_FREE_SCAN_LIMIT
+        if not free_anon_scan:
+            track_event("blocked_auth", {"reason": "first_value_scan_limit", "anon_scans_used": anon_used})
+            raise HTTPException(status_code=401, detail="AUTH_REQUIRED")
 
     track_event("analyze_request", {"mode": mode, "auth": "user" if user else "anon"})
+    track_event("scan_started", {"mode": mode, "auth": "user" if user else "anon"})
 
     result = analyze_email(
         parsed_email,
@@ -4345,7 +4357,16 @@ def _run_analysis_request(
     )
     result["learning_profile"] = get_learning_profile()
     summary = result.get("summary", {}) if isinstance(result, dict) else {}
+    signals = result.get("signals", {}) if isinstance(result, dict) else {}
     findings = result.get("partial_findings") or summary.get("findings") or []
+
+    fix_engine = build_fix_engine_payload(parsed_email, summary if isinstance(summary, dict) else {}, signals if isinstance(signals, dict) else {})
+    result["issues"] = fix_engine["issues"]
+    result["fixes"] = fix_engine["fixes"]
+    result["variants"] = fix_engine["variants"]
+    result["impact_score"] = fix_engine["impact_score"]
+    result["impact_label"] = fix_engine["impact_label"]
+
     final_score = int(summary.get("final_score", summary.get("score", 0)) or 0)
     if user:
         stats = _score_outcome_stats(int(user["id"]))
@@ -4395,7 +4416,7 @@ def _run_analysis_request(
         result["usage"] = {
             "authenticated": False,
             "anonymous_scans_used": anon_scans,
-            "anonymous_scans_limit": ANON_SCAN_LIMIT,
+            "anonymous_scans_limit": FIRST_VALUE_FREE_SCAN_LIMIT,
         }
 
     top_finding = findings[0] if isinstance(findings, list) and findings else {}
@@ -4418,9 +4439,23 @@ def _run_analysis_request(
         else "Likely to reduce replies and trust if sent unchanged.",
     }
 
-    preview_subject = str(summary.get("subject") or "Quick question")
-    result["fix_preview"] = (
-        f"Noticed your team is sending high-volume outreach - quick question on {preview_subject.lower()}?"
+    variants = fix_engine.get("variants", {}) if isinstance(fix_engine, dict) else {}
+    insight_preview = str((variants.get("insight") if isinstance(variants, dict) else "") or "").strip()
+    if insight_preview:
+        preview_line = insight_preview.splitlines()[0].strip()
+        result["fix_preview"] = preview_line
+    else:
+        preview_subject = str(summary.get("subject") or "Quick question")
+        result["fix_preview"] = f"Noticed your team is sending high-volume outreach - quick question on {preview_subject.lower()}?"
+
+    track_event(
+        "scan_completed",
+        {
+            "mode": mode,
+            "auth": "user" if user else "anon",
+            "impact_score": int(result.get("impact_score", 0) or 0),
+            "risk_band": str(summary.get("risk_band", "")),
+        },
     )
     return result
 
