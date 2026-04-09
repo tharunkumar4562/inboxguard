@@ -235,6 +235,11 @@ const impactEstimateNode = document.getElementById("impact-estimate");
 const variantInsightNode = document.getElementById("variant-insight");
 const variantLossNode = document.getElementById("variant-loss");
 const variantPatternNode = document.getElementById("variant-pattern");
+const fixedEmailNowNode = document.getElementById("fixed-email-now");
+const copyFixedNowButton = document.getElementById("copy-fixed-now");
+const progressStep1Node = document.getElementById("progress-step-1");
+const progressStep2Node = document.getElementById("progress-step-2");
+const progressStep3Node = document.getElementById("progress-step-3");
 const unlockFixButton = document.getElementById("unlock-fix-btn");
 const shareResultButton = document.getElementById("share-result-btn");
 const resultCaptureEmailInput = document.getElementById("result-capture-email");
@@ -397,6 +402,91 @@ let currentUserPlan = "free";
 let userActionCount = 0;
 let appliedPromoState = null;
 
+window.appState = {
+    hasScanned: localStorage.getItem("ig_has_scanned") === "1",
+    isAuthenticated: false,
+    credits: 0,
+};
+
+let sidebarLockTooltipTimer = null;
+
+function showSidebarTooltip(message, target) {
+    let tooltip = document.getElementById("scan-lock-tooltip");
+    if (!tooltip) {
+        tooltip = document.createElement("div");
+        tooltip.id = "scan-lock-tooltip";
+        tooltip.className = "scan-lock-tooltip";
+        document.body.appendChild(tooltip);
+    }
+
+    tooltip.textContent = String(message || "Run your first scan to unlock this");
+    const rect = target && typeof target.getBoundingClientRect === "function"
+        ? target.getBoundingClientRect()
+        : null;
+    const top = rect ? Math.max(8, rect.top - 42) : 20;
+    const left = rect ? Math.max(8, rect.left + rect.width / 2 - 120) : 20;
+    tooltip.style.top = `${Math.round(top)}px`;
+    tooltip.style.left = `${Math.round(left)}px`;
+    tooltip.classList.add("show");
+
+    if (sidebarLockTooltipTimer) {
+        clearTimeout(sidebarLockTooltipTimer);
+    }
+    sidebarLockTooltipTimer = setTimeout(() => {
+        tooltip.classList.remove("show");
+    }, 1200);
+}
+
+function lockSidebar() {
+    document.querySelectorAll(".advanced-tool").forEach((el) => {
+        el.classList.add("locked");
+        el.setAttribute("aria-disabled", "true");
+        el.setAttribute("title", "Run your first scan to unlock this");
+    });
+}
+
+function unlockSidebar() {
+    document.querySelectorAll(".advanced-tool").forEach((el) => {
+        el.classList.remove("locked");
+        el.removeAttribute("aria-disabled");
+        el.removeAttribute("title");
+    });
+}
+
+function updateProgressIndicator() {
+    const done1 = Boolean(window.appState && window.appState.hasScanned);
+    const done2 = done1;
+    const done3 = done1 && (Boolean(window.appState && window.appState.isAuthenticated) || Number(window.appState && window.appState.credits ? window.appState.credits : 0) > 0);
+
+    if (progressStep1Node) {
+        progressStep1Node.classList.toggle("active", !done1);
+        progressStep1Node.classList.toggle("done", done1);
+        progressStep1Node.classList.remove("locked");
+        progressStep1Node.textContent = done1 ? "Step 1: Run your first scan ✅" : "Step 1: Run your first scan";
+    }
+    if (progressStep2Node) {
+        progressStep2Node.classList.toggle("active", done1 && !done2);
+        progressStep2Node.classList.toggle("done", done2);
+        progressStep2Node.classList.toggle("locked", !done1);
+        progressStep2Node.textContent = done2 ? "Step 2: Optimize your email ✅" : "Step 2: Optimize your email";
+    }
+    if (progressStep3Node) {
+        progressStep3Node.classList.toggle("active", done2 && !done3);
+        progressStep3Node.classList.toggle("done", done3);
+        progressStep3Node.classList.toggle("locked", !done2);
+        progressStep3Node.textContent = done3 ? "Step 3: Scale campaigns ✅" : "Step 3: Scale campaigns";
+    }
+}
+
+function applyProgressiveExposure() {
+    if (window.appState && window.appState.hasScanned) {
+        unlockSidebar();
+    } else {
+        lockSidebar();
+    }
+    updateProgressIndicator();
+}
+
 function syncFlowUserState() {
     if (!window.InboxGuardFlow || typeof window.InboxGuardFlow.updateFlowUser !== "function") {
         return;
@@ -409,6 +499,10 @@ function syncFlowUserState() {
             }
             : null,
     );
+
+    window.appState.isAuthenticated = Boolean(isAuthenticated);
+    window.appState.credits = Number(userState.tokens || 0);
+    applyProgressiveExposure();
 }
 
 const PLAN_CHECKOUT_AMOUNTS_INR = {
@@ -1135,6 +1229,7 @@ async function refreshAuthStatus() {
         if (leadCaptureEmail) {
             localStorage.setItem("ig_lead_capture_email", leadCaptureEmail);
         }
+        window.appState.isAuthenticated = Boolean(isAuthenticated);
         updateProfileNav();
         syncFlowUserState();
 
@@ -1441,6 +1536,15 @@ function showHome() {
 
 function openTool(tool) {
     const key = String(tool || "").toLowerCase();
+    const advancedTarget = document.querySelector(`.advanced-tool[data-tool="${key}"]`);
+    if (advancedTarget && !(window.appState && window.appState.hasScanned)) {
+        showSidebarTooltip("Run your first scan to unlock this", advancedTarget);
+        showError("Run at least one scan first before opening advanced tools.");
+        trackEvent("blocked_before_first_value", { tool: key });
+        activateTab("threat-scan");
+        return;
+    }
+
     const requiredByTool = {
         "campaign-debugger": "starter",
         seed: "monthly",
@@ -1551,6 +1655,8 @@ function setIdleState() {
         submitButton.disabled = false;
         submitButton.textContent = defaultSubmitLabel;
     }
+    window.appState.hasScanned = localStorage.getItem("ig_has_scanned") === "1";
+    applyProgressiveExposure();
 }
 
 function setLoadingState() {
@@ -1594,6 +1700,9 @@ function setResultState() {
     if (progressBarNode) {
         progressBarNode.style.width = "100%";
     }
+    window.appState.hasScanned = true;
+    localStorage.setItem("ig_has_scanned", "1");
+    applyProgressiveExposure();
     updateUxState({
         screen: "result",
         valueShown: true,
@@ -2091,6 +2200,7 @@ function renderConversionResult(data, summary, findings) {
     const variants = data && typeof data.variants === "object" ? data.variants : {};
     const impactLabel = String((data && data.impact_label) || "").trim();
     const impactScore = Number(data && data.impact_score ? data.impact_score : 0);
+    const instantFixedEmail = String((variants && variants.insight) || preview || "").trim();
 
     resultScreenNode.classList.remove("hidden");
     riskTitleNode.textContent = biggestRisk.title;
@@ -2142,6 +2252,14 @@ function renderConversionResult(data, summary, findings) {
     }
     if (variantPatternNode) {
         variantPatternNode.textContent = String(variants.pattern || "").trim() || "Pattern variant will appear after scan.";
+    }
+
+    if (fixedEmailNowNode) {
+        fixedEmailNowNode.textContent = instantFixedEmail || "Run your first scan to generate a fixed version.";
+    }
+
+    if (unlockFixButton) {
+        unlockFixButton.textContent = "Unlock More Variants";
     }
 
     if (resultSection) {
@@ -3018,6 +3136,8 @@ async function runAnalyze() {
         latestSummary = summary;
         latestFindings = findings;
         localStorage.setItem("ig_has_scanned", "1");
+        window.appState.hasScanned = true;
+        applyProgressiveExposure();
         if (window.InboxGuardFlow && typeof window.InboxGuardFlow.markFlowScanCompleted === "function") {
             window.InboxGuardFlow.markFlowScanCompleted();
         }
@@ -3396,6 +3516,8 @@ async function runAnalyzeAsync() {
             latestFindings = findings;
             hasScanResult = true;
             localStorage.setItem("ig_has_scanned", "1");
+            window.appState.hasScanned = true;
+            applyProgressiveExposure();
             if (window.InboxGuardFlow && typeof window.InboxGuardFlow.markFlowScanCompleted === "function") {
                 window.InboxGuardFlow.markFlowScanCompleted();
             }
@@ -3550,6 +3672,7 @@ async function loadUserTokens() {
                 tokenEmptyStateNode.classList.add("hidden");
             }
             userState.tokens = 0;
+            window.appState.credits = 0;
             syncFlowUserState();
             return;
         }
@@ -3584,6 +3707,7 @@ async function loadUserTokens() {
         }
 
         updateTokenMessaging(tokens);
+        window.appState.credits = tokens;
         refreshLockedFeatures();
         refreshPricingContext();
         syncFlowUserState();
@@ -4222,6 +4346,37 @@ function wireUiEvents() {
         });
     }
 
+    if (copyFixedNowButton) {
+        copyFixedNowButton.addEventListener("click", () => {
+            const text = String(fixedEmailNowNode && fixedEmailNowNode.textContent ? fixedEmailNowNode.textContent : "").trim();
+            if (!text) {
+                showError("Run a scan first to generate a fixed email.");
+                return;
+            }
+            navigator.clipboard.writeText(text).then(() => {
+                showError("Fixed email copied.");
+            }).catch(() => {
+                showError("Copy blocked. Select and copy the text manually.");
+            });
+        });
+    }
+
+    document.querySelectorAll(".advanced-tool").forEach((toolNode) => {
+        toolNode.addEventListener("click", (event) => {
+            if (window.appState && window.appState.hasScanned) {
+                return;
+            }
+            event.preventDefault();
+            event.stopPropagation();
+            showSidebarTooltip("Run your first scan to unlock this", toolNode);
+            showError("Run at least one scan first before opening advanced tools.");
+            trackEvent("blocked_before_first_value", {
+                tool: String(toolNode.getAttribute("data-tool") || "advanced"),
+                source: "sidebar",
+            });
+        });
+    });
+
     if (fixNowButton) {
         fixNowButton.addEventListener("click", () => {
             const payload = new FormData();
@@ -4414,6 +4569,7 @@ setupParallax();
 
 setIdleState();
 openTool("scan");
+applyProgressiveExposure();
 refreshAuthStatus().then(() => {
     loadUser().catch(() => null);
     refreshHomeLiveStats().catch(() => null);
@@ -4431,6 +4587,7 @@ refreshAuthStatus().then(() => {
     refreshPricingContext();
     openPendingScanFromStorage();
     openEntryFromQueryIfNeeded();
+    applyProgressiveExposure();
 });
 
 document.addEventListener("DOMContentLoaded", () => {
