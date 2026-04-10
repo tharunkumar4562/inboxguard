@@ -591,6 +591,45 @@ html:not([data-theme="dark"]) .border-slate-700\/80 {
   border-color: #e5e7eb !important;
 }
 
+/* Critical light-mode readability fixes for decision and post-fix sections. */
+html[data-theme="light"] #status-primary-issue,
+html[data-theme="light"] #status-confidence,
+html[data-theme="light"] #biggest-risk-title,
+html:not([data-theme="dark"]) #status-primary-issue,
+html:not([data-theme="dark"]) #status-confidence,
+html:not([data-theme="dark"]) #biggest-risk-title {
+  color: #64748b !important;
+}
+
+html[data-theme="light"] #status-risk-card.warning-bg,
+html:not([data-theme="dark"]) #status-risk-card.warning-bg {
+  background: #fff7ed !important;
+  border-color: #fdba74 !important;
+}
+
+html[data-theme="light"] #decision-block .confidence-meter,
+html:not([data-theme="dark"]) #decision-block .confidence-meter {
+  background: #e5e7eb !important;
+  border-color: #d1d5db !important;
+}
+
+html[data-theme="light"] #decision-block .risk-strip-neutral,
+html:not([data-theme="dark"]) #decision-block .risk-strip-neutral {
+  background: #f1f5f9 !important;
+  border-color: #cbd5e1 !important;
+}
+
+html[data-theme="light"] #fix-output .post-fix-gate,
+html:not([data-theme="dark"]) #fix-output .post-fix-gate {
+  background: #eff6ff !important;
+  border-color: #93c5fd !important;
+}
+
+html[data-theme="light"] #fix-output .post-fix-title,
+html:not([data-theme="dark"]) #fix-output .post-fix-title {
+  color: #1e3a8a !important;
+}
+
 .flow-progress {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -681,6 +720,44 @@ html[data-theme="light"] .scan-lock-tooltip {
   border-color: rgba(37, 99, 235, 0.34);
 }
 
+html[data-theme="light"] #status-primary-issue,
+html[data-theme="light"] #status-confidence,
+html[data-theme="light"] #biggest-risk-title,
+html:not([data-theme="dark"]) #status-primary-issue,
+html:not([data-theme="dark"]) #status-confidence,
+html:not([data-theme="dark"]) #biggest-risk-title {
+  color: #64748b !important;
+}
+
+html[data-theme="light"] #status-risk-card.warning-bg,
+html:not([data-theme="dark"]) #status-risk-card.warning-bg {
+  background: #fff7ed !important;
+  border-color: #fdba74 !important;
+}
+
+html[data-theme="light"] #decision-block .confidence-meter,
+html:not([data-theme="dark"]) #decision-block .confidence-meter {
+  background: #e5e7eb !important;
+  border-color: #d1d5db !important;
+}
+
+html[data-theme="light"] #decision-block .risk-strip-neutral,
+html:not([data-theme="dark"]) #decision-block .risk-strip-neutral {
+  background: #f1f5f9 !important;
+  border-color: #cbd5e1 !important;
+}
+
+html[data-theme="light"] #fix-output .post-fix-gate,
+html:not([data-theme="dark"]) #fix-output .post-fix-gate {
+  background: #eff6ff !important;
+  border-color: #93c5fd !important;
+}
+
+html[data-theme="light"] #fix-output .post-fix-title,
+html:not([data-theme="dark"]) #fix-output .post-fix-title {
+  color: #1e3a8a !important;
+}
+
 /* Ensure home pricing card truly adapts to theme mode. */
 html:not([data-theme="dark"]) #home-pricing-cta {
   background: #ffffff;
@@ -722,4 +799,139 @@ html.dark #home-pricing-cta .plan-card li,
 html.dark #home-pricing-cta .price .strike,
 html.dark #home-pricing-cta .price span {
   color: #cbd5e1;
+}
+
+/* Decision/rewrite blocks: ensure full theme adaptability and contrast. */
+html:not([data-theme="dark"]) .status-card,
+html:not([data-theme="dark"]) .status-card-primary,
+html:not([data-theme="dark"]) .rewrite-proof,
+html:not([data-theme="dark"]) .post-fix-gate,
+html:not([data-theme="dark"]) .risk-strip {
+  background: #ffffff;
+  border-color: #d1d5db;
+}
+
+html:not([data-theme="dark"]) .status-card-primary.warning-bg {
+  background: #fff7ed;
+  border-color: #fdba74;
+}
+
+html:not([data-theme="dark"]) .status-card-primary.critical-bg {
+  background: #fef2f2;
+  border-color: #fca5a5;
+}
+
+html:not([data-theme="dark"]) .status-card-primary.safe-bg {
+  background: #ecfdf5;
+  border-color: #6ee7b7;
+}
+
+html:not([data-theme="dark"]) .status-value.pending {
+  color: #64748b;
+}
+
+html:not([data-theme="dark"]) .status-value.warning {
+  color: #b45309;
+}
+
+html:not([data-theme="dark"]) .status-value.critical {
+  color: #b91c1c;
+}
+
+html:not([data-theme="dark"]) .status-value.safe {
+  color: #166534;
+}
+
+html:not([data-theme="dark"]) .risk-strip-neutral {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+html:not([data-theme="dark"]) .risk-strip-neutral .risk-strip-title {
+  color: #1f2937;
+}
+
+html:not([data-theme="dark"]) .risk-strip-body,
+html:not([data-theme="dark"]) .confidence-meter-detail,
+html:not([data-theme="dark"]) .decision-cta-subtext,
+html:not([data-theme="dark"]) .trust-hook,
+html:not([data-theme="dark"]) .post-fix-gate .compact-list li {
+  color: #475569;
+}
+
+html:not([data-theme="dark"]) .decision-scope {
+  color: #1d4ed8;
+}
+
+html:not([data-theme="dark"]) .confidence-meter {
+  background: #e5e7eb;
+  border-color: #d1d5db;
+}
+
+html:not([data-theme="dark"]) .scale-warning {
+  background: #fff7ed;
+  border-color: #fdba74;
+}
+
+html:not([data-theme="dark"]) .scale-warning .rewrite-proof-title {
+  color: #92400e;
+}
+
+html:not([data-theme="dark"]) .post-fix-gate {
+  background: #eff6ff;
+  border-color: #93c5fd;
+}
+
+html:not([data-theme="dark"]) .post-fix-title {
+  color: #1e3a8a;
+}
+
+html[data-theme="dark"] .post-fix-gate,
+html.dark .post-fix-gate {
+  background: rgba(15, 23, 42, 0.72);
+  border-color: rgba(59, 130, 246, 0.52);
+}
+
+html[data-theme="dark"] .post-fix-title,
+html.dark .post-fix-title {
+  color: #dbeafe;
+}
+
+/* High-priority light-mode fixes for decision blocks that still inherit dark defaults. */
+html[data-theme="light"] #status-primary-issue,
+html[data-theme="light"] #status-confidence,
+html[data-theme="light"] #biggest-risk-title,
+html:not([data-theme="dark"]) #status-primary-issue,
+html:not([data-theme="dark"]) #status-confidence,
+html:not([data-theme="dark"]) #biggest-risk-title {
+  color: #64748b !important;
+}
+
+html[data-theme="light"] #status-risk-card.warning-bg,
+html:not([data-theme="dark"]) #status-risk-card.warning-bg {
+  background: #fff7ed !important;
+  border-color: #fdba74 !important;
+}
+
+html[data-theme="light"] #decision-block .confidence-meter,
+html:not([data-theme="dark"]) #decision-block .confidence-meter {
+  background: #e5e7eb !important;
+  border-color: #d1d5db !important;
+}
+
+html[data-theme="light"] #decision-block .risk-strip-neutral,
+html:not([data-theme="dark"]) #decision-block .risk-strip-neutral {
+  background: #f1f5f9 !important;
+  border-color: #cbd5e1 !important;
+}
+
+html[data-theme="light"] #fix-output .post-fix-gate,
+html:not([data-theme="dark"]) #fix-output .post-fix-gate {
+  background: #eff6ff !important;
+  border-color: #93c5fd !important;
+}
+
+html[data-theme="light"] #fix-output .post-fix-title,
+html:not([data-theme="dark"]) #fix-output .post-fix-title {
+  color: #1e3a8a !important;
 }

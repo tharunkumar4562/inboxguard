@@ -57,6 +57,56 @@
     <link rel="preload" href="/static/css/styles.min.css?v=20260406-seo-fix-1" as="style" />
     <link rel="stylesheet" href="/static/css/styles.min.css?v=20260406-seo-fix-1" />
     <link rel="stylesheet" href="/static/theme-overrides.css?v=20260408-logo-contrast-1" />
+    <style>
+      html[data-theme="light"] #status-primary-issue,
+      html[data-theme="light"] #status-confidence,
+      html[data-theme="light"] #biggest-risk-title,
+      html:not([data-theme="dark"]) #status-primary-issue,
+      html:not([data-theme="dark"]) #status-confidence,
+      html:not([data-theme="dark"]) #biggest-risk-title {
+        color: #64748b !important;
+      }
+
+      html[data-theme="light"] #status-risk-card.warning-bg,
+      html:not([data-theme="dark"]) #status-risk-card.warning-bg {
+        background: #fff7ed !important;
+        border-color: #fdba74 !important;
+      }
+
+      html[data-theme="light"] #decision-block .confidence-meter,
+      html:not([data-theme="dark"]) #decision-block .confidence-meter {
+        background: #e5e7eb !important;
+        border-color: #d1d5db !important;
+      }
+
+      html[data-theme="light"] #decision-block .risk-strip-neutral,
+      html:not([data-theme="dark"]) #decision-block .risk-strip-neutral {
+        background: #f1f5f9 !important;
+        border-color: #cbd5e1 !important;
+      }
+
+      html[data-theme="light"] #fix-output .post-fix-gate,
+      html:not([data-theme="dark"]) #fix-output .post-fix-gate {
+        background: #eff6ff !important;
+        border-color: #93c5fd !important;
+      }
+
+      html[data-theme="light"] #fix-output .post-fix-title,
+      html:not([data-theme="dark"]) #fix-output .post-fix-title {
+        color: #1e3a8a !important;
+      }
+
+      html[data-theme="dark"] #fix-output .post-fix-gate,
+      html.dark #fix-output .post-fix-gate {
+        background: rgba(15, 23, 42, 0.72) !important;
+        border-color: rgba(59, 130, 246, 0.52) !important;
+      }
+
+      html[data-theme="dark"] #fix-output .post-fix-title,
+      html.dark #fix-output .post-fix-title {
+        color: #dbeafe !important;
+      }
+    </style>
     <link rel="stylesheet" href="/static/css/cookie-consent.css?v=20260410-cookie-consent-1" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
