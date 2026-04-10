@@ -1146,6 +1146,9 @@ function showAuthModal() {
     }
 
     hideLeadCaptureModal();
+    if (typeof renderBlockedScanResult === "function") {
+        renderBlockedScanResult("Sign in required", "Your first scan is blocked until you sign in or continue your scan access.");
+    }
 
     const msgNode = authModal.querySelector(".micro");
     if (msgNode) {
@@ -2350,6 +2353,42 @@ function renderConversionResult(data) {
     });
 }
 
+function renderBlockedScanResult(title, message) {
+    const rawText = rawEmailInput ? String(rawEmailInput.value || "").trim() : "";
+    if (resultSection) {
+        resultSection.classList.remove("hidden");
+    }
+    if (resultScreenNode) {
+        resultScreenNode.classList.remove("hidden");
+    }
+    if (decisionTitleNode) {
+        decisionTitleNode.textContent = title || "Scan blocked";
+    }
+    if (primaryIssueNode) {
+        primaryIssueNode.textContent = message || "Sign in to continue scanning.";
+    }
+    if (step2FixBlockNode) {
+        step2FixBlockNode.classList.remove("hidden");
+    }
+    if (step3BlockNode) {
+        step3BlockNode.classList.remove("hidden");
+    }
+    if (beforeEmailNode) {
+        beforeEmailNode.textContent = rawText || "Paste your email and scan again.";
+    }
+    if (afterEmailNode) {
+        afterEmailNode.textContent = "Unlock access to generate the fixed version.";
+    }
+    if (diffSummaryNode) {
+        diffSummaryNode.innerHTML = "";
+        const line = document.createElement("div");
+        line.className = "diff-line";
+        line.textContent = message || "Result is hidden until access is restored.";
+        diffSummaryNode.appendChild(line);
+    }
+    resultSection?.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
 function renderSubjectIntel(data) {
     if (!subjectTopPickNode || !subjectTopReasonNode || !subjectWarningListNode || !subjectTopListNode || !subjectAllListNode) {
         return;
@@ -3183,14 +3222,17 @@ async function runAnalyze() {
             const err = await response.json().catch(() => ({}));
             const code = String(err.detail || "");
             if (code === "AUTH_REQUIRED") {
+                renderBlockedScanResult("Sign in required", "Your first scan is blocked until you sign in or continue your scan access.");
                 showAuthModal();
                 throw new Error("Sign in to continue scanning.");
             }
             if (code === "SUBSCRIPTION_REQUIRED") {
+                renderBlockedScanResult("Upgrade required", "This scan is locked until you upgrade your plan.");
                 showPaywall();
                 throw new Error("Active subscription required. Upgrade to continue scanning.");
             }
             if (code === "FREE_PLAN_LIMIT_REACHED" || code === "NO_TOKENS" || code === "INSUFFICIENT_TOKENS") {
+                renderBlockedScanResult("Scan limit reached", "You used your available scans. Unlock more scans to continue.");
                 openPricingModal();
                 throw new Error("You reached your monthly free plan scan limit. Upgrade is required for more scans.");
             }
@@ -3272,7 +3314,29 @@ async function runAnalyze() {
         if (loadingTicker && typeof loadingTicker.stop === "function") {
             loadingTicker.stop();
         }
-        showError(error && error.message ? error.message : "Scan failed.");
+        const errorMessage = String(error && error.message ? error.message : "Scan failed.");
+        showError(errorMessage);
+        const blockedScan = /continue scanning|subscription required|scan limit/i.test(errorMessage);
+        if (blockedScan) {
+            if (loadingPanel) {
+                loadingPanel.classList.add("hidden");
+            }
+            if (resultSection) {
+                resultSection.classList.remove("hidden");
+            }
+            if (resultScreenNode) {
+                resultScreenNode.classList.remove("hidden");
+            }
+            if (submitButton) {
+                submitButton.disabled = false;
+                submitButton.textContent = defaultSubmitLabel;
+            }
+            if (resultSection) {
+                resultSection.classList.remove("hidden");
+            }
+            resultSection?.scrollIntoView({ behavior: "smooth", block: "start" });
+            return;
+        }
         setIdleState();
     }
 }
