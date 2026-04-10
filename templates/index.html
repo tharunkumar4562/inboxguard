@@ -422,7 +422,33 @@ I noticed your recent post and had one short idea to improve reply rates."></tex
 
         <section id="result" class="scan-only hidden">
           <div id="result-screen" class="hidden">
-            <section id="decision-section" class="card">
+            <!-- Status Overview Block -->
+            <div id="status-overview" class="status-overview">
+              <div id="status-badge" class="status-badge">SCAN REQUIRED</div>
+              <h2 id="status-headline" class="status-headline">Analyze before sending</h2>
+              <p id="status-sub" class="status-sub">Run analysis to reveal placement risk</p>
+            </div>
+
+            <!-- Decision Grid -->
+            <div id="decision-grid" class="decision-grid">
+              <div class="card warning" id="status-risk-card">
+                <span>RISK STATUS</span>
+                <h3 id="status-risk">Multiple Issues</h3>
+              </div>
+
+              <div class="card">
+                <span>PRIMARY ISSUE</span>
+                <h3 id="primary-issue">Pending</h3>
+              </div>
+
+              <div class="card">
+                <span>CONFIDENCE</span>
+                <h3 id="status-confidence">Pending</h3>
+              </div>
+            </div>
+
+            <!-- Old decision block for backwards compat -->
+            <section id="decision-section" class="card hidden">
               <div class="alert-box">
                 <strong>SCAN REQUIRED</strong>
                 <p>Run analysis now to reveal placement risk before sending.</p>
@@ -430,7 +456,7 @@ I noticed your recent post and had one short idea to improve reply rates."></tex
 
               <div class="decision-box">
                 <h3>Decision: <span id="decision-title">Analyze before sending</span></h3>
-                <p id="primary-issue">Waiting for scan</p>
+                <p id="primary-issue-old">Waiting for scan</p>
               </div>
             </section>
 

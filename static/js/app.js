@@ -2273,6 +2273,59 @@ function renderConversionResult(data) {
         resultScreenNode.classList.remove("hidden");
     }
 
+    // Populate Status Overview
+    const statusOverview = document.getElementById("status-overview");
+    const statusBadge = document.getElementById("status-badge");
+    const statusHeadline = document.getElementById("status-headline");
+    const statusSub = document.getElementById("status-sub");
+
+    if (statusOverview) {
+        statusOverview.classList.remove("hidden");
+    }
+
+    if (statusBadge && statusHeadline && statusSub) {
+        if (issues.length === 0) {
+            statusBadge.textContent = "SAFE";
+            statusBadge.className = "status-badge success";
+            statusHeadline.textContent = "Safe to send";
+            statusSub.textContent = "No major issues detected";
+        } else {
+            statusBadge.textContent = "ACTION REQUIRED";
+            statusBadge.className = "status-badge warning";
+            statusHeadline.textContent = "Issues detected";
+            statusSub.textContent = "Review and fix before sending";
+        }
+    }
+
+    // Populate Decision Grid
+    const statusRiskCard = document.getElementById("status-risk-card");
+    const statusRisk = document.getElementById("status-risk");
+    const primaryIssueCard = document.getElementById("primary-issue");
+    const statusConfidence = document.getElementById("status-confidence");
+
+    if (statusRiskCard) {
+        if (issues.length === 0) {
+            statusRiskCard.classList.remove("warning");
+            statusRiskCard.querySelector("span").textContent = "RISK LEVEL";
+        } else {
+            statusRiskCard.classList.add("warning");
+            statusRiskCard.querySelector("span").textContent = "RISK STATUS";
+        }
+    }
+
+    if (statusRisk) {
+        statusRisk.textContent = issues.length === 0 ? "No issues" : `${issues.length} issue${issues.length !== 1 ? "s" : ""}`;
+    }
+
+    if (primaryIssueCard) {
+        primaryIssueCard.textContent = String(issues[0] && (issues[0].message || issues[0].type || issues[0].title) || "None");
+    }
+
+    if (statusConfidence) {
+        statusConfidence.textContent = issues.length === 0 ? "High" : "Review needed";
+    }
+
+    // Legacy elements for backwards compatibility
     if (decisionTitleNode && primaryIssueNode) {
         if (issues.length === 0) {
             decisionTitleNode.textContent = "Safe to send";
@@ -2347,10 +2400,11 @@ function renderConversionResult(data) {
     window.appState.hasOptimized = true;
     syncProgressState();
     updateSteps();
+}
 
-    document.getElementById("step2-fix-block")?.scrollIntoView({
-        behavior: "smooth",
-    });
+document.getElementById("step2-fix-block")?.scrollIntoView({
+    behavior: "smooth",
+});
 }
 
 function renderBlockedScanResult(title, message) {

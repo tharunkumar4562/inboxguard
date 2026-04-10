@@ -896,6 +896,163 @@ html.dark #home-pricing-cta .price span {
   color: #cbd5e1;
 }
 
+/* ===== NEW UI HIERARCHY ===== */
+
+/* Status Overview Block */
+.status-overview {
+  background: linear-gradient(135deg, #0b1220, #0f172a);
+  color: white;
+  padding: 32px;
+  border-radius: 18px;
+  margin-bottom: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+html[data-theme="light"] .status-overview,
+html:not([data-theme="dark"]) .status-overview {
+  background: linear-gradient(135deg, #1e3a8a, #1e40af);
+  color: white;
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.status-badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: rgba(239, 68, 68, 0.2);
+  color: #fca5a5;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+html[data-theme="light"] .status-badge,
+html:not([data-theme="dark"]) .status-badge {
+  background: rgba(220, 38, 38, 0.25);
+  color: #fecaca;
+}
+
+.status-headline {
+  font-size: 30px;
+  font-weight: 800;
+  margin: 10px 0 0;
+  line-height: 1.2;
+}
+
+.status-sub {
+  color: #94a3b8;
+  margin-top: 8px;
+  font-size: 15px;
+  line-height: 1.4;
+}
+
+html[data-theme="light"] .status-sub,
+html:not([data-theme="dark"]) .status-sub {
+  color: #dbeafe;
+}
+
+/* Decision Grid */
+.decision-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+  margin: 20px 0 30px;
+}
+
+@media (max-width: 768px) {
+  .decision-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.card {
+  background: white;
+  padding: 18px;
+  border-radius: 14px;
+  border: 1px solid #e5e7eb;
+}
+
+html.dark .card,
+html[data-theme="dark"] .card {
+  background: var(--card);
+  border-color: var(--border);
+}
+
+.card span {
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  display: block;
+}
+
+html.dark .card span,
+html[data-theme="dark"] .card span {
+  color: #94a3b8;
+}
+
+.card h3 {
+  margin: 6px 0 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+html.dark .card h3,
+html[data-theme="dark"] .card h3 {
+  color: var(--text);
+}
+
+.card.warning {
+  border: 1px solid #f59e0b;
+  background: #fff7ed;
+}
+
+html.dark .card.warning,
+html[data-theme="dark"] .card.warning {
+  background: rgba(245, 158, 11, 0.1);
+  border-color: rgba(245, 158, 11, 0.4);
+}
+
+.card.warning h3 {
+  color: #d97706;
+}
+
+html.dark .card.warning h3,
+html[data-theme="dark"] .card.warning h3 {
+  color: #fbbf24;
+}
+
+/* Block Container */
+.block {
+  background: white;
+  padding: 20px;
+  border-radius: 14px;
+  border: 1px solid #e5e7eb;
+  margin-bottom: 16px;
+}
+
+html.dark .block,
+html[data-theme="dark"] .block {
+  background: var(--card);
+  border-color: var(--border);
+}
+
+/* Step Spacing */
+#step1 {
+  margin-bottom: 40px;
+}
+
+#step2 {
+  margin-bottom: 40px;
+}
+
+#step3 {
+  margin-bottom: 40px;
+}
+
 /* Decision/rewrite blocks: ensure full theme adaptability and contrast. */
 html:not([data-theme="dark"]) .status-card,
 html:not([data-theme="dark"]) .status-card-primary,
