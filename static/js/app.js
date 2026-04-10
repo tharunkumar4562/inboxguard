@@ -228,6 +228,8 @@ const decisionTitleNode = document.getElementById("decision-title");
 const primaryIssueNode = document.getElementById("primary-issue");
 const step2FixBlockNode = document.getElementById("step2-fix-block");
 const step3BlockNode = document.getElementById("step3-block");
+const biggestRiskTextNode = document.getElementById("biggest-risk-text");
+const deliverabilitySummaryNode = document.getElementById("deliverability-summary");
 const beforeEmailNode = document.getElementById("before-email");
 const afterEmailNode = document.getElementById("after-email");
 const diffSummaryNode = document.getElementById("diff-summary");
@@ -240,6 +242,7 @@ const riskSummaryNode = document.getElementById("risk-summary");
 const riskReasonsNode = document.getElementById("risk-reasons");
 const riskImpactNode = document.getElementById("risk-impact");
 const riskWarningImpactNode = document.getElementById("risk-warning-impact");
+const fixTitleNode = document.getElementById("fix-title");
 const fixPreviewTextNode = document.getElementById("fix-preview-text");
 const fixRecommendationsNode = document.getElementById("fix-recommendations");
 const impactEstimateNode = document.getElementById("impact-estimate");
@@ -2293,13 +2296,13 @@ function renderConversionResult(data) {
         if (issues.length === 0) {
             statusBadge.textContent = "SAFE";
             statusBadge.className = "status-badge success";
-            statusHeadline.textContent = "Safe to send";
-            statusSub.textContent = "No major issues detected";
+            statusHeadline.textContent = "Your email looks safe to send";
+            statusSub.textContent = "No major issues detected. Keep the message focused and personal.";
         } else {
             statusBadge.textContent = "ACTION REQUIRED";
             statusBadge.className = "status-badge warning";
-            statusHeadline.textContent = "Issues detected";
-            statusSub.textContent = "Review and fix before sending";
+            statusHeadline.textContent = "Your email may hurt reply rates";
+            statusSub.textContent = "We detected issues affecting deliverability and engagement.";
         }
     }
 
@@ -2320,15 +2323,60 @@ function renderConversionResult(data) {
     }
 
     if (statusRisk) {
-        statusRisk.textContent = issues.length === 0 ? "No issues" : `${issues.length} issue${issues.length !== 1 ? "s" : ""}`;
+        statusRisk.textContent = issues.length === 0 ? "Low Risk" : "High Risk";
     }
 
     if (primaryIssueCard) {
-        primaryIssueCard.textContent = String(issues[0] && (issues[0].message || issues[0].type || issues[0].title) || "None");
+        primaryIssueCard.textContent = issues.length === 0
+            ? "No critical issue"
+            : String(issues[0] && (issues[0].message || issues[0].type || issues[0].title) || "Spam phrases detected");
     }
 
     if (statusConfidence) {
-        statusConfidence.textContent = issues.length === 0 ? "High" : "Review needed";
+        statusConfidence.textContent = issues.length === 0 ? "High" : "Medium";
+    }
+
+    const topIssueText = String(issues[0] && (issues[0].message || issues[0].type || issues[0].title) || "No major issue detected");
+    if (biggestRiskTextNode) {
+        biggestRiskTextNode.innerHTML = issues.length === 0
+            ? "Your email has <strong>no major issues</strong> and is ready for a send test."
+            : `Your email has <strong>${topIssueText.toLowerCase()}</strong>`;
+    }
+
+    if (deliverabilitySummaryNode) {
+        if (issues.length === 0) {
+            deliverabilitySummaryNode.textContent = "Clean content signal profile with no major spam triggers.";
+        } else {
+            const summaryBits = issues.slice(0, 2).map((issue) => String(issue && (issue.message || issue.type || issue.title) || "risk signal")).filter(Boolean);
+            deliverabilitySummaryNode.textContent = summaryBits.length ? summaryBits.join(", ") : "Overly salesy language, spam triggers used";
+        }
+    }
+
+    if (fixTitleNode) {
+        fixTitleNode.textContent = issues.length === 0 ? "This is safer, but not guaranteed" : "This is safer, but not guaranteed";
+    }
+
+    if (topFixesListNode) {
+        topFixesListNode.innerHTML = "";
+        const topFixes = Array.isArray(data && data.top_fixes) ? data.top_fixes : [];
+        if (!topFixes.length && issues.length === 0) {
+            const item = document.createElement("li");
+            item.textContent = "Keep the message short and personal.";
+            topFixesListNode.appendChild(item);
+        } else if (!topFixes.length) {
+            const itemA = document.createElement("li");
+            itemA.textContent = "Remove spam phrases";
+            topFixesListNode.appendChild(itemA);
+            const itemB = document.createElement("li");
+            itemB.textContent = "Personalize messaging";
+            topFixesListNode.appendChild(itemB);
+        } else {
+            topFixes.slice(0, 3).forEach((fix, index) => {
+                const item = document.createElement("li");
+                item.textContent = `${index + 1}. ${String(fix && (fix.title || fix.type || fix.action) || "Review this issue")}`;
+                topFixesListNode.appendChild(item);
+            });
+        }
     }
 
     // Legacy elements for backwards compatibility

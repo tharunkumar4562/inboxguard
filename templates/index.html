@@ -421,34 +421,84 @@ I noticed your recent post and had one short idea to improve reply rates."></tex
         </div>
 
         <section id="result" class="scan-only hidden">
-          <div id="result-screen" class="hidden">
-            <!-- Status Overview Block -->
-            <div id="status-overview" class="status-overview">
-              <div id="status-badge" class="status-badge">SCAN REQUIRED</div>
-              <h2 id="status-headline" class="status-headline">Analyze before sending</h2>
-              <p id="status-sub" class="status-sub">Run analysis to reveal placement risk</p>
+          <div id="result-screen" class="hidden result-screen">
+            <section id="status-overview" class="status-overview">
+              <div id="status-badge" class="status-badge">NEEDS WORK</div>
+              <h2 id="status-headline" class="status-headline">Your email may hurt reply rates</h2>
+              <p id="status-sub" class="status-sub">We detected issues affecting deliverability and engagement.</p>
+            </section>
+
+            <section class="card decision-panel">
+              <h3 class="decision-panel-label">DECISION GRID</h3>
+              <div id="decision-grid" class="decision-grid">
+                <div class="card warning decision-card" id="status-risk-card">
+                  <span>RISK STATUS</span>
+                  <h3 id="status-risk">High Risk</h3>
+                </div>
+
+                <div class="card decision-card">
+                  <span>PRIMARY ISSUE</span>
+                  <h3 id="primary-issue">Spam phrases detected</h3>
+                </div>
+
+                <div class="card decision-card">
+                  <span>CONFIDENCE</span>
+                  <h3 id="status-confidence">Medium</h3>
+                </div>
+              </div>
+            </section>
+
+            <section id="biggest-risk-block" class="card result-block">
+              <h3 id="biggest-risk-title">Biggest Risk</h3>
+              <p id="biggest-risk-text">Your email has <strong>spam-like phrases</strong></p>
+            </section>
+
+            <div class="result-duo">
+              <section class="card result-block">
+                <h3>What is hurting deliverability</h3>
+                <p id="deliverability-summary">Overly salesy language, spam triggers used</p>
+              </section>
+
+              <section class="card result-block">
+                <h3>Top Fixes</h3>
+                <ul id="top-fixes-list" class="result-fix-list">
+                  <li>Remove spam phrases</li>
+                  <li>Personalize messaging</li>
+                </ul>
+              </section>
             </div>
 
-            <!-- Decision Grid -->
-            <div id="decision-grid" class="decision-grid">
-              <div class="card warning" id="status-risk-card">
-                <span>RISK STATUS</span>
-                <h3 id="status-risk">Multiple Issues</h3>
-              </div>
+            <section id="step2-fix-block" class="card result-fix-card hidden">
+              <h3>Top Fixes</h3>
+              <div class="result-fix-shell">
+                <div class="result-fix-summary">
+                  <strong id="fix-title">This is safer, but not guaranteed</strong>
+                  <span>inbox placement</span>
+                </div>
 
-              <div class="card">
-                <span>PRIMARY ISSUE</span>
-                <h3 id="primary-issue">Pending</h3>
-              </div>
+                <div class="result-fix-copy">
+                  <h4>Quick note for teams.</h4>
+                  <p id="fix-preview-text">I noticed your recent post and had one short idea to improve reply rates. Have time for a quick chat?</p>
+                </div>
 
-              <div class="card">
-                <span>CONFIDENCE</span>
-                <h3 id="status-confidence">Pending</h3>
+                <div class="result-fix-actions">
+                  <button id="copy-fixed-btn" class="primary" type="button">Copy Fixed Email</button>
+                </div>
               </div>
-            </div>
+            </section>
+
+            <section id="step3-block" class="card result-step3 hidden">
+              <h3><strong>Step 3:</strong> This is safer, but not guaranteed inbox placement</h3>
+              <ul class="result-checklist">
+                <li>Run real inbox test</li>
+                <li>Compare Gmail / Outlook</li>
+                <li>Track performance</li>
+              </ul>
+              <button id="run-test-btn" class="cta" type="button">Run Real Inbox Test</button>
+            </section>
 
             <!-- Old decision block for backwards compat -->
-            <section id="decision-section" class="card hidden">
+            <section id="decision-section-legacy" class="card hidden">
               <div class="alert-box">
                 <strong>SCAN REQUIRED</strong>
                 <p>Run analysis now to reveal placement risk before sending.</p>
@@ -460,7 +510,7 @@ I noticed your recent post and had one short idea to improve reply rates."></tex
               </div>
             </section>
 
-            <section id="step2-fix-block" class="card hidden">
+            <section id="step2-fix-block-legacy" class="card hidden">
               <h3>Safer version generated</h3>
 
               <div class="success-bar">
@@ -491,13 +541,13 @@ I noticed your recent post and had one short idea to improve reply rates."></tex
               </div>
 
               <div class="actions">
-                <button id="copy-fixed-btn" class="primary" type="button">Copy Fixed Email</button>
+                <button id="copy-fixed-btn-legacy" class="primary" type="button">Copy Fixed Email</button>
                 <button id="restore-btn" type="button">Restore Original</button>
                 <button id="gmail-btn" type="button">Open in Gmail</button>
               </div>
             </section>
 
-            <section id="step3-block" class="card hidden">
+            <section id="step3-block-legacy" class="card hidden">
               <div class="warning-box">
                 <strong>This is safer now, but not guaranteed inbox placement.</strong>
 
@@ -507,7 +557,7 @@ I noticed your recent post and had one short idea to improve reply rates."></tex
                   <li>Track future performance</li>
                 </ul>
 
-                <button id="run-test-btn" class="cta" type="button">Run Real Inbox Test</button>
+                <button id="run-test-btn-legacy" class="cta" type="button">Run Real Inbox Test</button>
               </div>
             </section>
           </div>
