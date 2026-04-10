@@ -232,7 +232,7 @@
           <h1>Scan first, then fix, then upgrade when it matters</h1>
           <p>Open the scan, check the risk, and keep the advanced tools out of the way until you need them.</p>
           <div class="hero-actions">
-            <button class="primary-btn" type="button" onclick="openTool('scan')">Scan an Email</button>
+            <button id="home-scan-btn" class="primary-btn" type="button" onclick="openTool('scan')">Scan an Email</button>
             <button class="secondary-btn" type="button" onclick="document.getElementById('scan-panel').scrollIntoView({ behavior: 'smooth', block: 'start' })">See the scan flow</button>
           </div>
           <p class="hero-note">Start with Scan Email and fix risk before it damages your domain.</p>
@@ -246,7 +246,7 @@
               <div class="feature-cost">1 token • Core Tool</div>
               <h3 class="feature-title">📨 Scan Email</h3>
               <p class="feature-description">Check if your email will land in inbox or spam across Gmail, Outlook, and other providers.</p>
-              <button class="feature-open-btn" onclick="openTool('scan');">Open</button>
+              <button id="card-scan-open-btn" class="feature-open-btn" onclick="openTool('scan');">Open</button>
             </article>
 
             <article class="feature-card core-card lockable" data-plan-required="starter">
@@ -945,6 +945,6 @@ I noticed your recent post and had one short idea to improve reply rates."></tex
     </script>
 
     <script src="/static/js/flow.js?v=20260410-progressive-exposure-1"></script>
-    <script src="/static/js/app.js?v=20260410-blocked-result-3"></script>
+    <script src="/static/js/app.js?v=20260410-nav-system-4"></script>
   </body>
 </html>

@@ -154,6 +154,8 @@ const tabFeedbackNode = document.getElementById("tab-feedback");
 const dashboardTab = document.getElementById("tab-dashboard");
 const threatScanTab = document.getElementById("tab-threat-scan");
 const startButton = document.getElementById("start-btn");
+const homeScanButton = document.getElementById("home-scan-btn");
+const cardScanOpenButton = document.getElementById("card-scan-open-btn");
 const accessButton = document.getElementById("get-access-btn") || document.getElementById("access-btn");
 const fillExampleButton = document.getElementById("fill-example");
 const tokenCostHintNode = document.getElementById("token-cost-hint");
@@ -2505,11 +2507,6 @@ function renderConversionResult(data) {
     updateSteps();
 }
 
-document.getElementById("step2-fix-block")?.scrollIntoView({
-    behavior: "smooth",
-});
-}
-
 function renderBlockedScanResult(title, message) {
     const rawText = rawEmailInput ? String(rawEmailInput.value || "").trim() : "";
 
@@ -4673,6 +4670,20 @@ function wireUiEvents() {
                 setTimeout(() => rawEmailInput.focus(), 160);
             }
             trackEvent("start_clicked", { destination: "email_input" });
+        });
+    }
+
+    if (homeScanButton) {
+        homeScanButton.addEventListener("click", (event) => {
+            event.preventDefault();
+            activateTab("threat-scan");
+        });
+    }
+
+    if (cardScanOpenButton) {
+        cardScanOpenButton.addEventListener("click", (event) => {
+            event.preventDefault();
+            activateTab("threat-scan");
         });
     }
 
