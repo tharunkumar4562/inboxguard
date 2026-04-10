@@ -680,3 +680,46 @@ html[data-theme="light"] .scan-lock-tooltip {
   color: #0f172a;
   border-color: rgba(37, 99, 235, 0.34);
 }
+
+/* Ensure home pricing card truly adapts to theme mode. */
+html:not([data-theme="dark"]) #home-pricing-cta {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
+}
+
+html:not([data-theme="dark"]) #home-pricing-cta>h2,
+html:not([data-theme="dark"]) #home-pricing-cta h3 {
+  color: #111827;
+}
+
+html:not([data-theme="dark"]) #home-pricing-cta>p,
+html:not([data-theme="dark"]) #home-pricing-cta .plan-card li,
+html:not([data-theme="dark"]) #home-pricing-cta .price .strike,
+html:not([data-theme="dark"]) #home-pricing-cta .price span {
+  color: #4b5563;
+}
+
+html[data-theme="dark"] #home-pricing-cta,
+html.dark #home-pricing-cta {
+  background: radial-gradient(circle at top, rgba(59, 130, 246, 0.14), transparent 70%), linear-gradient(180deg, #0f172a, #020617);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+html[data-theme="dark"] #home-pricing-cta>h2,
+html[data-theme="dark"] #home-pricing-cta h3,
+html.dark #home-pricing-cta>h2,
+html.dark #home-pricing-cta h3 {
+  color: #e2e8f0;
+}
+
+html[data-theme="dark"] #home-pricing-cta>p,
+html[data-theme="dark"] #home-pricing-cta .plan-card li,
+html[data-theme="dark"] #home-pricing-cta .price .strike,
+html[data-theme="dark"] #home-pricing-cta .price span,
+html.dark #home-pricing-cta>p,
+html.dark #home-pricing-cta .plan-card li,
+html.dark #home-pricing-cta .price .strike,
+html.dark #home-pricing-cta .price span {
+  color: #cbd5e1;
+}
