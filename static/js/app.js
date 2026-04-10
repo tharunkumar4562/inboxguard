@@ -224,6 +224,17 @@ const predictionHeadlineNode = document.getElementById("prediction-headline");
 const predictionDetailNode = document.getElementById("prediction-detail");
 const predictionBandsNode = document.getElementById("prediction-bands");
 const resultScreenNode = document.getElementById("result-screen");
+const decisionTitleNode = document.getElementById("decision-title");
+const primaryIssueNode = document.getElementById("primary-issue");
+const step2FixBlockNode = document.getElementById("step2-fix-block");
+const step3BlockNode = document.getElementById("step3-block");
+const beforeEmailNode = document.getElementById("before-email");
+const afterEmailNode = document.getElementById("after-email");
+const diffSummaryNode = document.getElementById("diff-summary");
+const copyFixedBtnNode = document.getElementById("copy-fixed-btn");
+const restoreBtnNode = document.getElementById("restore-btn");
+const gmailBtnNode = document.getElementById("gmail-btn");
+const runTestBtnNode = document.getElementById("run-test-btn");
 const riskTitleNode = document.getElementById("risk-title");
 const riskSummaryNode = document.getElementById("risk-summary");
 const riskReasonsNode = document.getElementById("risk-reasons");
@@ -296,8 +307,6 @@ const streakNode = document.getElementById("streak");
 const nextActionNode = document.getElementById("nextAction");
 const fixOutput = document.getElementById("fix-output");
 const saveFixButton = document.getElementById("save-fix");
-const beforeEmailNode = document.getElementById("before-email");
-const afterEmailNode = document.getElementById("after-email");
 const useFixedButton = document.getElementById("use-fixed");
 const restoreOriginalButton = document.getElementById("restore-original");
 const sendGmailButton = document.getElementById("send-gmail");
@@ -489,6 +498,18 @@ function applyProgressiveExposure() {
         lockSidebar();
     }
     updateProgressIndicator();
+}
+
+function updateSteps() {
+    if (progressStep1Node) {
+        progressStep1Node.classList.toggle("done", Boolean(window.appState && window.appState.hasScanned));
+    }
+    if (progressStep2Node) {
+        progressStep2Node.classList.toggle("done", Boolean(window.appState && window.appState.hasOptimized));
+    }
+    if (progressStep3Node) {
+        progressStep3Node.classList.toggle("done", Boolean(window.appState && window.appState.hasScaled));
+    }
 }
 
 function syncProgressState() {
@@ -2226,95 +2247,107 @@ function buildBiggestRiskPayload(summary = {}, findings = [], payload = null) {
     };
 }
 
-function renderConversionResult(data, summary, findings) {
-    if (!resultScreenNode || !riskTitleNode || !riskSummaryNode || !riskReasonsNode || !riskImpactNode || !fixPreviewTextNode) {
-        return;
+function renderConversionResult(data) {
+    const issues = Array.isArray(data && data.issues)
+        ? data.issues
+        : Array.isArray(data && data.findings)
+            ? data.findings
+            : Array.isArray(data && data.partial_findings)
+                ? data.partial_findings
+                : Array.isArray(data && data.summary && data.summary.findings)
+                    ? data.summary.findings
+                    : [];
+    const improved = String(
+        (data && data.improved_email)
+        || (data && data.instant_fixed)
+        || (data && data.rewritten_text)
+        || (data && data.rewritten_body)
+        || ""
+    );
+    const original = String((data && data.original_email) || (rawEmailInput && rawEmailInput.value) || "");
+
+    if (resultScreenNode) {
+        resultScreenNode.classList.remove("hidden");
     }
 
-    const biggestRisk = buildBiggestRiskPayload(summary, findings, data && data.biggest_risk ? data.biggest_risk : null);
-    const quickFix = getQuickFixPreview(summary, findings);
-    const preview = String((data && data.fix_preview) || quickFix.after || "Quick question about your workflow?");
-    const fixes = Array.isArray(data && data.fixes ? data.fixes : []) ? data.fixes : [];
-    const variants = data && typeof data.variants === "object" ? data.variants : {};
-    const impactLabel = String((data && data.impact_label) || "").trim();
-    const impactScore = Number(data && data.impact_score ? data.impact_score : 0);
-    const instantFixedEmail = String((variants && variants.insight) || preview || "").trim();
-
-    resultScreenNode.classList.remove("hidden");
-    riskTitleNode.textContent = biggestRisk.title;
-    riskSummaryNode.textContent = biggestRisk.summary;
-    riskImpactNode.textContent = biggestRisk.impact;
-    if (riskWarningImpactNode) {
-        riskWarningImpactNode.innerHTML = "→ It will likely be ignored<br />→ Domain reputation can drop over time<br />→ Future emails are more likely to land in spam";
-    }
-    fixPreviewTextNode.textContent = preview;
-    if (impactEstimateNode) {
-        impactEstimateNode.textContent = impactLabel
-            ? `Estimated improvement: ${impactLabel} (impact score ${impactScore})`
-            : `Estimated improvement impact score: ${impactScore}`;
-    }
-
-    riskReasonsNode.innerHTML = "";
-    biggestRisk.reasons.slice(0, 3).forEach((reason) => {
-        const li = document.createElement("li");
-        li.textContent = reason;
-        riskReasonsNode.appendChild(li);
-    });
-
-    if (fixRecommendationsNode) {
-        fixRecommendationsNode.innerHTML = "";
-        if (!fixes.length) {
-            const li = document.createElement("li");
-            li.textContent = "No mapped fixes yet. Run another scan with full email context.";
-            fixRecommendationsNode.appendChild(li);
+    if (decisionTitleNode && primaryIssueNode) {
+        if (issues.length === 0) {
+            decisionTitleNode.textContent = "Safe to send";
+            primaryIssueNode.textContent = "No major issues detected";
         } else {
-            fixes.slice(0, 4).forEach((item) => {
-                const li = document.createElement("li");
-                const problem = String(item && item.data && item.data.problem ? item.data.problem : item.type || "Issue");
-                const fixData = item && item.data && item.data.fix ? item.data.fix : {};
-                const firstRewrite = Array.isArray(fixData.with) && fixData.with.length ? String(fixData.with[0]) : "";
-                const firstAdd = Array.isArray(fixData.add) && fixData.add.length ? String(fixData.add[0]) : "";
-                const firstVariant = Array.isArray(fixData.rewrite) && fixData.rewrite.length ? String(fixData.rewrite[0]) : "";
-                const action = firstRewrite || firstAdd || firstVariant || String(fixData.example || fixData.instruction || "Apply the top fix and rescan.");
-                li.textContent = `${problem}: ${action}`;
-                fixRecommendationsNode.appendChild(li);
-            });
+            decisionTitleNode.textContent = "Analyze before sending";
+            primaryIssueNode.textContent = String(issues[0] && (issues[0].message || issues[0].type || issues[0].title) || "Issues detected");
         }
     }
 
-    if (variantInsightNode) {
-        variantInsightNode.textContent = String(variants.insight || "").trim() || "Insight variant will appear after scan.";
+    if (step2FixBlockNode) {
+        step2FixBlockNode.classList.remove("hidden");
     }
-    if (variantLossNode) {
-        variantLossNode.textContent = String(variants.loss || "").trim() || "Loss variant will appear after scan.";
-    }
-    if (variantPatternNode) {
-        variantPatternNode.textContent = String(variants.pattern || "").trim() || "Pattern variant will appear after scan.";
+    if (step3BlockNode) {
+        step3BlockNode.classList.remove("hidden");
     }
 
-    if (fixedEmailNowNode) {
-        fixedEmailNowNode.textContent = instantFixedEmail || "Run your first scan to generate a fixed version.";
+    if (beforeEmailNode) {
+        beforeEmailNode.textContent = original;
+    }
+    if (afterEmailNode) {
+        afterEmailNode.textContent = improved;
     }
 
-    window.appState.hasOptimized = true;
-    syncProgressState();
-    applyProgressiveExposure();
-
-    if (unlockFixButton) {
-        unlockFixButton.textContent = "Unlock More Variants";
-    }
-
-    if (resultSection) {
-        Array.from(resultSection.children).forEach((child) => {
-            if (!(child instanceof HTMLElement)) {
-                return;
-            }
-            if (child.id === "result-screen") {
-                return;
-            }
-            child.classList.add("hidden");
+    if (diffSummaryNode) {
+        diffSummaryNode.innerHTML = "";
+        issues.forEach((issue) => {
+            const line = document.createElement("div");
+            line.className = "diff-line";
+            line.textContent = String(issue && (issue.message || issue.type || issue.title) || "Fix applied");
+            diffSummaryNode.appendChild(line);
         });
     }
+
+    if (copyFixedBtnNode) {
+        copyFixedBtnNode.onclick = () => {
+            navigator.clipboard.writeText(improved);
+            copyFixedBtnNode.textContent = "Copied!";
+            setTimeout(() => {
+                copyFixedBtnNode.textContent = "Copy Fixed Email";
+            }, 1500);
+        };
+    }
+
+    if (restoreBtnNode) {
+        restoreBtnNode.onclick = () => {
+            if (rawEmailInput) {
+                rawEmailInput.value = original;
+            }
+        };
+    }
+
+    if (gmailBtnNode) {
+        gmailBtnNode.onclick = () => {
+            const bodyText = String(improved || original || "");
+            if (!bodyText.trim()) {
+                return;
+            }
+            window.open(`https://mail.google.com/mail/?view=cm&fs=1&body=${encodeURIComponent(bodyText)}`, "_blank", "noopener");
+        };
+    }
+
+    if (runTestBtnNode) {
+        runTestBtnNode.onclick = () => {
+            window.appState.hasScaled = true;
+            updateSteps();
+            alert("Upgrade / pricing flow here");
+        };
+    }
+
+    window.appState.hasScanned = true;
+    window.appState.hasOptimized = true;
+    syncProgressState();
+    updateSteps();
+
+    document.getElementById("step2-fix-block")?.scrollIntoView({
+        behavior: "smooth",
+    });
 }
 
 function renderSubjectIntel(data) {

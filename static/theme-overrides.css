@@ -630,69 +630,98 @@ html:not([data-theme="dark"]) #fix-output .post-fix-title {
   color: #1e3a8a !important;
 }
 
-/* Clean result flow layout. */
-#result-screen.result-grid {
+/* High-pressure result funnel layout. */
+#result-screen {
   display: grid;
   gap: 16px;
 }
 
-.result-step-card {
-  border: 1px solid #dbe3ef;
-  border-radius: 16px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 250, 252, 0.98));
-  padding: 18px;
-  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.05);
-}
-
-#result-screen .result-card {
-  border: 1px solid #dbe3ef;
-  border-radius: 14px;
-  background: #ffffff;
-  padding: 14px;
-  margin-top: 12px;
-}
-
-.result-step-card .workflow-step {
-  margin: 0 0 10px;
-}
-
-.result-step-card .trust-bar {
-  margin-bottom: 14px;
-}
-
-.result-step-card .result-cta {
-  margin-top: 12px;
-}
-
-#result-screen .result-card pre,
-#result-screen .result-card ul {
-  margin-bottom: 0;
-}
-
-#result-screen .blur-box {
-  position: relative;
-  min-height: 96px;
-  border: 1px solid #e5e7eb;
+#result .card {
+  background: #fff;
   border-radius: 12px;
-  overflow: hidden;
-  background: linear-gradient(180deg, #f8fafc, #eef2ff);
+  padding: 20px;
+  margin-top: 20px;
+  border: 1px solid #e5e7eb;
 }
 
-#result-screen .blur-box p {
-  margin: 0;
-  padding: 14px;
+#result .alert-box {
+  background: #eef2ff;
+  padding: 12px;
+  border-radius: 8px;
+  color: #1e3a8a;
 }
 
-#result-screen .blur-overlay {
-  position: absolute;
-  inset: auto 0 0 0;
-  height: 34px;
-  background: linear-gradient(180deg, rgba(248, 250, 252, 0), rgba(248, 250, 252, 0.96));
+#result .decision-box {
+  margin-top: 15px;
+  font-size: 18px;
+}
+
+#result .success-bar {
+  background: #dcfce7;
+  color: #166534;
+  padding: 10px;
+  border-radius: 8px;
+  margin: 10px 0;
+}
+
+#result .tags span {
+  background: #065f46;
+  color: #fff;
+  padding: 6px 10px;
+  margin-right: 6px;
+  border-radius: 20px;
+  font-size: 12px;
+}
+
+#result .grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+  margin-top: 15px;
+}
+
+#result pre {
+  background: #f9fafb;
+  padding: 12px;
+  border-radius: 8px;
+  font-size: 14px;
+  white-space: pre-wrap;
+}
+
+#result .actions {
+  margin-top: 15px;
+}
+
+#result .actions button {
+  margin-right: 10px;
+}
+
+#result .primary {
+  background: #2563eb;
+  color: white;
+}
+
+#result .cta {
+  background: #1d4ed8;
+  color: white;
+  width: 100%;
+  padding: 12px;
+  margin-top: 10px;
+}
+
+#result .warning-box {
+  background: #eff6ff;
+  padding: 15px;
+  border-radius: 10px;
+}
+
+.hidden {
+  display: none;
 }
 
 @media (max-width: 900px) {
-  .result-step-card {
-    padding: 14px;
+  #result .grid {
+    grid-template-columns: 1fr;
   }
 }
 

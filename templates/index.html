@@ -421,93 +421,67 @@ I noticed your recent post and had one short idea to improve reply rates."></tex
         </div>
 
         <section id="result" class="scan-only hidden">
-          <div id="result-screen" class="result-grid hidden">
-            <section class="result-step-card hero-card">
-              <div class="trust-bar">
-                <span>🔥 12,400+ emails analyzed</span>
-                <span>⭐ Used by cold email agencies</span>
+          <div id="result-screen" class="hidden">
+            <section id="decision-section" class="card">
+              <div class="alert-box">
+                <strong>SCAN REQUIRED</strong>
+                <p>Run analysis now to reveal placement risk before sending.</p>
               </div>
-              <p class="workflow-step">Step 1: Scan Result</p>
-              <div class="result-card risk-card">
-                <div class="badge danger">BIGGEST RISK</div>
-                <h2 id="risk-title">This email looks like mass outreach</h2>
-                <p id="risk-summary">It will likely be ignored within 3-5 seconds.</p>
-              </div>
-              <div class="result-card">
-                <h3>Why this happens</h3>
-                <ul id="risk-reasons">
-                  <li>Generic opening line</li>
-                  <li>No specific insight</li>
-                  <li>No proof or credibility</li>
-                </ul>
-              </div>
-              <div class="result-card impact-card">
-                <h3>Impact</h3>
-                <p id="risk-impact">Reply rate drops by 30-50%. This looks like bulk outreach and can damage domain reputation over time.</p>
-              </div>
-              <div class="result-card warning-card">
-                <h3>If you send this email</h3>
-                <p id="risk-warning-impact">
-                  → It will likely be ignored<br />
-                  → Domain reputation can drop over time<br />
-                  → Future emails are more likely to land in spam
-                </p>
-              </div>
-              <div class="result-card fix-preview">
-                <h3>Better version (preview)</h3>
-                <div class="blur-box">
-                  <p id="fix-preview-text">Noticed your SDR team is sending high-volume outreach - quick question on reply rates?</p>
-                  <div class="blur-overlay"></div>
-                </div>
+
+              <div class="decision-box">
+                <h3>Decision: <span id="decision-title">Analyze before sending</span></h3>
+                <p id="primary-issue">Waiting for scan</p>
               </div>
             </section>
 
-            <section class="result-step-card">
-              <p class="workflow-step">Step 2: Optimize</p>
-              <div class="result-card">
-                <h3>Fixed email (instant)</h3>
-                <pre id="fixed-email-now" class="rewrite-box">Run your first scan to generate a fixed version.</pre>
-                <button id="copy-fixed-now" type="button" class="btn-secondary" style="margin-top:8px;">Copy Fixed Email</button>
+            <section id="step2-fix-block" class="card hidden">
+              <h3>Safer version generated</h3>
+
+              <div class="success-bar">
+                ✅ Spam Risk Reduced | Higher inbox chance
               </div>
 
-              <div class="result-card">
-                <h3>Fix recommendations</h3>
-                <ul id="fix-recommendations">
-                  <li>Run analysis to load mapped fixes.</li>
-                </ul>
+              <div class="tags">
+                <span>Removed spam triggers</span>
+                <span>Added personalization</span>
+                <span>Simplified structure</span>
               </div>
 
-              <div class="result-card impact-card">
-                <h3>Estimated impact</h3>
-                <p id="impact-estimate">Estimated improvement impact score: 0</p>
+              <div class="grid">
+                <div>
+                  <h4>BEFORE</h4>
+                  <pre id="before-email"></pre>
+                </div>
+
+                <div>
+                  <h4>AFTER</h4>
+                  <pre id="after-email"></pre>
+                </div>
               </div>
 
-              <div class="result-card">
-                <h3>Rewrite variants</h3>
-                <p class="micro">Insight version</p>
-                <pre id="variant-insight" class="rewrite-box">Insight variant will appear after scan.</pre>
-                <p class="micro" style="margin-top:8px;">Loss version</p>
-                <pre id="variant-loss" class="rewrite-box">Loss variant will appear after scan.</pre>
-                <p class="micro" style="margin-top:8px;">Pattern version</p>
-                <pre id="variant-pattern" class="rewrite-box">Pattern variant will appear after scan.</pre>
+              <div>
+                <h4>Diff summary</h4>
+                <div id="diff-summary"></div>
+              </div>
+
+              <div class="actions">
+                <button id="copy-fixed-btn" class="primary" type="button">Copy Fixed Email</button>
+                <button id="restore-btn" type="button">Restore Original</button>
+                <button id="gmail-btn" type="button">Open in Gmail</button>
               </div>
             </section>
 
-            <section class="result-step-card">
-              <p class="workflow-step">Step 3: Scale</p>
-              <div class="result-cta">
-                <p class="cta-text">Fix this email before you send it.</p>
-                <button id="unlock-fix-btn" class="primary-btn" type="button">Unlock Full Fix</button>
-                <button id="share-result-btn" class="btn-secondary" type="button" style="margin-top:10px;">📸 Copy Result Card</button>
-              </div>
+            <section id="step3-block" class="card hidden">
+              <div class="warning-box">
+                <strong>This is safer now, but not guaranteed inbox placement.</strong>
 
-              <div class="email-capture">
-                <p>Get weekly deliverability tips</p>
-                <div class="email-capture-row">
-                  <input id="result-capture-email" type="email" placeholder="Enter email" autocomplete="email" />
-                  <button id="result-capture-submit" class="btn-secondary" type="button">Subscribe</button>
-                </div>
-                <p id="result-capture-status" class="micro hidden"></p>
+                <ul>
+                  <li>Run a real inbox test</li>
+                  <li>Compare Gmail / Outlook</li>
+                  <li>Track future performance</li>
+                </ul>
+
+                <button id="run-test-btn" class="cta" type="button">Run Real Inbox Test</button>
               </div>
             </section>
           </div>
