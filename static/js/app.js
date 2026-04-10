@@ -1932,6 +1932,21 @@ function startRealtimeScanSteps() {
     };
 }
 
+function applyAsyncJobProgress(job) {
+    const progress = job && typeof job.progress === "object" ? job.progress : {};
+    const percent = Number(progress.percent);
+    const message = String(progress.message || "").trim();
+
+    if (Number.isFinite(percent) && progressBarNode) {
+        const bounded = Math.max(0, Math.min(100, percent));
+        progressBarNode.style.width = `${bounded}%`;
+    }
+
+    if (message && loadingStep) {
+        loadingStep.textContent = message;
+    }
+}
+
 function setImpactBadge(node, impact) {
     if (!node) {
         return;
@@ -2349,6 +2364,9 @@ function renderConversionResult(data) {
     }
 
     const summary = data && typeof data.summary === "object" ? data.summary : {};
+    const signals = data && typeof data.signals === "object" ? data.signals : {};
+    const prediction = data && typeof data.prediction === "object" ? data.prediction : {};
+    const biggestRisk = data && typeof data.biggest_risk === "object" ? data.biggest_risk : {};
     const riskBand = String((summary && summary.risk_band) || "").toLowerCase();
     const baseScore = Number((summary && summary.score) ?? data.score ?? 0);
     const inferredRiskScore = Number.isFinite(baseScore)
@@ -2364,22 +2382,24 @@ function renderConversionResult(data) {
         statusOverview.classList.add(riskClass === "risk-high" ? "danger" : riskClass === "risk-medium" ? "warning" : "success");
     }
 
+    const finalScore = Number((summary && summary.final_score) ?? (summary && summary.score) ?? data.score ?? 0);
+
     if (statusBadge && statusHeadline && statusSub) {
         if (riskClass === "risk-low") {
             statusBadge.textContent = "SAFE TO SEND";
             statusBadge.className = "status-badge success";
             statusHeadline.textContent = "Your email looks safe to send";
-            statusSub.textContent = "No major issues detected. Keep the message focused and personal.";
+            statusSub.textContent = `Score ${Math.round(finalScore || 0)}/100. No major issues detected. Keep the message focused and personal.`;
         } else if (riskClass === "risk-medium") {
             statusBadge.textContent = "REVIEW RECOMMENDED";
             statusBadge.className = "status-badge warning";
             statusHeadline.textContent = "Your email may underperform without fixes";
-            statusSub.textContent = "We found caution signals that can lower engagement and placement.";
+            statusSub.textContent = `Score ${Math.round(finalScore || 0)}/100. We found caution signals that can lower engagement and placement.`;
         } else {
             statusBadge.textContent = "ACTION REQUIRED";
             statusBadge.className = "status-badge danger";
             statusHeadline.textContent = "Your email may hurt reply rates";
-            statusSub.textContent = "We detected issues affecting deliverability and engagement.";
+            statusSub.textContent = `Score ${Math.round(finalScore || 0)}/100. We detected issues affecting deliverability and engagement.`;
         }
     }
 
@@ -2403,16 +2423,24 @@ function renderConversionResult(data) {
     }
 
     if (primaryIssueCard) {
-        primaryIssueCard.textContent = issues.length === 0
-            ? "No critical issue"
-            : String(issues[0] && (issues[0].message || issues[0].type || issues[0].title) || "Spam phrases detected");
+        primaryIssueCard.textContent = String(
+            (summary && summary.primary_issue)
+            || (biggestRisk && biggestRisk.title)
+            || (issues[0] && (issues[0].message || issues[0].issue || issues[0].type || issues[0].title))
+            || "No critical issue"
+        );
     }
 
     if (statusConfidence) {
-        statusConfidence.textContent = issues.length === 0 ? "High" : "Medium";
+        const inboxProbability = Number(prediction.inbox_probability || 0);
+        statusConfidence.textContent = inboxProbability >= 70 ? "High" : inboxProbability >= 45 ? "Medium" : "Low";
     }
 
-    const topIssueText = String(issues[0] && (issues[0].message || issues[0].type || issues[0].title) || "No major issue detected");
+    const topIssueText = String(
+        (biggestRisk && biggestRisk.title)
+        || (issues[0] && (issues[0].message || issues[0].issue || issues[0].type || issues[0].title))
+        || "No major issue detected"
+    );
     if (biggestRiskTextNode) {
         biggestRiskTextNode.innerHTML = issues.length === 0
             ? "Your email has <strong>no major issues</strong> and is ready for a send test."
@@ -2420,11 +2448,22 @@ function renderConversionResult(data) {
     }
 
     if (deliverabilitySummaryNode) {
-        if (issues.length === 0) {
+        if (String(biggestRisk.summary || "").trim()) {
+            deliverabilitySummaryNode.textContent = String(biggestRisk.summary);
+        } else if (issues.length === 0) {
             deliverabilitySummaryNode.textContent = "Clean content signal profile with no major spam triggers.";
         } else {
-            const summaryBits = issues.slice(0, 2).map((issue) => String(issue && (issue.message || issue.type || issue.title) || "risk signal")).filter(Boolean);
-            deliverabilitySummaryNode.textContent = summaryBits.length ? summaryBits.join(", ") : "Overly salesy language, spam triggers used";
+            const summaryBits = issues.slice(0, 2).map((issue) => String(issue && (issue.message || issue.issue || issue.type || issue.title) || "risk signal")).filter(Boolean);
+            deliverabilitySummaryNode.textContent = summaryBits.length ? summaryBits.join(", ") : "Deliverability and engagement risk signals detected.";
+        }
+
+        if (String((summary && summary.analysis_mode) || "").toLowerCase() === "full") {
+            const infraSummary = [
+                `SPF: ${String(signals.spf_status || "n/a")}`,
+                `DKIM: ${String(signals.dkim_status || "n/a")}`,
+                `DMARC: ${String(signals.dmarc_status || "n/a")}`,
+            ].join(" | ");
+            deliverabilitySummaryNode.textContent = `${deliverabilitySummaryNode.textContent} (${infraSummary})`;
         }
     }
 
@@ -2432,29 +2471,43 @@ function renderConversionResult(data) {
         fixTitleNode.textContent = "Improved Version";
     }
 
+    if (fixPreviewTextNode) {
+        fixPreviewTextNode.textContent = String(
+            data.fix_preview
+            || (biggestRisk && biggestRisk.impact)
+            || "Before and after transformation so you can ship a safer draft with confidence."
+        );
+    }
+
     renderRewrite({
         original,
-        rewritten: improved || original,
+        rewritten: improved || String(data.fix_preview || original),
     });
 
     if (topFixesListNode) {
         topFixesListNode.innerHTML = "";
-        const topFixes = Array.isArray(data && data.top_fixes) ? data.top_fixes : [];
+        const topFixes = Array.isArray(data && data.top_fixes)
+            ? data.top_fixes
+            : Array.isArray(summary && summary.top_fixes)
+                ? summary.top_fixes
+                : Array.isArray(data && data.fixes)
+                    ? data.fixes
+                    : [];
         if (!topFixes.length && issues.length === 0) {
             const item = document.createElement("li");
             item.textContent = "Keep the message short and personal.";
             topFixesListNode.appendChild(item);
         } else if (!topFixes.length) {
             const itemA = document.createElement("li");
-            itemA.textContent = "Remove spam phrases";
+            itemA.textContent = "Reduce urgency and promotional language.";
             topFixesListNode.appendChild(itemA);
             const itemB = document.createElement("li");
-            itemB.textContent = "Personalize messaging";
+            itemB.textContent = "Add recipient-specific personalization.";
             topFixesListNode.appendChild(itemB);
         } else {
             topFixes.slice(0, 3).forEach((fix, index) => {
                 const item = document.createElement("li");
-                item.textContent = `${index + 1}. ${String(fix && (fix.title || fix.type || fix.action) || "Review this issue")}`;
+                item.textContent = `${index + 1}. ${String(fix && (fix.title || fix.type || fix.action || fix.text) || "Review this issue")}`;
                 topFixesListNode.appendChild(item);
             });
         }
@@ -2584,6 +2637,59 @@ function renderBlockedScanResult(title, message) {
     }
     if (primaryIssueNode) {
         primaryIssueNode.textContent = message || "Sign in to continue scanning.";
+    }
+
+    const statusOverview = document.getElementById("status-overview");
+    const statusBadge = document.getElementById("status-badge");
+    const statusHeadline = document.getElementById("status-headline");
+    const statusSub = document.getElementById("status-sub");
+    const statusRisk = document.getElementById("status-risk");
+    const primaryIssueCard = document.getElementById("primary-issue");
+    const statusConfidence = document.getElementById("status-confidence");
+    const statusRiskCard = document.getElementById("status-risk-card");
+
+    if (statusOverview) {
+        statusOverview.classList.remove("warning", "success");
+        statusOverview.classList.add("danger");
+    }
+    if (statusBadge) {
+        statusBadge.textContent = "ACCESS REQUIRED";
+        statusBadge.className = "status-badge danger";
+    }
+    if (statusHeadline) {
+        statusHeadline.textContent = title || "Scan blocked";
+    }
+    if (statusSub) {
+        statusSub.textContent = message || "Sign in to continue scanning.";
+    }
+    if (statusRiskCard) {
+        statusRiskCard.classList.remove("risk-medium", "risk-low");
+        statusRiskCard.classList.add("risk-high");
+    }
+    if (statusRisk) {
+        statusRisk.textContent = "Locked";
+    }
+    if (primaryIssueCard) {
+        primaryIssueCard.textContent = message || "Sign in to continue scanning.";
+    }
+    if (statusConfidence) {
+        statusConfidence.textContent = "Pending";
+    }
+
+    if (biggestRiskTextNode) {
+        biggestRiskTextNode.innerHTML = "Run one authenticated scan to unlock your real risk diagnosis and fixes.";
+    }
+    if (deliverabilitySummaryNode) {
+        deliverabilitySummaryNode.textContent = "Result details are hidden until access is restored.";
+    }
+    if (topFixesListNode) {
+        topFixesListNode.innerHTML = "";
+        const item = document.createElement("li");
+        item.textContent = "Sign in or upgrade to generate ranked fixes from your actual scan.";
+        topFixesListNode.appendChild(item);
+    }
+    if (fixPreviewTextNode) {
+        fixPreviewTextNode.textContent = "Before and after rewrite will appear after access is restored.";
     }
     if (step2FixBlockNode) {
         step2FixBlockNode.classList.remove("hidden");
@@ -3883,6 +3989,9 @@ async function runAnalyzeAsync() {
     window.appState.hasScaled = false;
     syncProgressState();
 
+    setLoadingState();
+    const loadingTicker = startRealtimeScanSteps();
+
     if (submitAsyncButton) {
         submitAsyncButton.disabled = true;
         submitAsyncButton.textContent = "Queued...";
@@ -3908,7 +4017,11 @@ async function runAnalyzeAsync() {
             continue;
         }
         const job = await poll.json();
+        applyAsyncJobProgress(job);
         if (job.status === "completed" && job.result) {
+            if (loadingTicker && typeof loadingTicker.stop === "function") {
+                loadingTicker.stop();
+            }
             const summary = job.result.summary || {};
             const signals = job.result.signals || {};
             const findings = job.result.partial_findings || summary.findings || [];
@@ -3929,9 +4042,19 @@ async function runAnalyzeAsync() {
             break;
         }
         if (job.status === "failed") {
+            if (loadingTicker && typeof loadingTicker.stop === "function") {
+                loadingTicker.stop();
+            }
             showError(String(job.error || "Async scan failed."));
+            if (loadingPanel) {
+                loadingPanel.classList.add("hidden");
+            }
             break;
         }
+    }
+
+    if (loadingTicker && typeof loadingTicker.stop === "function") {
+        loadingTicker.stop();
     }
 
     if (submitAsyncButton) {

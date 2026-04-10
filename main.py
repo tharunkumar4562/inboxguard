@@ -4477,6 +4477,7 @@ def _set_job_runtime_state(
     timeout_seconds: int,
     result: Optional[dict[str, Any]] = None,
     error: str = "",
+    progress: Optional[dict[str, Any]] = None,
 ) -> None:
     ASYNC_JOB_STORE[job_id] = {
         "id": job_id,
@@ -4487,6 +4488,7 @@ def _set_job_runtime_state(
         "timeout_seconds": timeout_seconds,
         "result": result or {},
         "error": error,
+        "progress": progress or {},
         "updated_at": _now_iso(),
     }
 
@@ -4505,6 +4507,15 @@ def _execute_async_analysis(
     while retries <= max_retries:
         started = datetime.now(timezone.utc)
         try:
+            _set_job_runtime_state(
+                job_id,
+                queue_name=queue_name,
+                status="running",
+                retries=retries,
+                max_retries=max_retries,
+                timeout_seconds=timeout_seconds,
+                progress={"percent": 15, "message": "Parsing email and extracting structure"},
+            )
             result = _run_analysis_request(
                 request,
                 email=payload.get("email", ""),
@@ -4526,6 +4537,7 @@ def _execute_async_analysis(
                 max_retries=max_retries,
                 timeout_seconds=timeout_seconds,
                 result=result,
+                progress={"percent": 100, "message": "Analysis complete"},
             )
             _record_async_job(
                 job_id,
@@ -4650,6 +4662,7 @@ def analyze_async(
         retries=0,
         max_retries=ASYNC_JOB_MAX_RETRIES,
         timeout_seconds=ASYNC_JOB_TIMEOUT_SECONDS,
+        progress={"percent": 5, "message": "Queued for analysis"},
     )
     _record_async_job(
         job_id,
