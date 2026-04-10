@@ -2587,6 +2587,12 @@ def _get_session_user(request: Request):
     }
 
 
+def _is_admin_user(user: Optional[dict[str, Any]]) -> bool:
+    if not user:
+        return False
+    return _is_admin_email(str(user.get("email") or ""))
+
+
 def _display_name_from_email(email: str) -> str:
     local = (email or "").split("@", 1)[0].replace(".", " ").replace("_", " ").strip()
     if not local:
@@ -4327,10 +4333,11 @@ def _run_analysis_request(
     free_anon_scan = False
     if user:
         user_id = int(user["id"])
+        is_admin_user = _is_admin_user(user)
         current_tokens = _get_user_tokens(user_id)
         user_plan = _normalize_plan_key(str(user.get("plan") or "free"))
         scans_used = int(_get_usage(user_id).get("scans_used", 0))
-        free_scan_credit = user_plan == "free" and scans_used < FREE_SCANS_LIMIT
+        free_scan_credit = is_admin_user or (user_plan == "free" and scans_used < FREE_SCANS_LIMIT)
 
         if not free_scan_credit:
             if current_tokens < token_cost:
@@ -4628,9 +4635,10 @@ def analyze_async(
 
     user_id = int(user["id"])
     token_cost = FEATURE_COSTS.get("scan_email", 1)
+    is_admin_user = _is_admin_user(user)
     user_plan = _normalize_plan_key(str(user.get("plan") or "free"))
     scans_used = int(_get_usage(user_id).get("scans_used", 0))
-    free_scan_credit = user_plan == "free" and scans_used < FREE_SCANS_LIMIT
+    free_scan_credit = is_admin_user or (user_plan == "free" and scans_used < FREE_SCANS_LIMIT)
     if not free_scan_credit and _get_user_tokens(user_id) < token_cost:
         raise HTTPException(status_code=402, detail="NO_TOKENS")
 

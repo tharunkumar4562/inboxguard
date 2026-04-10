@@ -399,6 +399,7 @@ let leadCaptureEmail = localStorage.getItem("ig_lead_capture_email") || "";
 let leadCaptureSaved = localStorage.getItem("ig_lead_capture_saved") === "1";
 let pendingPlanChoice = "monthly";
 let currentUserPlan = "free";
+let currentUserIsAdmin = false;
 let userActionCount = 0;
 let appliedPromoState = null;
 
@@ -619,6 +620,9 @@ function getActivePlanForAccess() {
 }
 
 function hasPlanAccess(requiredPlan) {
+    if (Boolean(window.userIsAdmin || currentUserIsAdmin)) {
+        return true;
+    }
     const required = normalizePlanChoice(requiredPlan || "free");
     return planAccessLevel(getActivePlanForAccess()) >= planAccessLevel(required);
 }
@@ -1207,6 +1211,7 @@ async function refreshAuthStatus() {
         currentUserStatus = String(data && data.status ? data.status : "inactive").toLowerCase();
         currentUserPlan = normalizePlanChoice(String(data && data.plan ? data.plan : (data && data.pro ? "monthly" : "free")));
         const isAdmin = Boolean(data && data.is_admin);
+        currentUserIsAdmin = isAdmin;
         leadCaptureSaved = Boolean(data && data.lead_email_captured);
         leadCaptureEmail = String(data && data.lead_email ? data.lead_email : leadCaptureEmail);
 
@@ -1215,6 +1220,7 @@ async function refreshAuthStatus() {
         window.userIsPro = Boolean(data && data.pro);
         window.userStatus = currentUserStatus;
         window.userPlan = currentUserPlan;
+        window.userIsAdmin = isAdmin;
         window.currentUserEmail = currentUserEmail;
         window.currentUserName = currentUserName;
 
@@ -3740,6 +3746,10 @@ async function ensureScanAccess() {
         showAuthModal();
         trackEvent("blocked_auth", { reason: "first_value_scan_limit" });
         return false;
+    }
+
+    if (Boolean(window.userIsAdmin || currentUserIsAdmin)) {
+        return true;
     }
 
     const plan = String(currentUserPlan || userState.plan || "free").toLowerCase();
