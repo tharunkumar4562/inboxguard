@@ -420,301 +420,97 @@ I noticed your recent post and had one short idea to improve reply rates."></tex
           <button type="button" onclick="openPricingModal()" class="btn-primary">Get Access</button>
         </div>
 
-        <!-- decision-engine-v2 -->
-        <section id="result" class="dashboard-grid hidden scan-only">
-          <div id="result-screen" class="result-container hidden">
-            <div class="trust-bar">
-              <span>🔥 12,400+ emails analyzed</span>
-              <span>⭐ Used by cold email agencies</span>
-            </div>
-
-            <div class="result-card risk-card">
-              <div class="badge danger">BIGGEST RISK</div>
-              <h2 id="risk-title">This email looks like mass outreach</h2>
-              <p id="risk-summary">It will likely be ignored within 3-5 seconds.</p>
-            </div>
-
-            <div class="result-card">
-              <h3>Why this happens</h3>
-              <ul id="risk-reasons">
-                <li>Generic opening line</li>
-                <li>No specific insight</li>
-                <li>No proof or credibility</li>
-              </ul>
-            </div>
-
-            <div class="result-card impact-card">
-              <h3>Impact</h3>
-              <p id="risk-impact">Reply rate drops by 30-50%. This looks like bulk outreach and can damage domain reputation over time.</p>
-            </div>
-
-            <div class="result-card warning-card">
-              <h3>If you send this email</h3>
-              <p id="risk-warning-impact">
-                → It will likely be ignored<br />
-                → Domain reputation can drop over time<br />
-                → Future emails are more likely to land in spam
-              </p>
-            </div>
-
-            <div class="result-card fix-preview">
-              <h3>Better version (preview)</h3>
-              <div class="blur-box">
-                <p id="fix-preview-text">Noticed your SDR team is sending high-volume outreach - quick question on reply rates?</p>
-                <div class="blur-overlay"></div>
+        <section id="result" class="scan-only hidden">
+          <div id="result-screen" class="result-grid hidden">
+            <section class="result-step-card hero-card">
+              <div class="trust-bar">
+                <span>🔥 12,400+ emails analyzed</span>
+                <span>⭐ Used by cold email agencies</span>
               </div>
-            </div>
-
-            <div class="result-card">
-              <h3>Fixed email (instant)</h3>
-              <pre id="fixed-email-now" class="rewrite-box">Run your first scan to generate a fixed version.</pre>
-              <button id="copy-fixed-now" type="button" class="btn-secondary" style="margin-top:8px;">Copy Fixed Email</button>
-            </div>
-
-            <div class="result-card">
-              <h3>Fix recommendations</h3>
-              <ul id="fix-recommendations">
-                <li>Run analysis to load mapped fixes.</li>
-              </ul>
-            </div>
-
-            <div class="result-card impact-card">
-              <h3>Estimated impact</h3>
-              <p id="impact-estimate">Estimated improvement impact score: 0</p>
-            </div>
-
-            <div class="result-card">
-              <h3>Rewrite variants</h3>
-              <p class="micro">Insight version</p>
-              <pre id="variant-insight" class="rewrite-box">Insight variant will appear after scan.</pre>
-              <p class="micro" style="margin-top:8px;">Loss version</p>
-              <pre id="variant-loss" class="rewrite-box">Loss variant will appear after scan.</pre>
-              <p class="micro" style="margin-top:8px;">Pattern version</p>
-              <pre id="variant-pattern" class="rewrite-box">Pattern variant will appear after scan.</pre>
-            </div>
-
-            <div class="result-cta">
-              <p class="cta-text">Fix this email before you send it.</p>
-              <button id="unlock-fix-btn" class="primary-btn" type="button">Unlock Full Fix</button>
-              <button id="share-result-btn" class="btn-secondary" type="button" style="margin-top:10px;">📸 Copy Result Card</button>
-            </div>
-
-            <div class="email-capture">
-              <p>Get weekly deliverability tips</p>
-              <div class="email-capture-row">
-                <input id="result-capture-email" type="email" placeholder="Enter email" autocomplete="email" />
-                <button id="result-capture-submit" class="btn-secondary" type="button">Subscribe</button>
+              <p class="workflow-step">Step 1: Scan Result</p>
+              <div class="result-card risk-card">
+                <div class="badge danger">BIGGEST RISK</div>
+                <h2 id="risk-title">This email looks like mass outreach</h2>
+                <p id="risk-summary">It will likely be ignored within 3-5 seconds.</p>
               </div>
-              <p id="result-capture-status" class="micro hidden"></p>
-            </div>
-          </div>
-
-          <section class="card" id="decision-block">
-            <div id="risk-strip" class="risk-strip risk-strip-neutral">
-              <p id="risk-strip-title" class="risk-strip-title">SCAN REQUIRED</p>
-              <p id="risk-strip-body" class="risk-strip-body">Run analysis now to reveal placement risk before sending.</p>
-            </div>
-            <div id="reality-strip" class="rewrite-proof" style="margin-top: 8px;">
-              <p id="reality-strip-title" class="rewrite-proof-title">Reality Check</p>
-              <p id="reality-strip-body" class="micro">Top campaigns that reliably land in Inbox usually score 85+ with strong trust signals. Most risky drafts score lower and lose replies at scale.</p>
-            </div>
-            <p class="workflow-step">Decision Engine</p>
-            <h3 id="decision-problem" class="main-issue">Decision: Analyze before sending</h3>
-            <p id="decision-signal" class="micro">No decision signal yet. Scan required.</p>
-            <p id="decision-scope" class="decision-scope">Primary issue: waiting for scan</p>
-
-            <section class="status-grid status-grid-triad" style="margin-top: 10px;">
-              <article id="status-risk-card" class="status-card status-card-primary warning-bg">
-                <p class="status-label">Risk Status</p>
-                <p id="status-risk-band" class="status-value warning">Pending</p>
-              </article>
-              <article class="status-card">
-                <p class="status-label">Primary Issue</p>
-                <p id="status-primary-issue" class="status-value pending">Scan pending</p>
-              </article>
-              <article class="status-card">
-                <p class="status-label">Confidence</p>
-                <p id="status-confidence" class="status-value pending">Pending</p>
-                <div class="confidence-meter" aria-hidden="true"><span id="confidence-meter-fill"></span></div>
-                <p id="confidence-meter-detail" class="confidence-meter-detail">Confidence is unavailable until analysis runs.</p>
-              </article>
-            </section>
-
-            <article id="biggest-risk-card" class="status-card" style="margin-top: 10px;">
-              <p class="status-label">Biggest Risk</p>
-              <p id="biggest-risk-title" class="status-value pending">No scan yet</p>
-              <p id="biggest-risk-impact" class="impact-badge">LOW</p>
-              <p id="biggest-risk-desc" class="micro">Run analysis to detect the top deliverability blocker.</p>
-            </article>
-
-            <div class="rewrite-proof" style="margin-top: 8px;">
-              <p class="rewrite-proof-title">What Is Hurting Deliverability:</p>
-              <ul id="hurt-list" class="compact-list">
-                <li>No scan yet - run analysis to detect deliverability risks.</li>
-              </ul>
-            </div>
-
-            <div class="rewrite-proof" style="margin-top: 8px;">
-              <p class="rewrite-proof-title">Top Fixes:</p>
-              <ul id="top-fixes-list" class="compact-list">
-                <li>No fixes loaded yet - run analysis first.</li>
-              </ul>
-            </div>
-
-            <div class="rewrite-proof" style="margin-top: 8px;">
-              <p class="rewrite-proof-title">If You Send This Now:</p>
-              <ul id="consequence-list" class="compact-list">
-                <li>Risk and impact summary appears after analysis.</li>
-              </ul>
-            </div>
-
-            <div class="rewrite-proof" style="margin-top: 8px;">
-              <p class="rewrite-proof-title">Why this is happening:</p>
-              <ul id="decision-why" class="compact-list">
-                <li>Run analysis to see root-cause evidence.</li>
-              </ul>
-            </div>
-
-            <div class="rewrite-proof" style="margin-top: 8px;">
-              <p class="rewrite-proof-title">Fix this FIRST:</p>
-              <ul id="decision-fix-first" class="compact-list">
-                <li>Analyze an email to get prioritized fix order.</li>
-              </ul>
-            </div>
-
-            <div class="rewrite-proof" style="margin-top: 8px;">
-              <p class="rewrite-proof-title">If you send this now:</p>
-              <ul id="decision-consequence" class="compact-list">
-                <li>Risk and impact summary appears after analysis.</li>
-              </ul>
-            </div>
-
-            <div id="scale-warning" class="rewrite-proof scale-warning" style="margin-top: 8px;">
-              <p class="rewrite-proof-title">At scale:</p>
-              <ul id="scale-warning-list" class="compact-list">
-                <li>Run analysis to see scale risk.</li>
-              </ul>
-            </div>
-
-            <button id="risk-fix-now" type="button" class="btn-primary decision-cta">Make This Safe to Send</button>
-            <button id="fix-now" type="button" class="btn-secondary" style="margin-top: 8px;">Fix Issues</button>
-            <button id="risk-fix-async" type="button" class="btn-secondary" style="margin-top: 8px;">Generate Safe Rewrite In Background</button>
-            <p class="decision-cta-subtext">Applies safe rewrite patterns used by inbox-placed emails.</p>
-            <p id="trust-hook" class="trust-hook">Based on patterns commonly flagged by Gmail and Outlook filters.</p>
-          </section>
-
-          <section class="action-panel card">
-            <details class="secondary-options">
-              <summary>Rewrite style controls</summary>
-              <div class="inline-fields rewrite-controls" style="margin-top: 8px;">
-                <div>
-                  <label for="rewrite-style">Rewrite Style</label>
-                  <select id="rewrite-style" name="rewrite_style">
-                    <option value="safe" selected>Safe (best for avoiding spam)</option>
-                    <option value="balanced">Balanced (best for normal outreach)</option>
-                    <option value="aggressive">Aggressive (max replies, slightly riskier)</option>
-                  </select>
+              <div class="result-card">
+                <h3>Why this happens</h3>
+                <ul id="risk-reasons">
+                  <li>Generic opening line</li>
+                  <li>No specific insight</li>
+                  <li>No proof or credibility</li>
+                </ul>
+              </div>
+              <div class="result-card impact-card">
+                <h3>Impact</h3>
+                <p id="risk-impact">Reply rate drops by 30-50%. This looks like bulk outreach and can damage domain reputation over time.</p>
+              </div>
+              <div class="result-card warning-card">
+                <h3>If you send this email</h3>
+                <p id="risk-warning-impact">
+                  → It will likely be ignored<br />
+                  → Domain reputation can drop over time<br />
+                  → Future emails are more likely to land in spam
+                </p>
+              </div>
+              <div class="result-card fix-preview">
+                <h3>Better version (preview)</h3>
+                <div class="blur-box">
+                  <p id="fix-preview-text">Noticed your SDR team is sending high-volume outreach - quick question on reply rates?</p>
+                  <div class="blur-overlay"></div>
                 </div>
               </div>
-            </details>
-            <div style="font-size: 0.9rem; color: #8b94a5; line-height: 1.5; margin-top: 10px;">
-              <strong>Default mode is automatic.</strong> Advanced rewrite styles stay hidden here to keep the decision view focused.
-            </div>
-          </section>
+            </section>
 
-          <details class="card advanced-block">
-            <summary>Why this was flagged (advanced)</summary>
-            <div class="advanced-content">
-              <article class="card">
-                <h3>Score Breakdown</h3>
-                <ul id="score-breakdown" class="compact-list">
-                  <li>Run analysis to see exact score math and penalty evidence.</li>
-                </ul>
-              </article>
-              <article class="card" style="margin-top:10px;">
-                <h3>Inbox Prediction</h3>
-                <p id="prediction-headline" class="main-issue">Run analysis to predict placement.</p>
-                <p id="prediction-detail" class="micro">We will estimate inbox probability and compare against top-performing score benchmarks.</p>
-                <ul id="prediction-bands" class="compact-list" style="margin-top:8px;">
-                  <li>No prediction yet.</li>
-                </ul>
-              </article>
-            </div>
-          </details>
-
-          <section id="fix-output" class="cta-panel card hidden">
-            <p id="workflow-state" class="workflow-step">Step 2: Fix in progress</p>
-            <h3 id="workflow-title">Improved Draft Generated</h3>
-            <p id="rewrite-mode-display" class="micro">Rewrite mode: Balanced (best mix)</p>
-            <p id="improvement-estimate" class="improvement-estimate" style="color: #2ecc71; font-weight: 500;">Ready to use</p>
-            <div id="rewardBox" class="hidden reward-box">
-              <div id="rewardText" class="reward-text"></div>
-            </div>
-            <div id="subject-change" class="rewrite-proof hidden"></div>
-            <div class="rewrite-proof">
-              <p class="rewrite-proof-title">What changed:</p>
-              <ul id="rewrite-changes" class="compact-list">
-                <li>Reduced bulk-style patterns and tightened structure.</li>
-              </ul>
-            </div>
-            <div class="transform-tags">
-              <span class="tag">Removed spam triggers</span>
-              <span class="tag">Added personalization</span>
-              <span class="tag">Simplified structure</span>
-            </div>
-            <div class="rewrite-grid">
-              <article>
-                <p class="rewrite-label">Before (spam-risk highlighted)</p>
-                <pre id="before-email" class="rewrite-box">-</pre>
-              </article>
-              <article>
-                <p class="rewrite-label">After</p>
-                <pre id="after-email" class="rewrite-box">-</pre>
-              </article>
-            </div>
-            <div id="successBadge" class="hidden text-green-400 text-sm" style="margin-top:10px;">✔ Safer version ready</div>
-            <div class="micro" style="margin-top: 6px;">Different emails produce different results.</div>
-            <div class="rewrite-proof" style="margin-top:8px;">
-              <p class="rewrite-proof-title">Diff summary:</p>
-              <ul id="rewrite-diff" class="compact-list">
-                <li>Generate a fix to view exact line-by-line changes.</li>
-              </ul>
-            </div>
-            <p id="rewrite-trust-note" class="micro">Based on pattern shifts commonly flagged by Gmail and Outlook filters.</p>
-            <ul id="rewrite-limitations" class="compact-list" style="margin-top: 8px;">
-              <li>Final placement still depends on domain reputation, list quality, and send behavior.</li>
-            </ul>
-            <div class="actions" style="margin-top: 12px;">
-              <button id="save-fix" type="button" class="btn-secondary">Save Fix</button>
-              <button id="use-fixed" type="button" class="btn-primary">Copy Fixed Email</button>
-              <button id="restore-original" type="button" class="btn-secondary">Restore Original</button>
-              <button id="send-gmail" type="button" class="btn-secondary">Open in Gmail</button>
-              <button id="edit-manual" type="button" class="btn-secondary">Edit Manually</button>
-            </div>
-
-            <div id="post-fix-gate" class="post-fix-gate">
-              <p class="post-fix-title">This is safer now, but one fix does not prove inbox placement.</p>
-              <ul class="compact-list">
-                <li>Run a real inbox test before scaling</li>
-                <li>Compare placements across Gmail, Outlook, and Yahoo</li>
-                <li>Track what changed before the next campaign</li>
-              </ul>
-              <button id="post-fix-access" type="button" class="btn-primary decision-cta">Run Real Inbox Test</button>
-            </div>
-
-            <div class="feedback-row" style="margin-top: 12px;">
-              <p class="micro" style="margin-bottom: 6px;">After sending, where did this land?</p>
-              <div class="action-links">
-                <button id="feedback-inbox" type="button" class="link-action">Inbox</button>
-                <button id="feedback-spam" type="button" class="link-action">Spam</button>
-                <button id="feedback-promotions" type="button" class="link-action">Promotions</button>
+            <section class="result-step-card">
+              <p class="workflow-step">Step 2: Optimize</p>
+              <div class="result-card">
+                <h3>Fixed email (instant)</h3>
+                <pre id="fixed-email-now" class="rewrite-box">Run your first scan to generate a fixed version.</pre>
+                <button id="copy-fixed-now" type="button" class="btn-secondary" style="margin-top:8px;">Copy Fixed Email</button>
               </div>
-              <p id="feedback-status" class="micro" style="margin-top: 6px;">Your selection helps improve prediction accuracy.</p>
-            </div>
 
-            <div id="nextAction" class="next-action">Try another email →</div>
-          </section>
-        </section>
+              <div class="result-card">
+                <h3>Fix recommendations</h3>
+                <ul id="fix-recommendations">
+                  <li>Run analysis to load mapped fixes.</li>
+                </ul>
+              </div>
+
+              <div class="result-card impact-card">
+                <h3>Estimated impact</h3>
+                <p id="impact-estimate">Estimated improvement impact score: 0</p>
+              </div>
+
+              <div class="result-card">
+                <h3>Rewrite variants</h3>
+                <p class="micro">Insight version</p>
+                <pre id="variant-insight" class="rewrite-box">Insight variant will appear after scan.</pre>
+                <p class="micro" style="margin-top:8px;">Loss version</p>
+                <pre id="variant-loss" class="rewrite-box">Loss variant will appear after scan.</pre>
+                <p class="micro" style="margin-top:8px;">Pattern version</p>
+                <pre id="variant-pattern" class="rewrite-box">Pattern variant will appear after scan.</pre>
+              </div>
+            </section>
+
+            <section class="result-step-card">
+              <p class="workflow-step">Step 3: Scale</p>
+              <div class="result-cta">
+                <p class="cta-text">Fix this email before you send it.</p>
+                <button id="unlock-fix-btn" class="primary-btn" type="button">Unlock Full Fix</button>
+                <button id="share-result-btn" class="btn-secondary" type="button" style="margin-top:10px;">📸 Copy Result Card</button>
+              </div>
+
+              <div class="email-capture">
+                <p>Get weekly deliverability tips</p>
+                <div class="email-capture-row">
+                  <input id="result-capture-email" type="email" placeholder="Enter email" autocomplete="email" />
+                  <button id="result-capture-submit" class="btn-secondary" type="button">Subscribe</button>
+                </div>
+                <p id="result-capture-status" class="micro hidden"></p>
+              </div>
+            </section>
+          </div>
 
         <div id="cookie-banner" class="cookie-banner hidden" role="dialog" aria-live="polite" aria-label="Cookie consent" aria-hidden="true">
           <p>We use cookies to keep you signed in and improve your experience.</p>
