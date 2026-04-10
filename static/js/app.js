@@ -2269,6 +2269,12 @@ function renderConversionResult(data) {
     );
     const original = String((data && data.original_email) || (rawEmailInput && rawEmailInput.value) || "");
 
+    // Show result container and screen
+    const resultContainer = document.getElementById("result");
+    if (resultContainer) {
+        resultContainer.classList.remove("hidden");
+    }
+
     if (resultScreenNode) {
         resultScreenNode.classList.remove("hidden");
     }
@@ -2409,8 +2415,11 @@ document.getElementById("step2-fix-block")?.scrollIntoView({
 
 function renderBlockedScanResult(title, message) {
     const rawText = rawEmailInput ? String(rawEmailInput.value || "").trim() : "";
-    if (resultSection) {
-        resultSection.classList.remove("hidden");
+
+    // Show result container and screen
+    const resultContainer = document.getElementById("result");
+    if (resultContainer) {
+        resultContainer.classList.remove("hidden");
     }
     if (resultScreenNode) {
         resultScreenNode.classList.remove("hidden");
