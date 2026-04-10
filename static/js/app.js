@@ -405,8 +405,11 @@ let appliedPromoState = null;
 
 window.appState = {
     hasScanned: localStorage.getItem("ig_has_scanned") === "1",
+    hasOptimized: localStorage.getItem("ig_has_optimized") === "1",
+    hasScaled: localStorage.getItem("ig_has_scaled") === "1",
     isAuthenticated: false,
     credits: 0,
+    isAdmin: false,
 };
 
 let sidebarLockTooltipTimer = null;
@@ -456,8 +459,8 @@ function unlockSidebar() {
 
 function updateProgressIndicator() {
     const done1 = Boolean(window.appState && window.appState.hasScanned);
-    const done2 = done1;
-    const done3 = done1 && (Boolean(window.appState && window.appState.isAuthenticated) || Number(window.appState && window.appState.credits ? window.appState.credits : 0) > 0);
+    const done2 = Boolean(window.appState && window.appState.hasOptimized);
+    const done3 = Boolean(window.appState && window.appState.hasScaled);
 
     if (progressStep1Node) {
         progressStep1Node.classList.toggle("active", !done1);
@@ -488,6 +491,26 @@ function applyProgressiveExposure() {
     updateProgressIndicator();
 }
 
+function syncProgressState() {
+    if (window.appState && window.appState.hasScanned) {
+        localStorage.setItem("ig_has_scanned", "1");
+    } else {
+        localStorage.removeItem("ig_has_scanned");
+    }
+
+    if (window.appState && window.appState.hasOptimized) {
+        localStorage.setItem("ig_has_optimized", "1");
+    } else {
+        localStorage.removeItem("ig_has_optimized");
+    }
+
+    if (window.appState && window.appState.hasScaled) {
+        localStorage.setItem("ig_has_scaled", "1");
+    } else {
+        localStorage.removeItem("ig_has_scaled");
+    }
+}
+
 function syncFlowUserState() {
     if (!window.InboxGuardFlow || typeof window.InboxGuardFlow.updateFlowUser !== "function") {
         return;
@@ -503,6 +526,7 @@ function syncFlowUserState() {
 
     window.appState.isAuthenticated = Boolean(isAuthenticated);
     window.appState.credits = Number(userState.tokens || 0);
+    window.appState.isAdmin = Boolean(window.userIsAdmin || currentUserIsAdmin || window.appState.isAdmin);
     applyProgressiveExposure();
 }
 
@@ -1212,6 +1236,7 @@ async function refreshAuthStatus() {
         currentUserPlan = normalizePlanChoice(String(data && data.plan ? data.plan : (data && data.pro ? "monthly" : "free")));
         const isAdmin = Boolean(data && data.is_admin);
         currentUserIsAdmin = isAdmin;
+        window.appState.isAdmin = isAdmin;
         leadCaptureSaved = Boolean(data && data.lead_email_captured);
         leadCaptureEmail = String(data && data.lead_email ? data.lead_email : leadCaptureEmail);
 
@@ -1223,6 +1248,7 @@ async function refreshAuthStatus() {
         window.userIsAdmin = isAdmin;
         window.currentUserEmail = currentUserEmail;
         window.currentUserName = currentUserName;
+        window.appState.isAdmin = isAdmin;
 
         if (adminDashboardButton) {
             adminDashboardButton.classList.toggle("hidden", !isAuthenticated || !isAdmin);
@@ -1542,8 +1568,9 @@ function showHome() {
 
 function openTool(tool) {
     const key = String(tool || "").toLowerCase();
+    const isAdmin = Boolean(window.appState && window.appState.isAdmin);
     const advancedTarget = document.querySelector(`.advanced-tool[data-tool="${key}"]`);
-    if (advancedTarget && !(window.appState && window.appState.hasScanned)) {
+    if (advancedTarget && !isAdmin && !(window.appState && window.appState.hasScanned)) {
         showSidebarTooltip("Run your first scan to unlock this", advancedTarget);
         showError("Run at least one scan first before opening advanced tools.");
         trackEvent("blocked_before_first_value", { tool: key });
@@ -1558,14 +1585,14 @@ function openTool(tool) {
         ops: "monthly",
     };
 
-    if (requiredByTool[key] && localStorage.getItem("ig_has_scanned") !== "1") {
+    if (requiredByTool[key] && !isAdmin && localStorage.getItem("ig_has_scanned") !== "1") {
         showError("Run at least one scan first before opening advanced tools.");
         activateTab("threat-scan");
         return;
     }
 
     const requiredPlan = requiredByTool[key] || "free";
-    if (!hasPlanAccess(requiredPlan)) {
+    if (!isAdmin && !hasPlanAccess(requiredPlan)) {
         showUpgradeModal({
             title: "You're losing emails to spam right now",
             subtitle: "Upgrade to fix it before your next campaign",
@@ -1662,6 +1689,8 @@ function setIdleState() {
         submitButton.textContent = defaultSubmitLabel;
     }
     window.appState.hasScanned = localStorage.getItem("ig_has_scanned") === "1";
+    window.appState.hasOptimized = localStorage.getItem("ig_has_optimized") === "1";
+    window.appState.hasScaled = localStorage.getItem("ig_has_scaled") === "1";
     applyProgressiveExposure();
 }
 
@@ -1688,6 +1717,9 @@ function setLoadingState() {
     if (progressBarNode) {
         progressBarNode.style.width = "0%";
     }
+    window.appState.hasOptimized = false;
+    window.appState.hasScaled = false;
+    syncProgressState();
     animateProgress(100);
 }
 
@@ -1707,7 +1739,7 @@ function setResultState() {
         progressBarNode.style.width = "100%";
     }
     window.appState.hasScanned = true;
-    localStorage.setItem("ig_has_scanned", "1");
+    syncProgressState();
     applyProgressiveExposure();
     updateUxState({
         screen: "result",
@@ -2263,6 +2295,10 @@ function renderConversionResult(data, summary, findings) {
     if (fixedEmailNowNode) {
         fixedEmailNowNode.textContent = instantFixedEmail || "Run your first scan to generate a fixed version.";
     }
+
+    window.appState.hasOptimized = true;
+    syncProgressState();
+    applyProgressiveExposure();
 
     if (unlockFixButton) {
         unlockFixButton.textContent = "Unlock More Variants";
@@ -3141,8 +3177,8 @@ async function runAnalyze() {
 
         latestSummary = summary;
         latestFindings = findings;
-        localStorage.setItem("ig_has_scanned", "1");
         window.appState.hasScanned = true;
+        syncProgressState();
         applyProgressiveExposure();
         if (window.InboxGuardFlow && typeof window.InboxGuardFlow.markFlowScanCompleted === "function") {
             window.InboxGuardFlow.markFlowScanCompleted();
@@ -3153,10 +3189,6 @@ async function runAnalyze() {
             analysis_mode: mode,
         });
 
-        renderStatus(summary, signals, findings);
-        renderDecisionEngine(summary, signals, findings, data.prediction || null);
-        renderBreakdown(summary);
-        renderPrediction(summary, data.prediction || null);
         renderConversionResult(data, summary, findings);
 
         if (rewriteStyleInput) {
@@ -3489,6 +3521,10 @@ async function runAnalyzeAsync() {
     }
     payload.set("analysis_mode", analysisModeInput ? analysisModeInput.value : "content");
 
+    window.appState.hasOptimized = false;
+    window.appState.hasScaled = false;
+    syncProgressState();
+
     if (submitAsyncButton) {
         submitAsyncButton.disabled = true;
         submitAsyncButton.textContent = "Queued...";
@@ -3521,16 +3557,12 @@ async function runAnalyzeAsync() {
             latestSummary = summary;
             latestFindings = findings;
             hasScanResult = true;
-            localStorage.setItem("ig_has_scanned", "1");
             window.appState.hasScanned = true;
+            syncProgressState();
             applyProgressiveExposure();
             if (window.InboxGuardFlow && typeof window.InboxGuardFlow.markFlowScanCompleted === "function") {
                 window.InboxGuardFlow.markFlowScanCompleted();
             }
-            renderStatus(summary, signals, findings);
-            renderDecisionEngine(summary, signals, findings, job.result.prediction || null);
-            renderBreakdown(summary);
-            renderPrediction(summary, job.result.prediction || null);
             renderConversionResult(job.result || {}, summary, findings);
             setResultState();
             if (resultSection) {
@@ -3915,6 +3947,10 @@ function showScanCost() {
 }
 
 function canUserScan() {
+    if (window.appState && window.appState.isAdmin) {
+        return true;
+    }
+
     if (!isAuthenticated) {
         return true;
     }
@@ -4413,6 +4449,9 @@ function wireUiEvents() {
     }
     if (postFixAccessButton) {
         postFixAccessButton.addEventListener("click", () => {
+            window.appState.hasScaled = true;
+            syncProgressState();
+            applyProgressiveExposure();
             if (!isAuthenticated) {
                 openPricingModal();
                 trackEvent("post_fix_access_clicked", { state: "anon" });
@@ -4427,6 +4466,9 @@ function wireUiEvents() {
 
     if (unlockFixButton) {
         unlockFixButton.addEventListener("click", async () => {
+            window.appState.hasScaled = true;
+            syncProgressState();
+            applyProgressiveExposure();
             await refreshAuthStatus();
             await loadUserTokens();
 
@@ -4453,6 +4495,24 @@ function wireUiEvents() {
             });
         });
     }
+
+    document.querySelectorAll("[data-nav]").forEach((buttonNode) => {
+        if (buttonNode.dataset.navBound === "1") {
+            return;
+        }
+        buttonNode.dataset.navBound = "1";
+        buttonNode.addEventListener("click", () => {
+            const target = String(buttonNode.dataset.nav || "").trim();
+            if (!target) {
+                return;
+            }
+            document.querySelectorAll(".page").forEach((pageNode) => pageNode.classList.add("hidden"));
+            const targetNode = document.getElementById(target);
+            if (targetNode) {
+                targetNode.classList.remove("hidden");
+            }
+        });
+    });
 
     if (resultCaptureSubmitButton) {
         resultCaptureSubmitButton.addEventListener("click", () => {
@@ -4494,6 +4554,24 @@ function wireUiEvents() {
     if (addTeamMemberButton) addTeamMemberButton.addEventListener("click", () => addTeamMember().catch((error) => showError(error && error.message ? error.message : "Could not add team member.")));
     if (refreshOutcomeStatsButton) refreshOutcomeStatsButton.addEventListener("click", () => refreshOutcomeStats().catch((error) => showError(error && error.message ? error.message : "Could not load outcome stats.")));
     if (refreshJobsButton) refreshJobsButton.addEventListener("click", () => refreshJobs().catch((error) => showError(error && error.message ? error.message : "Could not load async jobs.")));
+
+    document.querySelectorAll("[data-nav]").forEach((buttonNode) => {
+        if (buttonNode.dataset.navBound === "1") {
+            return;
+        }
+        buttonNode.dataset.navBound = "1";
+        buttonNode.addEventListener("click", () => {
+            const target = String(buttonNode.dataset.nav || "").trim();
+            if (!target) {
+                return;
+            }
+            document.querySelectorAll(".page").forEach((pageNode) => pageNode.classList.add("hidden"));
+            const targetNode = document.getElementById(target);
+            if (targetNode) {
+                targetNode.classList.remove("hidden");
+            }
+        });
+    });
 
     if (leadCaptureContinueButton) {
         leadCaptureContinueButton.addEventListener("click", () => {
@@ -4616,5 +4694,23 @@ document.addEventListener("DOMContentLoaded", () => {
     btn.addEventListener("click", () => {
         console.log("Get Access clicked");
         openPricingModal();
+    });
+
+    document.querySelectorAll("[data-nav]").forEach((buttonNode) => {
+        if (buttonNode.dataset.navBound === "1") {
+            return;
+        }
+        buttonNode.dataset.navBound = "1";
+        buttonNode.addEventListener("click", () => {
+            const target = String(buttonNode.dataset.nav || "").trim();
+            if (!target) {
+                return;
+            }
+            document.querySelectorAll(".page").forEach((pageNode) => pageNode.classList.add("hidden"));
+            const targetNode = document.getElementById(target);
+            if (targetNode) {
+                targetNode.classList.remove("hidden");
+            }
+        });
     });
 });
