@@ -422,6 +422,7 @@ window.appState = {
     isAuthenticated: false,
     credits: 0,
     isAdmin: false,
+    currentScreen: "dashboard",
 };
 
 let sidebarLockTooltipTimer = null;
@@ -1547,7 +1548,7 @@ window.igLeadCaptureClose = () => hideLeadCaptureModal();
 
 function activateTab(tab) {
     if (tab === "threat-scan") {
-        openTool("scan");
+        navigate("scan", { focusInput: true, scroll: true });
         return;
     }
     goHome();
@@ -1564,33 +1565,93 @@ function hideAllViews() {
     }
 }
 
-function showHome() {
+function navigate(screen, options = {}) {
+    const requested = String(screen || "dashboard").toLowerCase();
+    const target = requested === "home" ? "dashboard" : requested;
+    const focusInput = Boolean(options.focusInput);
+    const shouldScroll = options.scroll !== false;
+
     hideAllViews();
-    if (typeof window.closeTool === "function") {
-        window.closeTool();
+
+    if (target === "dashboard") {
+        if (typeof window.closeTool === "function") {
+            window.closeTool();
+        }
+        if (homeView) {
+            homeView.classList.remove("hidden");
+        }
+        homeSections.forEach((node) => node.classList.remove("hidden"));
+        scanSections.forEach((node) => node.classList.add("hidden"));
+        if (scanPanel) {
+            scanPanel.classList.remove("focused");
+            scanPanel.classList.add("hidden");
+        }
+        if (dashboardTab) {
+            dashboardTab.classList.add("active");
+        }
+        if (threatScanTab) {
+            threatScanTab.classList.remove("active");
+        }
+        setTabFeedback("Choose a tool to get started.");
+        updateUxState({
+            screen: "home",
+            valueShown: false,
+            showPaywall: false,
+            hasMultipleCTAs: countPrimaryActions(homeView) > 1,
+        });
+        window.appState.currentScreen = "dashboard";
+        return;
     }
-    if (homeView) {
-        homeView.classList.remove("hidden");
+
+    if (toolPanel) {
+        toolPanel.classList.remove("hidden");
     }
-    homeSections.forEach((node) => node.classList.remove("hidden"));
+    homeSections.forEach((node) => node.classList.add("hidden"));
+    if (dashboardTab) {
+        dashboardTab.classList.remove("active");
+    }
+
+    if (target === "scan" || target === "result") {
+        if (typeof window.closeTool === "function") {
+            window.closeTool();
+        }
+        if (threatScanTab) {
+            threatScanTab.classList.add("active");
+        }
+        scanSections.forEach((node) => node.classList.remove("hidden"));
+        if (scanPanel) {
+            scanPanel.classList.add("focused");
+            scanPanel.classList.remove("hidden");
+            if (shouldScroll) {
+                scanPanel.scrollIntoView({ behavior: "smooth", block: "start" });
+            }
+        }
+        if (focusInput && rawEmailInput) {
+            setTimeout(() => rawEmailInput.focus(), 60);
+        }
+        setTabFeedback("Scan mode active. Paste your email and click Check Before Sending.");
+        window.appState.currentScreen = target;
+        return;
+    }
+
+    if (threatScanTab) {
+        threatScanTab.classList.remove("active");
+    }
     scanSections.forEach((node) => node.classList.add("hidden"));
     if (scanPanel) {
         scanPanel.classList.remove("focused");
         scanPanel.classList.add("hidden");
     }
-    if (dashboardTab) {
-        dashboardTab.classList.add("active");
+    if (typeof window.igOpenToolPane === "function") {
+        window.igOpenToolPane(target);
     }
-    if (threatScanTab) {
-        threatScanTab.classList.remove("active");
-    }
-    setTabFeedback("Choose a tool to get started.");
-    updateUxState({
-        screen: "home",
-        valueShown: false,
-        showPaywall: false,
-        hasMultipleCTAs: countPrimaryActions(homeView) > 1,
-    });
+    refreshToolPaneData(target);
+    setTabFeedback("Tool panel active.");
+    window.appState.currentScreen = target;
+}
+
+function showHome() {
+    navigate("dashboard", { scroll: false });
 }
 
 function openTool(tool) {
@@ -1633,6 +1694,13 @@ function openTool(tool) {
         return;
     }
 
+    if (key === "scan" || key === "threat-scan") {
+        userActionCount += 1;
+        refreshPricingContext();
+        navigate("scan", { focusInput: true, scroll: true });
+        return;
+    }
+
     userActionCount += 1;
     refreshPricingContext();
 
@@ -1644,26 +1712,6 @@ function openTool(tool) {
 
     if (dashboardTab) {
         dashboardTab.classList.remove("active");
-    }
-
-    if (key === "scan" || key === "threat-scan") {
-        if (typeof window.closeTool === "function") {
-            window.closeTool();
-        }
-        if (threatScanTab) {
-            threatScanTab.classList.add("active");
-        }
-        scanSections.forEach((node) => node.classList.remove("hidden"));
-        if (scanPanel) {
-            scanPanel.classList.add("focused");
-            scanPanel.classList.remove("hidden");
-            scanPanel.scrollIntoView({ behavior: "smooth", block: "start" });
-        }
-        if (rawEmailInput) {
-            setTimeout(() => rawEmailInput.focus(), 60);
-        }
-        setTabFeedback("Scan mode active. Paste your email and click Check Before Sending.");
-        return;
     }
 
     if (threatScanTab) {
@@ -1687,6 +1735,7 @@ function goHome() {
 
 window.openTool = openTool;
 window.goHome = goHome;
+window.navigate = navigate;
 
 function setIdleState() {
     hasScanResult = false;
@@ -3311,6 +3360,9 @@ async function runAnalyze() {
         showError("Paste the full email draft before scanning.");
         return;
     }
+
+    // Centralized transition: move from scan screen to result screen state before analysis.
+    navigate("result", { scroll: true });
 
     // Keep the result shell visible from the start of analysis so UI state is explicit.
     if (resultSection) {
