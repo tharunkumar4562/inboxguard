@@ -1646,7 +1646,7 @@ function openTool(tool) {
         dashboardTab.classList.remove("active");
     }
 
-    if (tool === "scan" || tool === "threat-scan") {
+    if (key === "scan" || key === "threat-scan") {
         if (typeof window.closeTool === "function") {
             window.closeTool();
         }
@@ -3312,6 +3312,23 @@ async function runAnalyze() {
         return;
     }
 
+    // Keep the result shell visible from the start of analysis so UI state is explicit.
+    if (resultSection) {
+        resultSection.classList.remove("hidden");
+    }
+    if (resultScreenNode) {
+        resultScreenNode.classList.remove("hidden");
+    }
+    const statusHeadlineNode = document.getElementById("status-headline");
+    const statusSubNode = document.getElementById("status-sub");
+    if (statusHeadlineNode) {
+        statusHeadlineNode.textContent = "Analyzing...";
+    }
+    if (statusSubNode) {
+        statusSubNode.textContent = "Checking content and deliverability signals.";
+    }
+    resultScreenNode?.scrollIntoView({ behavior: "smooth", block: "start" });
+
     setLoadingState();
     const loadingTicker = startRealtimeScanSteps();
 
@@ -3448,7 +3465,30 @@ async function runAnalyze() {
             resultSection?.scrollIntoView({ behavior: "smooth", block: "start" });
             return;
         }
-        setIdleState();
+
+        // Preserve visible result context on non-blocking errors instead of resetting to idle.
+        if (loadingPanel) {
+            loadingPanel.classList.add("hidden");
+        }
+        if (resultSection) {
+            resultSection.classList.remove("hidden");
+        }
+        if (resultScreenNode) {
+            resultScreenNode.classList.remove("hidden");
+        }
+        const statusHeadlineNode = document.getElementById("status-headline");
+        const statusSubNode = document.getElementById("status-sub");
+        if (statusHeadlineNode) {
+            statusHeadlineNode.textContent = "Error running analysis";
+        }
+        if (statusSubNode) {
+            statusSubNode.textContent = errorMessage;
+        }
+        if (submitButton) {
+            submitButton.disabled = false;
+            submitButton.textContent = defaultSubmitLabel;
+        }
+        resultScreenNode?.scrollIntoView({ behavior: "smooth", block: "start" });
     }
 }
 
