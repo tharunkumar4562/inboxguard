@@ -56,57 +56,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
     <link rel="preload" href="/static/css/styles.min.css?v=20260406-seo-fix-1" as="style" />
     <link rel="stylesheet" href="/static/css/styles.min.css?v=20260406-seo-fix-1" />
-    <link rel="stylesheet" href="/static/theme-overrides.css?v=20260410-theme-adapt-3" />
-    <style>
-      html[data-theme="light"] #status-primary-issue,
-      html[data-theme="light"] #status-confidence,
-      html[data-theme="light"] #biggest-risk-title,
-      html:not([data-theme="dark"]) #status-primary-issue,
-      html:not([data-theme="dark"]) #status-confidence,
-      html:not([data-theme="dark"]) #biggest-risk-title {
-        color: #64748b !important;
-      }
-
-      html[data-theme="light"] #status-risk-card.warning-bg,
-      html:not([data-theme="dark"]) #status-risk-card.warning-bg {
-        background: #fff7ed !important;
-        border-color: #fdba74 !important;
-      }
-
-      html[data-theme="light"] #decision-block .confidence-meter,
-      html:not([data-theme="dark"]) #decision-block .confidence-meter {
-        background: #e5e7eb !important;
-        border-color: #d1d5db !important;
-      }
-
-      html[data-theme="light"] #decision-block .risk-strip-neutral,
-      html:not([data-theme="dark"]) #decision-block .risk-strip-neutral {
-        background: #f1f5f9 !important;
-        border-color: #cbd5e1 !important;
-      }
-
-      html[data-theme="light"] #fix-output .post-fix-gate,
-      html:not([data-theme="dark"]) #fix-output .post-fix-gate {
-        background: #eff6ff !important;
-        border-color: #93c5fd !important;
-      }
-
-      html[data-theme="light"] #fix-output .post-fix-title,
-      html:not([data-theme="dark"]) #fix-output .post-fix-title {
-        color: #1e3a8a !important;
-      }
-
-      html[data-theme="dark"] #fix-output .post-fix-gate,
-      html.dark #fix-output .post-fix-gate {
-        background: rgba(15, 23, 42, 0.72) !important;
-        border-color: rgba(59, 130, 246, 0.52) !important;
-      }
-
-      html[data-theme="dark"] #fix-output .post-fix-title,
-      html.dark #fix-output .post-fix-title {
-        color: #dbeafe !important;
-      }
-    </style>
+    <link rel="stylesheet" href="/static/theme-overrides.css?v=20260410-product-polish-1" />
     <link rel="stylesheet" href="/static/css/cookie-consent.css?v=20260410-cookie-consent-1" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
@@ -422,8 +372,8 @@ I noticed your recent post and had one short idea to improve reply rates."></tex
 
         <section id="result" class="scan-only hidden">
           <div id="result-screen" class="hidden result-screen">
-            <section id="status-overview" class="status-overview">
-              <div id="status-badge" class="status-badge">NEEDS WORK</div>
+            <section id="status-overview" class="status-overview status-hero danger">
+              <div id="status-badge" class="status-badge">ACTION REQUIRED</div>
               <h2 id="status-headline" class="status-headline">Your email may hurt reply rates</h2>
               <p id="status-sub" class="status-sub">We detected issues affecting deliverability and engagement.</p>
             </section>
@@ -431,7 +381,7 @@ I noticed your recent post and had one short idea to improve reply rates."></tex
             <section class="card decision-panel">
               <h3 class="decision-panel-label">DECISION GRID</h3>
               <div id="decision-grid" class="decision-grid">
-                <div class="card warning decision-card" id="status-risk-card">
+                <div class="card decision-card risk-high" id="status-risk-card">
                   <span>RISK STATUS</span>
                   <h3 id="status-risk">High Risk</h3>
                 </div>
@@ -468,22 +418,22 @@ I noticed your recent post and had one short idea to improve reply rates."></tex
               </section>
             </div>
 
-            <section id="step2-fix-block" class="card result-fix-card hidden">
-              <h3>Top Fixes</h3>
-              <div class="result-fix-shell">
-                <div class="result-fix-summary">
-                  <strong id="fix-title">This is safer, but not guaranteed</strong>
-                  <span>inbox placement</span>
+            <section id="step2-fix-block" class="card result-fix-card rewrite-section hidden">
+              <h3 id="fix-title">Improved Version</h3>
+              <p id="fix-preview-text" class="rewrite-subtitle">Before and after transformation so you can ship a safer draft with confidence.</p>
+              <div class="rewrite-grid">
+                <div class="rewrite-box before">
+                  <h4>Before</h4>
+                  <pre id="before-email"></pre>
                 </div>
-
-                <div class="result-fix-copy">
-                  <h4>Quick note for teams.</h4>
-                  <p id="fix-preview-text">I noticed your recent post and had one short idea to improve reply rates. Have time for a quick chat?</p>
+                <div class="rewrite-box after">
+                  <h4>After</h4>
+                  <pre id="after-email"></pre>
                 </div>
-
-                <div class="result-fix-actions">
-                  <button id="copy-fixed-btn" class="primary" type="button">Copy Fixed Email</button>
-                </div>
+              </div>
+              <div id="diff-summary" class="diff-summary"></div>
+              <div class="result-fix-actions">
+                <button id="copy-fixed-btn" class="primary" type="button">Copy Fixed Email</button>
               </div>
             </section>
 
@@ -526,18 +476,18 @@ I noticed your recent post and had one short idea to improve reply rates."></tex
               <div class="grid">
                 <div>
                   <h4>BEFORE</h4>
-                  <pre id="before-email"></pre>
+                  <pre id="before-email-legacy"></pre>
                 </div>
 
                 <div>
                   <h4>AFTER</h4>
-                  <pre id="after-email"></pre>
+                  <pre id="after-email-legacy"></pre>
                 </div>
               </div>
 
               <div>
                 <h4>Diff summary</h4>
-                <div id="diff-summary"></div>
+                <div id="diff-summary-legacy"></div>
               </div>
 
               <div class="actions">
@@ -945,6 +895,6 @@ I noticed your recent post and had one short idea to improve reply rates."></tex
     </script>
 
     <script src="/static/js/flow.js?v=20260410-progressive-exposure-1"></script>
-    <script src="/static/js/app.js?v=20260410-nav-system-4"></script>
+    <script src="/static/js/app.js?v=20260410-product-polish-1"></script>
   </body>
 </html>

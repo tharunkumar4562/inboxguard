@@ -76,6 +76,10 @@ function toggleInboxGuardTheme() {
     return applyTheme(currentTheme === "dark" ? "light" : "dark");
 }
 
+function toggleTheme() {
+    return toggleInboxGuardTheme();
+}
+
 function initTheme() {
     const storedTheme = getStoredTheme();
     const initialTheme = storedTheme || getSystemTheme();
@@ -99,6 +103,7 @@ function initTheme() {
 }
 
 window.toggleInboxGuardTheme = toggleInboxGuardTheme;
+window.toggleTheme = toggleTheme;
 window.applyInboxGuardTheme = applyTheme;
 initTheme();
 
@@ -2343,15 +2348,36 @@ function renderConversionResult(data) {
         statusOverview.classList.remove("hidden");
     }
 
+    const summary = data && typeof data.summary === "object" ? data.summary : {};
+    const riskBand = String((summary && summary.risk_band) || "").toLowerCase();
+    const baseScore = Number((summary && summary.score) ?? data.score ?? 0);
+    const inferredRiskScore = Number.isFinite(baseScore)
+        ? Math.max(0, Math.min(100, 100 - baseScore))
+        : (issues.length ? 75 : 20);
+    const riskScore = Number((summary && summary.risk_score) ?? data.risk_score ?? inferredRiskScore);
+
+    const riskClass = getRiskClass(riskScore, riskBand);
+    const riskLabel = riskClass === "risk-high" ? "High Risk" : riskClass === "risk-medium" ? "Medium Risk" : "Low Risk";
+
+    if (statusOverview) {
+        statusOverview.classList.remove("danger", "warning", "success");
+        statusOverview.classList.add(riskClass === "risk-high" ? "danger" : riskClass === "risk-medium" ? "warning" : "success");
+    }
+
     if (statusBadge && statusHeadline && statusSub) {
-        if (issues.length === 0) {
-            statusBadge.textContent = "SAFE";
+        if (riskClass === "risk-low") {
+            statusBadge.textContent = "SAFE TO SEND";
             statusBadge.className = "status-badge success";
             statusHeadline.textContent = "Your email looks safe to send";
             statusSub.textContent = "No major issues detected. Keep the message focused and personal.";
+        } else if (riskClass === "risk-medium") {
+            statusBadge.textContent = "REVIEW RECOMMENDED";
+            statusBadge.className = "status-badge warning";
+            statusHeadline.textContent = "Your email may underperform without fixes";
+            statusSub.textContent = "We found caution signals that can lower engagement and placement.";
         } else {
             statusBadge.textContent = "ACTION REQUIRED";
-            statusBadge.className = "status-badge warning";
+            statusBadge.className = "status-badge danger";
             statusHeadline.textContent = "Your email may hurt reply rates";
             statusSub.textContent = "We detected issues affecting deliverability and engagement.";
         }
@@ -2364,17 +2390,16 @@ function renderConversionResult(data) {
     const statusConfidence = document.getElementById("status-confidence");
 
     if (statusRiskCard) {
-        if (issues.length === 0) {
-            statusRiskCard.classList.remove("warning");
-            statusRiskCard.querySelector("span").textContent = "RISK LEVEL";
-        } else {
-            statusRiskCard.classList.add("warning");
-            statusRiskCard.querySelector("span").textContent = "RISK STATUS";
+        statusRiskCard.classList.remove("risk-high", "risk-medium", "risk-low");
+        statusRiskCard.classList.add(riskClass);
+        const labelNode = statusRiskCard.querySelector("span");
+        if (labelNode) {
+            labelNode.textContent = "RISK STATUS";
         }
     }
 
     if (statusRisk) {
-        statusRisk.textContent = issues.length === 0 ? "Low Risk" : "High Risk";
+        statusRisk.textContent = riskLabel;
     }
 
     if (primaryIssueCard) {
@@ -2404,8 +2429,13 @@ function renderConversionResult(data) {
     }
 
     if (fixTitleNode) {
-        fixTitleNode.textContent = issues.length === 0 ? "This is safer, but not guaranteed" : "This is safer, but not guaranteed";
+        fixTitleNode.textContent = "Improved Version";
     }
+
+    renderRewrite({
+        original,
+        rewritten: improved || original,
+    });
 
     if (topFixesListNode) {
         topFixesListNode.innerHTML = "";
@@ -2505,6 +2535,37 @@ function renderConversionResult(data) {
     window.appState.hasOptimized = true;
     syncProgressState();
     updateSteps();
+}
+
+function getRiskClass(score, riskBand = "") {
+    const normalizedBand = String(riskBand || "").toLowerCase();
+    if (normalizedBand.includes("high")) {
+        return "risk-high";
+    }
+    if (normalizedBand.includes("medium") || normalizedBand.includes("moderate")) {
+        return "risk-medium";
+    }
+    if (normalizedBand.includes("low")) {
+        return "risk-low";
+    }
+
+    const value = Number(score);
+    if (value > 70) {
+        return "risk-high";
+    }
+    if (value > 40) {
+        return "risk-medium";
+    }
+    return "risk-low";
+}
+
+function renderRewrite(data) {
+    if (beforeEmailNode) {
+        beforeEmailNode.textContent = String(data && data.original ? data.original : "");
+    }
+    if (afterEmailNode) {
+        afterEmailNode.textContent = String(data && data.rewritten ? data.rewritten : "");
+    }
 }
 
 function renderBlockedScanResult(title, message) {

@@ -630,6 +630,180 @@ html:not([data-theme="dark"]) #fix-output .post-fix-title {
   color: #1e3a8a !important;
 }
 
+/* Product polish foundation: single token system + risk-first result hierarchy. */
+:root {
+  --bg: #ffffff;
+  --card: #f8fafc;
+  --text: #0f172a;
+  --muted: #64748b;
+  --danger: #ef4444;
+  --warning: #f59e0b;
+  --success: #22c55e;
+  --primary: #3b82f6;
+}
+
+[data-theme="dark"] {
+  --bg: #0b1220;
+  --card: #111827;
+  --text: #f3f4f6;
+  --muted: #9ca3af;
+  --danger: #f87171;
+  --warning: #fbbf24;
+  --success: #4ade80;
+  --primary: #60a5fa;
+}
+
+body {
+  background: var(--bg) !important;
+  color: var(--text) !important;
+}
+
+.card,
+.decision-card,
+.result-block,
+.result-fix-card,
+.result-step3,
+.rewrite-box {
+  background: var(--card) !important;
+  color: var(--text) !important;
+}
+
+.status-overview.status-hero {
+  padding: 32px;
+  border-radius: 16px;
+  font-weight: 600;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.status-overview.status-hero.danger {
+  background: linear-gradient(135deg, #7f1d1d, #1e3a8a) !important;
+  color: #ffffff !important;
+}
+
+.status-overview.status-hero.warning {
+  background: linear-gradient(135deg, #78350f, #1e3a8a) !important;
+  color: #ffffff !important;
+}
+
+.status-overview.status-hero.success {
+  background: linear-gradient(135deg, #064e3b, #1e3a8a) !important;
+  color: #ffffff !important;
+}
+
+.status-overview .status-headline,
+.status-overview .status-sub {
+  color: #ffffff !important;
+}
+
+.status-badge {
+  color: #ffffff !important;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: rgba(15, 23, 42, 0.28) !important;
+}
+
+.status-badge.danger {
+  background: rgba(127, 29, 29, 0.52) !important;
+}
+
+.status-badge.warning {
+  background: rgba(120, 53, 15, 0.52) !important;
+}
+
+.status-badge.success {
+  background: rgba(6, 78, 59, 0.52) !important;
+}
+
+.decision-card {
+  padding: 20px;
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.16) !important;
+}
+
+.decision-card.risk-high {
+  border-left: 4px solid var(--danger) !important;
+}
+
+.decision-card.risk-medium {
+  border-left: 4px solid var(--warning) !important;
+}
+
+.decision-card.risk-low {
+  border-left: 4px solid var(--success) !important;
+}
+
+.result-fix-card.rewrite-section {
+  display: grid;
+  gap: 14px;
+}
+
+.rewrite-subtitle {
+  margin: 0;
+  color: var(--muted);
+}
+
+.rewrite-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.rewrite-box {
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+}
+
+.rewrite-box.before {
+  border-color: var(--danger);
+}
+
+.rewrite-box.after {
+  border-color: var(--success);
+}
+
+.rewrite-box h4 {
+  margin: 0 0 10px;
+  font-size: 0.92rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.rewrite-box pre {
+  margin: 0;
+  white-space: pre-wrap;
+  line-height: 1.55;
+  color: var(--text);
+}
+
+.diff-summary {
+  display: grid;
+  gap: 8px;
+}
+
+.diff-summary .diff-line {
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  padding: 10px 12px;
+  background: color-mix(in srgb, var(--card) 82%, transparent);
+  color: var(--text);
+}
+
+.result-fix-actions .primary,
+.result-step3 .cta,
+.primary-btn,
+.btn-primary {
+  background: var(--primary) !important;
+  border-color: var(--primary) !important;
+  color: #ffffff !important;
+}
+
+@media (max-width: 900px) {
+  .rewrite-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* High-pressure result funnel layout. */
 #result-screen {
   display: grid;
