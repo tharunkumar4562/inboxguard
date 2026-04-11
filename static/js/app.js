@@ -1,3 +1,26 @@
+// --- Modal Plan Dropdown & Price Sync ---
+function populateModalPlanDropdown() {
+    const select = document.getElementById("inline-plan-type");
+    if (!select || !window.plans) return;
+    select.innerHTML = "";
+    Object.entries(window.plans).forEach(([key, plan]) => {
+        const opt = document.createElement("option");
+        opt.value = key;
+        opt.textContent = `${plan.name || key} ($${plan.price_usd}/${plan.interval})`;
+        select.appendChild(opt);
+    });
+    select.addEventListener("change", (e) => {
+        updateModalPrice(e.target.value);
+    });
+}
+
+function initModalPricing() {
+    populateModalPlanDropdown();
+    // Default to first plan or 'starter'
+    const firstPlan = Object.keys(window.plans)[0] || "starter";
+    document.getElementById("inline-plan-type").value = firstPlan;
+    updateModalPrice(firstPlan);
+}
 // --- Modal Dynamic Pricing ---
 function updateModalPrice(planKey) {
     if (!window.plans || !window.plans[planKey]) return;
@@ -19,6 +42,8 @@ async function initPricing() {
         console.log("PLANS LOADED:", window.plans);
         populatePlanDropdown();
         updateDisplayedPrice(Object.keys(window.plans)[0] || "growth_monthly");
+        // Modal pricing setup
+        initModalPricing();
     } catch (e) {
         console.error("Failed to load plans", e);
     }
