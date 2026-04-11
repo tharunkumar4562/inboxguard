@@ -241,6 +241,10 @@ const beforeEmailNode = document.getElementById("before-email");
 const afterEmailNode = document.getElementById("after-email");
 const diffSummaryNode = document.getElementById("diff-summary");
 const copyFixedBtnNode = document.getElementById("copy-fixed-btn");
+const fixIssueButton = document.getElementById("fix-issue-btn");
+const rewriteSafeButton = document.getElementById("rewrite-safe-btn");
+const rewriteEngagingButton = document.getElementById("rewrite-engaging-btn");
+const rewriteConvertingButton = document.getElementById("rewrite-converting-btn");
 const restoreBtnNode = document.getElementById("restore-btn");
 const gmailBtnNode = document.getElementById("gmail-btn");
 const runTestBtnNode = document.getElementById("run-test-btn");
@@ -1932,21 +1936,6 @@ function startRealtimeScanSteps() {
     };
 }
 
-function applyAsyncJobProgress(job) {
-    const progress = job && typeof job.progress === "object" ? job.progress : {};
-    const percent = Number(progress.percent);
-    const message = String(progress.message || "").trim();
-
-    if (Number.isFinite(percent) && progressBarNode) {
-        const bounded = Math.max(0, Math.min(100, percent));
-        progressBarNode.style.width = `${bounded}%`;
-    }
-
-    if (message && loadingStep) {
-        loadingStep.textContent = message;
-    }
-}
-
 function setImpactBadge(node, impact) {
     if (!node) {
         return;
@@ -2364,9 +2353,6 @@ function renderConversionResult(data) {
     }
 
     const summary = data && typeof data.summary === "object" ? data.summary : {};
-    const signals = data && typeof data.signals === "object" ? data.signals : {};
-    const prediction = data && typeof data.prediction === "object" ? data.prediction : {};
-    const biggestRisk = data && typeof data.biggest_risk === "object" ? data.biggest_risk : {};
     const riskBand = String((summary && summary.risk_band) || "").toLowerCase();
     const baseScore = Number((summary && summary.score) ?? data.score ?? 0);
     const inferredRiskScore = Number.isFinite(baseScore)
@@ -2382,24 +2368,22 @@ function renderConversionResult(data) {
         statusOverview.classList.add(riskClass === "risk-high" ? "danger" : riskClass === "risk-medium" ? "warning" : "success");
     }
 
-    const finalScore = Number((summary && summary.final_score) ?? (summary && summary.score) ?? data.score ?? 0);
-
     if (statusBadge && statusHeadline && statusSub) {
         if (riskClass === "risk-low") {
             statusBadge.textContent = "SAFE TO SEND";
             statusBadge.className = "status-badge success";
             statusHeadline.textContent = "Your email looks safe to send";
-            statusSub.textContent = `Score ${Math.round(finalScore || 0)}/100. No major issues detected. Keep the message focused and personal.`;
+            statusSub.textContent = "No major issues detected. Keep the message focused and personal.";
         } else if (riskClass === "risk-medium") {
             statusBadge.textContent = "REVIEW RECOMMENDED";
             statusBadge.className = "status-badge warning";
             statusHeadline.textContent = "Your email may underperform without fixes";
-            statusSub.textContent = `Score ${Math.round(finalScore || 0)}/100. We found caution signals that can lower engagement and placement.`;
+            statusSub.textContent = "We found caution signals that can lower engagement and placement.";
         } else {
             statusBadge.textContent = "ACTION REQUIRED";
             statusBadge.className = "status-badge danger";
             statusHeadline.textContent = "Your email may hurt reply rates";
-            statusSub.textContent = `Score ${Math.round(finalScore || 0)}/100. We detected issues affecting deliverability and engagement.`;
+            statusSub.textContent = "We detected issues affecting deliverability and engagement.";
         }
     }
 
@@ -2423,24 +2407,17 @@ function renderConversionResult(data) {
     }
 
     if (primaryIssueCard) {
-        primaryIssueCard.textContent = String(
-            (summary && summary.primary_issue)
-            || (biggestRisk && biggestRisk.title)
-            || (issues[0] && (issues[0].message || issues[0].issue || issues[0].type || issues[0].title))
-            || "No critical issue"
-        );
+        const primaryIssue = issues.length === 0
+            ? "no_clear_value"
+            : String(issues[0] && (issues[0].type || issues[0].message || issues[0].title) || "spam_phrase");
+        primaryIssueCard.textContent = issues.length === 0 ? "No critical issue" : humanizeIssue(primaryIssue);
     }
 
     if (statusConfidence) {
-        const inboxProbability = Number(prediction.inbox_probability || 0);
-        statusConfidence.textContent = inboxProbability >= 70 ? "High" : inboxProbability >= 45 ? "Medium" : "Low";
+        statusConfidence.textContent = issues.length === 0 ? "High" : "Medium";
     }
 
-    const topIssueText = String(
-        (biggestRisk && biggestRisk.title)
-        || (issues[0] && (issues[0].message || issues[0].issue || issues[0].type || issues[0].title))
-        || "No major issue detected"
-    );
+    const topIssueText = String(issues[0] && (issues[0].message || issues[0].type || issues[0].title) || "No major issue detected");
     if (biggestRiskTextNode) {
         biggestRiskTextNode.innerHTML = issues.length === 0
             ? "Your email has <strong>no major issues</strong> and is ready for a send test."
@@ -2448,22 +2425,11 @@ function renderConversionResult(data) {
     }
 
     if (deliverabilitySummaryNode) {
-        if (String(biggestRisk.summary || "").trim()) {
-            deliverabilitySummaryNode.textContent = String(biggestRisk.summary);
-        } else if (issues.length === 0) {
+        if (issues.length === 0) {
             deliverabilitySummaryNode.textContent = "Clean content signal profile with no major spam triggers.";
         } else {
-            const summaryBits = issues.slice(0, 2).map((issue) => String(issue && (issue.message || issue.issue || issue.type || issue.title) || "risk signal")).filter(Boolean);
-            deliverabilitySummaryNode.textContent = summaryBits.length ? summaryBits.join(", ") : "Deliverability and engagement risk signals detected.";
-        }
-
-        if (String((summary && summary.analysis_mode) || "").toLowerCase() === "full") {
-            const infraSummary = [
-                `SPF: ${String(signals.spf_status || "n/a")}`,
-                `DKIM: ${String(signals.dkim_status || "n/a")}`,
-                `DMARC: ${String(signals.dmarc_status || "n/a")}`,
-            ].join(" | ");
-            deliverabilitySummaryNode.textContent = `${deliverabilitySummaryNode.textContent} (${infraSummary})`;
+            const summaryBits = issues.slice(0, 2).map((issue) => String(issue && (issue.message || issue.type || issue.title) || "risk signal")).filter(Boolean);
+            deliverabilitySummaryNode.textContent = summaryBits.length ? summaryBits.join(", ") : "Overly salesy language, spam triggers used";
         }
     }
 
@@ -2471,43 +2437,34 @@ function renderConversionResult(data) {
         fixTitleNode.textContent = "Improved Version";
     }
 
-    if (fixPreviewTextNode) {
-        fixPreviewTextNode.textContent = String(
-            data.fix_preview
-            || (biggestRisk && biggestRisk.impact)
-            || "Before and after transformation so you can ship a safer draft with confidence."
-        );
-    }
-
     renderRewrite({
         original,
-        rewritten: improved || String(data.fix_preview || original),
+        rewritten: (data && data.rewritten) || improved || (data && data.fix) || original,
+        improved: data && data.improved,
+        fix: data && data.fix,
+        rewritten_text: data && data.rewritten_text,
+        issue_highlights: (data && data.issue_highlights)
+            || issues.map((issue) => String(issue && (issue.span || issue.phrase || "") || "")).filter(Boolean),
     });
 
     if (topFixesListNode) {
         topFixesListNode.innerHTML = "";
-        const topFixes = Array.isArray(data && data.top_fixes)
-            ? data.top_fixes
-            : Array.isArray(summary && summary.top_fixes)
-                ? summary.top_fixes
-                : Array.isArray(data && data.fixes)
-                    ? data.fixes
-                    : [];
+        const topFixes = Array.isArray(data && data.top_fixes) ? data.top_fixes : [];
         if (!topFixes.length && issues.length === 0) {
             const item = document.createElement("li");
             item.textContent = "Keep the message short and personal.";
             topFixesListNode.appendChild(item);
         } else if (!topFixes.length) {
             const itemA = document.createElement("li");
-            itemA.textContent = "Reduce urgency and promotional language.";
+            itemA.textContent = "Remove spam phrases";
             topFixesListNode.appendChild(itemA);
             const itemB = document.createElement("li");
-            itemB.textContent = "Add recipient-specific personalization.";
+            itemB.textContent = "Personalize messaging";
             topFixesListNode.appendChild(itemB);
         } else {
             topFixes.slice(0, 3).forEach((fix, index) => {
                 const item = document.createElement("li");
-                item.textContent = `${index + 1}. ${String(fix && (fix.title || fix.type || fix.action || fix.text) || "Review this issue")}`;
+                item.textContent = `${index + 1}. ${String(fix && (fix.title || fix.type || fix.action) || "Review this issue")}`;
                 topFixesListNode.appendChild(item);
             });
         }
@@ -2520,7 +2477,8 @@ function renderConversionResult(data) {
             primaryIssueNode.textContent = "No major issues detected";
         } else {
             decisionTitleNode.textContent = "Analyze before sending";
-            primaryIssueNode.textContent = String(issues[0] && (issues[0].message || issues[0].type || issues[0].title) || "Issues detected");
+            const compatibilityIssue = String(issues[0] && (issues[0].type || issues[0].message || issues[0].title) || "Issues detected");
+            primaryIssueNode.textContent = humanizeIssue(compatibilityIssue);
         }
     }
 
@@ -2532,10 +2490,13 @@ function renderConversionResult(data) {
     }
 
     if (beforeEmailNode) {
-        beforeEmailNode.textContent = original;
+        beforeEmailNode.innerHTML = highlightIssueSpans(
+            original,
+            (data && data.issue_highlights) || issues.map((issue) => String(issue && (issue.span || issue.phrase || "") || "")).filter(Boolean)
+        );
     }
     if (afterEmailNode) {
-        afterEmailNode.textContent = improved;
+        afterEmailNode.textContent = String((data && (data.rewritten || data.improved || data.fix || data.rewritten_text)) || improved || "No rewrite generated");
     }
 
     if (diffSummaryNode) {
@@ -2612,12 +2573,114 @@ function getRiskClass(score, riskBand = "") {
     return "risk-low";
 }
 
+function humanizeIssue(issue) {
+    const map = {
+        weak_cta: "Your call-to-action is unclear or weak",
+        spam_phrase: "Spam-triggering words detected",
+        too_long: "Email is too long",
+        long_intro: "Intro is too long before the value",
+        generic_personalization: "Email feels generic and not personalized",
+        no_clear_value: "Value proposition is not clear",
+    };
+    const key = String(issue || "").toLowerCase().trim();
+    return map[key] || key.replace(/_/g, " ") || "No major issue detected";
+}
+
+function highlightIssueSpans(text, spans = []) {
+    let html = escapeHtml(String(text || ""));
+    spans.filter(Boolean).forEach((span) => {
+        const safeSpan = escapeHtml(String(span));
+        if (!safeSpan) {
+            return;
+        }
+        const escaped = safeSpan.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const regex = new RegExp(escaped, "gi");
+        html = html.replace(regex, (match) => `<span class=\"spam-word\">${match}</span>`);
+    });
+    return html;
+}
+
+async function generateRewrite(mode = "safe") {
+    if (!rawEmailInput || !afterEmailNode || !beforeEmailNode) {
+        return;
+    }
+    const original = String(rawEmailInput.value || "").trim();
+    if (original.length < 20) {
+        showError("Paste the full email draft before generating rewrite.");
+        return;
+    }
+
+    const payload = new FormData();
+    payload.set("raw_email", original);
+    payload.set("analysis_mode", analysisModeInput ? analysisModeInput.value : "content");
+    payload.set("rewrite_mode", mode);
+    payload.set("rewrite_style", mode);
+    if (domainInput && String(domainInput.value || "").trim()) {
+        payload.set("domain", String(domainInput.value || "").trim());
+    }
+
+    const response = await fetch("/rewrite", { method: "POST", body: payload });
+    if (!response.ok) {
+        throw new Error("Rewrite failed. Try again.");
+    }
+    const data = await response.json();
+    const selectedMode = mode === "high-converting" ? "high_converting" : mode;
+    const rewrittenFromModes = data && data.rewrites && data.rewrites[selectedMode];
+    const rewritten = String(
+        rewrittenFromModes
+        || data.rewritten
+        || data.rewritten_text
+        || data.improved
+        || data.fix
+        || original
+    );
+
+    renderRewrite({
+        original,
+        rewritten,
+        improved: data.improved,
+        fix: data.fix,
+        issue_highlights: data.issue_highlights,
+    });
+
+    if (fixPreviewTextNode) {
+        fixPreviewTextNode.textContent = String(data.primary_fix || "Rewrite generated to fix the top issue.");
+    }
+
+    if (diffSummaryNode) {
+        diffSummaryNode.innerHTML = "";
+        const rows = Array.isArray(data.diff) ? data.diff : [];
+        rows.slice(0, 5).forEach((row) => {
+            const line = document.createElement("div");
+            line.className = "diff-line";
+            line.textContent = `${String(row.before || "") || "(added)"} -> ${String(row.after || "") || "(removed)"}`;
+            diffSummaryNode.appendChild(line);
+        });
+    }
+
+    latestRewriteContext = {
+        original_text: original,
+        rewritten_text: rewritten,
+        rewrite_style: String(data.rewrite_style || mode || "balanced"),
+        rewrite_mode: String(data.rewrite_mode || selectedMode || "engaging"),
+        from_risk_band: String(data.from_risk_band || "Needs Review"),
+        to_risk_band: String(data.to_risk_band || "Needs Review"),
+        score_delta: Number(data.score_delta || 0),
+    };
+}
+
 function renderRewrite(data) {
+    const original = String((data && data.original) || "");
+    const rewritten = String(
+        (data && (data.rewritten || data.improved || data.fix || data.rewritten_text)) || "No rewrite generated"
+    );
+    const highlightSpans = Array.isArray(data && data.issue_highlights) ? data.issue_highlights : [];
+
     if (beforeEmailNode) {
-        beforeEmailNode.textContent = String(data && data.original ? data.original : "");
+        beforeEmailNode.innerHTML = highlightIssueSpans(original, highlightSpans);
     }
     if (afterEmailNode) {
-        afterEmailNode.textContent = String(data && data.rewritten ? data.rewritten : "");
+        afterEmailNode.textContent = rewritten;
     }
 }
 
@@ -2637,59 +2700,6 @@ function renderBlockedScanResult(title, message) {
     }
     if (primaryIssueNode) {
         primaryIssueNode.textContent = message || "Sign in to continue scanning.";
-    }
-
-    const statusOverview = document.getElementById("status-overview");
-    const statusBadge = document.getElementById("status-badge");
-    const statusHeadline = document.getElementById("status-headline");
-    const statusSub = document.getElementById("status-sub");
-    const statusRisk = document.getElementById("status-risk");
-    const primaryIssueCard = document.getElementById("primary-issue");
-    const statusConfidence = document.getElementById("status-confidence");
-    const statusRiskCard = document.getElementById("status-risk-card");
-
-    if (statusOverview) {
-        statusOverview.classList.remove("warning", "success");
-        statusOverview.classList.add("danger");
-    }
-    if (statusBadge) {
-        statusBadge.textContent = "ACCESS REQUIRED";
-        statusBadge.className = "status-badge danger";
-    }
-    if (statusHeadline) {
-        statusHeadline.textContent = title || "Scan blocked";
-    }
-    if (statusSub) {
-        statusSub.textContent = message || "Sign in to continue scanning.";
-    }
-    if (statusRiskCard) {
-        statusRiskCard.classList.remove("risk-medium", "risk-low");
-        statusRiskCard.classList.add("risk-high");
-    }
-    if (statusRisk) {
-        statusRisk.textContent = "Locked";
-    }
-    if (primaryIssueCard) {
-        primaryIssueCard.textContent = message || "Sign in to continue scanning.";
-    }
-    if (statusConfidence) {
-        statusConfidence.textContent = "Pending";
-    }
-
-    if (biggestRiskTextNode) {
-        biggestRiskTextNode.innerHTML = "Run one authenticated scan to unlock your real risk diagnosis and fixes.";
-    }
-    if (deliverabilitySummaryNode) {
-        deliverabilitySummaryNode.textContent = "Result details are hidden until access is restored.";
-    }
-    if (topFixesListNode) {
-        topFixesListNode.innerHTML = "";
-        const item = document.createElement("li");
-        item.textContent = "Sign in or upgrade to generate ranked fixes from your actual scan.";
-        topFixesListNode.appendChild(item);
-    }
-    if (fixPreviewTextNode) {
-        fixPreviewTextNode.textContent = "Before and after rewrite will appear after access is restored.";
     }
     if (step2FixBlockNode) {
         step2FixBlockNode.classList.remove("hidden");
@@ -3989,9 +3999,6 @@ async function runAnalyzeAsync() {
     window.appState.hasScaled = false;
     syncProgressState();
 
-    setLoadingState();
-    const loadingTicker = startRealtimeScanSteps();
-
     if (submitAsyncButton) {
         submitAsyncButton.disabled = true;
         submitAsyncButton.textContent = "Queued...";
@@ -4017,11 +4024,7 @@ async function runAnalyzeAsync() {
             continue;
         }
         const job = await poll.json();
-        applyAsyncJobProgress(job);
         if (job.status === "completed" && job.result) {
-            if (loadingTicker && typeof loadingTicker.stop === "function") {
-                loadingTicker.stop();
-            }
             const summary = job.result.summary || {};
             const signals = job.result.signals || {};
             const findings = job.result.partial_findings || summary.findings || [];
@@ -4042,19 +4045,9 @@ async function runAnalyzeAsync() {
             break;
         }
         if (job.status === "failed") {
-            if (loadingTicker && typeof loadingTicker.stop === "function") {
-                loadingTicker.stop();
-            }
             showError(String(job.error || "Async scan failed."));
-            if (loadingPanel) {
-                loadingPanel.classList.add("hidden");
-            }
             break;
         }
-    }
-
-    if (loadingTicker && typeof loadingTicker.stop === "function") {
-        loadingTicker.stop();
     }
 
     if (submitAsyncButton) {
@@ -4939,6 +4932,34 @@ function wireUiEvents() {
             trackEvent("fix_async_clicked", { source: "risk_fix_async" });
             runRewriteAsync().catch((error) => {
                 showError(error && error.message ? error.message : "Could not queue async rewrite.");
+            });
+        });
+    }
+    if (fixIssueButton) {
+        fixIssueButton.addEventListener("click", () => {
+            generateRewrite("fix_primary").catch((error) => {
+                showError(error && error.message ? error.message : "Could not fix the primary issue.");
+            });
+        });
+    }
+    if (rewriteSafeButton) {
+        rewriteSafeButton.addEventListener("click", () => {
+            generateRewrite("safe").catch((error) => {
+                showError(error && error.message ? error.message : "Could not generate safe rewrite.");
+            });
+        });
+    }
+    if (rewriteEngagingButton) {
+        rewriteEngagingButton.addEventListener("click", () => {
+            generateRewrite("engaging").catch((error) => {
+                showError(error && error.message ? error.message : "Could not generate engaging rewrite.");
+            });
+        });
+    }
+    if (rewriteConvertingButton) {
+        rewriteConvertingButton.addEventListener("click", () => {
+            generateRewrite("high-converting").catch((error) => {
+                showError(error && error.message ? error.message : "Could not generate high-converting rewrite.");
             });
         });
     }

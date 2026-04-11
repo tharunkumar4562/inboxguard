@@ -4477,7 +4477,6 @@ def _set_job_runtime_state(
     timeout_seconds: int,
     result: Optional[dict[str, Any]] = None,
     error: str = "",
-    progress: Optional[dict[str, Any]] = None,
 ) -> None:
     ASYNC_JOB_STORE[job_id] = {
         "id": job_id,
@@ -4488,7 +4487,6 @@ def _set_job_runtime_state(
         "timeout_seconds": timeout_seconds,
         "result": result or {},
         "error": error,
-        "progress": progress or {},
         "updated_at": _now_iso(),
     }
 
@@ -4507,15 +4505,6 @@ def _execute_async_analysis(
     while retries <= max_retries:
         started = datetime.now(timezone.utc)
         try:
-            _set_job_runtime_state(
-                job_id,
-                queue_name=queue_name,
-                status="running",
-                retries=retries,
-                max_retries=max_retries,
-                timeout_seconds=timeout_seconds,
-                progress={"percent": 15, "message": "Parsing email and extracting structure"},
-            )
             result = _run_analysis_request(
                 request,
                 email=payload.get("email", ""),
@@ -4537,7 +4526,6 @@ def _execute_async_analysis(
                 max_retries=max_retries,
                 timeout_seconds=timeout_seconds,
                 result=result,
-                progress={"percent": 100, "message": "Analysis complete"},
             )
             _record_async_job(
                 job_id,
@@ -4662,7 +4650,6 @@ def analyze_async(
         retries=0,
         max_retries=ASYNC_JOB_MAX_RETRIES,
         timeout_seconds=ASYNC_JOB_TIMEOUT_SECONDS,
-        progress={"percent": 5, "message": "Queued for analysis"},
     )
     _record_async_job(
         job_id,
@@ -4962,6 +4949,122 @@ def _summarize_rewrite_changes(original: str, rewritten: str, issue_titles: list
     return changes[:4]
 
 
+REWRITE_MODE_ALIASES = {
+    "safe": "safe",
+    "balanced": "balanced",
+    "engaging": "balanced",
+    "high-converting": "aggressive",
+    "high_converting": "aggressive",
+    "aggressive": "aggressive",
+    "fix_primary": "safe",
+}
+
+
+ISSUE_LABELS = {
+    "weak_cta": "Weak call to action",
+    "spam_phrase": "Spam-triggering phrase",
+    "too_long": "Email is too long",
+    "long_intro": "Intro takes too long",
+    "generic_personalization": "Missing personalization",
+    "no_clear_value": "No clear value proposition",
+}
+
+
+ISSUE_EXPLANATIONS = {
+    "weak_cta": "The call to action is vague, so the reader does not know what to do next.",
+    "spam_phrase": "The draft contains terms that can trigger spam filters or lower trust.",
+    "too_long": "The message is carrying too much text for a fast reply decision.",
+    "long_intro": "The opener delays the value and buries the ask.",
+    "generic_personalization": "The message does not feel specific to the recipient.",
+    "no_clear_value": "The reader cannot quickly see why the email matters to them.",
+}
+
+
+def _normalize_rewrite_mode(value: str) -> str:
+    normalized = str(value or "balanced").strip().lower().replace(" ", "-")
+    return REWRITE_MODE_ALIASES.get(normalized, "balanced")
+
+
+def _mode_key_from_style(style: str) -> str:
+    normalized = _normalize_rewrite_mode(style)
+    if normalized == "safe":
+        return "safe"
+    if normalized == "aggressive":
+        return "high_converting"
+    return "engaging"
+
+
+def _humanize_issue_type(issue_type: str) -> str:
+    normalized = str(issue_type or "").strip().lower()
+    return ISSUE_LABELS.get(normalized, normalized.replace("_", " ").strip().title() or "Email issue")
+
+
+def _issue_explanation(issue: dict[str, Any], fix_data: dict[str, Any] | None = None) -> str:
+    issue_type = str(issue.get("type") or "").strip().lower()
+    meta_value = issue.get("meta")
+    meta: dict[str, Any] = meta_value if isinstance(meta_value, dict) else {}
+    fix_problem = str((fix_data or {}).get("problem") or "").strip()
+    title = str(meta.get("title") or "").strip()
+    if fix_problem:
+        return fix_problem
+    if title:
+        return title
+    return ISSUE_EXPLANATIONS.get(issue_type, "This pattern can reduce replies and lower trust.")
+
+
+def _primary_fix_text(issue_type: str, fix_data: dict[str, Any] | None = None) -> str:
+    normalized = str(issue_type or "").strip().lower()
+    if normalized == "weak_cta":
+        return "Replace the vague ask with a specific action and time window."
+    if normalized == "spam_phrase":
+        return "Remove spam-triggering wording and use calmer language."
+    if normalized in {"too_long", "long_intro"}:
+        return "Shorten the opener and move the value up immediately."
+    if normalized == "generic_personalization":
+        return "Add a specific recipient cue or context line."
+    if normalized == "no_clear_value":
+        return "State the benefit of replying in one direct sentence."
+    if isinstance(fix_data, dict):
+        replace = str((fix_data.get("fix") or {}).get("replace") or "").strip()
+        if replace:
+            return f"Rewrite the flagged span: {replace}"
+    return "Improve clarity and make the next step explicit."
+
+
+def _build_rewrite_diff(before_text: str, after_text: str) -> list[dict[str, str]]:
+    before_words = str(before_text or "").split()
+    after_words = str(after_text or "").split()
+    diff_rows: list[dict[str, str]] = []
+    matcher = SequenceMatcher(None, before_words, after_words)
+    for tag, start_a, end_a, start_b, end_b in matcher.get_opcodes():
+        if tag == "equal":
+            continue
+        before_chunk = " ".join(before_words[start_a:end_a]).strip()
+        after_chunk = " ".join(after_words[start_b:end_b]).strip()
+        if before_chunk or after_chunk:
+            diff_rows.append({"before": before_chunk, "after": after_chunk})
+        if len(diff_rows) >= 6:
+            break
+    if not diff_rows:
+        diff_rows.append({"before": str(before_text or "").strip()[:80], "after": str(after_text or "").strip()[:80]})
+    return diff_rows
+
+
+def _build_rewrite_variants(original: str, issue_titles: list[str], email_intent: str, selected_style: str, selected_text: str) -> dict[str, str]:
+    safe_text = rewrite_email_text(original, detected_issues=issue_titles, intent_type=email_intent, rewrite_style="safe")
+    engaging_text = rewrite_email_text(original, detected_issues=issue_titles, intent_type=email_intent, rewrite_style="balanced")
+    high_converting_text = rewrite_email_text(original, detected_issues=issue_titles, intent_type=email_intent, rewrite_style="aggressive")
+
+    selected_key = _mode_key_from_style(selected_style)
+    rewrites = {
+        "safe": safe_text,
+        "engaging": engaging_text,
+        "high_converting": high_converting_text,
+    }
+    rewrites[selected_key] = selected_text or rewrites[selected_key] or original
+    return rewrites
+
+
 def _style_acceptance(style: str, from_band: str, to_band: str, score_delta: int) -> bool:
     from_rank = _risk_rank(from_band)
     to_rank = _risk_rank(to_band)
@@ -5044,6 +5147,7 @@ def rewrite_email(
     domain: str = Form(""),
     analysis_mode: str = Form("content"),
     rewrite_style: str = Form("balanced"),
+    rewrite_mode: str = Form(""),
 ):
     original = (raw_email or "").strip()
     clean_domain = (domain or "").strip()
@@ -5055,9 +5159,7 @@ def rewrite_email(
     if mode not in ("content", "full"):
         mode = "content"
 
-    style = (rewrite_style or "balanced").strip().lower()
-    if style not in ("safe", "balanced", "aggressive"):
-        style = "balanced"
+    style = _normalize_rewrite_mode(rewrite_mode or rewrite_style or "balanced")
 
     if os.getenv("INBOXGUARD_REWRITE_DEBUG", "0") == "1":
         debug_safe = rewrite_email_text(original, intent_type="cold outreach", rewrite_style="safe")
@@ -5068,12 +5170,50 @@ def rewrite_email(
 
     before = analyze_email(original, clean_domain, original, mode)
     before_summary = before.get("summary", {})
+    before_signals = before.get("signals", {}) if isinstance(before.get("signals"), dict) else {}
     findings = before.get("partial_findings", [])
     issue_titles = [str(item.get("title", "")) for item in findings if isinstance(item, dict)]
     email_intent = str(before_summary.get("email_type", "cold outreach"))
 
     before_score = int(before_summary.get("final_score", before_summary.get("score", 0)))
     from_band = str(before_summary.get("risk_band", "Needs Review"))
+    fix_engine = build_fix_engine_payload(original, before_summary if isinstance(before_summary, dict) else {}, before_signals)
+    fix_lookup = {
+        str(item.get("type") or "").strip().lower(): item
+        for item in (fix_engine.get("fixes") or [])
+        if isinstance(item, dict)
+    }
+
+    structured_issues: list[dict[str, Any]] = []
+    for item in fix_engine.get("issues", []):
+        if not isinstance(item, dict):
+            continue
+        issue_type = str(item.get("type") or "").strip().lower()
+        fix_data = fix_lookup.get(issue_type, {})
+        structured_issues.append(
+            {
+                "type": issue_type,
+                "severity": str(item.get("severity") or "low"),
+                "span": str(item.get("span") or ""),
+                "label": _humanize_issue_type(issue_type),
+                "explanation": _issue_explanation(item, fix_data),
+                "primary_fix": _primary_fix_text(issue_type, fix_data),
+                "meta": item.get("meta") or {},
+            }
+        )
+
+    if not structured_issues:
+        structured_issues.append(
+            {
+                "type": "no_clear_value",
+                "severity": "medium",
+                "span": "",
+                "label": _humanize_issue_type("no_clear_value"),
+                "explanation": ISSUE_EXPLANATIONS["no_clear_value"],
+                "primary_fix": _primary_fix_text("no_clear_value", None),
+                "meta": {"source": "fallback"},
+            }
+        )
 
     intent_profile = extract_rewrite_intent(original, intent_type=email_intent)
     style_variants = build_style_variants_with_guard(original, issue_titles, email_intent)
@@ -5192,6 +5332,20 @@ def rewrite_email(
             to_band = from_band
             rewrite_outcome = "failed_fix"
 
+    selected_mode = _mode_key_from_style(selected_style)
+    rewrite_bundle = _build_rewrite_variants(original, issue_titles, email_intent, selected_style, rewritten)
+    selected_rewrite = rewrite_bundle.get(selected_mode) or rewritten or original
+    rewrite_diff = _build_rewrite_diff(original, selected_rewrite)
+
+    primary_issue = structured_issues[0]
+    for preferred in ("spam_phrase", "weak_cta", "long_intro", "generic_personalization", "no_clear_value"):
+        match = next((issue for issue in structured_issues if issue.get("type") == preferred), None)
+        if match:
+            primary_issue = match
+            break
+
+    primary_fix = primary_issue.get("primary_fix") or _primary_fix_text(str(primary_issue.get("type") or ""), fix_lookup.get(str(primary_issue.get("type") or "").lower(), {}))
+
     other_styles = [name for name in ("safe", "balanced", "aggressive") if name != selected_style]
     collapse_detected = any(
         _similarity_ratio(rewritten, style_variants.get(name, "")) > 0.82 for name in other_styles
@@ -5244,8 +5398,17 @@ def rewrite_email(
         "ok": True,
         "original_text": original,
         "rewritten_text": rewritten,
+        "original": original,
+        "rewritten": selected_rewrite,
+        "fix": selected_rewrite,
         "rewrite_style": selected_style,
+        "rewrite_mode": selected_mode,
         "requested_rewrite_style": style,
+        "issues": structured_issues,
+        "primary_fix": str(primary_fix),
+        "rewrites": rewrite_bundle,
+        "diff": rewrite_diff,
+        "issue_highlights": [str(item.get("span") or "") for item in structured_issues if str(item.get("span") or "").strip()],
         "from_risk_band": from_band,
         "to_risk_band": to_band,
         "from_score": before_score,

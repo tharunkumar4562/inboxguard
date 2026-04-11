@@ -776,6 +776,55 @@ body {
   color: var(--text);
 }
 
+.rewrite-box pre {
+  white-space: pre-wrap;
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+[data-theme="light"] .rewrite-box pre {
+  color: #111111;
+}
+
+[data-theme="dark"] .rewrite-box pre {
+  color: #e5e7eb;
+}
+
+.rewrite-actions-top {
+  display: grid;
+  gap: 10px;
+}
+
+.rewrite-modes {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.rewrite-modes button,
+.danger-btn {
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  background: var(--card);
+  color: var(--text);
+  padding: 8px 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.danger-btn {
+  border-color: color-mix(in srgb, var(--danger) 50%, #ffffff);
+  background: color-mix(in srgb, var(--danger) 18%, var(--card));
+}
+
+.spam-word {
+  background: rgba(239, 68, 68, 0.2);
+  color: #f87171;
+  padding: 2px 4px;
+  border-radius: 4px;
+}
+
 .diff-summary {
   display: grid;
   gap: 8px;
