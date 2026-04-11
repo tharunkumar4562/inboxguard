@@ -1,4 +1,29 @@
+
+from pathlib import Path
 import json
+import logging
+import os
+import re
+import hmac
+import hashlib
+import secrets
+import sqlite3
+import csv
+import io
+import imaplib
+import smtplib
+from typing import Any, Optional, cast
+from uuid import uuid4
+from email.message import EmailMessage
+import time
+import httpx
+from datetime import date, datetime, timedelta, timezone
+from difflib import SequenceMatcher
+import joblib
+import threading
+
+BASE_DIR = Path(__file__).resolve().parent
+
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 from starlette.exceptions import HTTPException as StarletteHTTPException
@@ -15,9 +40,6 @@ from correction_engine import (
 )
 from fix_engine import build_fix_engine_payload
 from utils import build_email_from_raw, extract_domain_from_text
-
-import joblib
-import threading
 
 # Load classifier and vectorizer once, thread-safe
 _ml_lock = threading.Lock()
@@ -141,6 +163,8 @@ RAZORPAY_ANNUAL_PLAN_ID = os.getenv("INBOXGUARD_RAZORPAY_ANNUAL_PLAN_ID", os.get
 RAZORPAY_TRIAL_PLAN_ID = os.getenv("INBOXGUARD_RAZORPAY_TRIAL_PLAN_ID", os.getenv("RAZORPAY_TRIAL_PLAN_ID", "")).strip()
 RAZORPAY_PRO_PLAN_ID = os.getenv("INBOXGUARD_RAZORPAY_PRO_PLAN_ID", "").strip()
 RAZORPAY_STARTER_PLAN_ID = os.getenv("INBOXGUARD_RAZORPAY_STARTER_PLAN_ID", "").strip()
+# INR pricing for legacy/India support (default 749)
+RAZORPAY_AMOUNT_INR = int(os.getenv("INBOXGUARD_RAZORPAY_AMOUNT_INR", "749"))
 TRIAL_DAYS = int(os.getenv("INBOXGUARD_TRIAL_DAYS", "7"))
 PAST_DUE_GRACE_DAYS = int(os.getenv("INBOXGUARD_PAST_DUE_GRACE_DAYS", "3"))
 GOOGLE_VERIFICATION_FILE = "googleab4b33a28d8dfb88.html"
