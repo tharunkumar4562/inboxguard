@@ -109,8 +109,8 @@
             {% endif %}
             <label for="plan-type" class="text-sm text-slate-300">Choose plan</label>
             <select id="plan-type" class="mt-2 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-slate-100">
-              <option value="monthly">Growth Monthly Pro ($10/month)</option>
-              <option value="annual">Growth Annual Pro ($45/year)</option>
+              <option value="monthly">Growth Monthly Pro ({{ plans.monthly.display_price }}/month)</option>
+              <option value="annual">Growth Annual Pro ({{ plans.annual.display_price }}/year)</option>
               <option value="trial">Starter Trial ({{ trial_days }} days)</option>
               <option value="usage">Usage-Based ({{ plans.usage.display_price }})</option>
             </select>
