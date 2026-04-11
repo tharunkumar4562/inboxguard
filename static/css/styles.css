@@ -150,6 +150,7 @@
 }
 
 /* Modal Styles */
+
 .modal {
     position: fixed;
     top: 0;
@@ -161,6 +162,7 @@
     justify-content: center;
     align-items: center;
     z-index: 9999;
+    overflow: visible !important;
 }
 
 body.modal-open {
@@ -182,6 +184,7 @@ body.modal-open {
     text-align: center;
     position: relative;
     animation: scaleIn 0.2s ease;
+    overflow: visible !important;
 }
 
 .modal-close {
