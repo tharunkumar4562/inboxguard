@@ -4610,10 +4610,10 @@ async function startPayment() {
             const options = {
                 key: data.key,
                 amount: data.amount,
-                currency: data.currency || "INR",
+                currency: data.currency || "USD",
                 order_id: data.order_id,
                 name: "InboxGuard",
-                description: `${data.display_price || formatInr(Number(data.amount || 0) / 100)} checkout`,
+                description: `${data.display_price || "$12"} / month`,
                 prefill: {
                     email: currentUserEmail || "",
                     name: currentUserName || "",
@@ -4641,7 +4641,7 @@ async function startPayment() {
         const options = {
             key: data.key,
             amount: data.amount,
-            currency: data.currency || "INR",
+            currency: data.currency || "USD",
             subscription_id: data.subscription_id,
             name: "InboxGuard",
             description: `${data.display_price || "$12"} / month`,

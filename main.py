@@ -2942,8 +2942,7 @@ def pricing_page(request: Request):
             "payment_status": request.query_params.get("payment", request.query_params.get("checkout", "")),
             "payment_ready": bool(RAZORPAY_KEY and RAZORPAY_SECRET),
             "display_price_usd": RAZORPAY_DISPLAY_PRICE_USD,
-            "charge_currency": "INR",
-            "charge_amount_inr": RAZORPAY_AMOUNT_INR,
+            "charge_currency": "USD",
             "subscription_ready": bool(RAZORPAY_KEY and RAZORPAY_SECRET and RAZORPAY_PLAN_ID),
             "plans": plans,
             "trial_days": TRIAL_DAYS,
@@ -3070,10 +3069,10 @@ async def create_subscription(request: Request, plan: str = Form("monthly")):
                 "subscription_id": subscription_id,
                 "short_url": str(data.get("short_url", "") or ""),
                 "key": RAZORPAY_KEY,
-                "amount": int(RAZORPAY_AMOUNT_INR) * 100,
-                "currency": "INR",
+                "amount": int(plan_data.get("price", 0)) * 100,
+                "currency": "USD",
                 "display_price": str(plan_data.get("display_price") or RAZORPAY_DISPLAY_PRICE_USD),
-                "charge_currency": "INR",
+                "charge_currency": "USD",
                 "plan": selected_plan,
                 "promo_code": str(promo.get("code") or ""),
                 "promo_applied": True,
@@ -3252,7 +3251,7 @@ async def create_subscription(request: Request, plan: str = Form("monthly")):
             "subscription_id": subscription_id,
             "short_url": str(data.get("short_url", "") or ""),
             "key": RAZORPAY_KEY,
-            "amount": int(RAZORPAY_AMOUNT_INR) * 100,
+            "amount": int(plan_data.get("price", 0)) * 100,
             "currency": "USD",
             "display_price": str(plan_data.get("display_price") or RAZORPAY_DISPLAY_PRICE_USD),
             "charge_currency": "USD",
@@ -3338,7 +3337,7 @@ async def razorpay_webhook(request: Request, x_razorpay_signature: str | None = 
                 promo_code=str(notes.get("promo_code", "") or ""),
                 plan=selected_plan,
                 checkout_type="subscription" if subscription_id else "order",
-                discount_amount=int(notes.get("discount_amount_inr", 0) or 0),
+                # discount_amount is now always USD; remove INR
             )
             track_event(
                 "payment_captured",
@@ -6020,11 +6019,9 @@ def admin_revenue(request: Request, token: str = ""):
 
     paid_rows = [row for row in rows if str(row["status"] or "").lower() == "paid"]
     total_revenue_paise = sum(int(row["amount"] or 0) for row in paid_rows)
-    total_revenue_inr = total_revenue_paise / 100.0
     return JSONResponse(
         {
             "total_revenue_paise": total_revenue_paise,
-            "total_revenue_inr": total_revenue_inr,
             "total_payments": len(paid_rows),
         }
     )
