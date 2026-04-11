@@ -389,6 +389,12 @@ I noticed your recent post and had one short idea to improve reply rates."></tex
               <p id="status-sub" class="status-sub">We detected issues affecting deliverability and engagement.</p>
             </section>
 
+            <!-- Classification Card (new UI/UX) -->
+            <section id="classification-card" class="card classification-card hidden" style="margin-bottom: 18px;">
+              <h3 class="classification-label" style="margin:0 0 4px 0;">Classification</h3>
+              <p class="classification-desc" style="margin:0; color:#94a3b8; font-size:0.98em;">Type will appear here.</p>
+            </section>
+
             <section class="card decision-panel">
               <h3 class="decision-panel-label">DECISION GRID</h3>
               <div id="decision-grid" class="decision-grid">
@@ -410,14 +416,15 @@ I noticed your recent post and had one short idea to improve reply rates."></tex
             </section>
 
             <section id="biggest-risk-block" class="card result-block">
-              <h3 id="biggest-risk-title">Biggest Risk</h3>
-              <p id="biggest-risk-text">Your email has <strong>spam-like phrases</strong></p>
+               <h3 id="biggest-risk-title">Biggest Risk</h3>
+               <p id="biggest-risk-text"></p>
             </section>
 
             <div class="result-duo">
               <section class="card result-block">
                 <h3>What is hurting deliverability</h3>
                 <p id="deliverability-summary">Overly salesy language, spam triggers used</p>
+                  <p id="deliverability-summary"></p>
               </section>
 
               <section class="card result-block">
@@ -426,21 +433,18 @@ I noticed your recent post and had one short idea to improve reply rates."></tex
                   <li>Remove spam phrases</li>
                   <li>Personalize messaging</li>
                 </ul>
+                  <ul id="top-fixes-list" class="result-fix-list"></ul>
               </section>
             </div>
 
             <section id="rewrite-section" class="card result-fix-card rewrite-container hidden">
               <div class="rewrite-header">
-                <h2 id="fix-title">Fix Your Email</h2>
-                <p id="rewrite-summary" class="rewrite-subtitle">We found issues that hurt deliverability.</p>
+                <h2 id="fix-title">Improved Version</h2>
+                <p id="rewrite-summary" class="rewrite-subtitle"></p>
               </div>
-              <p id="fix-preview-text" class="rewrite-subtitle">Before and after transformation so you can ship a safer draft with confidence.</p>
-              <p id="rewrite-live-status" class="rewrite-live-status" aria-live="polite">Live rewrite adapts as you type and learns from feedback.</p>
-              <div id="rewrite-tags" class="rewrite-tags">
-                <span class="tag success">Removed spam triggers</span>
-                <span class="tag success">Improved CTA clarity</span>
-                <span class="tag success">Simplified structure</span>
-              </div>
+              <p id="fix-preview-text" class="rewrite-subtitle"></p>
+              <p id="rewrite-live-status" class="rewrite-live-status" aria-live="polite"></p>
+              <div id="rewrite-tags" class="rewrite-tags"></div>
               <div class="rewrite-actions-top">
                 <button id="fix-issue-btn" class="danger-btn" type="button">Fix this issue</button>
                 <div class="rewrite-modes" role="group" aria-label="Rewrite modes">
@@ -465,10 +469,7 @@ I noticed your recent post and had one short idea to improve reply rates."></tex
                 <h4>What changed</h4>
                 <div id="diff-summary" class="diff-summary"></div>
               </div>
-              <div id="rewrite-notes" class="rewrite-notes">
-                <p>✔ Optimized for inbox placement and reply rate</p>
-                <p>✔ Removed bulk-style phrasing patterns</p>
-              </div>
+              <div id="rewrite-notes" class="rewrite-notes"></div>
               <div class="result-fix-actions">
                 <button id="copy-fixed-btn" class="primary" type="button">Copy Fixed Email</button>
               </div>

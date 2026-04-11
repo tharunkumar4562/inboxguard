@@ -2037,6 +2037,16 @@ function setResultState() {
         valueShown: true,
         hasMultipleCTAs: countPrimaryActions(resultSection) > 1,
     });
+    // Always force real-time lint after scan result
+    if (typeof runRealtimeLint === "function" && rawEmailInput && rawEmailInput.value) {
+        runRealtimeLint(rawEmailInput.value).catch(() => {});
+    }
+    // Always clear loading state text
+    const statusHeadlineNode = document.getElementById("status-hero");
+    if (statusHeadlineNode) {
+        statusHeadlineNode.textContent = "";
+        statusHeadlineNode.classList.remove("loading");
+    }
 }
 
 function getQuickFixPreview(summary = {}, findings = []) {
@@ -2986,8 +2996,37 @@ function normalizeIssueRows(data) {
 }
 
 function renderAnalysisResult(data) {
+
     if (!step2FixBlockNode || !beforeEmailNode || !afterEmailNode) {
         return;
+    }
+
+    // Clear loading/Analyzing state
+    const statusHeadlineNode = document.getElementById("status-hero");
+    if (statusHeadlineNode) {
+        statusHeadlineNode.textContent = "";
+        statusHeadlineNode.classList.remove("loading");
+    }
+
+    // Classification card logic
+    const classificationCard = document.getElementById("classification-card");
+    if (classificationCard) {
+        const cls = (data && data.classification) || (data && data.summary && data.summary.classification) || "unknown";
+        let label = "Unclassified";
+        let desc = "Could not determine email type.";
+        if (cls === "transactional") {
+            label = "Transactional";
+            desc = "This email is recognized as transactional (e.g., receipts, notifications). Spam checks are relaxed.";
+        } else if (cls === "outreach") {
+            label = "Outreach";
+            desc = "This email is classified as outreach/cold email. Full spam and deliverability checks applied.";
+        } else if (cls === "marketing") {
+            label = "Marketing";
+            desc = "This email is classified as marketing/promotional. Strictest checks applied.";
+        }
+        classificationCard.querySelector(".classification-label").textContent = label;
+        classificationCard.querySelector(".classification-desc").textContent = desc;
+        classificationCard.classList.remove("hidden");
     }
 
     const original = String(
@@ -3008,10 +3047,11 @@ function renderAnalysisResult(data) {
     beforeEmailNode.innerHTML = highlightIssues(original, issues);
     afterEmailNode.textContent = rewritten || "Run rewrite to generate an improved version.";
 
+    // Show exact phrase-level issues, no generic text
     if (rewriteSummaryNode) {
         rewriteSummaryNode.textContent = issues.length
-            ? `We found ${issues.length} issue${issues.length === 1 ? "" : "s"} that hurt deliverability.`
-            : "No major phrase-level issues were detected in this draft.";
+            ? `Found ${issues.length} phrase-level issue${issues.length === 1 ? "" : "s"} that hurt deliverability.`
+            : "No phrase-level issues detected in this draft.";
     }
 
     if (decisionTitleNode) {
@@ -3026,30 +3066,44 @@ function renderAnalysisResult(data) {
     if (biggestRiskTextNode) {
         biggestRiskTextNode.textContent = issues.length
             ? `Primary issue: ${issues[0].text || issues[0].label}`
-            : "No high-risk phrase-level patterns were detected.";
+            : "No high-risk phrase-level patterns detected.";
     }
 
     if (issueListNode) {
         if (!issues.length) {
-            issueListNode.innerHTML = '<div class="issue-item">No major phrase-level issues detected.</div>';
+            issueListNode.innerHTML = '<div class="issue-item">No phrase-level issues detected.</div>';
         } else {
             issueListNode.innerHTML = issues.slice(0, 8).map((issue) => {
-                const fixText = issue.fix ? ` | Fix: ${escapeHtml(issue.fix)}` : "";
-                return `<div class="issue-item"><strong>${escapeHtml(issue.text || issue.label)}</strong> - ${escapeHtml(issue.reason || issue.label)}${fixText}</div>`;
+                // Always show exact phrase, reason, and fix
+                const phrase = issue.text || issue.label || "(phrase)";
+                const reason = issue.reason || issue.why || issue.label || "(reason)";
+                const fix = issue.fix ? ` | Fix: ${escapeHtml(issue.fix)}` : "";
+                return `<div class="issue-item"><strong>${escapeHtml(phrase)}</strong> - ${escapeHtml(reason)}${fix}</div>`;
             }).join("");
         }
     }
 
-    if (rewriteNotesNode && Array.isArray(data && data.issue_fixes) && data.issue_fixes.length) {
+    if (rewriteNotesNode) {
         rewriteNotesNode.innerHTML = "";
-        data.issue_fixes.slice(0, 4).forEach((item) => {
+        if (Array.isArray(data && data.issue_fixes) && data.issue_fixes.length) {
+            data.issue_fixes.slice(0, 4).forEach((item) => {
+                const p = document.createElement("p");
+                const text = String(item && (item.text || item.issue) ? (item.text || item.issue) : "Issue");
+                const why = String(item && item.why ? item.why : "Needs attention");
+                const fix = String(item && item.suggested_fix ? item.suggested_fix : "");
+                p.textContent = `${text} -> ${why}${fix ? ` | Fix: ${fix}` : ""}`;
+                rewriteNotesNode.appendChild(p);
+            });
+        } else {
             const p = document.createElement("p");
-            const text = String(item && (item.text || item.issue) ? (item.text || item.issue) : "Issue");
-            const why = String(item && item.why ? item.why : "Needs attention");
-            const fix = String(item && item.suggested_fix ? item.suggested_fix : "");
-            p.textContent = `${text} -> ${why}${fix ? ` | Fix: ${fix}` : ""}`;
+            p.textContent = "No additional fix notes.";
             rewriteNotesNode.appendChild(p);
-        });
+        }
+    }
+
+    // Always force real-time lint on load after scan
+    if (typeof runRealtimeLint === "function" && rawEmailInput && rawEmailInput.value) {
+        runRealtimeLint(rawEmailInput.value).catch(() => {});
     }
 }
 
@@ -5309,11 +5363,16 @@ function wireUiEvents() {
         });
     }
 
+
     if (rawEmailInput) {
         rawEmailInput.addEventListener("input", () => {
             scheduleRealtimeLint();
             scheduleAdaptiveRewritePreview();
         });
+        // --- FIX: Force realtime lint on load ---
+        setTimeout(() => {
+            runRealtimeLint(rawEmailInput.value).catch(() => {});
+        }, 0);
     }
 
     if (copyFixedNowButton) {
