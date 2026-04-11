@@ -247,6 +247,7 @@
           <h2 id="pricing-title">Simple pricing. No guesswork.</h2>
           <p>Start free. Upgrade when you're ready.</p>
           <div style="display: flex; flex-direction: column; align-items: center; margin-bottom: 24px;">
+            <!-- Plan dropdown: only one instance allowed for JS logic -->
             <select id="plan-select" style="margin-bottom: 16px; font-size: 1.1rem; padding: 8px 12px; border-radius: 8px;"></select>
             <h1 id="dynamic-price" class="big-price" style="color: #2563eb; font-size: 2.5rem; margin: 0;"></h1>
           </div>
@@ -800,13 +801,7 @@ I noticed your recent post and had one short idea to improve reply rates."></tex
         </div>
         <!-- Removed legacy selected plan text; dynamic price now shown above -->
         <label for="plan-select" class="pricing-note" style="display:block; margin-top:8px;">Choose plan</label>
-        <select id="plan-select" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900" style="margin-top:6px;"></select>
-        <select id="plan-type" class="hidden" aria-hidden="true" tabindex="-1">
-          <option value="monthly">Growth Monthly Pro ($10/month)</option>
-          <option value="annual" selected>Growth Annual Pro ($49/year)</option>
-          <option value="starter">Starter ($2/month)</option>
-          <option value="usage">Usage-Based ($0.20/scan)</option>
-        </select>
+        <!-- Only one #plan-select allowed; removed legacy/hidden selects -->
         <button id="refresh-plans" type="button" class="secondary-btn" style="margin-top:8px;">Refresh Plans</button>
         <ul id="plans-output" class="compact-list" style="margin-top:8px;">
           <li>Plan details load from server when requested.</li>

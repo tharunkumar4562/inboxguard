@@ -1,79 +1,42 @@
 // --- Modal Plan Dropdown & Price Sync ---
-function populateModalPlanDropdown() {
-    const select = document.getElementById("inline-plan-type");
-    if (!select || !window.plans) return;
-    select.innerHTML = "";
-    Object.entries(window.plans).forEach(([key, plan]) => {
-        const opt = document.createElement("option");
-        opt.value = key;
-        opt.textContent = `${plan.name || key} ($${plan.price_usd}/${plan.interval})`;
-        select.appendChild(opt);
-    });
-    select.addEventListener("change", (e) => {
-        updateModalPrice(e.target.value);
-    });
-}
+// --- Clean Plan Dropdown Logic ---
 
-function initModalPricing() {
-    populateModalPlanDropdown();
-    // Default to first plan or 'starter'
-    const firstPlan = Object.keys(window.plans)[0] || "starter";
-    document.getElementById("inline-plan-type").value = firstPlan;
-    updateModalPrice(firstPlan);
-}
-// --- Modal Dynamic Pricing ---
-function updateModalPrice(planKey) {
-    if (!window.plans || !window.plans[planKey]) return;
-    const plan = window.plans[planKey];
-    const priceEl = document.getElementById("modal-dynamic-price");
-    if (!priceEl) {
-        console.error("Modal price element not found");
-        return;
-    }
-    priceEl.innerText = `$${plan.price_usd} / ${plan.interval}`;
-    console.log("Modal price updated:", planKey, plan);
-}
-// --- Dynamic Pricing UI ---
-async function initPricing() {
+async function loadPlans() {
+    console.log("🚀 loading plans...");
+
     try {
         const res = await fetch("/plans");
-        const data = await res.json();
-        window.plans = data || {};
-        console.log("PLANS LOADED:", window.plans);
-        populatePlanDropdown();
-        updateDisplayedPrice(Object.keys(window.plans)[0] || "growth_monthly");
-        // Modal pricing setup
-        initModalPricing();
-    } catch (e) {
-        console.error("Failed to load plans", e);
+        const plans = await res.json();
+
+        console.log("✅ plans:", plans);
+
+        const select = document.getElementById("plan-select");
+
+        if (!select) {
+            console.error("❌ plan-select not found");
+            return;
+        }
+
+        select.innerHTML = "";
+
+        Object.entries(plans).forEach(([id, plan]) => {
+            const opt = document.createElement("option");
+            opt.value = id;
+            opt.textContent = `${plan.name} ($${plan.price_usd}/${plan.interval})`;
+            select.appendChild(opt);
+        });
+
+        console.log("🔥 dropdown filled");
+
+    } catch (err) {
+        console.error("❌ failed to load plans", err);
     }
 }
 
-function populatePlanDropdown() {
-    const select = document.getElementById("plan-select");
-    if (!select || !window.plans) return;
-    select.innerHTML = "";
-    Object.entries(window.plans).forEach(([key, plan]) => {
-        const opt = document.createElement("option");
-        opt.value = key;
-        opt.textContent = `${plan.name || key} ($${plan.price_usd}/${plan.interval})`;
-        select.appendChild(opt);
-    });
-    select.addEventListener("change", (e) => {
-        updateDisplayedPrice(e.target.value);
-    });
-}
-
-function updateDisplayedPrice(planKey) {
-    if (!window.plans || !window.plans[planKey]) return;
-    const plan = window.plans[planKey];
-    const priceEl = document.getElementById("dynamic-price");
-    if (!priceEl) return;
-    priceEl.innerText = `$${plan.price_usd} / ${plan.interval}`;
-    console.log("Displayed price updated:", planKey, plan);
-}
-
-document.addEventListener("DOMContentLoaded", initPricing);
+document.addEventListener("DOMContentLoaded", () => {
+    console.log("📦 DOM ready");
+    loadPlans();
+});
 const form = document.getElementById("risk-form");
 const nativeFetch = window.fetch.bind(window);
 
