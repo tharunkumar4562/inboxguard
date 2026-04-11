@@ -1,9 +1,16 @@
-
-from pathlib import Path
-# --- Ensure BASE_DIR is defined before use ---
-BASE_DIR = Path(__file__).resolve().parent
-
+...existing code...
 import json
+...existing code...
+app = FastAPI(title="InboxGuard")
+
+logger = logging.getLogger("inboxguard")
+BASE_DIR = Path(__file__).resolve().parent
+STATIC_DIR = BASE_DIR / "static"
+TEMPLATES_DIR = BASE_DIR / "templates"
+
+app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
+
 # Load plans.json as single source of truth
 PLANS_FILE = BASE_DIR / "plans.json"
 with open(PLANS_FILE, "r", encoding="utf-8") as f:
