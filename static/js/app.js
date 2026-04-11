@@ -1,38 +1,30 @@
 // --- Modal Plan Dropdown & Price Sync ---
 // --- Clean Plan Dropdown Logic ---
-
 async function loadPlans() {
     console.log("🚀 loading plans...");
-
     try {
         const res = await fetch("/plans");
         const plans = await res.json();
-
         console.log("✅ plans:", plans);
-
         const select = document.getElementById("plan-select");
-
+        const debug = document.getElementById("plan-debug");
         if (!select) {
             console.error("❌ plan-select not found");
             return;
         }
-
         select.innerHTML = "";
-
         Object.entries(plans).forEach(([id, plan]) => {
             const opt = document.createElement("option");
             opt.value = id;
             opt.textContent = `${plan.name} ($${plan.price_usd}/${plan.interval})`;
             select.appendChild(opt);
         });
-
+        if (debug) debug.innerText = "Plans loaded: " + Object.keys(plans).length;
         console.log("🔥 dropdown filled");
-
     } catch (err) {
         console.error("❌ failed to load plans", err);
     }
 }
-
 document.addEventListener("DOMContentLoaded", () => {
     console.log("📦 DOM ready");
     loadPlans();
