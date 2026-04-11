@@ -1,86 +1,3 @@
-// --- PLANS SINGLE SOURCE OF TRUTH ---
-let plans = {};
-let selectedPlanKey = "growth_annual";
-
-async function loadPlans() {
-    const res = await fetch("/plans");
-    plans = await res.json();
-}
-
-function renderPlansDropdown() {
-    const select = document.getElementById("inline-plan-type");
-    if (!select) return;
-    select.innerHTML = "";
-    Object.entries(plans).forEach(([key, plan]) => {
-        const option = document.createElement("option");
-        option.value = key;
-        option.textContent = `${plan.name} ($${plan.price_usd}/${plan.interval})`;
-        if (key === selectedPlanKey) option.selected = true;
-        select.appendChild(option);
-    });
-}
-
-function updateHeroPrice(planKey) {
-    const plan = plans[planKey];
-    const priceNode = document.getElementById("hero-price");
-    if (!plan || !priceNode) return;
-    priceNode.innerText = `$${plan.price_usd} / ${plan.interval}`;
-}
-
-document.addEventListener("DOMContentLoaded", async () => {
-    await loadPlans();
-    renderPlansDropdown();
-    updateHeroPrice(selectedPlanKey);
-    const select = document.getElementById("inline-plan-type");
-    if (select) {
-        select.addEventListener("change", (e) => {
-            selectedPlanKey = e.target.value;
-            updateHeroPrice(selectedPlanKey);
-        });
-    }
-});
-// --- STATE MACHINE: EMPTY → TYPING → ANALYZING → RESULT ---
-let scanState = "empty"; // empty | typing | analyzing | result
-
-function setStatusState(state) {
-    const hero = document.getElementById("status-hero");
-    scanState = state;
-    if (state === "idle" || state === "empty") {
-        hero.innerHTML = "SCAN REQUIRED...";
-    }
-    if (state === "typing") {
-        hero.innerHTML = "Typing...";
-    }
-    if (state === "loading" || state === "analyzing") {
-        hero.innerHTML = "Analyzing...";
-    }
-    if (state === "done" || state === "result") {
-        hero.innerHTML = ""; // 🔥 CLEAR IT COMPLETELY
-    }
-}
-
-// Hook up state transitions to input events
-if (rawEmailInput) {
-    rawEmailInput.addEventListener("input", () => {
-        setStatusState(rawEmailInput.value.trim() ? "typing" : "empty");
-    });
-    rawEmailInput.addEventListener("paste", () => {
-        setStatusState("typing");
-    });
-}
-
-// --- ENFORCE STATE ON SCAN ---
-function startScan() {
-    setStatusState("loading");
-    // ...existing code to trigger scan...
-}
-
-// After response:
-function handleScanResult(data) {
-    setStatusState("done");
-    renderAnalysisResult(data);
-}
-
 const form = document.getElementById("risk-form");
 const nativeFetch = window.fetch.bind(window);
 
@@ -248,9 +165,6 @@ const accessButton = document.getElementById("get-access-btn") || document.getEl
 const fillExampleButton = document.getElementById("fill-example");
 const tokenCostHintNode = document.getElementById("token-cost-hint");
 const tokenAfterHintNode = document.getElementById("token-after-hint");
-const realtimeLintPanelNode = document.getElementById("realtime-lint-panel");
-const realtimeLintBandNode = document.getElementById("realtime-lint-band");
-const realtimeIssuesListNode = document.getElementById("realtime-issues-list");
 const tokenEmptyStateNode = document.getElementById("token-empty-state");
 
 const authModal = document.getElementById("auth-modal");
@@ -319,21 +233,17 @@ const predictionBandsNode = document.getElementById("prediction-bands");
 const resultScreenNode = document.getElementById("result-screen");
 const decisionTitleNode = document.getElementById("decision-title");
 const primaryIssueNode = document.getElementById("primary-issue");
-const step2FixBlockNode = document.getElementById("rewrite-section") || document.getElementById("step2-fix-block");
+const step2FixBlockNode = document.getElementById("step2-fix-block");
 const step3BlockNode = document.getElementById("step3-block");
 const biggestRiskTextNode = document.getElementById("biggest-risk-text");
 const deliverabilitySummaryNode = document.getElementById("deliverability-summary");
 const beforeEmailNode = document.getElementById("before-email");
 const afterEmailNode = document.getElementById("after-email");
-const issueListNode = document.getElementById("issue-list");
 const diffSummaryNode = document.getElementById("diff-summary");
-const rewriteTagsNode = document.getElementById("rewrite-tags");
-const rewriteNotesNode = document.getElementById("rewrite-notes");
 const copyFixedBtnNode = document.getElementById("copy-fixed-btn");
 const fixIssueButton = document.getElementById("fix-issue-btn");
 const rewriteSafeButton = document.getElementById("rewrite-safe-btn");
 const rewriteEngagingButton = document.getElementById("rewrite-engaging-btn");
-const rewriteDirectButton = document.getElementById("rewrite-direct-btn");
 const rewriteConvertingButton = document.getElementById("rewrite-converting-btn");
 const restoreBtnNode = document.getElementById("restore-btn");
 const gmailBtnNode = document.getElementById("gmail-btn");
@@ -344,9 +254,7 @@ const riskReasonsNode = document.getElementById("risk-reasons");
 const riskImpactNode = document.getElementById("risk-impact");
 const riskWarningImpactNode = document.getElementById("risk-warning-impact");
 const fixTitleNode = document.getElementById("fix-title");
-const rewriteSummaryNode = document.getElementById("rewrite-summary");
 const fixPreviewTextNode = document.getElementById("fix-preview-text");
-const rewriteLiveStatusNode = document.getElementById("rewrite-live-status");
 const fixRecommendationsNode = document.getElementById("fix-recommendations");
 const impactEstimateNode = document.getElementById("impact-estimate");
 const variantInsightNode = document.getElementById("variant-insight");
@@ -491,10 +399,6 @@ const defaultSubmitLabel = submitButton ? submitButton.textContent : "Check Befo
 let latestSummary = null;
 let latestFindings = [];
 let latestRewriteContext = null;
-let realtimeLintTimer = null;
-let liveRewriteTimer = null;
-let liveRewriteRequestId = 0;
-let activeRewriteMode = "casual";
 let latestLearningProfile = null;
 let hasScanResult = false;
 let pendingAction = null;
@@ -662,70 +566,49 @@ function syncFlowUserState() {
     applyProgressiveExposure();
 }
 
-const PLAN_CHECKOUT_AMOUNTS_USD = {
-    free: 0,
-    starter: 2,
-    monthly: 10,
-    annual: 49,
-    usage: 0.2,
-};
 
-const PLAN_OPTION_LABELS = {
-    free: "Free",
-    starter: "Starter ($2/month)",
-    monthly: "Growth Monthly Pro ($10/month)",
-    annual: "Growth Annual Pro ($49/year)",
-    usage: "Usage-Based ($0.20/scan)",
-};
-
-const PLAN_LEVELS = {
-    free: 0,
-    starter: 1,
-    monthly: 2,
-    annual: 2,
-};
+// USD-based plan logic
+let PLANS_USD = {};
+let PLANS_DISPLAY = {};
 
 function normalizePlanChoice(plan) {
-    const value = String(plan || "annual").toLowerCase();
-    if (value === "growth" || value === "pro" || value === "monthlypro") {
-        return "monthly";
-    }
-    if (value === "trial") {
-        return "starter";
-    }
-    if (Object.prototype.hasOwnProperty.call(PLAN_OPTION_LABELS, value)) {
-        return value;
-    }
-    return "annual";
+    const value = String(plan || "monthly").toLowerCase();
+    if (value === "growth" || value === "pro") return "monthly";
+    if (value === "trial") return "starter";
+    if (["free", "starter", "monthly", "annual", "usage"].includes(value)) return value;
+    return "monthly";
 }
 
 function planDisplayName(plan) {
     const normalized = normalizePlanChoice(plan);
-    return PLAN_OPTION_LABELS[normalized] || "Growth Monthly";
+    return PLANS_DISPLAY[normalized]?.display_name || PLANS_DISPLAY[normalized]?.name || normalized.charAt(0).toUpperCase() + normalized.slice(1);
 }
 
 function formatUsd(amount) {
     const value = Math.max(0, Number(amount || 0));
-    return `$${value % 1 === 0 ? value : value.toFixed(2)}`;
+    return new Intl.NumberFormat("en-US", {
+        style: "currency",
+        currency: "USD",
+        maximumFractionDigits: 0,
+    }).format(value);
 }
 
 function planCheckoutAmount(plan) {
     const normalized = normalizePlanChoice(plan);
-    return Number(PLAN_CHECKOUT_AMOUNTS_USD[normalized] || PLAN_CHECKOUT_AMOUNTS_USD.monthly || 0);
+    return Number(PLANS_USD[normalized]?.price || 0);
 }
 
 function renderCheckoutPrice(plan, promo = null) {
     if (!checkoutPriceLabelNode && !checkoutPriceSummaryNode) {
         return;
     }
-
     const baseAmount = planCheckoutAmount(plan);
     const applied = promo && typeof promo === "object" ? promo : null;
     const finalAmount = Number(applied && applied.final_amount_usd !== undefined ? applied.final_amount_usd : baseAmount);
     const discountAmount = Number(applied && applied.discount_amount_usd !== undefined ? applied.discount_amount_usd : 0);
 
     if (checkoutPriceLabelNode) {
-        checkoutPriceLabelNode.textContent = `${formatUsd(finalAmount)}${plan === "annual" ? " / year" : plan === "usage" ? " / scan" : plan === "starter" ? " / month" : " / month"}`;
+        checkoutPriceLabelNode.textContent = `${formatUsd(finalAmount)}${plan === "annual" ? " / year" : plan === "usage" ? " / scan" : " / month"}`;
     }
 
     if (checkoutPriceSummaryNode) {
@@ -739,6 +622,34 @@ function renderCheckoutPrice(plan, promo = null) {
         }
     }
 }
+
+// Dynamically set hero price from /plans
+async function setHeroPrice() {
+    const heroPriceNode = document.getElementById("hero-price");
+    if (!heroPriceNode) return;
+    try {
+        const response = await fetch("/plans", { method: "GET" });
+        if (!response.ok) return;
+        const data = await response.json();
+        const plans = data.plans || {};
+        PLANS_USD = plans;
+        PLANS_DISPLAY = plans;
+        // Prefer annual, fallback to monthly
+        const annual = plans.annual;
+        if (annual && annual.price) {
+            heroPriceNode.textContent = formatUsd(annual.price) + "/year";
+        } else if (plans.monthly && plans.monthly.price) {
+            heroPriceNode.textContent = formatUsd(plans.monthly.price) + "/month";
+        } else {
+            heroPriceNode.textContent = "$12/month";
+        }
+    } catch (e) {
+        // fallback
+        heroPriceNode.textContent = "$12/month";
+    }
+}
+
+document.addEventListener("DOMContentLoaded", setHeroPrice);
 
 function clearAppliedPromo(reason = "") {
     appliedPromoState = null;
@@ -1238,197 +1149,6 @@ function buildRewriteDiff(beforeText, afterText) {
     return rows;
 }
 
-function renderDiff(diff) {
-    if (!diffSummaryNode) {
-        return;
-    }
-    diffSummaryNode.innerHTML = "";
-    const rows = Array.isArray(diff) ? diff : [];
-    if (!rows.length) {
-        const neutral = document.createElement("div");
-        neutral.className = "diff-item";
-        neutral.textContent = "No major line-level differences were detected.";
-        diffSummaryNode.appendChild(neutral);
-        return;
-    }
-    rows.forEach((item) => {
-        const removedText = String(item && (item.removed || item.before) ? (item.removed || item.before) : "").trim();
-        const addedText = String(item && (item.added || item.after) ? (item.added || item.after) : "").trim();
-        if (removedText) {
-            const removed = document.createElement("div");
-            removed.className = "diff-item diff-removed";
-            removed.textContent = `Removed: ${removedText}`;
-            diffSummaryNode.appendChild(removed);
-        }
-        if (addedText) {
-            const added = document.createElement("div");
-            added.className = "diff-item diff-added";
-            added.textContent = `Added: ${addedText}`;
-            diffSummaryNode.appendChild(added);
-        }
-    });
-}
-
-function generateTags(issues) {
-    const items = Array.isArray(issues) ? issues : [];
-    const tags = [];
-    if (items.some((issue) => String(issue && issue.type ? issue.type : "").toLowerCase() === "spam" || String(issue && issue.type ? issue.type : "").toLowerCase() === "spam_phrase")) {
-        tags.push("Removed spam triggers");
-    }
-    if (items.some((issue) => String(issue && issue.type ? issue.type : "").toLowerCase() === "cta" || String(issue && issue.type ? issue.type : "").toLowerCase() === "weak_cta")) {
-        tags.push("Improved CTA clarity");
-    }
-    if (items.some((issue) => String(issue && issue.type ? issue.type : "").toLowerCase() === "length" || String(issue && issue.type ? issue.type : "").toLowerCase() === "too_long" || String(issue && issue.type ? issue.type : "").toLowerCase() === "long_intro")) {
-        tags.push("Simplified structure");
-    }
-    if (!tags.length) {
-        tags.push("Improved readability");
-    }
-    return tags;
-}
-
-function renderTags(tags) {
-    if (!rewriteTagsNode) {
-        return;
-    }
-    rewriteTagsNode.innerHTML = "";
-    const items = Array.isArray(tags) ? tags : [];
-    items.forEach((tag) => {
-        const node = document.createElement("span");
-        node.className = "tag success";
-        node.textContent = String(tag);
-        rewriteTagsNode.appendChild(node);
-    });
-}
-
-function setRewriteLiveStatus(message) {
-    if (rewriteLiveStatusNode) {
-        rewriteLiveStatusNode.textContent = String(message || "");
-    }
-}
-
-function applyRewriteResponse(data, original, mode, options = {}) {
-    const livePreview = Boolean(options && options.livePreview);
-    const selectedMode = String(mode || "casual").toLowerCase();
-    const rewrittenFromModes = data && data.rewrites && data.rewrites[selectedMode];
-    const rewritten = String(
-        rewrittenFromModes
-        || data.rewritten
-        || data.rewritten_text
-        || data.improved
-        || data.fix
-        || original
-    );
-
-    renderRewrite({
-        original,
-        rewritten,
-        improved: data.improved,
-        fix: data.fix,
-        issue_highlights: data.issue_highlights,
-        issues: data.issues,
-    });
-
-    renderTags(generateTags(data.issues));
-
-    if (fixPreviewTextNode) {
-        fixPreviewTextNode.textContent = String(data.primary_fix || (livePreview ? "Live adaptive rewrite updated from the current draft." : "Rewrite generated to fix the top issue."));
-    }
-
-    renderDiff(Array.isArray(data.diff) ? data.diff : []);
-
-    if (rewriteNotesNode) {
-        rewriteNotesNode.innerHTML = "";
-        const explicitFixes = Array.isArray(data && data.issue_fixes) ? data.issue_fixes : [];
-        const notes = explicitFixes.length
-            ? explicitFixes.slice(0, 4).map((item) => {
-                const text = String(item && (item.text || item.issue) ? (item.text || item.issue) : "Issue");
-                const why = String(item && item.why ? item.why : "");
-                const fix = String(item && item.suggested_fix ? item.suggested_fix : "");
-                return `${text} -> ${why}${fix ? ` | Fix: ${fix}` : ""}`;
-            })
-            : [
-                "Exact issue fixes will appear here after rewrite.",
-            ];
-        notes.forEach((note) => {
-            const p = document.createElement("p");
-            p.textContent = note;
-            rewriteNotesNode.appendChild(p);
-        });
-    }
-
-    latestRewriteContext = {
-        original_text: original,
-        rewritten_text: rewritten,
-        rewrite_style: String(data.rewrite_style || mode || "casual"),
-        rewrite_mode: String(data.rewrite_mode || selectedMode || "casual"),
-        from_risk_band: String(data.from_risk_band || "Needs Review"),
-        to_risk_band: String(data.to_risk_band || "Needs Review"),
-        score_delta: Number(data.score_delta || 0),
-    };
-
-    activeRewriteMode = String(data.rewrite_style || mode || activeRewriteMode || "casual");
-
-    if (livePreview) {
-        setRewriteLiveStatus("Live rewrite updated from the current draft and feedback profile.");
-    }
-}
-
-async function runAdaptiveRewritePreview() {
-    if (!rawEmailInput || !afterEmailNode || !beforeEmailNode) {
-        return;
-    }
-    if (!latestRewriteContext && (!resultSection || resultSection.classList.contains("hidden"))) {
-        return;
-    }
-
-    const original = String(rawEmailInput.value || "").trim();
-    if (original.length < 20) {
-        setRewriteLiveStatus("Paste a longer draft to enable live adaptive rewrite.");
-        return;
-    }
-
-    const mode = activeRewriteMode || String(latestRewriteContext && latestRewriteContext.rewrite_style ? latestRewriteContext.rewrite_style : "casual");
-    const requestId = ++liveRewriteRequestId;
-    setRewriteLiveStatus("Updating live rewrite from the current draft...");
-
-    const payload = new FormData();
-    payload.set("raw_email", original);
-    payload.set("analysis_mode", analysisModeInput ? analysisModeInput.value : "content");
-    payload.set("rewrite_mode", mode);
-    payload.set("rewrite_style", mode);
-    if (domainInput && String(domainInput.value || "").trim()) {
-        payload.set("domain", String(domainInput.value || "").trim());
-    }
-
-    const response = await fetch("/rewrite-live", { method: "POST", body: payload });
-    if (requestId !== liveRewriteRequestId) {
-        return;
-    }
-    if (!response.ok) {
-        throw new Error("Live rewrite preview failed.");
-    }
-    const data = await response.json();
-    if (requestId !== liveRewriteRequestId) {
-        return;
-    }
-    applyRewriteResponse(data, original, mode, { livePreview: true });
-}
-
-function scheduleAdaptiveRewritePreview() {
-    if (!rawEmailInput) {
-        return;
-    }
-    if (liveRewriteTimer) {
-        clearTimeout(liveRewriteTimer);
-    }
-    liveRewriteTimer = setTimeout(() => {
-        runAdaptiveRewritePreview().catch(() => {
-            setRewriteLiveStatus("Live rewrite is not available right now.");
-        });
-    }, 420);
-}
-
 function setTabFeedback(message) {
     if (tabFeedbackNode) {
         tabFeedbackNode.textContent = message;
@@ -1609,7 +1329,7 @@ function stashPendingContext(actionName) {
     localStorage.setItem("ig_pending_draft", rawEmailInput ? rawEmailInput.value : "");
     localStorage.setItem("ig_pending_domain", domainInput ? domainInput.value : "");
     localStorage.setItem("ig_pending_analysis_mode", analysisModeInput ? analysisModeInput.value : "content");
-    localStorage.setItem("ig_pending_rewrite_style", rewriteStyleInput ? rewriteStyleInput.value : "casual");
+    localStorage.setItem("ig_pending_rewrite_style", rewriteStyleInput ? rewriteStyleInput.value : "balanced");
 }
 
 function restorePendingContext() {
@@ -1813,7 +1533,7 @@ async function saveCurrentFix() {
     payload.set("score_delta", String(latestRewriteContext.score_delta || 0));
     payload.set("from_risk_band", String(latestRewriteContext.from_risk_band || ""));
     payload.set("to_risk_band", String(latestRewriteContext.to_risk_band || ""));
-    payload.set("rewrite_style", String(latestRewriteContext.rewrite_style || "casual"));
+    payload.set("rewrite_style", String(latestRewriteContext.rewrite_style || "balanced"));
 
     const response = await fetch("/save-fix", {
         method: "POST",
@@ -2687,10 +2407,9 @@ function renderConversionResult(data) {
     }
 
     if (primaryIssueCard) {
-        const primaryIssue = issues.length === 0
-            ? "no_clear_value"
-            : String(issues[0] && (issues[0].type || issues[0].message || issues[0].title) || "spam_phrase");
-        primaryIssueCard.textContent = issues.length === 0 ? "No critical issue" : humanizeIssue(primaryIssue);
+        primaryIssueCard.textContent = issues.length === 0
+            ? "No critical issue"
+            : String(issues[0] && (issues[0].message || issues[0].type || issues[0].title) || "Spam phrases detected");
     }
 
     if (statusConfidence) {
@@ -2719,15 +2438,8 @@ function renderConversionResult(data) {
 
     renderRewrite({
         original,
-        rewritten: (data && data.rewritten) || improved || (data && data.fix) || original,
-        improved: data && data.improved,
-        fix: data && data.fix,
-        rewritten_text: data && data.rewritten_text,
-        issue_highlights: (data && data.issue_highlights)
-            || issues.map((issue) => String(issue && (issue.span || issue.phrase || "") || "")).filter(Boolean),
+        rewritten: improved || original,
     });
-
-    renderTags(generateTags((data && data.issues) || issues));
 
     if (topFixesListNode) {
         topFixesListNode.innerHTML = "";
@@ -2759,8 +2471,7 @@ function renderConversionResult(data) {
             primaryIssueNode.textContent = "No major issues detected";
         } else {
             decisionTitleNode.textContent = "Analyze before sending";
-            const compatibilityIssue = String(issues[0] && (issues[0].type || issues[0].message || issues[0].title) || "Issues detected");
-            primaryIssueNode.textContent = humanizeIssue(compatibilityIssue);
+            primaryIssueNode.textContent = String(issues[0] && (issues[0].message || issues[0].type || issues[0].title) || "Issues detected");
         }
     }
 
@@ -2772,36 +2483,30 @@ function renderConversionResult(data) {
     }
 
     if (beforeEmailNode) {
-        const structuredIssues = (data && Array.isArray(data.issues))
-            ? data.issues
-            : issues;
-        beforeEmailNode.innerHTML = highlightIssues(original, structuredIssues);
+        beforeEmailNode.textContent = original;
     }
     if (afterEmailNode) {
-        afterEmailNode.textContent = String((data && (data.rewritten || data.improved || data.fix || data.rewritten_text)) || improved || "No rewrite generated");
+        afterEmailNode.textContent = improved;
     }
 
-    const fallbackDiff = issues.map((issue) => ({
-        removed: String(issue && (issue.span || issue.message || issue.title || issue.type) || "Risky phrasing"),
-        added: String(issue && issue.fix ? issue.fix : "Safer neutral phrasing"),
-    }));
-    renderDiff((data && Array.isArray(data.diff) && data.diff.length) ? data.diff : fallbackDiff.slice(0, 4));
-
-    if (rewriteNotesNode) {
-        rewriteNotesNode.innerHTML = "";
-        const notes = [
-            "✔ Optimized for inbox placement and reply rate",
-            "✔ Removed bulk-style phrasing patterns",
-        ];
-        notes.forEach((note) => {
-            const p = document.createElement("p");
-            p.textContent = note;
-            rewriteNotesNode.appendChild(p);
+    if (diffSummaryNode) {
+        diffSummaryNode.innerHTML = "";
+        issues.forEach((issue) => {
+            const line = document.createElement("div");
+            line.className = "diff-line";
+            line.textContent = String(issue && (issue.message || issue.type || issue.title) || "Fix applied");
+            diffSummaryNode.appendChild(line);
         });
     }
 
     if (copyFixedBtnNode) {
-        copyFixedBtnNode.onclick = null;
+        copyFixedBtnNode.onclick = () => {
+            navigator.clipboard.writeText(improved);
+            copyFixedBtnNode.textContent = "Copied!";
+            setTimeout(() => {
+                copyFixedBtnNode.textContent = "Copy Fixed Email";
+            }, 1500);
+        };
     }
 
     if (restoreBtnNode) {
@@ -2823,7 +2528,11 @@ function renderConversionResult(data) {
     }
 
     if (runTestBtnNode) {
-        runTestBtnNode.onclick = null;
+        runTestBtnNode.onclick = () => {
+            window.appState.hasScaled = true;
+            updateSteps();
+            alert("Upgrade / pricing flow here");
+        };
     }
 
     window.appState.hasScanned = true;
@@ -2881,121 +2590,6 @@ function highlightIssueSpans(text, spans = []) {
     return html;
 }
 
-function renderRealtimeLint(payload) {
-    if (!realtimeIssuesListNode || !realtimeLintBandNode) {
-        return;
-    }
-    const issues = Array.isArray(payload && payload.issues) ? payload.issues : [];
-    const summary = payload && typeof payload.summary === "object" ? payload.summary : {};
-    const band = String(summary.risk_band || "low").toLowerCase();
-    const total = Number((summary.counts && summary.counts.total) || issues.length || 0);
-
-    realtimeLintBandNode.classList.remove("risk-high", "risk-medium", "risk-low");
-    realtimeLintBandNode.classList.add(band === "high" ? "risk-high" : band === "medium" ? "risk-medium" : "risk-low");
-    realtimeLintBandNode.textContent = `${band.charAt(0).toUpperCase()}${band.slice(1)} risk (${total})`;
-
-    realtimeIssuesListNode.innerHTML = "";
-    if (!issues.length) {
-        const li = document.createElement("li");
-        li.textContent = "No live issues detected. This draft currently looks clean.";
-        realtimeIssuesListNode.appendChild(li);
-        return;
-    }
-
-    issues.slice(0, 8).forEach((issue) => {
-        const li = document.createElement("li");
-        const type = String(issue && issue.type ? issue.type : "issue").toLowerCase();
-        li.classList.add(`issue-${type}`);
-        const phrase = String(issue && issue.phrase ? issue.phrase : "Issue");
-        const reason = String(issue && issue.reason ? issue.reason : "Needs review");
-        li.innerHTML = `<strong>${escapeHtml(phrase)}</strong> -> ${escapeHtml(reason)}`;
-        realtimeIssuesListNode.appendChild(li);
-    });
-}
-
-async function runRealtimeLint(text) {
-    const value = String(text || "");
-    if (value.trim().length < 4) {
-        renderRealtimeLint({ issues: [], summary: { risk_band: "low", counts: { total: 0 } } });
-        return;
-    }
-    const response = await fetch("/lint-realtime", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: value }),
-    });
-    if (!response.ok) {
-        throw new Error("Could not run live lint.");
-    }
-    const data = await response.json();
-    renderRealtimeLint(data);
-}
-
-function scheduleRealtimeLint() {
-    if (!rawEmailInput) {
-        return;
-    }
-    if (realtimeLintTimer) {
-        clearTimeout(realtimeLintTimer);
-    }
-    realtimeLintTimer = setTimeout(() => {
-        runRealtimeLint(rawEmailInput.value).catch(() => {
-            renderRealtimeLint({ issues: [], summary: { risk_band: "low", counts: { total: 0 } } });
-        });
-    }, 220);
-}
-
-function highlightIssues(text, issues) {
-    const source = String(text || "");
-    const rows = Array.isArray(issues) ? issues : [];
-    if (!rows.length) {
-        return escapeHtml(source);
-    }
-
-    const positional = rows
-        .filter((issue) => Number.isInteger(issue && issue.start) && Number.isInteger(issue && issue.end) && Number(issue.end) > Number(issue.start))
-        .map((issue) => ({
-            type: String(issue.type || "issue").toLowerCase(),
-            start: Number(issue.start),
-            end: Number(issue.end),
-            label: String(issue.label || issue.type || "Issue"),
-            reason: String(issue.reason || issue.explanation || ""),
-        }))
-        .sort((a, b) => a.start - b.start);
-
-    if (!positional.length) {
-        let html = escapeHtml(source);
-        rows.forEach((issue) => {
-            const needle = String(issue && (issue.text || issue.span || issue.phrase || "") ? (issue.text || issue.span || issue.phrase) : "").trim();
-            if (!needle) {
-                return;
-            }
-            const escapedNeedle = needle.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-            const regex = new RegExp(escapedNeedle, "gi");
-            const label = String(issue && (issue.label || issue.issue || issue.type || "Issue") ? (issue.label || issue.issue || issue.type) : "Issue");
-            const reason = String(issue && (issue.reason || issue.explanation || issue.why || label) ? (issue.reason || issue.explanation || issue.why || label) : label);
-            html = html.replace(regex, (match) => `<span class="issue-highlight" title="${escapeHtml(reason)}">${match}</span><span class="issue-inline-note"> ${escapeHtml(label)}</span>`);
-        });
-        return html;
-    }
-
-    let cursor = 0;
-    let html = "";
-    positional.forEach((issue) => {
-        if (issue.start < cursor) {
-            return;
-        }
-        html += escapeHtml(source.slice(cursor, issue.start));
-        const target = escapeHtml(source.slice(issue.start, issue.end));
-        const reason = issue.reason || issue.label;
-        html += `<span class="issue-highlight issue-${issue.type}" title="${escapeHtml(reason)}">${target}</span>`;
-        html += `<span class="issue-inline-note"> ${escapeHtml(issue.label)}</span>`;
-        cursor = issue.end;
-    });
-    html += escapeHtml(source.slice(cursor));
-    return html;
-}
-
 async function generateRewrite(mode = "safe") {
     if (!rawEmailInput || !afterEmailNode || !beforeEmailNode) {
         return;
@@ -3020,8 +2614,49 @@ async function generateRewrite(mode = "safe") {
         throw new Error("Rewrite failed. Try again.");
     }
     const data = await response.json();
-    applyRewriteResponse(data, original, mode, { livePreview: false });
-    setRewriteLiveStatus("Live rewrite follows the current draft and feedback profile.");
+    const selectedMode = mode === "high-converting" ? "high_converting" : mode;
+    const rewrittenFromModes = data && data.rewrites && data.rewrites[selectedMode];
+    const rewritten = String(
+        rewrittenFromModes
+        || data.rewritten
+        || data.rewritten_text
+        || data.improved
+        || data.fix
+        || original
+    );
+
+    renderRewrite({
+        original,
+        rewritten,
+        improved: data.improved,
+        fix: data.fix,
+        issue_highlights: data.issue_highlights,
+    });
+
+    if (fixPreviewTextNode) {
+        fixPreviewTextNode.textContent = String(data.primary_fix || "Rewrite generated to fix the top issue.");
+    }
+
+    if (diffSummaryNode) {
+        diffSummaryNode.innerHTML = "";
+        const rows = Array.isArray(data.diff) ? data.diff : [];
+        rows.slice(0, 5).forEach((row) => {
+            const line = document.createElement("div");
+            line.className = "diff-line";
+            line.textContent = `${String(row.before || "") || "(added)"} -> ${String(row.after || "") || "(removed)"}`;
+            diffSummaryNode.appendChild(line);
+        });
+    }
+
+    latestRewriteContext = {
+        original_text: original,
+        rewritten_text: rewritten,
+        rewrite_style: String(data.rewrite_style || mode || "balanced"),
+        rewrite_mode: String(data.rewrite_mode || selectedMode || "engaging"),
+        from_risk_band: String(data.from_risk_band || "Needs Review"),
+        to_risk_band: String(data.to_risk_band || "Needs Review"),
+        score_delta: Number(data.score_delta || 0),
+    };
 }
 
 function renderRewrite(data) {
@@ -3030,126 +2665,12 @@ function renderRewrite(data) {
         (data && (data.rewritten || data.improved || data.fix || data.rewritten_text)) || "No rewrite generated"
     );
     const highlightSpans = Array.isArray(data && data.issue_highlights) ? data.issue_highlights : [];
-    const structuredIssues = Array.isArray(data && data.issues) ? data.issues : [];
 
     if (beforeEmailNode) {
-        if (structuredIssues.length) {
-            beforeEmailNode.innerHTML = highlightIssues(original, structuredIssues);
-        } else {
-            beforeEmailNode.innerHTML = highlightIssueSpans(original, highlightSpans);
-        }
+        beforeEmailNode.innerHTML = highlightIssueSpans(original, highlightSpans);
     }
     if (afterEmailNode) {
         afterEmailNode.textContent = rewritten;
-    }
-}
-
-function normalizeIssueRows(data) {
-    const raw = Array.isArray(data && data.issues) ? data.issues : [];
-    return raw.map((issue) => {
-        const text = String(issue && (issue.text || issue.span || issue.phrase || "") ? (issue.text || issue.span || issue.phrase) : "").trim();
-        const reason = String(issue && (issue.reason || issue.explanation || issue.why || "") ? (issue.reason || issue.explanation || issue.why) : "").trim();
-        return {
-            text,
-            label: String(issue && (issue.issue || issue.label || issue.type || "Issue") ? (issue.issue || issue.label || issue.type) : "Issue"),
-            type: String(issue && issue.type ? issue.type : "issue").toLowerCase(),
-            reason,
-            start: Number.isInteger(issue && issue.start) ? Number(issue.start) : -1,
-            end: Number.isInteger(issue && issue.end) ? Number(issue.end) : -1,
-            fix: String(issue && (issue.fix || issue.primary_fix || issue.suggested_fix || "") ? (issue.fix || issue.primary_fix || issue.suggested_fix) : "").trim(),
-        };
-    }).filter((item) => item.text || item.reason || item.label);
-}
-
-function renderAnalysisResult(data) {
-
-    if (!step2FixBlockNode || !beforeEmailNode || !afterEmailNode) {
-        return;
-    }
-
-    // --- FIX: Clear loading/Analyzing state and enforce state machine ---
-    setStatusState("done");
-        // --- ML CLASSIFIER TO UI ---
-        const emailTypeNode = document.getElementById("email-type");
-        if (emailTypeNode && data.classification && data.classification.type) {
-            const conf = data.classification.confidence ? Math.round(data.classification.confidence * 100) : 0;
-            emailTypeNode.innerText = `${data.classification.type.charAt(0).toUpperCase() + data.classification.type.slice(1)}${conf ? ` (${conf}%)` : ""}`;
-        } else if (emailTypeNode) {
-            emailTypeNode.innerText = "—";
-        }
-
-    const original = String(
-        (data && (data.original || data.original_text || (data.signals && data.signals.email_source) || ""))
-        || (rawEmailInput && rawEmailInput.value ? rawEmailInput.value : "")
-    );
-    const rewritten = String(
-        (data && (data.rewritten || data.rewritten_text || data.fix || data.improved || ""))
-        || ""
-    );
-    const issues = normalizeIssueRows(data);
-
-    step2FixBlockNode.classList.remove("hidden");
-    if (resultSection) {
-        resultSection.classList.remove("hidden");
-    }
-
-    beforeEmailNode.innerHTML = highlightIssues(original, issues);
-    afterEmailNode.textContent = rewritten || "Run rewrite to generate an improved version.";
-
-    if (rewriteSummaryNode) {
-        rewriteSummaryNode.textContent = issues.length
-            ? `We found ${issues.length} issue${issues.length === 1 ? "" : "s"} that hurt deliverability.`
-            : "No major phrase-level issues were detected in this draft.";
-    }
-
-    // --- Replace generic text with real data ---
-    if (decisionTitleNode) {
-        if (!issues.length && data.classification && data.classification.type !== "spam") {
-            decisionTitleNode.textContent = "Safe to send";
-        } else {
-            decisionTitleNode.textContent = issues.length ? "Fix before sending" : "No major issues detected";
-        }
-    }
-    if (primaryIssueNode) {
-        const firstIssue = issues[0];
-        if (!issues.length) {
-            primaryIssueNode.textContent = "No analysis has been run yet. Run a scan to detect real deliverability risks.";
-        } else {
-            primaryIssueNode.textContent = firstIssue
-                ? `Phrase: '${firstIssue.text || firstIssue.label}'\nReason: ${firstIssue.reason || firstIssue.label}\nFix: ${firstIssue.fix || "—"}`
-                : "No critical issue found";
-        }
-    }
-    if (biggestRiskTextNode) {
-        biggestRiskTextNode.textContent = issues.length
-            ? `Primary issue: ${issues[0].text || issues[0].label}`
-            : "No analysis has been run yet. Run a scan to detect real deliverability risks.";
-    }
-
-    if (issueListNode) {
-        if (!issues.length) {
-            issueListNode.innerHTML = '<div class="issue-item">No major phrase-level issues detected.</div>';
-        } else {
-            issueListNode.innerHTML = issues.slice(0, 8).map((issue) => {
-                // Always show exact phrase, reason, and fix
-                const phrase = issue.text || issue.label || "(phrase)";
-                const reason = issue.reason || issue.why || issue.label || "(reason)";
-                const fix = issue.fix ? ` | Fix: ${escapeHtml(issue.fix)}` : "";
-                return `<div class="issue-item"><strong>${escapeHtml(phrase)}</strong> - ${escapeHtml(reason)}${fix}</div>`;
-            }).join("");
-        }
-    }
-
-    if (rewriteNotesNode && Array.isArray(data && data.issue_fixes) && data.issue_fixes.length) {
-        rewriteNotesNode.innerHTML = "";
-        data.issue_fixes.slice(0, 4).forEach((item) => {
-            const p = document.createElement("p");
-            const text = String(item && (item.text || item.issue) ? (item.text || item.issue) : "Issue");
-            const why = String(item && item.why ? item.why : "Needs attention");
-            const fix = String(item && item.suggested_fix ? item.suggested_fix : "");
-            p.textContent = `${text} -> ${why}${fix ? ` | Fix: ${fix}` : ""}`;
-            rewriteNotesNode.appendChild(p);
-        });
     }
 }
 
@@ -3792,7 +3313,7 @@ function getRecommendedRewriteStyle() {
     if (band === "High Spam-Risk Signals" || band === "High Risk") {
         return "safe";
     }
-    return "casual";
+    return "balanced";
 }
 async function showFixTransformation() {
     if (!fixOutput || !beforeEmailNode || !afterEmailNode || !rawEmailInput || !fixNowButton) {
@@ -3809,7 +3330,7 @@ async function showFixTransformation() {
     fixNowButton.textContent = "Fixing...";
     trackEvent("fix_clicked", {
         source: "fix_issues_button",
-        rewrite_style: rewriteStyleInput ? rewriteStyleInput.value : "casual",
+        rewrite_style: rewriteStyleInput ? rewriteStyleInput.value : "balanced",
     });
 
     try {
@@ -3819,7 +3340,7 @@ async function showFixTransformation() {
             payload.set("domain", domainInput.value.trim());
         }
         payload.set("analysis_mode", analysisModeInput ? analysisModeInput.value : "content");
-        payload.set("rewrite_style", rewriteStyleInput ? rewriteStyleInput.value : "casual");
+        payload.set("rewrite_style", rewriteStyleInput ? rewriteStyleInput.value : "balanced");
 
         const response = await fetch("/rewrite", {
             method: "POST",
@@ -3871,7 +3392,7 @@ async function showFixTransformation() {
             from_risk_band: String(data.from_risk_band || "Needs Review"),
             to_risk_band: String(data.to_risk_band || "Needs Review"),
             score_delta: Number(data.score_delta || 0),
-            rewrite_style: String(data.rewrite_style || "casual"),
+            rewrite_style: String(data.rewrite_style || "balanced"),
         };
 
         const rewriteOutcome = String(data.rewrite_outcome || "neutral").toLowerCase();
@@ -3902,14 +3423,12 @@ async function showFixTransformation() {
         }
 
         if (rewriteModeDisplayNode) {
-            const mode = String(data.rewrite_style || "casual").toLowerCase();
+            const mode = String(data.rewrite_style || "balanced").toLowerCase();
             const modeLabel = mode === "safe"
                 ? "Safe (keeps more detail)"
-                : mode === "sales"
-                    ? "Sales (high-conv tone)"
-                    : mode === "direct"
-                        ? "Direct (concise and clear)"
-                        : "Casual (friendly and natural)";
+                : mode === "aggressive"
+                    ? "Aggressive (max reply rate)"
+                    : "Balanced (best mix)";
             rewriteModeDisplayNode.textContent = `Rewrite mode: ${modeLabel}`;
         }
 
@@ -4089,7 +3608,7 @@ async function runAnalyze() {
             analysis_mode: mode,
         });
 
-        renderAnalysisResult(data);
+        renderConversionResult(data, summary, findings);
 
         if (rewriteStyleInput) {
             rewriteStyleInput.value = getRecommendedRewriteStyle();
@@ -4189,81 +3708,25 @@ async function runAnalyze() {
     }
 }
 
-function getFixedEmailText() {
-    const fromContext = String(latestRewriteContext && latestRewriteContext.rewritten_text ? latestRewriteContext.rewritten_text : "").trim();
-    if (fromContext) {
-        return fromContext;
-    }
-    const fromNode = String(afterEmailNode && afterEmailNode.textContent ? afterEmailNode.textContent : "").trim();
-    if (fromNode && !fromNode.toLowerCase().includes("unlock access")) {
-        return fromNode;
-    }
-    return "";
-}
-
-async function copyFixedEmail(sourceButton = null) {
+function useFixedVersion() {
     if (!afterEmailNode || !rawEmailInput) {
         return;
     }
-    const text = getFixedEmailText();
-    if (!text) {
-        openPricingModal();
-        showError("Unlock access to copy and test the fixed version.");
-        return;
-    }
-
-    let clipboardOk = true;
-    try {
-        await navigator.clipboard.writeText(text);
-    } catch (_error) {
-        clipboardOk = false;
-    }
-
-    rawEmailInput.value = text;
-    trackEvent("copy_clicked", { source: "fixed_email" });
-
-    if (useFixedButton) {
-        useFixedButton.textContent = "✓ Copied";
-        useFixedButton.classList.add("bg-green-700");
-        setTimeout(() => {
-            useFixedButton.textContent = "Copy Fixed Email";
-            useFixedButton.classList.remove("bg-green-700");
-        }, 1200);
-    }
-
-    if (sourceButton && sourceButton !== useFixedButton) {
-        const originalText = String(sourceButton.textContent || "Copy Fixed Email");
-        sourceButton.textContent = "Copied!";
-        setTimeout(() => {
-            sourceButton.textContent = originalText;
-        }, 1200);
-    }
-
-    showError(clipboardOk ? "Copied fixed email. You can paste directly into your sender." : "Clipboard blocked. Fixed draft is still loaded in the editor.");
-}
-
-function runRealInboxTest() {
-    window.appState.hasScaled = true;
-    syncProgressState();
-    applyProgressiveExposure();
-
-    if (!isAuthenticated) {
-        openPricingModal();
-        trackEvent("run_real_inbox_test_clicked", { state: "anon" });
-        return;
-    }
-
-    trackEvent("run_real_inbox_test_clicked", { state: "authenticated" });
-    runSeedAuto().catch(() => {
-        window.location.href = "/seed-inbox";
-    });
-}
-
-function useFixedVersion() {
-    copyFixedEmail(useFixedButton).then(() => {
-        const text = getFixedEmailText();
+    const text = String(afterEmailNode.textContent || rawEmailInput.value || "");
+    navigator.clipboard.writeText(text).then(() => {
         rawEmailInput.value = text;
+        trackEvent("copy_clicked", { source: "fixed_email" });
+        if (useFixedButton) {
+            useFixedButton.textContent = "✓ Copied";
+            useFixedButton.classList.add("bg-green-700");
+            setTimeout(() => {
+                useFixedButton.textContent = "Copy Fixed Email";
+                useFixedButton.classList.remove("bg-green-700");
+            }, 1200);
+        }
+        showError("Copied fixed email. You can paste directly into your sender.");
     }).catch(() => {
+        rawEmailInput.value = text;
         showError("Fixed version ready. Clipboard blocked, but draft is updated in editor.");
     });
 }
@@ -4564,7 +4027,7 @@ async function runAnalyzeAsync() {
             if (window.InboxGuardFlow && typeof window.InboxGuardFlow.markFlowScanCompleted === "function") {
                 window.InboxGuardFlow.markFlowScanCompleted();
             }
-            renderAnalysisResult(job.result || {});
+            renderConversionResult(job.result || {}, summary, findings);
             setResultState();
             if (resultSection) {
                 resultSection.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -4602,7 +4065,7 @@ async function runRewriteAsync() {
             payload.set("domain", domainInput.value.trim());
         }
         payload.set("analysis_mode", analysisModeInput ? analysisModeInput.value : "content");
-        payload.set("rewrite_style", rewriteStyleInput ? rewriteStyleInput.value : "casual");
+        payload.set("rewrite_style", rewriteStyleInput ? rewriteStyleInput.value : "balanced");
 
         const response = await fetch("/rewrite-async", { method: "POST", body: payload });
         if (!response.ok) {
@@ -4634,7 +4097,7 @@ async function runRewriteAsync() {
                         from_risk_band: String(job.result.from_risk_band || "Needs Review"),
                         to_risk_band: String(job.result.to_risk_band || "Needs Review"),
                         score_delta: Number(job.result.score_delta || 0),
-                        rewrite_style: String(job.result.rewrite_style || "casual"),
+                        rewrite_style: String(job.result.rewrite_style || "balanced"),
                     };
                     if (workflowStateNode) {
                         workflowStateNode.textContent = "Step 2: Fix complete";
@@ -5147,10 +4610,10 @@ async function startPayment() {
             const options = {
                 key: data.key,
                 amount: data.amount,
-                currency: data.currency || "USD",
+                currency: data.currency || "INR",
                 order_id: data.order_id,
                 name: "InboxGuard",
-                description: `${data.display_price || formatUsd(Number(data.amount || 0) / 100)} checkout`,
+                description: `${data.display_price || formatInr(Number(data.amount || 0) / 100)} checkout`,
                 prefill: {
                     email: currentUserEmail || "",
                     name: currentUserName || "",
@@ -5178,7 +4641,7 @@ async function startPayment() {
         const options = {
             key: data.key,
             amount: data.amount,
-            currency: data.currency || "USD",
+            currency: data.currency || "INR",
             subscription_id: data.subscription_id,
             name: "InboxGuard",
             description: `${data.display_price || "$12"} / month`,
@@ -5404,21 +4867,7 @@ function wireUiEvents() {
     if (fillExampleButton) {
         fillExampleButton.addEventListener("click", () => {
             fillExampleEmail();
-            scheduleRealtimeLint();
-            scheduleAdaptiveRewritePreview();
         });
-    }
-
-
-    if (rawEmailInput) {
-        rawEmailInput.addEventListener("input", () => {
-            scheduleRealtimeLint();
-            scheduleAdaptiveRewritePreview();
-        });
-        // --- FIX: Force realtime lint on load ---
-        setTimeout(() => {
-            runRealtimeLint(rawEmailInput.value).catch(() => {});
-        }, 0);
     }
 
     if (copyFixedNowButton) {
@@ -5476,46 +4925,6 @@ function wireUiEvents() {
             });
         });
     }
-    if (fixIssueButton) {
-        fixIssueButton.addEventListener("click", () => {
-            activeRewriteMode = "safe";
-            generateRewrite("fix_primary").catch((error) => {
-                showError(error && error.message ? error.message : "Could not fix the primary issue.");
-            });
-        });
-    }
-    if (rewriteSafeButton) {
-        rewriteSafeButton.addEventListener("click", () => {
-            activeRewriteMode = "safe";
-            generateRewrite("safe").catch((error) => {
-                showError(error && error.message ? error.message : "Could not generate safe rewrite.");
-            });
-        });
-    }
-    if (rewriteEngagingButton) {
-        rewriteEngagingButton.addEventListener("click", () => {
-            activeRewriteMode = "casual";
-            generateRewrite("casual").catch((error) => {
-                showError(error && error.message ? error.message : "Could not generate casual rewrite.");
-            });
-        });
-    }
-    if (rewriteDirectButton) {
-        rewriteDirectButton.addEventListener("click", () => {
-            activeRewriteMode = "direct";
-            generateRewrite("direct").catch((error) => {
-                showError(error && error.message ? error.message : "Could not generate direct rewrite.");
-            });
-        });
-    }
-    if (rewriteConvertingButton) {
-        rewriteConvertingButton.addEventListener("click", () => {
-            activeRewriteMode = "sales";
-            generateRewrite("sales").catch((error) => {
-                showError(error && error.message ? error.message : "Could not generate sales rewrite.");
-            });
-        });
-    }
     if (postFixAccessButton) {
         postFixAccessButton.addEventListener("click", () => {
             window.appState.hasScaled = true;
@@ -5562,20 +4971,6 @@ function wireUiEvents() {
             shareResultCard().catch((error) => {
                 showError(error && error.message ? error.message : "Could not copy result card.");
             });
-        });
-    }
-
-    if (copyFixedBtnNode) {
-        copyFixedBtnNode.addEventListener("click", () => {
-            copyFixedEmail(copyFixedBtnNode).catch(() => {
-                showError("Could not copy fixed email right now.");
-            });
-        });
-    }
-
-    if (runTestBtnNode) {
-        runTestBtnNode.addEventListener("click", () => {
-            runRealInboxTest();
         });
     }
 
