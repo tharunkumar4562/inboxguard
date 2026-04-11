@@ -625,16 +625,16 @@ const PLAN_CHECKOUT_AMOUNTS_INR = {
     free: 0,
     starter: 200,
     monthly: 999,
-    annual: 3749,
+    annual: 9900,
     usage: 17,
 };
 
 const PLAN_OPTION_LABELS = {
     free: "Free",
-    starter: "Starter ($2/month)",
-    monthly: "Growth Monthly Pro ($10/mo)",
-    annual: "Growth Annual Pro ($45/yr)",
-    usage: "Usage-Based ($0.20/scan)",
+    starter: "Starter (₹200/month)",
+    monthly: "Growth Monthly Pro (₹999/mo)",
+    annual: "Growth Annual Pro (₹9,900/yr)",
+    usage: "Usage-Based (₹17/scan)",
 };
 
 const PLAN_LEVELS = {
