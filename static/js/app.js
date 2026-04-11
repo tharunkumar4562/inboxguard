@@ -1,3 +1,42 @@
+// --- Dynamic Pricing UI ---
+async function initPricing() {
+    try {
+        const res = await fetch("/plans");
+        const data = await res.json();
+        window.plans = data.plans || {};
+        console.log("PLANS LOADED:", window.plans);
+        populatePlanDropdown();
+        updateDisplayedPrice(Object.keys(window.plans)[0] || "growth_monthly");
+    } catch (e) {
+        console.error("Failed to load plans", e);
+    }
+}
+
+function populatePlanDropdown() {
+    const select = document.getElementById("plan-select");
+    if (!select || !window.plans) return;
+    select.innerHTML = "";
+    Object.entries(window.plans).forEach(([key, plan]) => {
+        const opt = document.createElement("option");
+        opt.value = key;
+        opt.textContent = `${plan.name || key} ($${plan.price_usd}/${plan.interval})`;
+        select.appendChild(opt);
+    });
+    select.addEventListener("change", (e) => {
+        updateDisplayedPrice(e.target.value);
+    });
+}
+
+function updateDisplayedPrice(planKey) {
+    if (!window.plans || !window.plans[planKey]) return;
+    const plan = window.plans[planKey];
+    const priceEl = document.getElementById("dynamic-price");
+    if (!priceEl) return;
+    priceEl.innerText = `$${plan.price_usd} / ${plan.interval}`;
+    console.log("Displayed price updated:", planKey, plan);
+}
+
+document.addEventListener("DOMContentLoaded", initPricing);
 const form = document.getElementById("risk-form");
 const nativeFetch = window.fetch.bind(window);
 

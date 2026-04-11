@@ -246,44 +246,9 @@
         <section class="pricing-section card home-only" id="home-pricing-cta">
           <h2 id="pricing-title">Simple pricing. No guesswork.</h2>
           <p>Start free. Upgrade when you're ready.</p>
-
-          <div class="pricing-grid">
-            <article class="plan-card">
-              <h3>Free</h3>
-              <p class="tag">Testing mode</p>
-              <p class="price">$0<span>/month</span></p>
-              <ul>
-                <li>✓ Scan Email</li>
-                <li>✓ Domain Check</li>
-                <li>✓ Small monthly token allowance</li>
-              </ul>
-              <button type="button" onclick="handlePlanClick('free')" class="plan-btn">Use Free Plan</button>
-            </article>
-
-            <article class="plan-card">
-              <h3>Starter</h3>
-              <p class="tag">For solo senders</p>
-              <p class="price">$2<span>/month</span></p>
-              <ul>
-                <li>✓ Everything in Free</li>
-                <li>✓ Campaign Debugger access</li>
-                <li>✓ More monthly tokens</li>
-              </ul>
-              <button type="button" onclick="handlePlanClick('starter')" class="plan-btn">Upgrade to Starter</button>
-            </article>
-
-            <article class="plan-card highlight">
-              <h3 class="highlight-title">Growth Annual Pro</h3>
-              <p class="tag">Most teams choose this</p>
-              <p class="price"><span id="hero-price"></span></p>
-              <ul>
-                <li>✓ Stop emails going to spam</li>
-                <li>✓ Catch hidden deliverability issues</li>
-                <li>✓ Protect your domain reputation</li>
-                <li>✓ Fix campaigns before sending</li>
-              </ul>
-              <button type="button" onclick="handlePlanClick('annual')" class="plan-btn primary">Upgrade to Growth Annual Pro</button>
-            </article>
+          <div style="display: flex; flex-direction: column; align-items: center; margin-bottom: 24px;">
+            <select id="plan-select" style="margin-bottom: 16px; font-size: 1.1rem; padding: 8px 12px; border-radius: 8px;"></select>
+            <h1 id="dynamic-price" class="big-price" style="color: #2563eb; font-size: 2.5rem; margin: 0;"></h1>
           </div>
           <p class="micro" style="margin-top:8px;">All plans use tokens. The difference is monthly token allocation and unlocked tools.</p>
         </section>
