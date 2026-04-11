@@ -4294,11 +4294,27 @@ function openPricingModal() {
     const modal = document.getElementById("pricing-modal");
     if (modal) {
         syncPlanSelection(pendingPlanChoice);
+        // Render modal price and total from /plans
+        renderPricingModal(pendingPlanChoice || "annual");
         modal.style.display = "flex";
         modal.classList.remove("hidden");
         document.body.classList.add("modal-open");
     } else {
         console.error("Pricing modal not found");
+    }
+}
+
+// Render modal price and total from /plans
+function renderPricingModal(planKey = "annual") {
+    if (!window.PLANS_USD || !window.PLANS_USD[planKey]) return;
+    const plan = window.PLANS_USD[planKey];
+    const modalPrice = document.getElementById("modal-price");
+    const modalTotal = document.getElementById("modal-total");
+    if (modalPrice) {
+        modalPrice.innerText = `$${plan.price}${plan.interval ? " / " + plan.interval : ""}`;
+    }
+    if (modalTotal) {
+        modalTotal.innerText = `$${plan.price}`;
     }
 }
 

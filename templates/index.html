@@ -818,10 +818,10 @@ I noticed your recent post and had one short idea to improve reply rates."></tex
       <div class="modal-content">
         <button class="modal-close" onclick="closePricingModal()" aria-label="Close pricing modal">×</button>
         <h2 id="pricing-modal-title">Stop guessing before you send</h2>
-        <p class="price" id="checkout-price-label">$49 / year</p>
+        <p class="price"><span id="modal-price"></span></p>
         <p class="pricing-note">Catch deliverability risk before one bad batch hurts your domain.</p>
         <button id="pay-btn" type="button" class="primary-btn">Get Access</button>
-        <p id="checkout-price-summary" class="pricing-note">Checkout total: $49</p>
+        <p class="pricing-note">Checkout total: <span id="modal-total"></span></p>
         <ul class="pricing-features">
           <li>Avoid spam triggers before they burn your domain</li>
           <li>Know whether the issue is content or infra</li>
