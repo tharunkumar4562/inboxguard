@@ -5290,13 +5290,14 @@ def _split_subject_body(text: str) -> tuple[str, str]:
     return (subject, body)
 
 
-@app.post("/rewrite")
-def rewrite_email(
+def _build_rewrite_response(
     raw_email: str = Form(""),
     domain: str = Form(""),
     analysis_mode: str = Form("content"),
     rewrite_style: str = Form("balanced"),
     rewrite_mode: str = Form(""),
+    track_metrics: bool = True,
+    live_preview: bool = False,
 ):
     original = (raw_email or "").strip()
     clean_domain = (domain or "").strip()
@@ -5309,11 +5310,12 @@ def rewrite_email(
         mode = "content"
 
     style = _normalize_rewrite_mode(rewrite_mode or rewrite_style or "balanced")
+    learning_profile = get_learning_profile()
 
     if os.getenv("INBOXGUARD_REWRITE_DEBUG", "0") == "1":
-        debug_safe = rewrite_email_text(original, intent_type="cold outreach", rewrite_style="safe")
-        debug_balanced = rewrite_email_text(original, intent_type="cold outreach", rewrite_style="balanced")
-        debug_aggressive = rewrite_email_text(original, intent_type="cold outreach", rewrite_style="aggressive")
+        debug_safe = rewrite_email_text(original, intent_type="cold outreach", rewrite_style="safe", learning_profile=learning_profile)
+        debug_balanced = rewrite_email_text(original, intent_type="cold outreach", rewrite_style="balanced", learning_profile=learning_profile)
+        debug_aggressive = rewrite_email_text(original, intent_type="cold outreach", rewrite_style="aggressive", learning_profile=learning_profile)
         if debug_safe == debug_balanced or debug_balanced == debug_aggressive or debug_safe == debug_aggressive:
             logger.warning("Rewrite style collapse detected for current draft")
 
@@ -5377,7 +5379,7 @@ def rewrite_email(
         )
 
     intent_profile = extract_rewrite_intent(original, intent_type=email_intent)
-    style_variants = build_style_variants_with_guard(original, issue_titles, email_intent)
+    style_variants = build_style_variants_with_guard(original, issue_titles, email_intent, learning_profile=learning_profile)
 
     selected_style = style
     rewritten = ""
@@ -5525,17 +5527,19 @@ def rewrite_email(
         score_delta,
     )
 
-    track_event(
-        "rewrite_request",
-        {
-            "mode": mode,
-            "rewrite_style": selected_style,
-            "score_delta": score_delta,
-            "from_risk_band": from_band,
-            "to_risk_band": to_band,
-            "improved": _risk_rank(to_band) < _risk_rank(from_band),
-        },
-    )
+    if track_metrics:
+        track_event(
+            "rewrite_request",
+            {
+                "mode": mode,
+                "rewrite_style": selected_style,
+                "score_delta": score_delta,
+                "from_risk_band": from_band,
+                "to_risk_band": to_band,
+                "improved": _risk_rank(to_band) < _risk_rank(from_band),
+                "live_preview": live_preview,
+            },
+        )
 
     rewrite_changes = _summarize_rewrite_changes(original, rewritten, issue_titles)
     rewrite_changes.insert(0, f"Mode applied: {selected_style.title()}.")
@@ -5587,9 +5591,49 @@ def rewrite_email(
         "intent": intent_profile,
         "validation_attempts": validation_attempts,
         "learning_profile": get_learning_profile(),
+        "adaptive_profile": learning_profile,
+        "live_preview": live_preview,
         "before_summary": before_summary,
         "after_summary": after_summary,
     }
+
+
+@app.post("/rewrite")
+def rewrite_email(
+    raw_email: str = Form(""),
+    domain: str = Form(""),
+    analysis_mode: str = Form("content"),
+    rewrite_style: str = Form("balanced"),
+    rewrite_mode: str = Form(""),
+):
+    return _build_rewrite_response(
+        raw_email=raw_email,
+        domain=domain,
+        analysis_mode=analysis_mode,
+        rewrite_style=rewrite_style,
+        rewrite_mode=rewrite_mode,
+        track_metrics=True,
+        live_preview=False,
+    )
+
+
+@app.post("/rewrite-live")
+def rewrite_email_live(
+    raw_email: str = Form(""),
+    domain: str = Form(""),
+    analysis_mode: str = Form("content"),
+    rewrite_style: str = Form("balanced"),
+    rewrite_mode: str = Form(""),
+):
+    return _build_rewrite_response(
+        raw_email=raw_email,
+        domain=domain,
+        analysis_mode=analysis_mode,
+        rewrite_style=rewrite_style,
+        rewrite_mode=rewrite_mode,
+        track_metrics=False,
+        live_preview=True,
+    )
 
 
 @app.post("/feedback")

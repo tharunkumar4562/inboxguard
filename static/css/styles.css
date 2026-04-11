@@ -259,6 +259,17 @@ body.modal-open {
     font-size: 20px;
 }
 
+.rewrite-live-status {
+    margin: 8px 0 16px;
+    color: #94a3b8;
+    font-size: 0.92rem;
+    line-height: 1.45;
+}
+
+[data-theme="light"] .rewrite-live-status {
+    color: #475569;
+}
+
 .paywall-section p {
     margin: 0 0 20px 0;
     color: #9ca3af;

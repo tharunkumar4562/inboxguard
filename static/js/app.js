@@ -260,6 +260,7 @@ const riskImpactNode = document.getElementById("risk-impact");
 const riskWarningImpactNode = document.getElementById("risk-warning-impact");
 const fixTitleNode = document.getElementById("fix-title");
 const fixPreviewTextNode = document.getElementById("fix-preview-text");
+const rewriteLiveStatusNode = document.getElementById("rewrite-live-status");
 const fixRecommendationsNode = document.getElementById("fix-recommendations");
 const impactEstimateNode = document.getElementById("impact-estimate");
 const variantInsightNode = document.getElementById("variant-insight");
@@ -405,6 +406,9 @@ let latestSummary = null;
 let latestFindings = [];
 let latestRewriteContext = null;
 let realtimeLintTimer = null;
+let liveRewriteTimer = null;
+let liveRewriteRequestId = 0;
+let activeRewriteMode = "engaging";
 let latestLearningProfile = null;
 let hasScanResult = false;
 let pendingAction = null;
@@ -1216,6 +1220,136 @@ function renderTags(tags) {
         node.textContent = String(tag);
         rewriteTagsNode.appendChild(node);
     });
+}
+
+function setRewriteLiveStatus(message) {
+    if (rewriteLiveStatusNode) {
+        rewriteLiveStatusNode.textContent = String(message || "");
+    }
+}
+
+function applyRewriteResponse(data, original, mode, options = {}) {
+    const livePreview = Boolean(options && options.livePreview);
+    const selectedMode = mode === "high-converting" ? "high_converting" : mode;
+    const rewrittenFromModes = data && data.rewrites && data.rewrites[selectedMode];
+    const rewritten = String(
+        rewrittenFromModes
+        || data.rewritten
+        || data.rewritten_text
+        || data.improved
+        || data.fix
+        || original
+    );
+
+    renderRewrite({
+        original,
+        rewritten,
+        improved: data.improved,
+        fix: data.fix,
+        issue_highlights: data.issue_highlights,
+    });
+
+    renderTags(generateTags(data.issues));
+
+    if (fixPreviewTextNode) {
+        fixPreviewTextNode.textContent = String(data.primary_fix || (livePreview ? "Live adaptive rewrite updated from the current draft." : "Rewrite generated to fix the top issue."));
+    }
+
+    renderDiff(Array.isArray(data.diff) ? data.diff : []);
+
+    if (rewriteNotesNode) {
+        rewriteNotesNode.innerHTML = "";
+        const profile = data && data.adaptive_profile ? data.adaptive_profile : null;
+        const notes = Array.isArray(data.rewrite_limitations) && data.rewrite_limitations.length
+            ? [
+                "✔ Optimized for inbox placement and reply rate",
+                "✔ Removed bulk-style phrasing patterns",
+                `ℹ ${String(data.rewrite_limitations[0])}`,
+            ]
+            : [
+                "✔ Optimized for inbox placement and reply rate",
+                "✔ Removed bulk-style phrasing patterns",
+            ];
+        if (profile && Number(profile.sample_size || 0) >= 20) {
+            notes.push(`ℹ Adapted from ${Number(profile.sample_size || 0)} feedback samples.`);
+        }
+        notes.slice(0, 4).forEach((note) => {
+            const p = document.createElement("p");
+            p.textContent = note;
+            rewriteNotesNode.appendChild(p);
+        });
+    }
+
+    latestRewriteContext = {
+        original_text: original,
+        rewritten_text: rewritten,
+        rewrite_style: String(data.rewrite_style || mode || "balanced"),
+        rewrite_mode: String(data.rewrite_mode || selectedMode || "engaging"),
+        from_risk_band: String(data.from_risk_band || "Needs Review"),
+        to_risk_band: String(data.to_risk_band || "Needs Review"),
+        score_delta: Number(data.score_delta || 0),
+    };
+
+    activeRewriteMode = String(data.rewrite_style || mode || activeRewriteMode || "engaging");
+
+    if (livePreview) {
+        setRewriteLiveStatus("Live rewrite updated from the current draft and feedback profile.");
+    }
+}
+
+async function runAdaptiveRewritePreview() {
+    if (!rawEmailInput || !afterEmailNode || !beforeEmailNode) {
+        return;
+    }
+    if (!latestRewriteContext && (!resultSection || resultSection.classList.contains("hidden"))) {
+        return;
+    }
+
+    const original = String(rawEmailInput.value || "").trim();
+    if (original.length < 20) {
+        setRewriteLiveStatus("Paste a longer draft to enable live adaptive rewrite.");
+        return;
+    }
+
+    const mode = activeRewriteMode || String(latestRewriteContext && latestRewriteContext.rewrite_style ? latestRewriteContext.rewrite_style : "engaging");
+    const requestId = ++liveRewriteRequestId;
+    setRewriteLiveStatus("Updating live rewrite from the current draft...");
+
+    const payload = new FormData();
+    payload.set("raw_email", original);
+    payload.set("analysis_mode", analysisModeInput ? analysisModeInput.value : "content");
+    payload.set("rewrite_mode", mode);
+    payload.set("rewrite_style", mode);
+    if (domainInput && String(domainInput.value || "").trim()) {
+        payload.set("domain", String(domainInput.value || "").trim());
+    }
+
+    const response = await fetch("/rewrite-live", { method: "POST", body: payload });
+    if (requestId !== liveRewriteRequestId) {
+        return;
+    }
+    if (!response.ok) {
+        throw new Error("Live rewrite preview failed.");
+    }
+    const data = await response.json();
+    if (requestId !== liveRewriteRequestId) {
+        return;
+    }
+    applyRewriteResponse(data, original, mode, { livePreview: true });
+}
+
+function scheduleAdaptiveRewritePreview() {
+    if (!rawEmailInput) {
+        return;
+    }
+    if (liveRewriteTimer) {
+        clearTimeout(liveRewriteTimer);
+    }
+    liveRewriteTimer = setTimeout(() => {
+        runAdaptiveRewritePreview().catch(() => {
+            setRewriteLiveStatus("Live rewrite is not available right now.");
+        });
+    }, 420);
 }
 
 function setTabFeedback(message) {
@@ -2590,13 +2724,7 @@ function renderConversionResult(data) {
     }
 
     if (copyFixedBtnNode) {
-        copyFixedBtnNode.onclick = () => {
-            navigator.clipboard.writeText(improved);
-            copyFixedBtnNode.textContent = "Copied!";
-            setTimeout(() => {
-                copyFixedBtnNode.textContent = "Copy Fixed Email";
-            }, 1500);
-        };
+        copyFixedBtnNode.onclick = null;
     }
 
     if (restoreBtnNode) {
@@ -2618,11 +2746,7 @@ function renderConversionResult(data) {
     }
 
     if (runTestBtnNode) {
-        runTestBtnNode.onclick = () => {
-            window.appState.hasScaled = true;
-            updateSteps();
-            alert("Upgrade / pricing flow here");
-        };
+        runTestBtnNode.onclick = null;
     }
 
     window.appState.hasScanned = true;
@@ -2801,61 +2925,8 @@ async function generateRewrite(mode = "safe") {
         throw new Error("Rewrite failed. Try again.");
     }
     const data = await response.json();
-    const selectedMode = mode === "high-converting" ? "high_converting" : mode;
-    const rewrittenFromModes = data && data.rewrites && data.rewrites[selectedMode];
-    const rewritten = String(
-        rewrittenFromModes
-        || data.rewritten
-        || data.rewritten_text
-        || data.improved
-        || data.fix
-        || original
-    );
-
-    renderRewrite({
-        original,
-        rewritten,
-        improved: data.improved,
-        fix: data.fix,
-        issue_highlights: data.issue_highlights,
-    });
-
-    renderTags(generateTags(data.issues));
-
-    if (fixPreviewTextNode) {
-        fixPreviewTextNode.textContent = String(data.primary_fix || "Rewrite generated to fix the top issue.");
-    }
-
-    renderDiff(Array.isArray(data.diff) ? data.diff : []);
-
-    if (rewriteNotesNode) {
-        rewriteNotesNode.innerHTML = "";
-        const notes = Array.isArray(data.rewrite_limitations) && data.rewrite_limitations.length
-            ? [
-                "✔ Optimized for inbox placement and reply rate",
-                "✔ Removed bulk-style phrasing patterns",
-                `ℹ ${String(data.rewrite_limitations[0])}`,
-            ]
-            : [
-                "✔ Optimized for inbox placement and reply rate",
-                "✔ Removed bulk-style phrasing patterns",
-            ];
-        notes.slice(0, 3).forEach((note) => {
-            const p = document.createElement("p");
-            p.textContent = note;
-            rewriteNotesNode.appendChild(p);
-        });
-    }
-
-    latestRewriteContext = {
-        original_text: original,
-        rewritten_text: rewritten,
-        rewrite_style: String(data.rewrite_style || mode || "balanced"),
-        rewrite_mode: String(data.rewrite_mode || selectedMode || "engaging"),
-        from_risk_band: String(data.from_risk_band || "Needs Review"),
-        to_risk_band: String(data.to_risk_band || "Needs Review"),
-        score_delta: Number(data.score_delta || 0),
-    };
+    applyRewriteResponse(data, original, mode, { livePreview: false });
+    setRewriteLiveStatus("Live rewrite follows the current draft and feedback profile.");
 }
 
 function renderRewrite(data) {
@@ -3907,25 +3978,81 @@ async function runAnalyze() {
     }
 }
 
-function useFixedVersion() {
+function getFixedEmailText() {
+    const fromContext = String(latestRewriteContext && latestRewriteContext.rewritten_text ? latestRewriteContext.rewritten_text : "").trim();
+    if (fromContext) {
+        return fromContext;
+    }
+    const fromNode = String(afterEmailNode && afterEmailNode.textContent ? afterEmailNode.textContent : "").trim();
+    if (fromNode && !fromNode.toLowerCase().includes("unlock access")) {
+        return fromNode;
+    }
+    return "";
+}
+
+async function copyFixedEmail(sourceButton = null) {
     if (!afterEmailNode || !rawEmailInput) {
         return;
     }
-    const text = String(afterEmailNode.textContent || rawEmailInput.value || "");
-    navigator.clipboard.writeText(text).then(() => {
+    const text = getFixedEmailText();
+    if (!text) {
+        openPricingModal();
+        showError("Unlock access to copy and test the fixed version.");
+        return;
+    }
+
+    let clipboardOk = true;
+    try {
+        await navigator.clipboard.writeText(text);
+    } catch (_error) {
+        clipboardOk = false;
+    }
+
+    rawEmailInput.value = text;
+    trackEvent("copy_clicked", { source: "fixed_email" });
+
+    if (useFixedButton) {
+        useFixedButton.textContent = "✓ Copied";
+        useFixedButton.classList.add("bg-green-700");
+        setTimeout(() => {
+            useFixedButton.textContent = "Copy Fixed Email";
+            useFixedButton.classList.remove("bg-green-700");
+        }, 1200);
+    }
+
+    if (sourceButton && sourceButton !== useFixedButton) {
+        const originalText = String(sourceButton.textContent || "Copy Fixed Email");
+        sourceButton.textContent = "Copied!";
+        setTimeout(() => {
+            sourceButton.textContent = originalText;
+        }, 1200);
+    }
+
+    showError(clipboardOk ? "Copied fixed email. You can paste directly into your sender." : "Clipboard blocked. Fixed draft is still loaded in the editor.");
+}
+
+function runRealInboxTest() {
+    window.appState.hasScaled = true;
+    syncProgressState();
+    applyProgressiveExposure();
+
+    if (!isAuthenticated) {
+        openPricingModal();
+        trackEvent("run_real_inbox_test_clicked", { state: "anon" });
+        return;
+    }
+
+    trackEvent("run_real_inbox_test_clicked", { state: "authenticated" });
+    runSeedAuto().catch(() => {
+        window.location.href = "/seed-inbox";
+    });
+}
+
+function useFixedVersion() {
+    copyFixedEmail(useFixedButton).then(() => {
+        const text = getFixedEmailText();
         rawEmailInput.value = text;
-        trackEvent("copy_clicked", { source: "fixed_email" });
-        if (useFixedButton) {
-            useFixedButton.textContent = "✓ Copied";
-            useFixedButton.classList.add("bg-green-700");
-            setTimeout(() => {
-                useFixedButton.textContent = "Copy Fixed Email";
-                useFixedButton.classList.remove("bg-green-700");
-            }, 1200);
-        }
-        showError("Copied fixed email. You can paste directly into your sender.");
     }).catch(() => {
-        rawEmailInput.value = text;
         showError("Fixed version ready. Clipboard blocked, but draft is updated in editor.");
     });
 }
@@ -5067,12 +5194,14 @@ function wireUiEvents() {
         fillExampleButton.addEventListener("click", () => {
             fillExampleEmail();
             scheduleRealtimeLint();
+            scheduleAdaptiveRewritePreview();
         });
     }
 
     if (rawEmailInput) {
         rawEmailInput.addEventListener("input", () => {
             scheduleRealtimeLint();
+            scheduleAdaptiveRewritePreview();
         });
     }
 
@@ -5133,6 +5262,7 @@ function wireUiEvents() {
     }
     if (fixIssueButton) {
         fixIssueButton.addEventListener("click", () => {
+            activeRewriteMode = "safe";
             generateRewrite("fix_primary").catch((error) => {
                 showError(error && error.message ? error.message : "Could not fix the primary issue.");
             });
@@ -5140,6 +5270,7 @@ function wireUiEvents() {
     }
     if (rewriteSafeButton) {
         rewriteSafeButton.addEventListener("click", () => {
+            activeRewriteMode = "safe";
             generateRewrite("safe").catch((error) => {
                 showError(error && error.message ? error.message : "Could not generate safe rewrite.");
             });
@@ -5147,6 +5278,7 @@ function wireUiEvents() {
     }
     if (rewriteEngagingButton) {
         rewriteEngagingButton.addEventListener("click", () => {
+            activeRewriteMode = "engaging";
             generateRewrite("engaging").catch((error) => {
                 showError(error && error.message ? error.message : "Could not generate engaging rewrite.");
             });
@@ -5154,6 +5286,7 @@ function wireUiEvents() {
     }
     if (rewriteConvertingButton) {
         rewriteConvertingButton.addEventListener("click", () => {
+            activeRewriteMode = "high-converting";
             generateRewrite("high-converting").catch((error) => {
                 showError(error && error.message ? error.message : "Could not generate high-converting rewrite.");
             });
@@ -5205,6 +5338,20 @@ function wireUiEvents() {
             shareResultCard().catch((error) => {
                 showError(error && error.message ? error.message : "Could not copy result card.");
             });
+        });
+    }
+
+    if (copyFixedBtnNode) {
+        copyFixedBtnNode.addEventListener("click", () => {
+            copyFixedEmail(copyFixedBtnNode).catch(() => {
+                showError("Could not copy fixed email right now.");
+            });
+        });
+    }
+
+    if (runTestBtnNode) {
+        runTestBtnNode.addEventListener("click", () => {
+            runRealInboxTest();
         });
     }
 

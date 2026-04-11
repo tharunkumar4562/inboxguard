@@ -465,6 +465,8 @@ def _value_lines_for_rewrite(lines: list[str], max_lines: int = 2) -> list[str]:
     picked: list[str] = []
     for line in lines:
         low = line.lower()
+        if re.match(r"^(hi|hello|dear|hey)\b", low):
+            continue
         if any(token in low for token in ["regards", "team", "thanks", "thank you"]):
             continue
         if any(token in low for token in ["http", "www", "@", "link"]):
@@ -542,6 +544,7 @@ def _extract_core_value(body: str) -> str:
     # Remove common preamble/closing patterns
     text = body
     text = re.sub(r"^(hi|hello|dear|hey).*?\n\n", "", text, flags=re.IGNORECASE | re.DOTALL)
+    text = re.sub(r"^(hi|hello|dear|hey)\s+[A-Za-z][A-Za-z\-]{1,24}[,\s]+", "", text, flags=re.IGNORECASE)
     text = re.sub(r"\n\n(best regards|sincerely|thanks|thank you).*$", "", text, flags=re.IGNORECASE | re.DOTALL)
     
     # Get first 1-2 sentences
@@ -567,6 +570,16 @@ def _infer_rewrite_style(rewrite_style: str, aggressive: bool) -> str:
     if style not in {"safe", "balanced", "aggressive"}:
         style = "aggressive" if aggressive else "balanced"
     return style
+
+
+def _normalize_learning_profile(learning_profile: Dict[str, Any] | None) -> Dict[str, Any]:
+    profile = dict(learning_profile or {})
+    profile.setdefault("sample_size", 0)
+    profile.setdefault("inbox_rate", None)
+    profile.setdefault("shorten_aggressiveness", "medium")
+    profile.setdefault("question_hook_strength", "medium")
+    profile.setdefault("personalization_priority", "high")
+    return profile
 
 
 def _target_word_bounds(style: str) -> tuple[int, int]:
@@ -697,6 +710,27 @@ def _compose_cold_outreach_rewrite(original_text: str, style: str) -> str:
     return _sanitize_rewrite_text("\n".join(lines))
 
 
+def _apply_learning_profile_to_text(text: str, style: str, profile: Dict[str, Any]) -> str:
+    compact = _sanitize_rewrite_text(text or "")
+    sample_size = int(profile.get("sample_size", 0) or 0)
+    inbox_rate = profile.get("inbox_rate")
+    shorten_aggressiveness = str(profile.get("shorten_aggressiveness", "medium") or "medium")
+    question_hook_strength = str(profile.get("question_hook_strength", "medium") or "medium")
+
+    if sample_size >= 20 and shorten_aggressiveness == "high":
+        compact = _shorten_text(compact, "high")
+    elif sample_size >= 20 and shorten_aggressiveness == "low" and style == "safe":
+        compact = _shorten_text(compact, "low")
+
+    if sample_size >= 20 and question_hook_strength == "high" and "?" not in compact:
+        compact = _ensure_conversational_question(compact)
+
+    if sample_size >= 20 and isinstance(inbox_rate, (int, float)) and inbox_rate < 0.5 and style == "balanced":
+        compact = _strip_blocked_phrases(compact)
+
+    return compact
+
+
 def _rewrite_update_or_transactional_safe(subject: str, body: str) -> str:
     raw_lines = _extract_body_lines(body)
     lines = _dedupe_lines(_strip_spam_lines(raw_lines))
@@ -750,12 +784,18 @@ def rewrite_email_text(
     intent_type: str = "cold outreach",
     rewrite_style: str = "balanced",
     aggressive: bool = False,
+    learning_profile: Dict[str, Any] | None = None,
 ) -> str:
     text = (original_text or "").strip()
     if not text:
         return ""
 
+    profile = _normalize_learning_profile(learning_profile)
     style = _infer_rewrite_style(rewrite_style, aggressive)
+    if int(profile.get("sample_size", 0) or 0) >= 20 and style == "balanced":
+        inbox_rate = profile.get("inbox_rate")
+        if isinstance(inbox_rate, (int, float)) and inbox_rate < 0.5:
+            style = "safe"
     _, max_words = _target_word_bounds(style)
 
     parsed = _extract_subject_and_body(text)
@@ -829,6 +869,7 @@ def rewrite_email_text(
 
     # Final cleanup
     text = _sanitize_rewrite_text(text)
+    text = _apply_learning_profile_to_text(text, style, profile)
 
     words = text.split()
     if len(words) > max_words:
@@ -999,7 +1040,15 @@ def enforce_rewrite_constraints(text: str, style: str) -> Dict[str, Any]:
     return {"text": cleaned, "valid": valid, "reasons": reasons}
 
 
-def generate_mode_candidate(intent: Dict[str, str], style: str, original_text: str, detected_issues: List[str] | None = None, attempt: int = 1) -> str:
+def generate_mode_candidate(
+    intent: Dict[str, str],
+    style: str,
+    original_text: str,
+    detected_issues: List[str] | None = None,
+    attempt: int = 1,
+    learning_profile: Dict[str, Any] | None = None,
+) -> str:
+    profile = _normalize_learning_profile(learning_profile)
     # Safe mode keeps more source structure; balanced/aggressive are intent-first templates.
     if style == "safe":
         return rewrite_email_text(
@@ -1007,12 +1056,20 @@ def generate_mode_candidate(intent: Dict[str, str], style: str, original_text: s
             detected_issues=detected_issues,
             intent_type=intent.get("type", "outreach"),
             rewrite_style="safe",
+            learning_profile=profile,
         )
 
     if style == "balanced":
-        value = intent.get("value", "Thought this might be relevant.")
+        value_source = intent.get("value", "Thought this might be relevant.")
+        value = _abstract_value_line(str(value_source))
+        if len(value.split()) > 16 or SequenceMatcher(None, str(value_source), value).ratio() > 0.72:
+            value = _extract_core_value(str(value_source))
+        if len(value.split()) > 20 or SequenceMatcher(None, str(value_source), value).ratio() > 0.78:
+            value = "We kept the core point while removing pushy phrasing."
         audience = intent.get("audience", "teams")
         soft_tail = "Open to a quick chat?" if attempt <= 1 else "Would it help if I shared a quick version?"
+        if str(profile.get("shorten_aggressiveness", "medium") or "medium") == "high":
+            soft_tail = "Open to a quick chat?"
         return _sanitize_rewrite_text(
             "\n".join(
                 [
@@ -1020,7 +1077,7 @@ def generate_mode_candidate(intent: Dict[str, str], style: str, original_text: s
                     "",
                     f"Quick note for {audience}.",
                     value,
-                    "Thought this might be relevant.",
+                    "Thought this might be relevant." if str(profile.get("shorten_aggressiveness", "medium") or "medium") != "high" else "Relevant context below.",
                     soft_tail,
                 ]
             )
@@ -1030,6 +1087,8 @@ def generate_mode_candidate(intent: Dict[str, str], style: str, original_text: s
     audience = intent.get("audience", "teams")
     anchor = intent.get("anchor", intent.get("type", "this area"))
     tail = "Worth a quick look?" if attempt <= 1 else "Want me to send the quick version?"
+    if str(profile.get("question_hook_strength", "medium") or "medium") == "high":
+        tail = "Want me to send the quick version?"
     return _sanitize_rewrite_text(
         "\n".join(
             [
@@ -1047,23 +1106,29 @@ def style_similarity(a: str, b: str) -> float:
     return SequenceMatcher(None, a or "", b or "").ratio()
 
 
-def build_style_variants_with_guard(original_text: str, detected_issues: List[str] | None, intent_type: str) -> Dict[str, str]:
+def build_style_variants_with_guard(
+    original_text: str,
+    detected_issues: List[str] | None,
+    intent_type: str,
+    learning_profile: Dict[str, Any] | None = None,
+) -> Dict[str, str]:
+    profile = _normalize_learning_profile(learning_profile)
     intent = extract_rewrite_intent(original_text, intent_type=intent_type)
     variants = {
-        "safe": enforce_rewrite_constraints(generate_mode_candidate(intent, "safe", original_text, detected_issues, attempt=1), "safe")["text"],
-        "balanced": enforce_rewrite_constraints(generate_mode_candidate(intent, "balanced", original_text, detected_issues, attempt=1), "balanced")["text"],
-        "aggressive": enforce_rewrite_constraints(generate_mode_candidate(intent, "aggressive", original_text, detected_issues, attempt=1), "aggressive")["text"],
+        "safe": enforce_rewrite_constraints(generate_mode_candidate(intent, "safe", original_text, detected_issues, attempt=1, learning_profile=profile), "safe")["text"],
+        "balanced": enforce_rewrite_constraints(generate_mode_candidate(intent, "balanced", original_text, detected_issues, attempt=1, learning_profile=profile), "balanced")["text"],
+        "aggressive": enforce_rewrite_constraints(generate_mode_candidate(intent, "aggressive", original_text, detected_issues, attempt=1, learning_profile=profile), "aggressive")["text"],
     }
 
     if style_similarity(variants["safe"], variants["balanced"]) > 0.8:
         variants["balanced"] = enforce_rewrite_constraints(
-            generate_mode_candidate(intent, "balanced", original_text, detected_issues, attempt=2),
+            generate_mode_candidate(intent, "balanced", original_text, detected_issues, attempt=2, learning_profile=profile),
             "balanced",
         )["text"]
 
     if style_similarity(variants["balanced"], variants["aggressive"]) > 0.6:
         variants["aggressive"] = enforce_rewrite_constraints(
-            generate_mode_candidate(intent, "aggressive", original_text, detected_issues, attempt=2),
+            generate_mode_candidate(intent, "aggressive", original_text, detected_issues, attempt=2, learning_profile=profile),
             "aggressive",
         )["text"]
 
