@@ -289,6 +289,10 @@ class SubjectLineInput(BaseModel):
     body: str = ""
 
 
+class RealtimeLintInput(BaseModel):
+    text: str = ""
+
+
 def _tokenize_subject_text(value: str) -> set[str]:
     tokens = re.findall(r"[a-z0-9]+", str(value or "").lower())
     stop_words = {
@@ -5110,6 +5114,151 @@ def _contains_risky_tokens(text: str) -> bool:
     return any(re.search(pattern, low) for pattern in patterns)
 
 
+REALTIME_SPAM_WORDS = {
+    "free": "Overused promotional word that can trigger spam filters.",
+    "urgent": "Pressure language that reduces trust and can raise spam risk.",
+    "limited time": "Classic marketing trigger phrase flagged by providers.",
+    "act now": "Aggressive urgency CTA that harms credibility.",
+    "guaranteed": "Unrealistic claim language commonly treated as spam.",
+    "register now": "Promotional command-style CTA that hurts inbox trust.",
+    "apply now": "High-pressure CTA pattern often associated with bulk mail.",
+}
+
+
+REALTIME_WEAK_CTA_PATTERNS = {
+    "let me know": "Vague CTA with no concrete next step.",
+    "would you be open": "Soft ask that often underperforms in outreach.",
+    "just checking": "Low-intent follow-up phrase that lowers urgency clarity.",
+    "thoughts?": "Unclear CTA that creates decision friction.",
+    "any interest": "Weak qualification ask without specific action.",
+}
+
+
+def _iter_phrase_matches(text: str, phrase: str):
+    escaped = re.escape(str(phrase))
+    pattern = re.compile(rf"\b{escaped}\b", re.IGNORECASE)
+    return pattern.finditer(text or "")
+
+
+def _detect_spam_phrases(text: str) -> list[dict[str, Any]]:
+    findings: list[dict[str, Any]] = []
+    source = text or ""
+    for phrase, reason in REALTIME_SPAM_WORDS.items():
+        for match in _iter_phrase_matches(source, phrase):
+            findings.append(
+                {
+                    "type": "spam",
+                    "phrase": str(match.group()),
+                    "start": int(match.start()),
+                    "end": int(match.end()),
+                    "reason": reason,
+                    "severity": "high",
+                    "fix": "Replace with neutral, specific language.",
+                }
+            )
+    return findings
+
+
+def _detect_weak_cta(text: str) -> list[dict[str, Any]]:
+    findings: list[dict[str, Any]] = []
+    source = text or ""
+    for phrase, reason in REALTIME_WEAK_CTA_PATTERNS.items():
+        for match in _iter_phrase_matches(source, phrase):
+            findings.append(
+                {
+                    "type": "cta",
+                    "phrase": str(match.group()),
+                    "start": int(match.start()),
+                    "end": int(match.end()),
+                    "reason": reason,
+                    "severity": "medium",
+                    "fix": "Use a specific ask with clear time and action.",
+                }
+            )
+    return findings
+
+
+def _detect_length_issue(text: str) -> list[dict[str, Any]]:
+    words = re.findall(r"\b\w+\b", text or "")
+    word_count = len(words)
+    if word_count <= 120:
+        return []
+    return [
+        {
+            "type": "length",
+            "phrase": f"{word_count} words",
+            "start": 0,
+            "end": len(text or ""),
+            "reason": "Email is too long and likely to lose engagement.",
+            "severity": "medium",
+            "fix": "Trim to under 120 words and move value up front.",
+        }
+    ]
+
+
+def _detect_personalization_issue(text: str) -> list[dict[str, Any]]:
+    source = text or ""
+    has_personal_greeting = bool(re.search(r"\b(hi|hello|hey)\s+[A-Za-z][A-Za-z\-]{1,24}\b", source, flags=re.IGNORECASE))
+    if has_personal_greeting:
+        return []
+    return [
+        {
+            "type": "personalization",
+            "phrase": "No recipient-specific opener",
+            "start": 0,
+            "end": 0,
+            "reason": "Email lacks recipient context and may feel mass-sent.",
+            "severity": "low",
+            "fix": "Add a recipient-specific line or observed context.",
+        }
+    ]
+
+
+def _score_realtime_issues(issues: list[dict[str, Any]]) -> dict[str, Any]:
+    high = sum(1 for issue in issues if str(issue.get("severity") or "").lower() == "high")
+    medium = sum(1 for issue in issues if str(issue.get("severity") or "").lower() == "medium")
+    low = sum(1 for issue in issues if str(issue.get("severity") or "").lower() == "low")
+    risk_score = min(100, high * 22 + medium * 10 + low * 4)
+    if risk_score >= 60:
+        risk_band = "high"
+    elif risk_score >= 30:
+        risk_band = "medium"
+    else:
+        risk_band = "low"
+    return {
+        "risk_score": risk_score,
+        "risk_band": risk_band,
+        "counts": {"high": high, "medium": medium, "low": low, "total": len(issues)},
+    }
+
+
+@app.post("/lint-realtime")
+def lint_realtime(payload: RealtimeLintInput):
+    text = str(payload.text or "")
+    if len(text.strip()) < 4:
+        return {
+            "ok": True,
+            "issues": [],
+            "summary": {"risk_score": 0, "risk_band": "low", "counts": {"high": 0, "medium": 0, "low": 0, "total": 0}},
+        }
+
+    issues = []
+    issues.extend(_detect_spam_phrases(text))
+    issues.extend(_detect_weak_cta(text))
+    issues.extend(_detect_length_issue(text))
+    issues.extend(_detect_personalization_issue(text))
+
+    issues = sorted(
+        issues,
+        key=lambda issue: (
+            int(issue.get("start") if isinstance(issue.get("start"), int) else 10**9),
+            str(issue.get("type") or ""),
+        ),
+    )
+    summary = _score_realtime_issues(issues)
+    return {"ok": True, "issues": issues, "summary": summary}
+
+
 def _split_subject_body(text: str) -> tuple[str, str]:
     content = (text or "").strip()
     if not content:
@@ -5190,11 +5339,23 @@ def rewrite_email(
             continue
         issue_type = str(item.get("type") or "").strip().lower()
         fix_data = fix_lookup.get(issue_type, {})
+        span_text = str(item.get("span") or "")
+        start_index = -1
+        end_index = -1
+        if span_text:
+            low_original = original.lower()
+            low_span = span_text.lower()
+            start_index = low_original.find(low_span)
+            if start_index >= 0:
+                end_index = start_index + len(span_text)
+
         structured_issues.append(
             {
                 "type": issue_type,
                 "severity": str(item.get("severity") or "low"),
-                "span": str(item.get("span") or ""),
+                "span": span_text,
+                "start": start_index,
+                "end": end_index,
                 "label": _humanize_issue_type(issue_type),
                 "explanation": _issue_explanation(item, fix_data),
                 "primary_fix": _primary_fix_text(issue_type, fix_data),

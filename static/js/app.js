@@ -165,6 +165,9 @@ const accessButton = document.getElementById("get-access-btn") || document.getEl
 const fillExampleButton = document.getElementById("fill-example");
 const tokenCostHintNode = document.getElementById("token-cost-hint");
 const tokenAfterHintNode = document.getElementById("token-after-hint");
+const realtimeLintPanelNode = document.getElementById("realtime-lint-panel");
+const realtimeLintBandNode = document.getElementById("realtime-lint-band");
+const realtimeIssuesListNode = document.getElementById("realtime-issues-list");
 const tokenEmptyStateNode = document.getElementById("token-empty-state");
 
 const authModal = document.getElementById("auth-modal");
@@ -399,6 +402,7 @@ const defaultSubmitLabel = submitButton ? submitButton.textContent : "Check Befo
 let latestSummary = null;
 let latestFindings = [];
 let latestRewriteContext = null;
+let realtimeLintTimer = null;
 let latestLearningProfile = null;
 let hasScanResult = false;
 let pendingAction = null;
@@ -2490,10 +2494,10 @@ function renderConversionResult(data) {
     }
 
     if (beforeEmailNode) {
-        beforeEmailNode.innerHTML = highlightIssueSpans(
-            original,
-            (data && data.issue_highlights) || issues.map((issue) => String(issue && (issue.span || issue.phrase || "") || "")).filter(Boolean)
-        );
+        const structuredIssues = (data && Array.isArray(data.issues))
+            ? data.issues
+            : issues;
+        beforeEmailNode.innerHTML = highlightIssues(original, structuredIssues);
     }
     if (afterEmailNode) {
         afterEmailNode.textContent = String((data && (data.rewritten || data.improved || data.fix || data.rewritten_text)) || improved || "No rewrite generated");
@@ -2597,6 +2601,103 @@ function highlightIssueSpans(text, spans = []) {
         const regex = new RegExp(escaped, "gi");
         html = html.replace(regex, (match) => `<span class=\"spam-word\">${match}</span>`);
     });
+    return html;
+}
+
+function renderRealtimeLint(payload) {
+    if (!realtimeIssuesListNode || !realtimeLintBandNode) {
+        return;
+    }
+    const issues = Array.isArray(payload && payload.issues) ? payload.issues : [];
+    const summary = payload && typeof payload.summary === "object" ? payload.summary : {};
+    const band = String(summary.risk_band || "low").toLowerCase();
+    const total = Number((summary.counts && summary.counts.total) || issues.length || 0);
+
+    realtimeLintBandNode.classList.remove("risk-high", "risk-medium", "risk-low");
+    realtimeLintBandNode.classList.add(band === "high" ? "risk-high" : band === "medium" ? "risk-medium" : "risk-low");
+    realtimeLintBandNode.textContent = `${band.charAt(0).toUpperCase()}${band.slice(1)} risk (${total})`;
+
+    realtimeIssuesListNode.innerHTML = "";
+    if (!issues.length) {
+        const li = document.createElement("li");
+        li.textContent = "No live issues detected. This draft currently looks clean.";
+        realtimeIssuesListNode.appendChild(li);
+        return;
+    }
+
+    issues.slice(0, 8).forEach((issue) => {
+        const li = document.createElement("li");
+        const type = String(issue && issue.type ? issue.type : "issue").toLowerCase();
+        li.classList.add(`issue-${type}`);
+        const phrase = String(issue && issue.phrase ? issue.phrase : "Issue");
+        const reason = String(issue && issue.reason ? issue.reason : "Needs review");
+        li.innerHTML = `<strong>${escapeHtml(phrase)}</strong> -> ${escapeHtml(reason)}`;
+        realtimeIssuesListNode.appendChild(li);
+    });
+}
+
+async function runRealtimeLint(text) {
+    const value = String(text || "");
+    if (value.trim().length < 4) {
+        renderRealtimeLint({ issues: [], summary: { risk_band: "low", counts: { total: 0 } } });
+        return;
+    }
+    const response = await fetch("/lint-realtime", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: value }),
+    });
+    if (!response.ok) {
+        throw new Error("Could not run live lint.");
+    }
+    const data = await response.json();
+    renderRealtimeLint(data);
+}
+
+function scheduleRealtimeLint() {
+    if (!rawEmailInput) {
+        return;
+    }
+    if (realtimeLintTimer) {
+        clearTimeout(realtimeLintTimer);
+    }
+    realtimeLintTimer = setTimeout(() => {
+        runRealtimeLint(rawEmailInput.value).catch(() => {
+            renderRealtimeLint({ issues: [], summary: { risk_band: "low", counts: { total: 0 } } });
+        });
+    }, 220);
+}
+
+function highlightIssues(text, issues) {
+    const source = String(text || "");
+    const rows = Array.isArray(issues) ? issues : [];
+    if (!rows.length) {
+        return escapeHtml(source);
+    }
+
+    const normalized = rows
+        .filter((issue) => Number.isInteger(issue && issue.start) && Number.isInteger(issue && issue.end) && Number(issue.end) > Number(issue.start))
+        .map((issue) => ({
+            type: String(issue.type || "issue").toLowerCase(),
+            start: Number(issue.start),
+            end: Number(issue.end),
+            reason: String(issue.reason || ""),
+        }))
+        .sort((a, b) => a.start - b.start);
+
+    let cursor = 0;
+    let html = "";
+    normalized.forEach((issue) => {
+        if (issue.start < cursor) {
+            return;
+        }
+        html += escapeHtml(source.slice(cursor, issue.start));
+        const target = escapeHtml(source.slice(issue.start, issue.end));
+        const cls = `issue-${issue.type}`;
+        html += `<span class="${cls}" title="${escapeHtml(issue.reason)}">${target}</span>`;
+        cursor = issue.end;
+    });
+    html += escapeHtml(source.slice(cursor));
     return html;
 }
 
@@ -4877,6 +4978,13 @@ function wireUiEvents() {
     if (fillExampleButton) {
         fillExampleButton.addEventListener("click", () => {
             fillExampleEmail();
+            scheduleRealtimeLint();
+        });
+    }
+
+    if (rawEmailInput) {
+        rawEmailInput.addEventListener("input", () => {
+            scheduleRealtimeLint();
         });
     }
 

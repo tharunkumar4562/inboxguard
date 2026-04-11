@@ -56,7 +56,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
     <link rel="preload" href="/static/css/styles.min.css?v=20260406-seo-fix-1" as="style" />
     <link rel="stylesheet" href="/static/css/styles.min.css?v=20260406-seo-fix-1" />
-    <link rel="stylesheet" href="/static/theme-overrides.css?v=20260411-rewrite-flow-1" />
+    <link rel="stylesheet" href="/static/theme-overrides.css?v=20260411-realtime-lint-1" />
     <link rel="stylesheet" href="/static/css/cookie-consent.css?v=20260410-cookie-consent-1" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
@@ -325,6 +325,16 @@ I noticed your recent post and had one short idea to improve reply rates."></tex
 
             <p id="token-cost-hint" class="micro">This will cost 1 credit. Sign in to see your balance.</p>
             <p id="token-after-hint" class="micro hidden">Credits remaining: --</p>
+
+            <section id="realtime-lint-panel" class="realtime-lint-panel" aria-live="polite">
+              <div class="realtime-lint-head">
+                <h4>Real-time Spam Checker</h4>
+                <span id="realtime-lint-band" class="realtime-lint-band risk-low">Low risk</span>
+              </div>
+              <ul id="realtime-issues-list" class="realtime-issues-list">
+                <li>No live issues detected yet. Start typing to lint this draft in real time.</li>
+              </ul>
+            </section>
 
             <details class="secondary-options">
               <summary>Advanced options</summary>
@@ -903,6 +913,6 @@ I noticed your recent post and had one short idea to improve reply rates."></tex
     </script>
 
     <script src="/static/js/flow.js?v=20260410-progressive-exposure-1"></script>
-    <script src="/static/js/app.js?v=20260411-rewrite-flow-1"></script>
+    <script src="/static/js/app.js?v=20260411-realtime-lint-1"></script>
   </body>
 </html>
