@@ -621,20 +621,20 @@ function syncFlowUserState() {
     applyProgressiveExposure();
 }
 
-const PLAN_CHECKOUT_AMOUNTS_INR = {
+const PLAN_CHECKOUT_AMOUNTS_USD = {
     free: 0,
-    starter: 200,
-    monthly: 999,
-    annual: 9900,
-    usage: 17,
+    starter: 2,
+    monthly: 10,
+    annual: 45,
+    usage: 0.2,
 };
 
 const PLAN_OPTION_LABELS = {
     free: "Free",
-    starter: "Starter (₹200/month)",
-    monthly: "Growth Monthly Pro (₹999/mo)",
-    annual: "Growth Annual Pro (₹9,900/yr)",
-    usage: "Usage-Based (₹17/scan)",
+    starter: "Starter ($2/month)",
+    monthly: "Growth Monthly Pro ($10/month)",
+    annual: "Growth Annual Pro ($45/year)",
+    usage: "Usage-Based ($0.20/scan)",
 };
 
 const PLAN_LEVELS = {
@@ -645,11 +645,8 @@ const PLAN_LEVELS = {
 };
 
 function normalizePlanChoice(plan) {
-    const value = String(plan || "monthly").toLowerCase();
-    if (value === "growth") {
-        return "monthly";
-    }
-    if (value === "pro") {
+    const value = String(plan || "annual").toLowerCase();
+    if (value === "growth" || value === "pro" || value === "monthlypro") {
         return "monthly";
     }
     if (value === "trial") {
@@ -658,7 +655,7 @@ function normalizePlanChoice(plan) {
     if (Object.prototype.hasOwnProperty.call(PLAN_OPTION_LABELS, value)) {
         return value;
     }
-    return "monthly";
+    return "annual";
 }
 
 function planDisplayName(plan) {
@@ -666,18 +663,14 @@ function planDisplayName(plan) {
     return PLAN_OPTION_LABELS[normalized] || "Growth Monthly";
 }
 
-function formatInr(amount) {
+function formatUsd(amount) {
     const value = Math.max(0, Number(amount || 0));
-    return new Intl.NumberFormat("en-IN", {
-        style: "currency",
-        currency: "INR",
-        maximumFractionDigits: 0,
-    }).format(value);
+    return `$${value % 1 === 0 ? value : value.toFixed(2)}`;
 }
 
 function planCheckoutAmount(plan) {
     const normalized = normalizePlanChoice(plan);
-    return Number(PLAN_CHECKOUT_AMOUNTS_INR[normalized] || PLAN_CHECKOUT_AMOUNTS_INR.monthly || 0);
+    return Number(PLAN_CHECKOUT_AMOUNTS_USD[normalized] || PLAN_CHECKOUT_AMOUNTS_USD.monthly || 0);
 }
 
 function renderCheckoutPrice(plan, promo = null) {
@@ -687,21 +680,21 @@ function renderCheckoutPrice(plan, promo = null) {
 
     const baseAmount = planCheckoutAmount(plan);
     const applied = promo && typeof promo === "object" ? promo : null;
-    const finalAmount = Number(applied && applied.final_amount_inr !== undefined ? applied.final_amount_inr : baseAmount);
-    const discountAmount = Number(applied && applied.discount_amount_inr !== undefined ? applied.discount_amount_inr : 0);
+    const finalAmount = Number(applied && applied.final_amount_usd !== undefined ? applied.final_amount_usd : baseAmount);
+    const discountAmount = Number(applied && applied.discount_amount_usd !== undefined ? applied.discount_amount_usd : 0);
 
     if (checkoutPriceLabelNode) {
-        checkoutPriceLabelNode.textContent = `${formatInr(finalAmount)}${plan === "annual" ? " / year" : plan === "usage" ? " / scan" : " / month"}`;
+        checkoutPriceLabelNode.textContent = `${formatUsd(finalAmount)}${plan === "annual" ? " / year" : plan === "usage" ? " / scan" : plan === "starter" ? " / month" : " / month"}`;
     }
 
     if (checkoutPriceSummaryNode) {
         if (applied) {
             const promoLabel = applied.type === "trial_extension"
                 ? `Trial extended by ${Number(applied.trial_extension_days || 0)} day${Number(applied.trial_extension_days || 0) === 1 ? "" : "s"}`
-                : `${formatInr(discountAmount)} off`;
-            checkoutPriceSummaryNode.textContent = `Checkout total: ${formatInr(finalAmount)} (${promoLabel})`;
+                : `${formatUsd(discountAmount)} off`;
+            checkoutPriceSummaryNode.textContent = `Checkout total: ${formatUsd(finalAmount)} (${promoLabel})`;
         } else {
-            checkoutPriceSummaryNode.textContent = `Checkout total: ${formatInr(baseAmount)}`;
+            checkoutPriceSummaryNode.textContent = `Checkout total: ${formatUsd(baseAmount)}`;
         }
     }
 }

@@ -251,7 +251,7 @@
             <article class="plan-card">
               <h3>Free</h3>
               <p class="tag">Testing mode</p>
-              <p class="price">₹0<span>/month</span></p>
+              <p class="price">$0<span>/month</span></p>
               <ul>
                 <li>✓ Scan Email</li>
                 <li>✓ Domain Check</li>
@@ -263,7 +263,7 @@
             <article class="plan-card">
               <h3>Starter</h3>
               <p class="tag">For solo senders</p>
-              <p class="price">₹200<span>/month</span></p>
+              <p class="price">$2<span>/month</span></p>
               <ul>
                 <li>✓ Everything in Free</li>
                 <li>✓ Campaign Debugger access</li>
@@ -275,14 +275,14 @@
             <article class="plan-card highlight">
               <h3 class="highlight-title">Growth Annual Pro</h3>
               <p class="tag">Most teams choose this</p>
-              <p class="price"><span class="strike">₹18,000</span> ₹9,900 <span>/year</span></p>
+              <p class="price"><span class="strike">$90</span> $45 <span>/year</span></p>
               <ul>
                 <li>✓ Stop emails going to spam</li>
                 <li>✓ Catch hidden deliverability issues</li>
                 <li>✓ Protect your domain reputation</li>
                 <li>✓ Fix campaigns before sending</li>
               </ul>
-              <button type="button" onclick="handlePlanClick('growth')" class="plan-btn primary">Upgrade to Growth Monthly Pro</button>
+              <button type="button" onclick="handlePlanClick('annual')" class="plan-btn primary">Upgrade to Growth Annual Pro</button>
             </article>
           </div>
           <p class="micro" style="margin-top:8px;">All plans use tokens. The difference is monthly token allocation and unlocked tools.</p>
@@ -818,10 +818,10 @@ I noticed your recent post and had one short idea to improve reply rates."></tex
       <div class="modal-content">
         <button class="modal-close" onclick="closePricingModal()" aria-label="Close pricing modal">×</button>
         <h2 id="pricing-modal-title">Stop guessing before you send</h2>
-        <p class="price" id="checkout-price-label">$12 / month</p>
+        <p class="price" id="checkout-price-label">$45 / year</p>
         <p class="pricing-note">Catch deliverability risk before one bad batch hurts your domain.</p>
-        <button id="pay-btn" type="button" class="primary-btn">Upgrade Now</button>
-        <p id="checkout-price-summary" class="pricing-note">Checkout total: ₹1,200</p>
+        <button id="pay-btn" type="button" class="primary-btn">Get Access</button>
+        <p id="checkout-price-summary" class="pricing-note">Checkout total: $45</p>
         <ul class="pricing-features">
           <li>Avoid spam triggers before they burn your domain</li>
           <li>Know whether the issue is content or infra</li>
@@ -836,17 +836,15 @@ I noticed your recent post and had one short idea to improve reply rates."></tex
         <p class="pricing-note" style="margin-top:8px;">Selected plan: <strong id="selected-plan-name">Growth Monthly Pro</strong></p>
         <label for="inline-plan-type" class="pricing-note" style="display:block; margin-top:8px;">Choose plan</label>
         <select id="inline-plan-type" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900" style="margin-top:6px;">
-          <option value="free">Free</option>
-          <option value="starter">Starter ($2/month)</option>
           <option value="monthly">Growth Monthly Pro ($10/month)</option>
-          <option value="annual">Growth Annual Pro ($45/year)</option>
+          <option value="annual" selected>Growth Annual Pro ($45/year)</option>
+          <option value="starter">Starter ($2/month)</option>
           <option value="usage">Usage-Based ($0.20/scan)</option>
         </select>
         <select id="plan-type" class="hidden" aria-hidden="true" tabindex="-1">
-          <option value="free">Free</option>
+          <option value="monthly">Growth Monthly Pro ($10/month)</option>
+          <option value="annual" selected>Growth Annual Pro ($45/year)</option>
           <option value="starter">Starter ($2/month)</option>
-          <option value="monthly" selected>Growth Monthly Pro ($10/month)</option>
-          <option value="annual">Growth Annual Pro ($45/year)</option>
           <option value="usage">Usage-Based ($0.20/scan)</option>
         </select>
         <button id="refresh-plans" type="button" class="secondary-btn" style="margin-top:8px;">Refresh Plans</button>
