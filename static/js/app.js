@@ -624,16 +624,16 @@ function syncFlowUserState() {
 const PLAN_CHECKOUT_AMOUNTS_INR = {
     free: 0,
     starter: 200,
-    monthly: 1200,
-    annual: 9900,
+    monthly: 999,
+    annual: 8999,
     usage: 2,
 };
 
 const PLAN_OPTION_LABELS = {
     free: "Free",
     starter: "Starter ($2/month)",
-    monthly: "Growth Monthly",
-    annual: "Growth Annual",
+    monthly: "Growth Monthly Pro ($6/mo)",
+    annual: "Growth Annual Pro ($69/yr)",
     usage: "Usage-Based (Pay Per Scan)",
 };
 
