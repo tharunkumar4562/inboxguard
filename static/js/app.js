@@ -1,3 +1,44 @@
+// --- PLANS SINGLE SOURCE OF TRUTH ---
+let plans = {};
+let selectedPlanKey = "growth_annual";
+
+async function loadPlans() {
+    const res = await fetch("/plans");
+    plans = await res.json();
+}
+
+function renderPlansDropdown() {
+    const select = document.getElementById("inline-plan-type");
+    if (!select) return;
+    select.innerHTML = "";
+    Object.entries(plans).forEach(([key, plan]) => {
+        const option = document.createElement("option");
+        option.value = key;
+        option.textContent = `${plan.name} ($${plan.price_usd}/${plan.interval})`;
+        if (key === selectedPlanKey) option.selected = true;
+        select.appendChild(option);
+    });
+}
+
+function updateHeroPrice(planKey) {
+    const plan = plans[planKey];
+    const priceNode = document.getElementById("hero-price");
+    if (!plan || !priceNode) return;
+    priceNode.innerText = `$${plan.price_usd} / ${plan.interval}`;
+}
+
+document.addEventListener("DOMContentLoaded", async () => {
+    await loadPlans();
+    renderPlansDropdown();
+    updateHeroPrice(selectedPlanKey);
+    const select = document.getElementById("inline-plan-type");
+    if (select) {
+        select.addEventListener("change", (e) => {
+            selectedPlanKey = e.target.value;
+            updateHeroPrice(selectedPlanKey);
+        });
+    }
+});
 // --- STATE MACHINE: EMPTY → TYPING → ANALYZING → RESULT ---
 let scanState = "empty"; // empty | typing | analyzing | result
 

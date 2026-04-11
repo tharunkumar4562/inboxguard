@@ -1,0 +1,14 @@
+{
+  "growth_monthly": {
+    "name": "Growth Monthly",
+    "price_usd": 9,
+    "interval": "month",
+    "razorpay_plan_id": "plan_SZWbPRZCN1aTkN"
+  },
+  "growth_annual": {
+    "name": "Growth Annual",
+    "price_usd": 49,
+    "interval": "year",
+    "razorpay_plan_id": "plan_ScBQCzGquzpbUA"
+  }
+}

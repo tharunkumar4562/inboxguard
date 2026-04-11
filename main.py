@@ -1,3 +1,14 @@
+import json
+# Load plans.json as single source of truth
+PLANS_FILE = BASE_DIR / "plans.json"
+with open(PLANS_FILE, "r", encoding="utf-8") as f:
+    PLANS = json.load(f)
+
+# Serve plans at /plans endpoint
+from fastapi.responses import JSONResponse
+@app.get("/plans")
+def get_plans():
+    return JSONResponse(content=PLANS)
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 from starlette.exceptions import HTTPException as StarletteHTTPException
