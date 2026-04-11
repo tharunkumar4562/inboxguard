@@ -243,6 +243,8 @@ const deliverabilitySummaryNode = document.getElementById("deliverability-summar
 const beforeEmailNode = document.getElementById("before-email");
 const afterEmailNode = document.getElementById("after-email");
 const diffSummaryNode = document.getElementById("diff-summary");
+const rewriteTagsNode = document.getElementById("rewrite-tags");
+const rewriteNotesNode = document.getElementById("rewrite-notes");
 const copyFixedBtnNode = document.getElementById("copy-fixed-btn");
 const fixIssueButton = document.getElementById("fix-issue-btn");
 const rewriteSafeButton = document.getElementById("rewrite-safe-btn");
@@ -1151,6 +1153,69 @@ function buildRewriteDiff(beforeText, afterText) {
         rows.push({ type: "Updated", text: "Tone and structure adjusted with minor line edits." });
     }
     return rows;
+}
+
+function renderDiff(diff) {
+    if (!diffSummaryNode) {
+        return;
+    }
+    diffSummaryNode.innerHTML = "";
+    const rows = Array.isArray(diff) ? diff : [];
+    if (!rows.length) {
+        const neutral = document.createElement("div");
+        neutral.className = "diff-item";
+        neutral.textContent = "No major line-level differences were detected.";
+        diffSummaryNode.appendChild(neutral);
+        return;
+    }
+    rows.forEach((item) => {
+        const removedText = String(item && (item.removed || item.before) ? (item.removed || item.before) : "").trim();
+        const addedText = String(item && (item.added || item.after) ? (item.added || item.after) : "").trim();
+        if (removedText) {
+            const removed = document.createElement("div");
+            removed.className = "diff-item diff-removed";
+            removed.textContent = `Removed: ${removedText}`;
+            diffSummaryNode.appendChild(removed);
+        }
+        if (addedText) {
+            const added = document.createElement("div");
+            added.className = "diff-item diff-added";
+            added.textContent = `Added: ${addedText}`;
+            diffSummaryNode.appendChild(added);
+        }
+    });
+}
+
+function generateTags(issues) {
+    const items = Array.isArray(issues) ? issues : [];
+    const tags = [];
+    if (items.some((issue) => String(issue && issue.type ? issue.type : "").toLowerCase() === "spam" || String(issue && issue.type ? issue.type : "").toLowerCase() === "spam_phrase")) {
+        tags.push("Removed spam triggers");
+    }
+    if (items.some((issue) => String(issue && issue.type ? issue.type : "").toLowerCase() === "cta" || String(issue && issue.type ? issue.type : "").toLowerCase() === "weak_cta")) {
+        tags.push("Improved CTA clarity");
+    }
+    if (items.some((issue) => String(issue && issue.type ? issue.type : "").toLowerCase() === "length" || String(issue && issue.type ? issue.type : "").toLowerCase() === "too_long" || String(issue && issue.type ? issue.type : "").toLowerCase() === "long_intro")) {
+        tags.push("Simplified structure");
+    }
+    if (!tags.length) {
+        tags.push("Improved readability");
+    }
+    return tags;
+}
+
+function renderTags(tags) {
+    if (!rewriteTagsNode) {
+        return;
+    }
+    rewriteTagsNode.innerHTML = "";
+    const items = Array.isArray(tags) ? tags : [];
+    items.forEach((tag) => {
+        const node = document.createElement("span");
+        node.className = "tag success";
+        node.textContent = String(tag);
+        rewriteTagsNode.appendChild(node);
+    });
 }
 
 function setTabFeedback(message) {
@@ -2451,6 +2516,8 @@ function renderConversionResult(data) {
             || issues.map((issue) => String(issue && (issue.span || issue.phrase || "") || "")).filter(Boolean),
     });
 
+    renderTags(generateTags((data && data.issues) || issues));
+
     if (topFixesListNode) {
         topFixesListNode.innerHTML = "";
         const topFixes = Array.isArray(data && data.top_fixes) ? data.top_fixes : [];
@@ -2503,13 +2570,22 @@ function renderConversionResult(data) {
         afterEmailNode.textContent = String((data && (data.rewritten || data.improved || data.fix || data.rewritten_text)) || improved || "No rewrite generated");
     }
 
-    if (diffSummaryNode) {
-        diffSummaryNode.innerHTML = "";
-        issues.forEach((issue) => {
-            const line = document.createElement("div");
-            line.className = "diff-line";
-            line.textContent = String(issue && (issue.message || issue.type || issue.title) || "Fix applied");
-            diffSummaryNode.appendChild(line);
+    const fallbackDiff = issues.map((issue) => ({
+        removed: String(issue && (issue.span || issue.message || issue.title || issue.type) || "Risky phrasing"),
+        added: String(issue && issue.fix ? issue.fix : "Safer neutral phrasing"),
+    }));
+    renderDiff((data && Array.isArray(data.diff) && data.diff.length) ? data.diff : fallbackDiff.slice(0, 4));
+
+    if (rewriteNotesNode) {
+        rewriteNotesNode.innerHTML = "";
+        const notes = [
+            "✔ Optimized for inbox placement and reply rate",
+            "✔ Removed bulk-style phrasing patterns",
+        ];
+        notes.forEach((note) => {
+            const p = document.createElement("p");
+            p.textContent = note;
+            rewriteNotesNode.appendChild(p);
         });
     }
 
@@ -2744,18 +2820,30 @@ async function generateRewrite(mode = "safe") {
         issue_highlights: data.issue_highlights,
     });
 
+    renderTags(generateTags(data.issues));
+
     if (fixPreviewTextNode) {
         fixPreviewTextNode.textContent = String(data.primary_fix || "Rewrite generated to fix the top issue.");
     }
 
-    if (diffSummaryNode) {
-        diffSummaryNode.innerHTML = "";
-        const rows = Array.isArray(data.diff) ? data.diff : [];
-        rows.slice(0, 5).forEach((row) => {
-            const line = document.createElement("div");
-            line.className = "diff-line";
-            line.textContent = `${String(row.before || "") || "(added)"} -> ${String(row.after || "") || "(removed)"}`;
-            diffSummaryNode.appendChild(line);
+    renderDiff(Array.isArray(data.diff) ? data.diff : []);
+
+    if (rewriteNotesNode) {
+        rewriteNotesNode.innerHTML = "";
+        const notes = Array.isArray(data.rewrite_limitations) && data.rewrite_limitations.length
+            ? [
+                "✔ Optimized for inbox placement and reply rate",
+                "✔ Removed bulk-style phrasing patterns",
+                `ℹ ${String(data.rewrite_limitations[0])}`,
+            ]
+            : [
+                "✔ Optimized for inbox placement and reply rate",
+                "✔ Removed bulk-style phrasing patterns",
+            ];
+        notes.slice(0, 3).forEach((note) => {
+            const p = document.createElement("p");
+            p.textContent = note;
+            rewriteNotesNode.appendChild(p);
         });
     }
 

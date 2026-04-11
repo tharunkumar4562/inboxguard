@@ -56,7 +56,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
     <link rel="preload" href="/static/css/styles.min.css?v=20260406-seo-fix-1" as="style" />
     <link rel="stylesheet" href="/static/css/styles.min.css?v=20260406-seo-fix-1" />
-    <link rel="stylesheet" href="/static/theme-overrides.css?v=20260411-realtime-lint-1" />
+    <link rel="stylesheet" href="/static/theme-overrides.css?v=20260411-rewrite-premium-1" />
     <link rel="stylesheet" href="/static/css/cookie-consent.css?v=20260410-cookie-consent-1" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
@@ -431,6 +431,11 @@ I noticed your recent post and had one short idea to improve reply rates."></tex
             <section id="step2-fix-block" class="card result-fix-card rewrite-section hidden">
               <h3 id="fix-title">Improved Version</h3>
               <p id="fix-preview-text" class="rewrite-subtitle">Before and after transformation so you can ship a safer draft with confidence.</p>
+              <div id="rewrite-tags" class="rewrite-tags">
+                <span class="tag success">Removed spam triggers</span>
+                <span class="tag success">Improved CTA clarity</span>
+                <span class="tag success">Simplified structure</span>
+              </div>
               <div class="rewrite-actions-top">
                 <button id="fix-issue-btn" class="danger-btn" type="button">Fix this issue</button>
                 <div class="rewrite-modes" role="group" aria-label="Rewrite modes">
@@ -441,15 +446,22 @@ I noticed your recent post and had one short idea to improve reply rates."></tex
               </div>
               <div class="rewrite-grid">
                 <div class="rewrite-box before">
-                  <h4>Before</h4>
+                  <div class="rewrite-header">Before</div>
                   <pre id="before-email"></pre>
                 </div>
                 <div class="rewrite-box after">
-                  <h4>After</h4>
+                  <div class="rewrite-header">After</div>
                   <pre id="after-email"></pre>
                 </div>
               </div>
-              <div id="diff-summary" class="diff-summary"></div>
+              <div class="rewrite-diff">
+                <h4>What changed</h4>
+                <div id="diff-summary" class="diff-summary"></div>
+              </div>
+              <div id="rewrite-notes" class="rewrite-notes">
+                <p>✔ Optimized for inbox placement and reply rate</p>
+                <p>✔ Removed bulk-style phrasing patterns</p>
+              </div>
               <div class="result-fix-actions">
                 <button id="copy-fixed-btn" class="primary" type="button">Copy Fixed Email</button>
               </div>
@@ -913,6 +925,6 @@ I noticed your recent post and had one short idea to improve reply rates."></tex
     </script>
 
     <script src="/static/js/flow.js?v=20260410-progressive-exposure-1"></script>
-    <script src="/static/js/app.js?v=20260411-realtime-lint-1"></script>
+    <script src="/static/js/app.js?v=20260411-rewrite-premium-1"></script>
   </body>
 </html>

@@ -734,6 +734,11 @@ body {
 .result-fix-card.rewrite-section {
   display: grid;
   gap: 14px;
+  margin-top: 40px;
+  padding: 28px;
+  border-radius: 16px;
+  background: var(--card);
+  border: 1px solid rgba(148, 163, 184, 0.18);
 }
 
 .rewrite-subtitle {
@@ -744,26 +749,33 @@ body {
 .rewrite-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 16px;
+  gap: 20px;
+  margin-bottom: 24px;
 }
 
 .rewrite-box {
   padding: 16px;
   border-radius: 12px;
   border: 1px solid rgba(148, 163, 184, 0.18);
+  min-height: 220px;
+  display: flex;
+  flex-direction: column;
 }
 
 .rewrite-box.before {
-  border-color: var(--danger);
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.2);
 }
 
 .rewrite-box.after {
-  border-color: var(--success);
+  background: rgba(34, 197, 94, 0.08);
+  border: 1px solid rgba(34, 197, 94, 0.2);
 }
 
-.rewrite-box h4 {
+.rewrite-header {
   margin: 0 0 10px;
-  font-size: 0.92rem;
+  font-size: 13px;
+  opacity: 0.75;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--muted);
@@ -781,6 +793,26 @@ body {
   font-family: inherit;
   font-size: 14px;
   line-height: 1.6;
+}
+
+.rewrite-tags {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.rewrite-tags .tag {
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.rewrite-tags .tag.success {
+  background: rgba(34, 197, 94, 0.15);
+  color: #4ade80;
+  border: 1px solid rgba(34, 197, 94, 0.2);
 }
 
 [data-theme="light"] .rewrite-box pre {
@@ -918,9 +950,40 @@ body {
   color: #1d4ed8;
 }
 
+.rewrite-diff {
+  margin-top: 10px;
+  padding: 16px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(148, 163, 184, 0.16);
+}
+
+.rewrite-diff h4 {
+  margin: 0 0 10px;
+  font-size: 14px;
+  color: var(--text);
+}
+
 .diff-summary {
   display: grid;
   gap: 8px;
+}
+
+.diff-item {
+  padding: 10px;
+  border-radius: 8px;
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+
+.diff-removed {
+  background: rgba(239, 68, 68, 0.12);
+  color: #f87171;
+}
+
+.diff-added {
+  background: rgba(34, 197, 94, 0.12);
+  color: #4ade80;
 }
 
 .diff-summary .diff-line {
@@ -929,6 +992,25 @@ body {
   padding: 10px 12px;
   background: color-mix(in srgb, var(--card) 82%, transparent);
   color: var(--text);
+}
+
+.rewrite-notes {
+  margin-top: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 12px;
+  padding: 12px 14px;
+  background: color-mix(in srgb, var(--card) 90%, transparent);
+}
+
+.rewrite-notes p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.rewrite-notes p + p {
+  margin-top: 6px;
 }
 
 .result-fix-actions .primary,
