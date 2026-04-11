@@ -1,17 +1,3 @@
-import json
-# Load plans.json as single source of truth
-PLANS_FILE = BASE_DIR / "plans.json"
-with open(PLANS_FILE, "r", encoding="utf-8") as f:
-    PLANS = json.load(f)
-
-# Serve plans at /plans endpoint
-from fastapi.responses import JSONResponse
-@app.get("/plans")
-def get_plans():
-    return JSONResponse(content=PLANS)
-from fastapi.templating import Jinja2Templates
-from pydantic import BaseModel
-from starlette.exceptions import HTTPException as StarletteHTTPException
 from analyzer import analyze_email
 from analytics import get_dashboard_data, track_event
 from correction_engine import (
@@ -107,6 +93,11 @@ logger = logging.getLogger("inboxguard")
 BASE_DIR = Path(__file__).resolve().parent
 STATIC_DIR = BASE_DIR / "static"
 TEMPLATES_DIR = BASE_DIR / "templates"
+
+# Load plans.json as single source of truth
+PLANS_FILE = BASE_DIR / "plans.json"
+with open(PLANS_FILE, "r", encoding="utf-8") as f:
+    PLANS = json.load(f)
 
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
