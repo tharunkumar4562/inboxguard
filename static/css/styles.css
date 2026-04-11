@@ -1,24 +1,33 @@
+/* --- Modal Dropdown Fix: Prevent Clipping --- */
+.modal-content {
+    overflow: visible !important;
+    max-height: none !important;
+}
 /* InboxGuard UX: Section Spacing & Card System */
 .section {
     margin-top: 32px;
 }
+
 .card {
     padding: 20px;
     border-radius: 12px;
     background: #fff;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
     margin-bottom: 24px;
 }
+
 .grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 16px;
 }
+
 .decision-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 16px;
 }
+
 .decision-card {
     min-height: 100px;
     display: flex;
@@ -26,6 +35,7 @@
     align-items: flex-start;
     justify-content: center;
 }
+
 .label {
     font-size: 13px;
     color: #888;
@@ -33,11 +43,13 @@
     text-transform: uppercase;
     letter-spacing: 0.04em;
 }
+
 .value {
     font-size: 20px;
     font-weight: 600;
     color: #1a202c;
 }
+
 @keyframes fadeIn {
     from {
         opacity: 0;
