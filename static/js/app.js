@@ -625,7 +625,7 @@ const PLAN_CHECKOUT_AMOUNTS_USD = {
     free: 0,
     starter: 2,
     monthly: 10,
-    annual: 45,
+    annual: 49,
     usage: 0.2,
 };
 
@@ -633,7 +633,7 @@ const PLAN_OPTION_LABELS = {
     free: "Free",
     starter: "Starter ($2/month)",
     monthly: "Growth Monthly Pro ($10/month)",
-    annual: "Growth Annual Pro ($45/year)",
+    annual: "Growth Annual Pro ($49/year)",
     usage: "Usage-Based ($0.20/scan)",
 };
 
@@ -5106,10 +5106,10 @@ async function startPayment() {
             const options = {
                 key: data.key,
                 amount: data.amount,
-                currency: data.currency || "INR",
+                currency: data.currency || "USD",
                 order_id: data.order_id,
                 name: "InboxGuard",
-                description: `${data.display_price || formatInr(Number(data.amount || 0) / 100)} checkout`,
+                description: `${data.display_price || formatUsd(Number(data.amount || 0) / 100)} checkout`,
                 prefill: {
                     email: currentUserEmail || "",
                     name: currentUserName || "",
@@ -5137,7 +5137,7 @@ async function startPayment() {
         const options = {
             key: data.key,
             amount: data.amount,
-            currency: data.currency || "INR",
+            currency: data.currency || "USD",
             subscription_id: data.subscription_id,
             name: "InboxGuard",
             description: `${data.display_price || "$12"} / month`,
