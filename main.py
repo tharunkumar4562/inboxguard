@@ -117,10 +117,10 @@ GOOGLE_CLIENT_SECRET = os.getenv("INBOXGUARD_GOOGLE_CLIENT_SECRET", os.getenv("G
 RAZORPAY_KEY = os.getenv("INBOXGUARD_RAZORPAY_KEY", os.getenv("RAZORPAY_KEY", "")).strip()
 RAZORPAY_SECRET = os.getenv("INBOXGUARD_RAZORPAY_SECRET", os.getenv("RAZORPAY_SECRET", "")).strip()
 RAZORPAY_WEBHOOK_SECRET = os.getenv("INBOXGUARD_RAZORPAY_WEBHOOK_SECRET", os.getenv("RAZORPAY_WEBHOOK_SECRET", "")).strip()
-RAZORPAY_AMOUNT_INR = int(os.getenv("INBOXGUARD_RAZORPAY_AMOUNT_INR", "999"))  # Growth Monthly Pro: Rs.999
-RAZORPAY_STARTER_AMOUNT_INR = int(os.getenv("INBOXGUARD_RAZORPAY_STARTER_AMOUNT_INR", "200"))
-RAZORPAY_ANNUAL_AMOUNT_INR = int(os.getenv("INBOXGUARD_RAZORPAY_ANNUAL_AMOUNT_INR", "3749"))  # Growth Annual: Rs.3749
-RAZORPAY_USAGE_AMOUNT_INR = int(os.getenv("INBOXGUARD_RAZORPAY_USAGE_AMOUNT_INR", "17"))  # Usage: Rs.17 per scan
+RAZORPAY_AMOUNT_USD = float(os.getenv("INBOXGUARD_RAZORPAY_AMOUNT_USD", "10"))  # Growth Monthly Pro: $10
+RAZORPAY_STARTER_AMOUNT_USD = float(os.getenv("INBOXGUARD_RAZORPAY_STARTER_AMOUNT_USD", "2"))
+RAZORPAY_ANNUAL_AMOUNT_USD = float(os.getenv("INBOXGUARD_RAZORPAY_ANNUAL_AMOUNT_USD", "45"))  # Growth Annual: $45
+RAZORPAY_USAGE_AMOUNT_USD = float(os.getenv("INBOXGUARD_RAZORPAY_USAGE_AMOUNT_USD", "0.02"))  # Usage: $0.02 per scan
 RAZORPAY_DISPLAY_PRICE_USD = os.getenv("INBOXGUARD_RAZORPAY_DISPLAY_PRICE_USD", "$10").strip()
 RAZORPAY_PLAN_ID = os.getenv("INBOXGUARD_RAZORPAY_PLAN_ID", os.getenv("RAZORPAY_PLAN_ID", "")).strip()
 RAZORPAY_ANNUAL_PLAN_ID = os.getenv("INBOXGUARD_RAZORPAY_ANNUAL_PLAN_ID", os.getenv("RAZORPAY_ANNUAL_PLAN_ID", "")).strip()
@@ -1460,22 +1460,22 @@ def _promo_plan_scope(plan: str) -> str:
     return normalized_plan
 
 
-def _plan_checkout_amount_inr(plan: str) -> int:
+def _plan_checkout_amount_usd(plan: str) -> float:
     normalized_plan = _normalize_plan_key(plan)
     if normalized_plan == "free":
-        return 0
+        return 0.0
     if normalized_plan == "starter":
-        return max(0, int(RAZORPAY_STARTER_AMOUNT_INR))
+        return max(0.0, float(RAZORPAY_STARTER_AMOUNT_USD))
     if normalized_plan == "annual":
-        return max(0, int(RAZORPAY_ANNUAL_AMOUNT_INR))
+        return max(0.0, float(RAZORPAY_ANNUAL_AMOUNT_USD))
     if normalized_plan == "usage":
-        return max(0, int(RAZORPAY_USAGE_AMOUNT_INR))
-    return max(0, int(RAZORPAY_AMOUNT_INR))
+        return max(0.0, float(RAZORPAY_USAGE_AMOUNT_USD))
+    return max(0.0, float(RAZORPAY_AMOUNT_USD))
 
 
-def _format_inr(amount: int) -> str:
-    safe_amount = max(0, int(amount or 0))
-    return f"₹{safe_amount:,.0f}"
+def _format_usd(amount: float) -> str:
+    safe_amount = max(0.0, float(amount or 0.0))
+    return f"${safe_amount:,.2f}"
 
 
 def _get_promo_code(code: str) -> Optional[dict[str, Any]]:
@@ -1571,7 +1571,7 @@ def _build_promo_quote(code: str, plan: str) -> dict[str, Any]:
     if not _promo_applies_to_plan(promo, plan):
         return {"valid": False, "reason": "Not applicable"}
 
-    base_amount = _plan_checkout_amount_inr(plan)
+    base_amount = _plan_checkout_amount_usd(plan)
     promo_type = str(promo.get("type") or "percentage").strip().lower()
     promo_value = max(0, int(promo.get("value") or 0))
     discount_amount = 0
@@ -1589,16 +1589,16 @@ def _build_promo_quote(code: str, plan: str) -> dict[str, Any]:
 
     promo_payload = {
         **promo,
-        "base_amount_inr": base_amount,
-        "discount_amount_inr": discount_amount,
-        "final_amount_inr": final_amount,
+        "base_amount_usd": base_amount,
+        "discount_amount_usd": discount_amount,
+        "final_amount_usd": final_amount,
         "trial_extension_days": trial_extension_days,
         "checkout_mode": checkout_mode,
         "summary": (
-            f"{promo_value}% off applied. Checkout total { _format_inr(final_amount) }"
+            f"{promo_value}% off applied. Checkout total { _format_usd(final_amount) }"
             if promo_type == "percentage"
             else (
-                f"{_format_inr(discount_amount)} off applied. Checkout total { _format_inr(final_amount) }"
+                f"{_format_usd(discount_amount)} off applied. Checkout total { _format_usd(final_amount) }"
                 if promo_type == "fixed"
                 else f"Trial extended by {trial_extension_days} day{'s' if trial_extension_days != 1 else ''}."
             )
@@ -3043,9 +3043,9 @@ async def create_subscription(request: Request, plan: str = Form("monthly")):
         )
 
     if promo:
-        base_amount = int(promo.get("base_amount_inr") or _plan_checkout_amount_inr(selected_plan))
-        discount_amount = int(promo.get("discount_amount_inr") or 0)
-        final_amount = int(promo.get("final_amount_inr") or max(0, base_amount - discount_amount))
+        base_amount = float(promo.get("base_amount_usd") or _plan_checkout_amount_usd(selected_plan))
+        discount_amount = float(promo.get("discount_amount_usd") or 0.0)
+        final_amount = float(promo.get("final_amount_usd") or max(0.0, base_amount - discount_amount))
         if final_amount <= 0:
             _increment_promo_usage(str(promo.get("id") or ""))
             _consume_promo_usage(user["id"], promo)
@@ -3062,7 +3062,7 @@ async def create_subscription(request: Request, plan: str = Form("monthly")):
                     "free_mode": True,
                     "promo_applied": True,
                     "plan": selected_plan,
-                    "display_price": _format_inr(final_amount),
+                    "display_price": _format_usd(final_amount),
                     "final_amount": final_amount,
                     "discount_amount": discount_amount,
                     "message": "Promo covered the full checkout amount. Access unlocked without payment.",
@@ -3070,8 +3070,8 @@ async def create_subscription(request: Request, plan: str = Form("monthly")):
             )
 
         order_payload = {
-            "amount": final_amount * 100,
-            "currency": "INR",
+            "amount": int(final_amount * 100),
+            "currency": "USD",
             "receipt": f"ig-{user['id']}-{selected_plan}-{secrets.token_hex(4)}",
             "notes": {
                 "user_id": str(user["id"]),
@@ -3080,9 +3080,9 @@ async def create_subscription(request: Request, plan: str = Form("monthly")):
                 "promo_code": str(promo.get("code") or ""),
                 "promo_type": str(promo.get("type") or ""),
                 "promo_value": str(promo.get("value") or 0),
-                "base_amount_inr": str(base_amount),
-                "discount_amount_inr": str(discount_amount),
-                "final_amount_inr": str(final_amount),
+                "base_amount_usd": str(base_amount),
+                "discount_amount_usd": str(discount_amount),
+                "final_amount_usd": str(final_amount),
             },
         }
         try:
@@ -3127,8 +3127,8 @@ async def create_subscription(request: Request, plan: str = Form("monthly")):
                 "order_id": order_id,
                 "key": RAZORPAY_KEY,
                 "amount": final_amount * 100,
-                "currency": "INR",
-                "display_price": _format_inr(final_amount),
+                "currency": "USD",
+                "display_price": _format_usd(final_amount),
                 "base_amount": base_amount,
                 "discount_amount": discount_amount,
                 "promo_code": str(promo.get("code") or ""),
@@ -3215,9 +3215,9 @@ async def create_subscription(request: Request, plan: str = Form("monthly")):
             "short_url": str(data.get("short_url", "") or ""),
             "key": RAZORPAY_KEY,
             "amount": int(RAZORPAY_AMOUNT_INR) * 100,
-            "currency": "INR",
+            "currency": "USD",
             "display_price": str(plan_data.get("display_price") or RAZORPAY_DISPLAY_PRICE_USD),
-            "charge_currency": "INR",
+            "charge_currency": "USD",
             "plan": selected_plan,
         },
     )
