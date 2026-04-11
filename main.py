@@ -1,3 +1,49 @@
+from fastapi.templating import Jinja2Templates
+from pydantic import BaseModel
+from starlette.exceptions import HTTPException as StarletteHTTPException
+from analyzer import analyze_email
+from analytics import get_dashboard_data, track_event
+from correction_engine import (
+    build_style_variants_with_guard,
+    enforce_rewrite_constraints,
+    extract_rewrite_intent,
+    generate_mode_candidate,
+    get_learning_profile,
+    record_feedback,
+    rewrite_email_text,
+)
+from fix_engine import build_fix_engine_payload
+from utils import build_email_from_raw, extract_domain_from_text
+
+import joblib
+import threading
+
+# Load classifier and vectorizer once, thread-safe
+_ml_lock = threading.Lock()
+_ml_model = None
+_ml_vectorizer = None
+def _load_ml_classifier():
+    global _ml_model, _ml_vectorizer
+    with _ml_lock:
+        if _ml_model is None or _ml_vectorizer is None:
+            try:
+                _ml_model = joblib.load(str(BASE_DIR / "email_classifier.pkl"))
+                _ml_vectorizer = joblib.load(str(BASE_DIR / "vectorizer.pkl"))
+            except Exception as e:
+                _ml_model = None
+                _ml_vectorizer = None
+_load_ml_classifier()
+
+def classify_email_ml(text):
+    if _ml_model is None or _ml_vectorizer is None:
+        return {"type": "outreach", "confidence": 0.0}
+    X = _ml_vectorizer.transform([text])
+    pred = _ml_model.predict(X)[0]
+    prob = float(_ml_model.predict_proba(X).max())
+    return {"type": pred, "confidence": prob}
+def is_trusted_sender(text):
+    trusted_domains = ["github.com", "google.com", "stripe.com"]
+    return any(d in text.lower() for d in trusted_domains)
 from datetime import date, datetime, timedelta, timezone
 from difflib import SequenceMatcher
 from pathlib import Path
@@ -71,11 +117,11 @@ GOOGLE_CLIENT_SECRET = os.getenv("INBOXGUARD_GOOGLE_CLIENT_SECRET", os.getenv("G
 RAZORPAY_KEY = os.getenv("INBOXGUARD_RAZORPAY_KEY", os.getenv("RAZORPAY_KEY", "")).strip()
 RAZORPAY_SECRET = os.getenv("INBOXGUARD_RAZORPAY_SECRET", os.getenv("RAZORPAY_SECRET", "")).strip()
 RAZORPAY_WEBHOOK_SECRET = os.getenv("INBOXGUARD_RAZORPAY_WEBHOOK_SECRET", os.getenv("RAZORPAY_WEBHOOK_SECRET", "")).strip()
-RAZORPAY_AMOUNT_INR = int(os.getenv("INBOXGUARD_RAZORPAY_AMOUNT_INR", "1200"))
+RAZORPAY_AMOUNT_INR = int(os.getenv("INBOXGUARD_RAZORPAY_AMOUNT_INR", "999"))
 RAZORPAY_STARTER_AMOUNT_INR = int(os.getenv("INBOXGUARD_RAZORPAY_STARTER_AMOUNT_INR", "200"))
-RAZORPAY_ANNUAL_AMOUNT_INR = int(os.getenv("INBOXGUARD_RAZORPAY_ANNUAL_AMOUNT_INR", "9900"))
+RAZORPAY_ANNUAL_AMOUNT_INR = int(os.getenv("INBOXGUARD_RAZORPAY_ANNUAL_AMOUNT_INR", "8999"))
 RAZORPAY_USAGE_AMOUNT_INR = int(os.getenv("INBOXGUARD_RAZORPAY_USAGE_AMOUNT_INR", "2"))
-RAZORPAY_DISPLAY_PRICE_USD = os.getenv("INBOXGUARD_RAZORPAY_DISPLAY_PRICE_USD", "$12").strip()
+RAZORPAY_DISPLAY_PRICE_USD = os.getenv("INBOXGUARD_RAZORPAY_DISPLAY_PRICE_USD", "$6").strip()
 RAZORPAY_PLAN_ID = os.getenv("INBOXGUARD_RAZORPAY_PLAN_ID", os.getenv("RAZORPAY_PLAN_ID", "")).strip()
 RAZORPAY_ANNUAL_PLAN_ID = os.getenv("INBOXGUARD_RAZORPAY_ANNUAL_PLAN_ID", os.getenv("RAZORPAY_ANNUAL_PLAN_ID", "")).strip()
 RAZORPAY_TRIAL_PLAN_ID = os.getenv("INBOXGUARD_RAZORPAY_TRIAL_PLAN_ID", os.getenv("RAZORPAY_TRIAL_PLAN_ID", "")).strip()
@@ -1850,20 +1896,20 @@ def _plan_catalog() -> dict[str, dict[str, Any]]:
             "trial_days": 0,
         },
         "monthly": {
-            "label": "Growth Monthly",
+            "label": "Growth Monthly Pro",
             "display_price": RAZORPAY_DISPLAY_PRICE_USD,
             "plan_id": pro_plan_id,
             "trial_days": 0,
         },
         "pro": {
-            "label": "Growth",
+            "label": "Growth Monthly Pro",
             "display_price": RAZORPAY_DISPLAY_PRICE_USD,
             "plan_id": pro_plan_id,
             "trial_days": 0,
         },
         "annual": {
-            "label": "Growth Annual",
-            "display_price": "$99",
+            "label": "Growth Annual Pro",
+            "display_price": "$69",
             "plan_id": RAZORPAY_ANNUAL_PLAN_ID,
             "trial_days": 0,
         },
@@ -4326,24 +4372,46 @@ def _run_analysis_request(
     if mode not in ("content", "full"):
         mode = "content"
 
+    # === ML CLASSIFICATION LAYER ===
+    classification = classify_email_ml(parsed_email)
+    result = dict()
+    result["classification"] = classification
+
+    # Trusted sender context filter
+    if classification["type"] == "transactional" or is_trusted_sender(parsed_email):
+        result["risk"] = "low"
+        result["message"] = "Transactional or trusted system email detected. No deliverability risks found."
+        result["issues"] = []
+        result["original"] = parsed_email
+        result["rewritten"] = parsed_email
+        result["rewritten_text"] = parsed_email
+        result["fixes"] = []
+        result["impact_score"] = 0
+        result["impact_label"] = "None"
+        result["biggest_risk"] = {
+            "title": "No risk",
+            "summary": "This is a system or transactional email from a trusted sender.",
+            "reasons": ["No spam/marketing signals detected."],
+            "impact": "Safe to send."
+        }
+        return result
+
     user = _get_session_user(request)
     if api_user_id is not None:
         user = {"id": api_user_id, "pro": True, "status": "active"}
-
-    # TOKEN SYSTEM: Check and deduct tokens
-    token_cost = FEATURE_COSTS.get("scan_email", 1)
-    free_scan_credit = False
     
     free_anon_scan = False
+    token_cost = FEATURE_COSTS.get("scan_email", 1)
+    free_scan_credit = False
     if user:
         user_id = int(user["id"])
         is_admin_user = _is_admin_user(user)
-        current_tokens = _get_user_tokens(user_id)
         user_plan = _normalize_plan_key(str(user.get("plan") or "free"))
         scans_used = int(_get_usage(user_id).get("scans_used", 0))
         free_scan_credit = is_admin_user or (user_plan == "free" and scans_used < FREE_SCANS_LIMIT)
 
         if not free_scan_credit:
+            current_tokens = _get_user_tokens(user_id)
             if current_tokens < token_cost:
                 raise HTTPException(status_code=402, detail="NO_TOKENS")
             if not _deduct_tokens(user_id, token_cost):
@@ -4351,6 +4419,7 @@ def _run_analysis_request(
     else:
         anon_used = _get_anon_scans_used(request)
         free_anon_scan = anon_used < FIRST_VALUE_FREE_SCAN_LIMIT
+        free_scan_credit = free_anon_scan
         if not free_anon_scan:
             track_event("blocked_auth", {"reason": "first_value_scan_limit", "anon_scans_used": anon_used})
             raise HTTPException(status_code=401, detail="AUTH_REQUIRED")

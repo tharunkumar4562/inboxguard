@@ -93,13 +93,13 @@
         </article>
 
         <article class="card" style="padding: 22px;">
-          <p class="workflow-step">InboxGuard Pro</p>
+          <p class="workflow-step">Growth Monthly Pro</p>
           <div class="mt-2 flex items-end gap-2">
             <span id="checkout-price-label" class="text-4xl font-bold">{{ display_price_usd }}</span>
             <span class="text-slate-400">/ month</span>
           </div>
-          <p id="checkout-price-summary" class="mt-2 text-sm text-slate-400">Checkout total: {{ display_price_usd }}</p>
-          <p class="mt-1 text-sm text-slate-400">Billed locally at checkout.</p>
+          <p id="checkout-price-summary" class="mt-2 text-sm text-slate-400">Checkout total: {{ display_price_usd }} (Billed in ₹ at checkout)</p>
+          <p class="mt-1 text-sm text-slate-400">You pay ₹999/month at checkout. Displayed in dollars for clarity.</p>
 
           <div class="mt-6 rounded-2xl border border-slate-700 bg-slate-950/50 p-4">
             {% if user_status == 'past_due' %}
@@ -109,9 +109,9 @@
             {% endif %}
             <label for="plan-type" class="text-sm text-slate-300">Choose plan</label>
             <select id="plan-type" class="mt-2 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-slate-100">
-              <option value="monthly">Monthly Pro ({{ plans.monthly.display_price }}/month)</option>
-              <option value="annual">Annual Pro ({{ plans.annual.display_price }}/year)</option>
-              <option value="trial">Trial Pro ({{ trial_days }} days)</option>
+              <option value="monthly">Growth Monthly Pro ({{ plans.monthly.display_price }}/month)</option>
+              <option value="annual">Growth Annual Pro ({{ plans.annual.display_price }}/year)</option>
+              <option value="trial">Starter Trial ({{ trial_days }} days)</option>
               <option value="usage">Usage-Based ({{ plans.usage.display_price }})</option>
             </select>
             <div class="mt-4 border-t border-slate-800 pt-4">
