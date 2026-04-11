@@ -92,6 +92,12 @@ from fix_engine import build_fix_engine_payload
 from utils import build_email_from_raw, extract_domain_from_text
 
 
+
+logger = logging.getLogger("inboxguard")
+BASE_DIR = Path(__file__).resolve().parent
+STATIC_DIR = BASE_DIR / "static"
+TEMPLATES_DIR = BASE_DIR / "templates"
+
 app = FastAPI(title="InboxGuard")
 
 # Load plans.json as single source of truth (after BASE_DIR is defined)
@@ -104,11 +110,6 @@ from fastapi.responses import JSONResponse
 @app.get("/plans")
 def get_plans():
     return JSONResponse(content=PLANS)
-
-logger = logging.getLogger("inboxguard")
-BASE_DIR = Path(__file__).resolve().parent
-STATIC_DIR = BASE_DIR / "static"
-TEMPLATES_DIR = BASE_DIR / "templates"
 
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
