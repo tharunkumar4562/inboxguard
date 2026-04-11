@@ -2,6 +2,8 @@ import json
 import os
 import re
 import threading
+from urllib import error as urlerror
+from urllib import request as urlrequest
 from datetime import datetime, timezone
 from difflib import SequenceMatcher
 from pathlib import Path
@@ -12,6 +14,11 @@ DATA_DIR = Path(os.getenv("INBOXGUARD_DATA_DIR", str(BASE_DIR / "data"))).expand
 FEEDBACK_FILE = DATA_DIR / "rewrite_feedback.json"
 MODEL_FILE = DATA_DIR / "rewrite_model.json"
 _LOCK = threading.Lock()
+
+OLLAMA_ENABLED = os.getenv("INBOXGUARD_OLLAMA_ENABLED", "0").strip().lower() in {"1", "true", "yes"}
+OLLAMA_HOST = os.getenv("INBOXGUARD_OLLAMA_HOST", "http://127.0.0.1:11434").strip().rstrip("/")
+OLLAMA_MODEL = os.getenv("INBOXGUARD_OLLAMA_MODEL", "llama3.1:8b").strip()
+OLLAMA_TIMEOUT_SECONDS = float(os.getenv("INBOXGUARD_OLLAMA_TIMEOUT_SECONDS", "8"))
 
 SPAM_LINE_PATTERNS = [
     r"\blast\s+chance\b",
@@ -778,6 +785,57 @@ def _rewrite_update_or_transactional_aggressive(subject: str, body: str) -> str:
     return _sanitize_rewrite_text("\n".join(out))
 
 
+def _build_ollama_prompt(original_text: str, style: str, intent_type: str, detected_issues: List[str] | None = None) -> str:
+    issue_blob = ", ".join([str(item) for item in (detected_issues or []) if str(item).strip()])
+    return (
+        "Rewrite this email for deliverability and clarity.\n"
+        f"Style: {style}.\n"
+        f"Intent type: {intent_type or 'outreach'}.\n"
+        "Rules:\n"
+        "- Output ONLY the rewritten email text.\n"
+        "- Keep it concise, specific, and non-spammy.\n"
+        "- Remove urgency pressure and aggressive CTA phrasing.\n"
+        "- Keep important context but improve readability.\n"
+        "- Keep under ~120 words when possible.\n"
+        f"Detected issues: {issue_blob or 'none'}\n\n"
+        "Original email:\n"
+        f"{original_text}"
+    )
+
+
+def _try_ollama_rewrite(original_text: str, style: str, intent_type: str, detected_issues: List[str] | None = None) -> str | None:
+    if not OLLAMA_ENABLED:
+        return None
+    if not OLLAMA_MODEL:
+        return None
+
+    payload = {
+        "model": OLLAMA_MODEL,
+        "prompt": _build_ollama_prompt(original_text, style, intent_type, detected_issues),
+        "stream": False,
+        "options": {
+            "temperature": 0.3,
+        },
+    }
+
+    try:
+        req = urlrequest.Request(
+            url=f"{OLLAMA_HOST}/api/generate",
+            data=json.dumps(payload).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with urlrequest.urlopen(req, timeout=OLLAMA_TIMEOUT_SECONDS) as response:
+            raw = response.read().decode("utf-8", errors="replace")
+        body = json.loads(raw)
+        text = str(body.get("response", "")).strip()
+        if not text:
+            return None
+        return text
+    except (urlerror.URLError, TimeoutError, ValueError, OSError):
+        return None
+
+
 def rewrite_email_text(
     original_text: str,
     detected_issues: List[str] | None = None,
@@ -798,6 +856,15 @@ def rewrite_email_text(
             style = "safe"
     _, max_words = _target_word_bounds(style)
 
+    ollama_candidate = _try_ollama_rewrite(
+        original_text=text,
+        style=style,
+        intent_type=intent_type,
+        detected_issues=detected_issues,
+    )
+    if ollama_candidate:
+        text = ollama_candidate
+
     parsed = _extract_subject_and_body(text)
     subject = parsed["subject"]
     body = parsed["body"]
@@ -809,7 +876,7 @@ def rewrite_email_text(
     normalized_intent = (intent_type or "").strip().lower()
 
     # COLD OUTREACH / BROADCAST EMAILS: hard split by style.
-    if is_broadcast or "cold" in normalized_intent or "outreach" in normalized_intent:
+    if not ollama_candidate and (is_broadcast or "cold" in normalized_intent or "outreach" in normalized_intent):
         if style == "safe":
             text = _compose_cold_outreach_rewrite(original_text, "safe")
         elif style == "aggressive":
@@ -818,7 +885,7 @@ def rewrite_email_text(
             text = _compose_cold_outreach_rewrite(original_text, "balanced")
 
     # TRANSACTIONAL / POLICY UPDATES: hard split by style.
-    elif normalized_intent in {"informational/system", "transactional", "update"}:
+    elif not ollama_candidate and normalized_intent in {"informational/system", "transactional", "update"}:
         if style == "safe":
             text = _rewrite_update_or_transactional_safe(subject, body)
         elif style == "aggressive":
@@ -827,7 +894,7 @@ def rewrite_email_text(
             text = _rewrite_update_or_transactional_balanced(subject, body)
 
     # EVERYTHING ELSE: Add conversational question hook
-    else:
+    elif not ollama_candidate:
         parsed_anchor = _extract_offer_anchor(subject, _extract_body_lines(body), _derive_context_hint(text))
         if style == "aggressive":
             text = _sanitize_rewrite_text(

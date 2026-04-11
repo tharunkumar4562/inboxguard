@@ -236,12 +236,13 @@ const predictionBandsNode = document.getElementById("prediction-bands");
 const resultScreenNode = document.getElementById("result-screen");
 const decisionTitleNode = document.getElementById("decision-title");
 const primaryIssueNode = document.getElementById("primary-issue");
-const step2FixBlockNode = document.getElementById("step2-fix-block");
+const step2FixBlockNode = document.getElementById("rewrite-section") || document.getElementById("step2-fix-block");
 const step3BlockNode = document.getElementById("step3-block");
 const biggestRiskTextNode = document.getElementById("biggest-risk-text");
 const deliverabilitySummaryNode = document.getElementById("deliverability-summary");
 const beforeEmailNode = document.getElementById("before-email");
 const afterEmailNode = document.getElementById("after-email");
+const issueListNode = document.getElementById("issue-list");
 const diffSummaryNode = document.getElementById("diff-summary");
 const rewriteTagsNode = document.getElementById("rewrite-tags");
 const rewriteNotesNode = document.getElementById("rewrite-notes");
@@ -249,6 +250,7 @@ const copyFixedBtnNode = document.getElementById("copy-fixed-btn");
 const fixIssueButton = document.getElementById("fix-issue-btn");
 const rewriteSafeButton = document.getElementById("rewrite-safe-btn");
 const rewriteEngagingButton = document.getElementById("rewrite-engaging-btn");
+const rewriteDirectButton = document.getElementById("rewrite-direct-btn");
 const rewriteConvertingButton = document.getElementById("rewrite-converting-btn");
 const restoreBtnNode = document.getElementById("restore-btn");
 const gmailBtnNode = document.getElementById("gmail-btn");
@@ -259,6 +261,7 @@ const riskReasonsNode = document.getElementById("risk-reasons");
 const riskImpactNode = document.getElementById("risk-impact");
 const riskWarningImpactNode = document.getElementById("risk-warning-impact");
 const fixTitleNode = document.getElementById("fix-title");
+const rewriteSummaryNode = document.getElementById("rewrite-summary");
 const fixPreviewTextNode = document.getElementById("fix-preview-text");
 const rewriteLiveStatusNode = document.getElementById("rewrite-live-status");
 const fixRecommendationsNode = document.getElementById("fix-recommendations");
@@ -408,7 +411,7 @@ let latestRewriteContext = null;
 let realtimeLintTimer = null;
 let liveRewriteTimer = null;
 let liveRewriteRequestId = 0;
-let activeRewriteMode = "engaging";
+let activeRewriteMode = "casual";
 let latestLearningProfile = null;
 let hasScanResult = false;
 let pendingAction = null;
@@ -1230,7 +1233,7 @@ function setRewriteLiveStatus(message) {
 
 function applyRewriteResponse(data, original, mode, options = {}) {
     const livePreview = Boolean(options && options.livePreview);
-    const selectedMode = mode === "high-converting" ? "high_converting" : mode;
+    const selectedMode = String(mode || "casual").toLowerCase();
     const rewrittenFromModes = data && data.rewrites && data.rewrites[selectedMode];
     const rewritten = String(
         rewrittenFromModes
@@ -1247,6 +1250,7 @@ function applyRewriteResponse(data, original, mode, options = {}) {
         improved: data.improved,
         fix: data.fix,
         issue_highlights: data.issue_highlights,
+        issues: data.issues,
     });
 
     renderTags(generateTags(data.issues));
@@ -1259,21 +1263,18 @@ function applyRewriteResponse(data, original, mode, options = {}) {
 
     if (rewriteNotesNode) {
         rewriteNotesNode.innerHTML = "";
-        const profile = data && data.adaptive_profile ? data.adaptive_profile : null;
-        const notes = Array.isArray(data.rewrite_limitations) && data.rewrite_limitations.length
-            ? [
-                "✔ Optimized for inbox placement and reply rate",
-                "✔ Removed bulk-style phrasing patterns",
-                `ℹ ${String(data.rewrite_limitations[0])}`,
-            ]
+        const explicitFixes = Array.isArray(data && data.issue_fixes) ? data.issue_fixes : [];
+        const notes = explicitFixes.length
+            ? explicitFixes.slice(0, 4).map((item) => {
+                const text = String(item && (item.text || item.issue) ? (item.text || item.issue) : "Issue");
+                const why = String(item && item.why ? item.why : "");
+                const fix = String(item && item.suggested_fix ? item.suggested_fix : "");
+                return `${text} -> ${why}${fix ? ` | Fix: ${fix}` : ""}`;
+            })
             : [
-                "✔ Optimized for inbox placement and reply rate",
-                "✔ Removed bulk-style phrasing patterns",
+                "Exact issue fixes will appear here after rewrite.",
             ];
-        if (profile && Number(profile.sample_size || 0) >= 20) {
-            notes.push(`ℹ Adapted from ${Number(profile.sample_size || 0)} feedback samples.`);
-        }
-        notes.slice(0, 4).forEach((note) => {
+        notes.forEach((note) => {
             const p = document.createElement("p");
             p.textContent = note;
             rewriteNotesNode.appendChild(p);
@@ -1283,14 +1284,14 @@ function applyRewriteResponse(data, original, mode, options = {}) {
     latestRewriteContext = {
         original_text: original,
         rewritten_text: rewritten,
-        rewrite_style: String(data.rewrite_style || mode || "balanced"),
-        rewrite_mode: String(data.rewrite_mode || selectedMode || "engaging"),
+        rewrite_style: String(data.rewrite_style || mode || "casual"),
+        rewrite_mode: String(data.rewrite_mode || selectedMode || "casual"),
         from_risk_band: String(data.from_risk_band || "Needs Review"),
         to_risk_band: String(data.to_risk_band || "Needs Review"),
         score_delta: Number(data.score_delta || 0),
     };
 
-    activeRewriteMode = String(data.rewrite_style || mode || activeRewriteMode || "engaging");
+    activeRewriteMode = String(data.rewrite_style || mode || activeRewriteMode || "casual");
 
     if (livePreview) {
         setRewriteLiveStatus("Live rewrite updated from the current draft and feedback profile.");
@@ -1311,7 +1312,7 @@ async function runAdaptiveRewritePreview() {
         return;
     }
 
-    const mode = activeRewriteMode || String(latestRewriteContext && latestRewriteContext.rewrite_style ? latestRewriteContext.rewrite_style : "engaging");
+    const mode = activeRewriteMode || String(latestRewriteContext && latestRewriteContext.rewrite_style ? latestRewriteContext.rewrite_style : "casual");
     const requestId = ++liveRewriteRequestId;
     setRewriteLiveStatus("Updating live rewrite from the current draft...");
 
@@ -1532,7 +1533,7 @@ function stashPendingContext(actionName) {
     localStorage.setItem("ig_pending_draft", rawEmailInput ? rawEmailInput.value : "");
     localStorage.setItem("ig_pending_domain", domainInput ? domainInput.value : "");
     localStorage.setItem("ig_pending_analysis_mode", analysisModeInput ? analysisModeInput.value : "content");
-    localStorage.setItem("ig_pending_rewrite_style", rewriteStyleInput ? rewriteStyleInput.value : "balanced");
+    localStorage.setItem("ig_pending_rewrite_style", rewriteStyleInput ? rewriteStyleInput.value : "casual");
 }
 
 function restorePendingContext() {
@@ -1736,7 +1737,7 @@ async function saveCurrentFix() {
     payload.set("score_delta", String(latestRewriteContext.score_delta || 0));
     payload.set("from_risk_band", String(latestRewriteContext.from_risk_band || ""));
     payload.set("to_risk_band", String(latestRewriteContext.to_risk_band || ""));
-    payload.set("rewrite_style", String(latestRewriteContext.rewrite_style || "balanced"));
+    payload.set("rewrite_style", String(latestRewriteContext.rewrite_style || "casual"));
 
     const response = await fetch("/save-fix", {
         method: "POST",
@@ -2875,26 +2876,44 @@ function highlightIssues(text, issues) {
         return escapeHtml(source);
     }
 
-    const normalized = rows
+    const positional = rows
         .filter((issue) => Number.isInteger(issue && issue.start) && Number.isInteger(issue && issue.end) && Number(issue.end) > Number(issue.start))
         .map((issue) => ({
             type: String(issue.type || "issue").toLowerCase(),
             start: Number(issue.start),
             end: Number(issue.end),
-            reason: String(issue.reason || ""),
+            label: String(issue.label || issue.type || "Issue"),
+            reason: String(issue.reason || issue.explanation || ""),
         }))
         .sort((a, b) => a.start - b.start);
 
+    if (!positional.length) {
+        let html = escapeHtml(source);
+        rows.forEach((issue) => {
+            const needle = String(issue && (issue.text || issue.span || issue.phrase || "") ? (issue.text || issue.span || issue.phrase) : "").trim();
+            if (!needle) {
+                return;
+            }
+            const escapedNeedle = needle.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+            const regex = new RegExp(escapedNeedle, "gi");
+            const label = String(issue && (issue.label || issue.issue || issue.type || "Issue") ? (issue.label || issue.issue || issue.type) : "Issue");
+            const reason = String(issue && (issue.reason || issue.explanation || issue.why || label) ? (issue.reason || issue.explanation || issue.why || label) : label);
+            html = html.replace(regex, (match) => `<span class="issue-highlight" title="${escapeHtml(reason)}">${match}</span><span class="issue-inline-note"> ${escapeHtml(label)}</span>`);
+        });
+        return html;
+    }
+
     let cursor = 0;
     let html = "";
-    normalized.forEach((issue) => {
+    positional.forEach((issue) => {
         if (issue.start < cursor) {
             return;
         }
         html += escapeHtml(source.slice(cursor, issue.start));
         const target = escapeHtml(source.slice(issue.start, issue.end));
-        const cls = `issue-${issue.type}`;
-        html += `<span class="${cls}" title="${escapeHtml(issue.reason)}">${target}</span>`;
+        const reason = issue.reason || issue.label;
+        html += `<span class="issue-highlight issue-${issue.type}" title="${escapeHtml(reason)}">${target}</span>`;
+        html += `<span class="issue-inline-note"> ${escapeHtml(issue.label)}</span>`;
         cursor = issue.end;
     });
     html += escapeHtml(source.slice(cursor));
@@ -2935,12 +2954,102 @@ function renderRewrite(data) {
         (data && (data.rewritten || data.improved || data.fix || data.rewritten_text)) || "No rewrite generated"
     );
     const highlightSpans = Array.isArray(data && data.issue_highlights) ? data.issue_highlights : [];
+    const structuredIssues = Array.isArray(data && data.issues) ? data.issues : [];
 
     if (beforeEmailNode) {
-        beforeEmailNode.innerHTML = highlightIssueSpans(original, highlightSpans);
+        if (structuredIssues.length) {
+            beforeEmailNode.innerHTML = highlightIssues(original, structuredIssues);
+        } else {
+            beforeEmailNode.innerHTML = highlightIssueSpans(original, highlightSpans);
+        }
     }
     if (afterEmailNode) {
         afterEmailNode.textContent = rewritten;
+    }
+}
+
+function normalizeIssueRows(data) {
+    const raw = Array.isArray(data && data.issues) ? data.issues : [];
+    return raw.map((issue) => {
+        const text = String(issue && (issue.text || issue.span || issue.phrase || "") ? (issue.text || issue.span || issue.phrase) : "").trim();
+        const reason = String(issue && (issue.reason || issue.explanation || issue.why || "") ? (issue.reason || issue.explanation || issue.why) : "").trim();
+        return {
+            text,
+            label: String(issue && (issue.issue || issue.label || issue.type || "Issue") ? (issue.issue || issue.label || issue.type) : "Issue"),
+            type: String(issue && issue.type ? issue.type : "issue").toLowerCase(),
+            reason,
+            start: Number.isInteger(issue && issue.start) ? Number(issue.start) : -1,
+            end: Number.isInteger(issue && issue.end) ? Number(issue.end) : -1,
+            fix: String(issue && (issue.fix || issue.primary_fix || issue.suggested_fix || "") ? (issue.fix || issue.primary_fix || issue.suggested_fix) : "").trim(),
+        };
+    }).filter((item) => item.text || item.reason || item.label);
+}
+
+function renderAnalysisResult(data) {
+    if (!step2FixBlockNode || !beforeEmailNode || !afterEmailNode) {
+        return;
+    }
+
+    const original = String(
+        (data && (data.original || data.original_text || (data.signals && data.signals.email_source) || ""))
+        || (rawEmailInput && rawEmailInput.value ? rawEmailInput.value : "")
+    );
+    const rewritten = String(
+        (data && (data.rewritten || data.rewritten_text || data.fix || data.improved || ""))
+        || ""
+    );
+    const issues = normalizeIssueRows(data);
+
+    step2FixBlockNode.classList.remove("hidden");
+    if (resultSection) {
+        resultSection.classList.remove("hidden");
+    }
+
+    beforeEmailNode.innerHTML = highlightIssues(original, issues);
+    afterEmailNode.textContent = rewritten || "Run rewrite to generate an improved version.";
+
+    if (rewriteSummaryNode) {
+        rewriteSummaryNode.textContent = issues.length
+            ? `We found ${issues.length} issue${issues.length === 1 ? "" : "s"} that hurt deliverability.`
+            : "No major phrase-level issues were detected in this draft.";
+    }
+
+    if (decisionTitleNode) {
+        decisionTitleNode.textContent = issues.length ? "Fix before sending" : "No major issues detected";
+    }
+    if (primaryIssueNode) {
+        const firstIssue = issues[0];
+        primaryIssueNode.textContent = firstIssue
+            ? `${firstIssue.text || firstIssue.label} - ${firstIssue.reason || firstIssue.label}`
+            : "No critical issue found";
+    }
+    if (biggestRiskTextNode) {
+        biggestRiskTextNode.textContent = issues.length
+            ? `Primary issue: ${issues[0].text || issues[0].label}`
+            : "No high-risk phrase-level patterns were detected.";
+    }
+
+    if (issueListNode) {
+        if (!issues.length) {
+            issueListNode.innerHTML = '<div class="issue-item">No major phrase-level issues detected.</div>';
+        } else {
+            issueListNode.innerHTML = issues.slice(0, 8).map((issue) => {
+                const fixText = issue.fix ? ` | Fix: ${escapeHtml(issue.fix)}` : "";
+                return `<div class="issue-item"><strong>${escapeHtml(issue.text || issue.label)}</strong> - ${escapeHtml(issue.reason || issue.label)}${fixText}</div>`;
+            }).join("");
+        }
+    }
+
+    if (rewriteNotesNode && Array.isArray(data && data.issue_fixes) && data.issue_fixes.length) {
+        rewriteNotesNode.innerHTML = "";
+        data.issue_fixes.slice(0, 4).forEach((item) => {
+            const p = document.createElement("p");
+            const text = String(item && (item.text || item.issue) ? (item.text || item.issue) : "Issue");
+            const why = String(item && item.why ? item.why : "Needs attention");
+            const fix = String(item && item.suggested_fix ? item.suggested_fix : "");
+            p.textContent = `${text} -> ${why}${fix ? ` | Fix: ${fix}` : ""}`;
+            rewriteNotesNode.appendChild(p);
+        });
     }
 }
 
@@ -3583,7 +3692,7 @@ function getRecommendedRewriteStyle() {
     if (band === "High Spam-Risk Signals" || band === "High Risk") {
         return "safe";
     }
-    return "balanced";
+    return "casual";
 }
 async function showFixTransformation() {
     if (!fixOutput || !beforeEmailNode || !afterEmailNode || !rawEmailInput || !fixNowButton) {
@@ -3600,7 +3709,7 @@ async function showFixTransformation() {
     fixNowButton.textContent = "Fixing...";
     trackEvent("fix_clicked", {
         source: "fix_issues_button",
-        rewrite_style: rewriteStyleInput ? rewriteStyleInput.value : "balanced",
+        rewrite_style: rewriteStyleInput ? rewriteStyleInput.value : "casual",
     });
 
     try {
@@ -3610,7 +3719,7 @@ async function showFixTransformation() {
             payload.set("domain", domainInput.value.trim());
         }
         payload.set("analysis_mode", analysisModeInput ? analysisModeInput.value : "content");
-        payload.set("rewrite_style", rewriteStyleInput ? rewriteStyleInput.value : "balanced");
+        payload.set("rewrite_style", rewriteStyleInput ? rewriteStyleInput.value : "casual");
 
         const response = await fetch("/rewrite", {
             method: "POST",
@@ -3662,7 +3771,7 @@ async function showFixTransformation() {
             from_risk_band: String(data.from_risk_band || "Needs Review"),
             to_risk_band: String(data.to_risk_band || "Needs Review"),
             score_delta: Number(data.score_delta || 0),
-            rewrite_style: String(data.rewrite_style || "balanced"),
+            rewrite_style: String(data.rewrite_style || "casual"),
         };
 
         const rewriteOutcome = String(data.rewrite_outcome || "neutral").toLowerCase();
@@ -3693,12 +3802,14 @@ async function showFixTransformation() {
         }
 
         if (rewriteModeDisplayNode) {
-            const mode = String(data.rewrite_style || "balanced").toLowerCase();
+            const mode = String(data.rewrite_style || "casual").toLowerCase();
             const modeLabel = mode === "safe"
                 ? "Safe (keeps more detail)"
-                : mode === "aggressive"
-                    ? "Aggressive (max reply rate)"
-                    : "Balanced (best mix)";
+                : mode === "sales"
+                    ? "Sales (high-conv tone)"
+                    : mode === "direct"
+                        ? "Direct (concise and clear)"
+                        : "Casual (friendly and natural)";
             rewriteModeDisplayNode.textContent = `Rewrite mode: ${modeLabel}`;
         }
 
@@ -3878,7 +3989,7 @@ async function runAnalyze() {
             analysis_mode: mode,
         });
 
-        renderConversionResult(data, summary, findings);
+        renderAnalysisResult(data);
 
         if (rewriteStyleInput) {
             rewriteStyleInput.value = getRecommendedRewriteStyle();
@@ -4353,7 +4464,7 @@ async function runAnalyzeAsync() {
             if (window.InboxGuardFlow && typeof window.InboxGuardFlow.markFlowScanCompleted === "function") {
                 window.InboxGuardFlow.markFlowScanCompleted();
             }
-            renderConversionResult(job.result || {}, summary, findings);
+            renderAnalysisResult(job.result || {});
             setResultState();
             if (resultSection) {
                 resultSection.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -4391,7 +4502,7 @@ async function runRewriteAsync() {
             payload.set("domain", domainInput.value.trim());
         }
         payload.set("analysis_mode", analysisModeInput ? analysisModeInput.value : "content");
-        payload.set("rewrite_style", rewriteStyleInput ? rewriteStyleInput.value : "balanced");
+        payload.set("rewrite_style", rewriteStyleInput ? rewriteStyleInput.value : "casual");
 
         const response = await fetch("/rewrite-async", { method: "POST", body: payload });
         if (!response.ok) {
@@ -4423,7 +4534,7 @@ async function runRewriteAsync() {
                         from_risk_band: String(job.result.from_risk_band || "Needs Review"),
                         to_risk_band: String(job.result.to_risk_band || "Needs Review"),
                         score_delta: Number(job.result.score_delta || 0),
-                        rewrite_style: String(job.result.rewrite_style || "balanced"),
+                        rewrite_style: String(job.result.rewrite_style || "casual"),
                     };
                     if (workflowStateNode) {
                         workflowStateNode.textContent = "Step 2: Fix complete";
@@ -5278,17 +5389,25 @@ function wireUiEvents() {
     }
     if (rewriteEngagingButton) {
         rewriteEngagingButton.addEventListener("click", () => {
-            activeRewriteMode = "engaging";
-            generateRewrite("engaging").catch((error) => {
-                showError(error && error.message ? error.message : "Could not generate engaging rewrite.");
+            activeRewriteMode = "casual";
+            generateRewrite("casual").catch((error) => {
+                showError(error && error.message ? error.message : "Could not generate casual rewrite.");
+            });
+        });
+    }
+    if (rewriteDirectButton) {
+        rewriteDirectButton.addEventListener("click", () => {
+            activeRewriteMode = "direct";
+            generateRewrite("direct").catch((error) => {
+                showError(error && error.message ? error.message : "Could not generate direct rewrite.");
             });
         });
     }
     if (rewriteConvertingButton) {
         rewriteConvertingButton.addEventListener("click", () => {
-            activeRewriteMode = "high-converting";
-            generateRewrite("high-converting").catch((error) => {
-                showError(error && error.message ? error.message : "Could not generate high-converting rewrite.");
+            activeRewriteMode = "sales";
+            generateRewrite("sales").catch((error) => {
+                showError(error && error.message ? error.message : "Could not generate sales rewrite.");
             });
         });
     }

@@ -429,8 +429,11 @@ I noticed your recent post and had one short idea to improve reply rates."></tex
               </section>
             </div>
 
-            <section id="step2-fix-block" class="card result-fix-card rewrite-section hidden">
-              <h3 id="fix-title">Improved Version</h3>
+            <section id="rewrite-section" class="card result-fix-card rewrite-container hidden">
+              <div class="rewrite-header">
+                <h2 id="fix-title">Fix Your Email</h2>
+                <p id="rewrite-summary" class="rewrite-subtitle">We found issues that hurt deliverability.</p>
+              </div>
               <p id="fix-preview-text" class="rewrite-subtitle">Before and after transformation so you can ship a safer draft with confidence.</p>
               <p id="rewrite-live-status" class="rewrite-live-status" aria-live="polite">Live rewrite adapts as you type and learns from feedback.</p>
               <div id="rewrite-tags" class="rewrite-tags">
@@ -442,20 +445,22 @@ I noticed your recent post and had one short idea to improve reply rates."></tex
                 <button id="fix-issue-btn" class="danger-btn" type="button">Fix this issue</button>
                 <div class="rewrite-modes" role="group" aria-label="Rewrite modes">
                   <button id="rewrite-safe-btn" type="button">Safe</button>
-                  <button id="rewrite-engaging-btn" type="button">Engaging</button>
-                  <button id="rewrite-converting-btn" type="button">High Converting</button>
+                  <button id="rewrite-engaging-btn" type="button">Casual</button>
+                  <button id="rewrite-direct-btn" type="button">Direct</button>
+                  <button id="rewrite-converting-btn" type="button">Sales</button>
                 </div>
               </div>
               <div class="rewrite-grid">
                 <div class="rewrite-box before">
-                  <div class="rewrite-header">Before</div>
-                  <pre id="before-email"></pre>
+                  <div class="rewrite-label">Your Email</div>
+                  <div id="before-email" class="rewrite-content"></div>
                 </div>
                 <div class="rewrite-box after">
-                  <div class="rewrite-header">After</div>
-                  <pre id="after-email"></pre>
+                  <div class="rewrite-label">Improved Version</div>
+                  <div id="after-email" class="rewrite-content"></div>
                 </div>
               </div>
+              <div id="issue-list" class="issue-list"></div>
               <div class="rewrite-diff">
                 <h4>What changed</h4>
                 <div id="diff-summary" class="diff-summary"></div>
@@ -927,6 +932,6 @@ I noticed your recent post and had one short idea to improve reply rates."></tex
     </script>
 
     <script src="/static/js/flow.js?v=20260410-progressive-exposure-1"></script>
-    <script src="/static/js/app.js?v=20260411-live-rewrite-2"></script>
+    <script src="/static/js/app.js?v=20260411-flow-rewrite-1"></script>
   </body>
 </html>

@@ -71,6 +71,22 @@ If token is missing, dashboard route returns `404`.
 
 The UI intentionally shows partial findings first and gates detailed recommendations behind an unlock CTA.
 
+## Optional Ollama Rewrite Backend
+
+InboxGuard now supports an optional local Ollama rewrite path with automatic fallback to the built-in heuristic engine.
+
+Set these environment variables before starting the app:
+
+`INBOXGUARD_OLLAMA_ENABLED=1`
+
+`INBOXGUARD_OLLAMA_HOST=http://127.0.0.1:11434`
+
+`INBOXGUARD_OLLAMA_MODEL=llama3.2:3b`
+
+`INBOXGUARD_OLLAMA_TIMEOUT_SECONDS=8`
+
+If Ollama is unavailable, the app continues using the existing rewrite logic automatically.
+
 ## Free Deployment (No Domain Needed)
 
 Your local URL `http://127.0.0.1:8000` is only visible on your own computer.
