@@ -25,10 +25,12 @@ async function loadPlans() {
         console.error("❌ failed to load plans", err);
     }
 }
-document.addEventListener("DOMContentLoaded", () => {
-    console.log("📦 DOM ready");
+
+// Force loadPlans after DOM and modal are likely injected
+setTimeout(() => {
+    console.log("⏱ forcing loadPlans");
     loadPlans();
-});
+}, 500);
 const form = document.getElementById("risk-form");
 const nativeFetch = window.fetch.bind(window);
 
