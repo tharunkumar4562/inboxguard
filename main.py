@@ -1897,19 +1897,19 @@ def _plan_catalog() -> dict[str, dict[str, Any]]:
         },
         "monthly": {
             "label": "Growth Monthly Pro",
-            "display_price": RAZORPAY_DISPLAY_PRICE_USD,
+            "display_price": "$10",
             "plan_id": pro_plan_id,
             "trial_days": 0,
         },
         "pro": {
             "label": "Growth Monthly Pro",
-            "display_price": RAZORPAY_DISPLAY_PRICE_USD,
+            "display_price": "$10",
             "plan_id": pro_plan_id,
             "trial_days": 0,
         },
         "annual": {
             "label": "Growth Annual Pro",
-            "display_price": "$69",
+            "display_price": "$45",
             "plan_id": RAZORPAY_ANNUAL_PLAN_ID,
             "trial_days": 0,
         },
@@ -1921,7 +1921,7 @@ def _plan_catalog() -> dict[str, dict[str, Any]]:
         },
         "usage": {
             "label": "Usage-Based",
-            "display_price": "$0.02 / scan",
+            "display_price": "$0.20 / scan",
             "plan_id": "",
             "trial_days": 0,
         },
