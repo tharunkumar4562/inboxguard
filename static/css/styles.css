@@ -1,25 +1,42 @@
-/* Classification Card Styles (new UI/UX) */
-.classification-card {
-    background: linear-gradient(90deg, #0f172a 60%, #2563eb 100%);
-    border: 1px solid #2563eb;
+/* InboxGuard UX: Section Spacing & Card System */
+.section {
+    margin-top: 32px;
+}
+.card {
+    padding: 20px;
     border-radius: 12px;
-    padding: 18px 22px 14px 22px;
-    margin-bottom: 18px;
-    color: #e0e7ef;
-    box-shadow: 0 2px 12px rgba(37,99,235,0.08);
-    display: block;
-    animation: fadeIn 0.4s;
+    background: #fff;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    margin-bottom: 24px;
 }
-.classification-label {
-    font-size: 1.1em;
-    font-weight: 700;
-    margin-bottom: 2px;
-    color: #60a5fa;
+.grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
 }
-.classification-desc {
-    font-size: 0.98em;
-    color: #cbd5e1;
-    margin: 0;
+.decision-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+}
+.decision-card {
+    min-height: 100px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+}
+.label {
+    font-size: 13px;
+    color: #888;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+.value {
+    font-size: 20px;
+    font-weight: 600;
+    color: #1a202c;
 }
 @keyframes fadeIn {
     from {

@@ -1,3 +1,45 @@
+// --- STATE MACHINE: EMPTY → TYPING → ANALYZING → RESULT ---
+let scanState = "empty"; // empty | typing | analyzing | result
+
+function setStatusState(state) {
+    const hero = document.getElementById("status-hero");
+    scanState = state;
+    if (state === "idle" || state === "empty") {
+        hero.innerHTML = "SCAN REQUIRED...";
+    }
+    if (state === "typing") {
+        hero.innerHTML = "Typing...";
+    }
+    if (state === "loading" || state === "analyzing") {
+        hero.innerHTML = "Analyzing...";
+    }
+    if (state === "done" || state === "result") {
+        hero.innerHTML = ""; // 🔥 CLEAR IT COMPLETELY
+    }
+}
+
+// Hook up state transitions to input events
+if (rawEmailInput) {
+    rawEmailInput.addEventListener("input", () => {
+        setStatusState(rawEmailInput.value.trim() ? "typing" : "empty");
+    });
+    rawEmailInput.addEventListener("paste", () => {
+        setStatusState("typing");
+    });
+}
+
+// --- ENFORCE STATE ON SCAN ---
+function startScan() {
+    setStatusState("loading");
+    // ...existing code to trigger scan...
+}
+
+// After response:
+function handleScanResult(data) {
+    setStatusState("done");
+    renderAnalysisResult(data);
+}
+
 const form = document.getElementById("risk-form");
 const nativeFetch = window.fetch.bind(window);
 
@@ -2037,16 +2079,6 @@ function setResultState() {
         valueShown: true,
         hasMultipleCTAs: countPrimaryActions(resultSection) > 1,
     });
-    // Always force real-time lint after scan result
-    if (typeof runRealtimeLint === "function" && rawEmailInput && rawEmailInput.value) {
-        runRealtimeLint(rawEmailInput.value).catch(() => {});
-    }
-    // Always clear loading state text
-    const statusHeadlineNode = document.getElementById("status-hero");
-    if (statusHeadlineNode) {
-        statusHeadlineNode.textContent = "";
-        statusHeadlineNode.classList.remove("loading");
-    }
 }
 
 function getQuickFixPreview(summary = {}, findings = []) {
@@ -3001,33 +3033,16 @@ function renderAnalysisResult(data) {
         return;
     }
 
-    // Clear loading/Analyzing state
-    const statusHeadlineNode = document.getElementById("status-hero");
-    if (statusHeadlineNode) {
-        statusHeadlineNode.textContent = "";
-        statusHeadlineNode.classList.remove("loading");
-    }
-
-    // Classification card logic
-    const classificationCard = document.getElementById("classification-card");
-    if (classificationCard) {
-        const cls = (data && data.classification) || (data && data.summary && data.summary.classification) || "unknown";
-        let label = "Unclassified";
-        let desc = "Could not determine email type.";
-        if (cls === "transactional") {
-            label = "Transactional";
-            desc = "This email is recognized as transactional (e.g., receipts, notifications). Spam checks are relaxed.";
-        } else if (cls === "outreach") {
-            label = "Outreach";
-            desc = "This email is classified as outreach/cold email. Full spam and deliverability checks applied.";
-        } else if (cls === "marketing") {
-            label = "Marketing";
-            desc = "This email is classified as marketing/promotional. Strictest checks applied.";
+    // --- FIX: Clear loading/Analyzing state and enforce state machine ---
+    setStatusState("done");
+        // --- ML CLASSIFIER TO UI ---
+        const emailTypeNode = document.getElementById("email-type");
+        if (emailTypeNode && data.classification && data.classification.type) {
+            const conf = data.classification.confidence ? Math.round(data.classification.confidence * 100) : 0;
+            emailTypeNode.innerText = `${data.classification.type.charAt(0).toUpperCase() + data.classification.type.slice(1)}${conf ? ` (${conf}%)` : ""}`;
+        } else if (emailTypeNode) {
+            emailTypeNode.innerText = "—";
         }
-        classificationCard.querySelector(".classification-label").textContent = label;
-        classificationCard.querySelector(".classification-desc").textContent = desc;
-        classificationCard.classList.remove("hidden");
-    }
 
     const original = String(
         (data && (data.original || data.original_text || (data.signals && data.signals.email_source) || ""))
@@ -3047,31 +3062,39 @@ function renderAnalysisResult(data) {
     beforeEmailNode.innerHTML = highlightIssues(original, issues);
     afterEmailNode.textContent = rewritten || "Run rewrite to generate an improved version.";
 
-    // Show exact phrase-level issues, no generic text
     if (rewriteSummaryNode) {
         rewriteSummaryNode.textContent = issues.length
-            ? `Found ${issues.length} phrase-level issue${issues.length === 1 ? "" : "s"} that hurt deliverability.`
-            : "No phrase-level issues detected in this draft.";
+            ? `We found ${issues.length} issue${issues.length === 1 ? "" : "s"} that hurt deliverability.`
+            : "No major phrase-level issues were detected in this draft.";
     }
 
+    // --- Replace generic text with real data ---
     if (decisionTitleNode) {
-        decisionTitleNode.textContent = issues.length ? "Fix before sending" : "No major issues detected";
+        if (!issues.length && data.classification && data.classification.type !== "spam") {
+            decisionTitleNode.textContent = "Safe to send";
+        } else {
+            decisionTitleNode.textContent = issues.length ? "Fix before sending" : "No major issues detected";
+        }
     }
     if (primaryIssueNode) {
         const firstIssue = issues[0];
-        primaryIssueNode.textContent = firstIssue
-            ? `${firstIssue.text || firstIssue.label} - ${firstIssue.reason || firstIssue.label}`
-            : "No critical issue found";
+        if (!issues.length) {
+            primaryIssueNode.textContent = "No analysis has been run yet. Run a scan to detect real deliverability risks.";
+        } else {
+            primaryIssueNode.textContent = firstIssue
+                ? `Phrase: '${firstIssue.text || firstIssue.label}'\nReason: ${firstIssue.reason || firstIssue.label}\nFix: ${firstIssue.fix || "—"}`
+                : "No critical issue found";
+        }
     }
     if (biggestRiskTextNode) {
         biggestRiskTextNode.textContent = issues.length
             ? `Primary issue: ${issues[0].text || issues[0].label}`
-            : "No high-risk phrase-level patterns detected.";
+            : "No analysis has been run yet. Run a scan to detect real deliverability risks.";
     }
 
     if (issueListNode) {
         if (!issues.length) {
-            issueListNode.innerHTML = '<div class="issue-item">No phrase-level issues detected.</div>';
+            issueListNode.innerHTML = '<div class="issue-item">No major phrase-level issues detected.</div>';
         } else {
             issueListNode.innerHTML = issues.slice(0, 8).map((issue) => {
                 // Always show exact phrase, reason, and fix
@@ -3083,27 +3106,16 @@ function renderAnalysisResult(data) {
         }
     }
 
-    if (rewriteNotesNode) {
+    if (rewriteNotesNode && Array.isArray(data && data.issue_fixes) && data.issue_fixes.length) {
         rewriteNotesNode.innerHTML = "";
-        if (Array.isArray(data && data.issue_fixes) && data.issue_fixes.length) {
-            data.issue_fixes.slice(0, 4).forEach((item) => {
-                const p = document.createElement("p");
-                const text = String(item && (item.text || item.issue) ? (item.text || item.issue) : "Issue");
-                const why = String(item && item.why ? item.why : "Needs attention");
-                const fix = String(item && item.suggested_fix ? item.suggested_fix : "");
-                p.textContent = `${text} -> ${why}${fix ? ` | Fix: ${fix}` : ""}`;
-                rewriteNotesNode.appendChild(p);
-            });
-        } else {
+        data.issue_fixes.slice(0, 4).forEach((item) => {
             const p = document.createElement("p");
-            p.textContent = "No additional fix notes.";
+            const text = String(item && (item.text || item.issue) ? (item.text || item.issue) : "Issue");
+            const why = String(item && item.why ? item.why : "Needs attention");
+            const fix = String(item && item.suggested_fix ? item.suggested_fix : "");
+            p.textContent = `${text} -> ${why}${fix ? ` | Fix: ${fix}` : ""}`;
             rewriteNotesNode.appendChild(p);
-        }
-    }
-
-    // Always force real-time lint on load after scan
-    if (typeof runRealtimeLint === "function" && rawEmailInput && rawEmailInput.value) {
-        runRealtimeLint(rawEmailInput.value).catch(() => {});
+        });
     }
 }
 
