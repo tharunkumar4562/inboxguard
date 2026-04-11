@@ -1,3 +1,8 @@
+
+from pathlib import Path
+# --- Ensure BASE_DIR is defined before use ---
+BASE_DIR = Path(__file__).resolve().parent
+
 import json
 # Load plans.json as single source of truth
 PLANS_FILE = BASE_DIR / "plans.json"
@@ -101,14 +106,13 @@ from correction_engine import (
 from fix_engine import build_fix_engine_payload
 from utils import build_email_from_raw, extract_domain_from_text
 
+app = FastAPI(title="InboxGuard")
 
-# --- Ensure BASE_DIR is defined before any use ---
 logger = logging.getLogger("inboxguard")
 BASE_DIR = Path(__file__).resolve().parent
 STATIC_DIR = BASE_DIR / "static"
 TEMPLATES_DIR = BASE_DIR / "templates"
 
-app = FastAPI(title="InboxGuard")
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
@@ -135,10 +139,10 @@ RAZORPAY_ANNUAL_AMOUNT_USD = float(os.getenv("INBOXGUARD_RAZORPAY_ANNUAL_AMOUNT_
 RAZORPAY_USAGE_AMOUNT_USD = float(os.getenv("INBOXGUARD_RAZORPAY_USAGE_AMOUNT_USD", "0.02"))  # Usage: $0.02 per scan
 RAZORPAY_DISPLAY_PRICE_USD = os.getenv("INBOXGUARD_RAZORPAY_DISPLAY_PRICE_USD", "$9").strip()
 RAZORPAY_PLAN_ID = os.getenv("INBOXGUARD_RAZORPAY_PLAN_ID", os.getenv("RAZORPAY_PLAN_ID", "")).strip()
-RAZORPAY_ANNUAL_PLAN_ID = os.getenv("INBOXGUARD_ANNUAL_PLAN_ID", os.getenv("RAZORPAY_ANNUAL_PLAN_ID", "")).strip()
-RAZORPAY_TRIAL_PLAN_ID = os.getenv("INBOXGUARD_TRIAL_PLAN_ID", os.getenv("RAZORPAY_TRIAL_PLAN_ID", "")).strip()
-RAZORPAY_PRO_PLAN_ID = os.getenv("INBOXGUARD_PRO_PLAN_ID", "").strip()
-RAZORPAY_STARTER_PLAN_ID = os.getenv("INBOXGUARD_STARTER_PLAN_ID", "").strip()
+RAZORPAY_ANNUAL_PLAN_ID = os.getenv("INBOXGUARD_RAZORPAY_ANNUAL_PLAN_ID", os.getenv("RAZORPAY_ANNUAL_PLAN_ID", "")).strip()
+RAZORPAY_TRIAL_PLAN_ID = os.getenv("INBOXGUARD_RAZORPAY_TRIAL_PLAN_ID", os.getenv("RAZORPAY_TRIAL_PLAN_ID", "")).strip()
+RAZORPAY_PRO_PLAN_ID = os.getenv("INBOXGUARD_RAZORPAY_PRO_PLAN_ID", "").strip()
+RAZORPAY_STARTER_PLAN_ID = os.getenv("INBOXGUARD_RAZORPAY_STARTER_PLAN_ID", "").strip()
 TRIAL_DAYS = int(os.getenv("INBOXGUARD_TRIAL_DAYS", "7"))
 PAST_DUE_GRACE_DAYS = int(os.getenv("INBOXGUARD_PAST_DUE_GRACE_DAYS", "3"))
 GOOGLE_VERIFICATION_FILE = "googleab4b33a28d8dfb88.html"
