@@ -1,3 +1,15 @@
+// --- Modal Dynamic Pricing ---
+function updateModalPrice(planKey) {
+    if (!window.plans || !window.plans[planKey]) return;
+    const plan = window.plans[planKey];
+    const priceEl = document.getElementById("modal-dynamic-price");
+    if (!priceEl) {
+        console.error("Modal price element not found");
+        return;
+    }
+    priceEl.innerText = `$${plan.price_usd} / ${plan.interval}`;
+    console.log("Modal price updated:", planKey, plan);
+}
 // --- Dynamic Pricing UI ---
 async function initPricing() {
     try {
@@ -4333,8 +4345,15 @@ function openPricingModal() {
     const modal = document.getElementById("pricing-modal");
     if (modal) {
         syncPlanSelection(pendingPlanChoice);
-        // Render modal price and total from /plans
-        renderPricingModal(pendingPlanChoice || "annual");
+        // Always update modal price on open
+        updateModalPrice(pendingPlanChoice || Object.keys(window.plans)[0] || "growth_monthly");
+        // Wire modal dropdown to update price
+        const modalSelect = modal.querySelector("#plan-select");
+        if (modalSelect) {
+            modalSelect.addEventListener("change", (e) => {
+                updateModalPrice(e.target.value);
+            });
+        }
         modal.style.display = "flex";
         modal.classList.remove("hidden");
         document.body.classList.add("modal-open");
