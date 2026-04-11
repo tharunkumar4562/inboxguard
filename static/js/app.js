@@ -38,7 +38,7 @@ async function initPricing() {
     try {
         const res = await fetch("/plans");
         const data = await res.json();
-        window.plans = data.plans || {};
+        window.plans = data || {};
         console.log("PLANS LOADED:", window.plans);
         populatePlanDropdown();
         updateDisplayedPrice(Object.keys(window.plans)[0] || "growth_monthly");
