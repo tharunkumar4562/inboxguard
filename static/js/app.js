@@ -1,36 +1,18 @@
-// --- Modal Plan Dropdown & Price Sync ---
-// --- Clean Plan Dropdown Logic ---
-async function loadPlans() {
-    console.log("🚀 loading plans...");
-    try {
-        const res = await fetch("/plans");
-        const plans = await res.json();
-        console.log("✅ plans:", plans);
-        const select = document.getElementById("plan-select");
-        const debug = document.getElementById("plan-debug");
-        if (!select) {
-            console.error("❌ plan-select not found");
-            return;
-        }
-        select.innerHTML = "";
-        Object.entries(plans).forEach(([id, plan]) => {
-            const opt = document.createElement("option");
-            opt.value = id;
-            opt.textContent = `${plan.name} ($${plan.price_usd}/${plan.interval})`;
-            select.appendChild(opt);
-        });
-        if (debug) debug.innerText = "Plans loaded: " + Object.keys(plans).length;
-        console.log("🔥 dropdown filled");
-    } catch (err) {
-        console.error("❌ failed to load plans", err);
-    }
+// --- Static Pricing Modal Logic ---
+function startCheckout(plan) {
+    // TODO: Wire up Razorpay checkout for each plan
+    alert(`Checkout for plan: ${plan} (wire up Razorpay here)`);
 }
 
-// Force loadPlans after DOM and modal are likely injected
-setTimeout(() => {
-    console.log("⏱ forcing loadPlans");
-    loadPlans();
-}, 500);
+function submitContactRequest() {
+    const email = document.getElementById('contact-email')?.value || '';
+    if (!email || !email.includes('@')) {
+        alert('Please enter a valid email address.');
+        return;
+    }
+    // TODO: Send contact request to backend
+    alert(`Contact request sent! We'll reach out to: ${email}`);
+}
 const form = document.getElementById("risk-form");
 const nativeFetch = window.fetch.bind(window);
 
