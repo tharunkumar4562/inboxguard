@@ -1,12 +1,21 @@
 import os
-from supabase import create_client, Client
+from supabase import create_client
 
-SUPABASE_URL = os.getenv("SUPABASE_URL", "https://lvacilaresklgbapsybb.supabase.co")  # TODO: Set your actual project URL
-SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY", "sb_publishable_2R8FGFw9jFfBKYsr-T-AzA_UkxN8M5-")
-SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY", "sb_secret_JeR-z1YNJhhIl1jNftxYUzQ_J83yFDE9")
+# 1. Pull keys from Railway environment
+url = os.environ.get("SUPABASE_URL")
+key = os.environ.get("SUPABASE_ANON_KEY")
 
-# Frontend-style (safe) client
-supabase = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
+# 2. Debugging prints (Check your Railway logs for these!)
+if not url:
+	print("⚠️ WARNING: SUPABASE_URL is missing!")
+if not key:
+	print("⚠️ WARNING: SUPABASE_ANON_KEY is missing!")
 
-# Backend (admin) client for secure server-side operations
-supabase_admin = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
+# 3. Create client safely
+supabase = None
+try:
+	# We .strip() to remove any accidental spaces or hidden characters
+	supabase = create_client(url.strip(), key.strip())
+	print("✅ Supabase Client initialized successfully!")
+except Exception as e:
+	print(f"❌ CRITICAL ERROR: Could not initialize Supabase. {e}")
