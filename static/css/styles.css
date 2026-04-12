@@ -10,11 +10,12 @@
 
 .modal-content {
     width: 100%;
-    max-width: 1100px;
+    max-width: 900px;
     margin: auto;
-    padding: 32px;
-    background: #f9fafb;
-    border-radius: 16px;
+    padding: 40px 36px 32px 36px;
+    background: #fff;
+    border-radius: 20px;
+    box-shadow: 0 8px 32px rgba(16,30,54,0.12);
     position: relative;
     z-index: 1000000;
 }
@@ -47,17 +48,22 @@
 .pricing-cards {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    gap: 20px;
+    gap: 28px;
+    margin-bottom: 18px;
 }
 
 /* CARD */
 .card {
-    padding: 24px;
+    padding: 28px 18px 24px 18px;
     border-radius: 14px;
-    background: white;
+    background: #f9fafb;
+    border: 1.5px solid #e5e7eb;
+    box-shadow: 0 2px 8px rgba(16,30,54,0.04);
     display: flex;
     flex-direction: column;
-    justify-content: space-between;
+    align-items: center;
+    justify-content: flex-start;
+    transition: box-shadow 0.18s;
 }
 
 .card:hover {
@@ -67,31 +73,39 @@
 
 /* PRO CARD */
 .card.highlight {
-    transform: scale(1.05);
-    border: 2px solid #3b82f6;
-    box-shadow: 0 10px 30px rgba(59,130,246,0.2);
+    border: 2.5px solid #3b82f6;
+    box-shadow: 0 10px 32px rgba(59,130,246,0.13);
     z-index: 2;
+    background: #f5faff;
 }
 
 /* BADGE */
 .badge {
-    font-size: 12px;
-    color: #3b82f6;
+    display: inline-block;
+    font-size: 13px;
     font-weight: 600;
-    margin-bottom: 5px;
+    background: #3b82f6;
+    color: #fff;
+    border-radius: 999px;
+    padding: 4px 16px 4px 16px;
+    margin-bottom: 10px;
+    margin-top: -18px;
+    box-shadow: 0 2px 8px rgba(59,130,246,0.10);
 }
 
 /* PRICE */
 .price {
-    font-size: 34px;
-    font-weight: 700;
+    font-size: 32px;
+    font-weight: 800;
     color: #2563eb;
-    margin: 10px 0;
+    margin: 0 0 2px 0;
 }
 
 .interval {
-    font-size: 14px;
-    color: #6b7280;
+    font-size: 19px;
+    font-weight: 700;
+    margin-bottom: 2px;
+    color: #222e3a;
 }
 
 /* FEATURES */
@@ -109,18 +123,22 @@
 
 /* BUTTON */
 .card button {
-    margin-top: 16px;
-    padding: 10px;
+    margin-top: 18px;
+    width: 100%;
+    padding: 12px 0;
     border-radius: 8px;
     border: none;
-    background: #3b82f6;
-    color: white;
-    font-weight: 600;
+    background: #2563eb;
+    color: #fff;
+    font-weight: 700;
+    font-size: 16px;
+    box-shadow: 0 2px 8px rgba(37,99,235,0.08);
     cursor: pointer;
+    transition: background 0.18s;
 }
 
 .card button:hover {
-    background: #2563eb;
+    background: #1746a2;
 }
 
 /* FREE PLAN STYLE */
@@ -132,14 +150,17 @@
     background: #e5e7eb;
     color: #6b7280;
     cursor: not-allowed;
+    font-weight: 600;
 }
 
 /* CONTACT */
 .contact-text {
-    margin-top: 30px;
-    font-size: 32px;
-    font-weight: 700;
-    color: #2563eb;
+    margin-top: 18px;
+    font-size: 15px;
+    font-weight: 400;
+    color: #6b7280;
+    text-align: center;
+}
 
 .contact-text a {
     color: #3b82f6;
@@ -189,8 +210,9 @@
 }
 
 .label {
-    font-size: 18px;
-    margin-bottom: 6px;
+    font-size: 15px;
+    color: #6b7280;
+    margin-bottom: 8px;
     margin-bottom: 4px;
     text-transform: uppercase;
     letter-spacing: 0.04em;
