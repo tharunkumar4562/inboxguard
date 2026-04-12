@@ -4943,17 +4943,8 @@ function wireUiEvents() {
 
     document.querySelectorAll(".advanced-tool").forEach((toolNode) => {
         toolNode.addEventListener("click", (event) => {
-            if (window.appState && window.appState.hasScanned) {
-                return;
-            }
-            event.preventDefault();
-            event.stopPropagation();
-            showSidebarTooltip("Run your first scan to unlock this", toolNode);
-            showError("Run at least one scan first before opening advanced tools.");
-            trackEvent("blocked_before_first_value", {
-                tool: String(toolNode.getAttribute("data-tool") || "advanced"),
-                source: "sidebar",
-            });
+            const tool = String(toolNode.getAttribute("data-tool") || "advanced");
+            window.openTool(tool);
         });
     });
 
