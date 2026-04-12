@@ -1,3 +1,25 @@
+// ===== PRICING MODAL (ISOLATED) =====
+function openPricingModal() {
+    document.getElementById("pricingModal").classList.remove("hidden");
+}
+
+function closePricingModal() {
+    document.getElementById("pricingModal").classList.add("hidden");
+}
+
+// Close modal on outside click
+document.addEventListener("click", function (e) {
+    const modal = document.getElementById("pricingModal");
+    if (!modal) return;
+    if (e.target === modal) {
+        closePricingModal();
+    }
+});
+
+// Plan purchase stub
+function buyPlan(plan) {
+    alert("Proceeding to checkout for " + plan);
+}
 // --- Static Pricing Modal Logic ---
 function startCheckout(plan) {
     // TODO: Wire up Razorpay checkout for each plan
