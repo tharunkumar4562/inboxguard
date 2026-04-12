@@ -15,6 +15,9 @@ if not service_key:
 	print("⚠️ WARNING: SUPABASE_SERVICE_KEY is missing!")
 
 # 3. Create client safely
+supabase = None
+supabase_admin = None
+
 try:
 	# We .strip() to remove any accidental spaces or hidden characters
 	supabase = create_client(url.strip(), key.strip())
