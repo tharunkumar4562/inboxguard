@@ -7,4 +7,5 @@ itsdangerous
 authlib
 httpx
 joblib
-supabase-py
+supabase==2.4.3
+razorpay==1.4.1
