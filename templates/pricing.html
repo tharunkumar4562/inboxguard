@@ -1,63 +1,96 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-WXGNG9TEFK"></script>
-    <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
-
-      gtag('config', 'G-WXGNG9TEFK');
-    </script>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>{{ page_title }}</title>
-    <meta name="description" content="{{ meta_description }}" />
-    <link rel="canonical" href="{{ canonical_url }}" />
-    <meta property="og:title" content="{{ page_title }}" />
-    <meta property="og:description" content="{{ meta_description }}" />
-    <meta property="og:type" content="website" />
-    <meta property="og:url" content="{{ canonical_url }}" />
-    <meta property="og:image" content="https://inboxguard.me/static/thumbnail-1200x630.png" />
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="{{ page_title }}" />
-    <meta name="twitter:description" content="{{ meta_description }}" />
-    <meta name="twitter:image" content="https://inboxguard.me/static/thumbnail-1200x630.png" />
-    <meta name="theme-color" content="#f8fafc" />
-    <link rel="icon" type="image/png" href="/static/branding/logo.png" />
-    <link rel="shortcut icon" href="/static/branding/logo.png" />
-    <script>
-      (function () {
-        try {
-          const savedTheme = localStorage.getItem("ig_theme");
-          const systemDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
-          const theme = savedTheme === "dark" || savedTheme === "light" ? savedTheme : (systemDark ? "dark" : "light");
-          const root = document.documentElement;
-          root.dataset.theme = theme;
-          root.classList.toggle("dark", theme === "dark");
-          root.style.colorScheme = theme === "dark" ? "dark" : "light";
-          const meta = document.querySelector('meta[name="theme-color"]');
-          if (meta) {
-            meta.setAttribute("content", theme === "dark" ? "#0f172a" : "#f8fafc");
-          }
-        } catch (error) {
-        }
-      })();
-    </script>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="/static/css/styles.min.css?v=20260406-seo-fix-1" />
-    <link rel="stylesheet" href="/static/theme-overrides.css?v=20260410-theme-adapt-3" />
-  </head>
-  <body class="bg-ink text-slate-100 min-h-screen antialiased">
-    <main class="mx-auto max-w-6xl px-5 py-8 md:py-10">
-      <header class="mb-8 flex items-center justify-between gap-4 border-b border-slate-800/70 pb-4">
-        <div class="logo-wrap">
-          <img src="/static/branding/logo.png" alt="InboxGuard" style="display:block; width: 172px; max-width: 100%;" />
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>InboxGuard Pricing</title>
+  <link rel="stylesheet" href="/static/css/styles.css">
+  <style>
+    .pricing-container {
+      text-align: center;
+      padding: 60px 20px;
+    }
+    .pricing-cards {
+      display: flex;
+      justify-content: center;
+      gap: 24px;
+      margin-top: 40px;
+      flex-wrap: wrap;
+    }
+    .card {
+      width: 280px;
+      padding: 24px;
+      border-radius: 16px;
+      background: white;
+      border: 1px solid #eee;
+      box-shadow: 0 2px 8px #0001;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .card.highlight {
+      border: 2px solid #3b82f6;
+      transform: scale(1.05);
+    }
+    .badge {
+      background: #3b82f6;
+      color: white;
+      padding: 4px 10px;
+      border-radius: 8px;
+      font-size: 12px;
+      margin-bottom: 10px;
+    }
+    .price {
+      font-size: 28px;
+      font-weight: bold;
+      margin: 10px 0;
+    }
+    .card button {
+      margin-top: 16px;
+      width: 100%;
+      padding: 10px;
+      border-radius: 10px;
+      background: #3b82f6;
+      color: white;
+      border: none;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .card button:hover {
+      background: #2563eb;
+    }
+  </style>
+</head>
+<body>
+  <div class="pricing-container">
+    <h1>Stop guessing. Know before you send.</h1>
+    <div class="pricing-cards">
+      <div class="card">
+        <h3>Starter</h3>
+        <p class="price">$9 / month</p>
+        <button onclick="startCheckout('starter')">Get Starter</button>
+      </div>
+      <div class="card highlight">
+        <div class="badge">Most Popular</div>
+        <h3>Pro</h3>
+        <p class="price">$29 / month</p>
+        <button onclick="startCheckout('pro')">Get Pro</button>
+      </div>
+      <div class="card">
+        <h3>Growth</h3>
+        <p class="price">$99 / year</p>
+        <button onclick="startCheckout('growth')">Get Growth</button>
+      </div>
+    </div>
+  </div>
+  <script>
+    function startCheckout(plan) {
+      alert('Checkout for: ' + plan);
+    }
+  </script>
+</body>
+</html>
         </div>
         <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; justify-content:flex-end;">
           <button id="theme-toggle" type="button" class="access-link theme-toggle" data-theme-toggle onclick="toggleInboxGuardTheme()" aria-pressed="false">🌙 Dark</button>

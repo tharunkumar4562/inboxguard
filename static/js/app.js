@@ -4292,8 +4292,7 @@ function closePricingModal() {
 }
 
 function handleGetAccess() {
-    syncPlanSelection(pendingPlanChoice);
-    openPricingModal();
+    window.location.href = "/pricing";
 }
 
 function handlePlanClick(plan) {
