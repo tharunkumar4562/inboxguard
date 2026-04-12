@@ -775,42 +775,65 @@ I noticed your recent post and had one short idea to improve reply rates."></tex
 
 
 
-    <!-- New Pricing Modal: Clean, modern, no legacy classes -->
-    <div id="pricingModal" class="pricing-modal hidden" role="dialog" aria-modal="true" aria-labelledby="pricingModalTitle">
+    <!-- Pricing Modal at root for proper isolation -->
+    <div id="pricing-modal" class="modal pricing-modal hidden" role="dialog" aria-modal="true" aria-labelledby="pricing-modal-title">
       <div class="pricing-content">
-        <span class="close-btn" onclick="closePricingModal()">✕</span>
-        <h2 id="pricingModalTitle">Choose your plan</h2>
+        <div class="modal-header">
+          <h2 id="pricing-modal-title">Choose your InboxGuard plan</h2>
+          <span class="close" onclick="closePricingModal()">&times;</span>
+        </div>
         <div class="pricing-grid">
-          <div class="plan-card free">
+          <!-- FREE -->
+          <div class="pricing-card free">
             <h3>Free</h3>
-            <div class="price">$0</div>
-            <ul><li>1 scan</li><li>1 fix</li></ul>
+            <div class="pricing-price">$0</div>
+            <ul>
+              <li>1 scan</li>
+              <li>1 fix</li>
+            </ul>
             <button disabled>Current Plan</button>
           </div>
-          <div class="plan-card">
+          <!-- STARTER -->
+          <div class="pricing-card">
             <h3>Starter</h3>
-            <div class="price">$9</div>
+            <div class="pricing-price">$9</div>
             <div class="interval">/ month</div>
-            <ul><li>10 scans / month</li><li>Email support</li></ul>
+            <ul>
+              <li>10 scans / month</li>
+              <li>Email support</li>
+            </ul>
             <button onclick="startCheckout('starter')">Get Starter</button>
           </div>
-          <div class="plan-card highlight">
+          <!-- PRO -->
+          <div class="pricing-card highlight">
             <div class="badge">Most Popular</div>
             <h3>Pro</h3>
-            <div class="price">$29</div>
+            <div class="pricing-price">$29</div>
             <div class="interval">/ month</div>
-            <ul><li>Unlimited scans</li><li>Batch testing</li><li>Priority support</li></ul>
+            <ul>
+              <li>Unlimited scans</li>
+              <li>Batch testing</li>
+              <li>Priority support</li>
+            </ul>
             <button onclick="startCheckout('pro')">Get Pro</button>
           </div>
-          <div class="plan-card">
+          <!-- GROWTH -->
+          <div class="pricing-card">
             <h3>Growth</h3>
-            <div class="price">$99</div>
+            <div class="pricing-price">$99</div>
             <div class="interval">/ year</div>
-            <ul><li>Unlimited scans</li><li>Team access</li><li>Annual billing</li></ul>
+            <ul>
+              <li>Unlimited scans</li>
+              <li>Team access</li>
+              <li>Annual billing</li>
+            </ul>
             <button onclick="startCheckout('growth')">Get Growth</button>
           </div>
         </div>
-        <p class="contact-text">Need enterprise or custom pricing? <a href="mailto:you@company.com">Contact us</a></p>
+        <p class="contact-text">
+          Need enterprise or custom pricing?
+          <a href="mailto:you@company.com">Contact us</a>
+        </p>
       </div>
     </div>
 
@@ -888,5 +911,66 @@ I noticed your recent post and had one short idea to improve reply rates."></tex
 
     <script src="/static/js/flow.js?v=20260410-progressive-exposure-1"></script>
     <script src="/static/js/app.js?v=20260411-flow-rewrite-1"></script>
+    <!-- Pricing Modal at root for proper isolation -->
+    <div id="pricing-modal" class="modal pricing-modal hidden" role="dialog" aria-modal="true" aria-labelledby="pricing-modal-title">
+      <div class="pricing-content">
+        <div class="modal-header">
+          <h2 id="pricing-modal-title">Choose your InboxGuard plan</h2>
+          <span class="close" onclick="closePricingModal()">&times;</span>
+        </div>
+        <div class="pricing-grid">
+          <!-- FREE -->
+          <div class="pricing-card free">
+            <h3>Free</h3>
+            <div class="pricing-price">$0</div>
+            <ul>
+              <li>1 scan</li>
+              <li>1 fix</li>
+            </ul>
+            <button disabled>Current Plan</button>
+          </div>
+          <!-- STARTER -->
+          <div class="pricing-card">
+            <h3>Starter</h3>
+            <div class="pricing-price">$9</div>
+            <div class="interval">/ month</div>
+            <ul>
+              <li>10 scans / month</li>
+              <li>Email support</li>
+            </ul>
+            <button onclick="startCheckout('starter')">Get Starter</button>
+          </div>
+          <!-- PRO -->
+          <div class="pricing-card highlight">
+            <div class="badge">Most Popular</div>
+            <h3>Pro</h3>
+            <div class="pricing-price">$29</div>
+            <div class="interval">/ month</div>
+            <ul>
+              <li>Unlimited scans</li>
+              <li>Batch testing</li>
+              <li>Priority support</li>
+            </ul>
+            <button onclick="startCheckout('pro')">Get Pro</button>
+          </div>
+          <!-- GROWTH -->
+          <div class="pricing-card">
+            <h3>Growth</h3>
+            <div class="pricing-price">$99</div>
+            <div class="interval">/ year</div>
+            <ul>
+              <li>Unlimited scans</li>
+              <li>Team access</li>
+              <li>Annual billing</li>
+            </ul>
+            <button onclick="startCheckout('growth')">Get Growth</button>
+          </div>
+        </div>
+        <p class="contact-text">
+          Need enterprise or custom pricing?
+          <a href="mailto:you@company.com">Contact us</a>
+        </p>
+      </div>
+    </div>
   </body>
 </html>
