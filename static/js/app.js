@@ -4314,21 +4314,21 @@ async function handleRequestAccess() {
 function openPricingModal() {
     const modal = document.getElementById("pricing-modal");
     if (modal) {
-        syncPlanSelection(pendingPlanChoice);
-        // Always update modal price on open
-        updateModalPrice(pendingPlanChoice || Object.keys(window.plans)[0] || "growth_monthly");
-        // Wire modal dropdown to update price
-        const modalSelect = modal.querySelector("#plan-select");
-        if (modalSelect) {
-            modalSelect.addEventListener("change", (e) => {
-                updateModalPrice(e.target.value);
-            });
-        }
         modal.style.display = "flex";
         modal.classList.remove("hidden");
         document.body.classList.add("modal-open");
     } else {
         console.error("Pricing modal not found");
+    }
+}
+
+// Ensure modal can be closed with close button
+function closeModal() {
+    const modal = document.getElementById("pricing-modal");
+    if (modal) {
+        modal.style.display = "none";
+        modal.classList.add("hidden");
+        document.body.classList.remove("modal-open");
     }
 }
 
