@@ -1,3 +1,71 @@
+/* PRICING PAGE FULL WIDTH CARDS */
+.pricing-container {
+    text-align: center;
+    padding: 60px 20px;
+}
+.pricing-title {
+    font-size: 2.2rem;
+    font-weight: 700;
+    margin-bottom: 0.5em;
+}
+.pricing-cards {
+    display: flex;
+    justify-content: center;
+    gap: 24px;
+    margin-top: 40px;
+    flex-wrap: wrap;
+}
+.card {
+    width: 280px;
+    padding: 24px;
+    border-radius: 16px;
+    background: white;
+    border: 1px solid #eee;
+    box-shadow: 0 2px 8px #0001;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+.card.highlight {
+    border: 2px solid #3b82f6;
+    transform: scale(1.05);
+}
+.badge {
+    background: #3b82f6;
+    color: white;
+    padding: 4px 10px;
+    border-radius: 8px;
+    font-size: 12px;
+    margin-bottom: 10px;
+}
+.price {
+    font-size: 28px;
+    font-weight: bold;
+    margin: 10px 0;
+}
+.card button {
+    margin-top: 16px;
+    width: 100%;
+    padding: 10px;
+    border-radius: 10px;
+    background: #3b82f6;
+    color: white;
+    border: none;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.card button:hover {
+    background: #2563eb;
+}
+.contact {
+    margin-top: 32px;
+    font-size: 1.1rem;
+}
+.contact a {
+    color: #3b82f6;
+    text-decoration: underline;
+}
 /* --- Modal Dropdown Fix: Prevent Clipping --- */
 .modal-content {
     overflow: visible !important;
