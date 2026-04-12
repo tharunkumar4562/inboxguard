@@ -1700,76 +1700,17 @@ function showHome() {
 
 function openTool(tool) {
     const key = String(tool || "").toLowerCase();
-    const isAdmin = Boolean(window.appState && window.appState.isAdmin);
-    const advancedTarget = document.querySelector(`.advanced-tool[data-tool="${key}"]`);
-    if (advancedTarget && !isAdmin && !(window.appState && window.appState.hasScanned)) {
-        showSidebarTooltip("Run your first scan to unlock this", advancedTarget);
-        showError("Run at least one scan first before opening advanced tools.");
-        trackEvent("blocked_before_first_value", { tool: key });
-        activateTab("threat-scan");
-        return;
-    }
-
-    const requiredByTool = {
-        "campaign-debugger": "starter",
-        seed: "monthly",
-        bulk: "monthly",
-        ops: "monthly",
-    };
-
-    if (requiredByTool[key] && !isAdmin && localStorage.getItem("ig_has_scanned") !== "1") {
-        showError("Run at least one scan first before opening advanced tools.");
-        activateTab("threat-scan");
-        return;
-    }
-
-    const requiredPlan = requiredByTool[key] || "free";
-    if (!isAdmin && !hasPlanAccess(requiredPlan)) {
-        showUpgradeModal({
-            title: "You're losing emails to spam right now",
-            subtitle: "Upgrade to fix it before your next campaign",
-            plan: requiredPlan === "starter" ? "starter" : "growth",
-        });
-        showHome();
-        const pricingSection = document.getElementById("home-pricing-cta");
-        if (pricingSection) {
-            pricingSection.scrollIntoView({ behavior: "smooth", block: "start" });
-        }
-        return;
-    }
-
-    if (key === "scan" || key === "threat-scan") {
-        userActionCount += 1;
-        refreshPricingContext();
-        navigate("scan", { focusInput: true, scroll: true });
-        return;
-    }
-
-    userActionCount += 1;
-    refreshPricingContext();
-
     hideAllViews();
     homeSections.forEach((node) => node.classList.add("hidden"));
     if (toolPanel) {
         toolPanel.classList.remove("hidden");
     }
-
-    if (dashboardTab) {
-        dashboardTab.classList.remove("active");
+    // Hide all tool panes, then show the one for this tool
+    document.querySelectorAll('.tool-pane').forEach((el) => el.classList.add('hidden'));
+    const pane = document.querySelector(`[data-tool-pane="${key}"]`);
+    if (pane) {
+        pane.classList.remove('hidden');
     }
-
-    if (threatScanTab) {
-        threatScanTab.classList.remove("active");
-    }
-    scanSections.forEach((node) => node.classList.add("hidden"));
-    if (scanPanel) {
-        scanPanel.classList.remove("focused");
-        scanPanel.classList.add("hidden");
-    }
-    if (typeof window.igOpenToolPane === "function") {
-        window.igOpenToolPane(tool);
-    }
-    refreshToolPaneData(tool);
     setTabFeedback("Tool panel active.");
 }
 
