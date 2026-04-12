@@ -190,7 +190,9 @@ body.modal-open {
     background: #0f172a;
     padding: 30px;
     border-radius: 12px;
-    width: min(420px, calc(100vw - 32px));
+    width: 95%;
+    max-width: 1100px;
+    margin: auto;
     max-height: 90vh;
     overflow-y: auto;
     color: white;
