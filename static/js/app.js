@@ -1,40 +1,5 @@
 // ===== PRICING MODAL (ISOLATED) =====
-function openPricingModal() {
-    document.getElementById("pricingModal").classList.remove("hidden");
-}
-
-function closePricingModal() {
-    document.getElementById("pricingModal").classList.add("hidden");
-}
-
-// Close modal on outside click
-document.addEventListener("click", function (e) {
-    const modal = document.getElementById("pricingModal");
-    if (!modal) return;
-    if (e.target === modal) {
-        closePricingModal();
-    }
-});
-
-// Plan purchase stub
-function buyPlan(plan) {
-    alert("Proceeding to checkout for " + plan);
-}
-// --- Static Pricing Modal Logic ---
-function startCheckout(plan) {
-    // TODO: Wire up Razorpay checkout for each plan
-    alert(`Checkout for plan: ${plan} (wire up Razorpay here)`);
-}
-
-function submitContactRequest() {
-    const email = document.getElementById('contact-email')?.value || '';
-    if (!email || !email.includes('@')) {
-        alert('Please enter a valid email address.');
-        return;
-    }
-    // TODO: Send contact request to backend
-    alert(`Contact request sent! We'll reach out to: ${email}`);
-}
+// (All legacy modal, card, plan-select, pricing-dropdown, pricing-card, and modal-content code removed. Only new isolated modal logic remains.)
 const form = document.getElementById("risk-form");
 const nativeFetch = window.fetch.bind(window);
 

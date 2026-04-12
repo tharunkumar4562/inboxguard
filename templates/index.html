@@ -20,49 +20,7 @@
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="InboxGuard" />
     <meta property="og:title" content="{{ page_title or 'InboxGuard | Fix risky emails before you send' }}" />
-    <meta property="og:description" content="{{ meta_description or 'Find out why emails that look fine still land in spam, then fix them before sending.' }}" />
-    <meta property="og:url" content="{{ canonical_url or 'https://inboxguard.me/' }}" />
-    <meta property="og:image" content="https://inboxguard.me/static/branding/logo.png" />
-    <meta name="twitter:card" content="summary" />
-    <meta name="twitter:title" content="{{ page_title or 'InboxGuard | Fix risky emails before you send' }}" />
-    <meta name="twitter:description" content="{{ meta_description or 'Find out why emails that look fine still land in spam, then fix them before sending.' }}" />
-    <meta name="twitter:image" content="https://inboxguard.me/static/branding/logo.png" />
-    <meta name="theme-color" content="#f8fafc" />
-    <link rel="icon" type="image/png" sizes="48x48" href="/static/branding/favicon-48.png?v=20260408-favicon-1" />
-    <link rel="icon" type="image/png" sizes="192x192" href="/static/branding/favicon-192.png?v=20260408-favicon-1" />
-    <link rel="apple-touch-icon" sizes="180x180" href="/static/branding/favicon-192.png?v=20260408-favicon-1" />
-    <link rel="shortcut icon" href="/favicon.ico?v=20260408-favicon-1" />
-    <link rel="manifest" href="/static/site.webmanifest?v=20260408-favicon-1" />
-    <script>
-      (function () {
-        try {
-          var savedTheme = localStorage.getItem("ig_theme");
-          var systemDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
-          var theme = savedTheme === "dark" || savedTheme === "light" ? savedTheme : (systemDark ? "dark" : "light");
-          var root = document.documentElement;
-          root.dataset.theme = theme;
-          root.classList.toggle("dark", theme === "dark");
-          root.style.colorScheme = theme === "dark" ? "dark" : "light";
-          var meta = document.querySelector('meta[name="theme-color"]');
-          if (meta) {
-            meta.setAttribute("content", theme === "dark" ? "#0f172a" : "#f8fafc");
-          }
-        } catch (error) {
-        }
-      })();
-    </script>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-    <link rel="preload" href="/static/css/styles.css?v=20260406-seo-fix-1" as="style" />
-    <link rel="stylesheet" href="/static/css/styles.css?v=20260406-seo-fix-1" />
-    <link rel="stylesheet" href="/static/css/styles.css?v=20260411-live-rewrite-1" />
-    <link rel="stylesheet" href="/static/theme-overrides.css?v=20260411-rewrite-premium-1" />
-    <link rel="stylesheet" href="/static/css/cookie-consent.css?v=20260410-cookie-consent-1" />
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
-    <script type="application/ld+json">
-      [
+        <!-- All legacy modal, card, pricing, and plan-select markup removed. Only new, isolated modal markup and unrelated content remain. -->
         {
           "@context": "https://schema.org",
           "@type": "Organization",
