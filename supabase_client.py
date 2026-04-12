@@ -1,7 +1,7 @@
 import os
 from supabase import create_client, Client
 
-SUPABASE_URL = os.getenv("SUPABASE_URL", "https://supabase.co")  # TODO: Set your actual project URL
+SUPABASE_URL = os.getenv("SUPABASE_URL", "https://lvacilaresklgbapsybb.supabase.co")  # TODO: Set your actual project URL
 SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY", "sb_publishable_2R8FGFw9jFfBKYsr-T-AzA_UkxN8...")
 SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY", "sb_secret_JeR-z1YNJhhIl1jNftxYUzQ_J83yFDE9")
 
