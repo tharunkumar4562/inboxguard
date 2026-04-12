@@ -1,4 +1,5 @@
 
+
 from pathlib import Path
 import json
 import logging
@@ -21,6 +22,9 @@ from datetime import date, datetime, timedelta, timezone
 from difflib import SequenceMatcher
 import joblib
 import threading
+
+# Supabase admin client import
+from supabase_client import supabase_admin
 
 BASE_DIR = Path(__file__).resolve().parent
 
@@ -3299,6 +3303,7 @@ async def razorpay_webhook(request: Request, x_razorpay_signature: str | None = 
     def _extract_user_id(notes: dict) -> int:
         return int((notes or {}).get("user_id", 0) or 0)
 
+
     if event == "subscription.activated":
         sub = (payload.get("payload", {}) or {}).get("subscription", {}).get("entity", {}) or {}
         notes = sub.get("notes", {}) or {}
@@ -3307,6 +3312,18 @@ async def razorpay_webhook(request: Request, x_razorpay_signature: str | None = 
         if user_id > 0:
             _set_user_plan(user_id, selected_plan, tokens=PLAN_TOKENS.get(selected_plan, PLAN_TOKENS.get("monthly", 500)))
             track_event("pro_activated", {"user_id": str(user_id), "provider": "razorpay", "subscription_id": str(sub.get("id", "") or "")})
+            # Supabase: upsert subscription status
+            try:
+                supabase_admin.table("subscriptions").upsert({
+                    "user_id": user_id,
+                    "subscription_id": sub.get("id", ""),
+                    "plan": selected_plan,
+                    "status": "active",
+                    "provider": "razorpay",
+                    "updated_at": datetime.utcnow().isoformat()
+                }).execute()
+            except Exception as e:
+                logger.error(f"Supabase upsert failed: {e}")
 
     elif event in {"payment.captured", "subscription.charged", "invoice.paid", "order.paid"}:
         payment_entity = (payload.get("payload", {}) or {}).get("payment", {}).get("entity", {}) or {}
@@ -3357,6 +3374,19 @@ async def razorpay_webhook(request: Request, x_razorpay_signature: str | None = 
                     "promo_code": str(notes.get("promo_code", "") or ""),
                 },
             )
+            # Supabase: upsert payment/subscription status
+            try:
+                supabase_admin.table("subscriptions").upsert({
+                    "user_id": user_id,
+                    "subscription_id": subscription_id,
+                    "plan": selected_plan,
+                    "status": "active",
+                    "provider": "razorpay",
+                    "order_id": order_id,
+                    "updated_at": datetime.utcnow().isoformat()
+                }).execute()
+            except Exception as e:
+                logger.error(f"Supabase upsert failed: {e}")
 
     elif event == "invoice.payment_failed":
         invoice = (payload.get("payload", {}) or {}).get("invoice", {}).get("entity", {}) or {}
@@ -3378,12 +3408,34 @@ async def razorpay_webhook(request: Request, x_razorpay_signature: str | None = 
                 payment_id=str(invoice.get("payment_id", "") or ""),
                 invoice_id=str(invoice.get("id", "") or ""),
             )
+            # Supabase: upsert failed status
+            try:
+                supabase_admin.table("subscriptions").upsert({
+                    "user_id": user_id,
+                    "subscription_id": subscription_id,
+                    "status": "past_due",
+                    "provider": "razorpay",
+                    "updated_at": datetime.utcnow().isoformat()
+                }).execute()
+            except Exception as e:
+                logger.error(f"Supabase upsert failed: {e}")
 
     elif event == "subscription.cancelled":
         sub = (payload.get("payload", {}) or {}).get("subscription", {}).get("entity", {}) or {}
         user_id = _apply_razorpay_subscription_state(sub, pro=False, status="cancelled")
         if user_id > 0:
             _set_user_plan(user_id, "free", tokens=PLAN_TOKENS.get("free", 10))
+            # Supabase: upsert cancelled status
+            try:
+                supabase_admin.table("subscriptions").upsert({
+                    "user_id": user_id,
+                    "subscription_id": sub.get("id", ""),
+                    "status": "cancelled",
+                    "provider": "razorpay",
+                    "updated_at": datetime.utcnow().isoformat()
+                }).execute()
+            except Exception as e:
+                logger.error(f"Supabase upsert failed: {e}")
 
     else:
         return JSONResponse(status_code=200, content={"status": "ignored"})
