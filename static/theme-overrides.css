@@ -91,28 +91,6 @@ span,
   color: var(--text-secondary);
 }
 
-.card,
-.tool-pane,
-.tool-pane-head,
-.modal-content,
-.modal-card,
-.profile-card,
-.profile-stat-card,
-.rewrite-proof,
-.usage-guide,
-.status-card,
-.paywall-section,
-.decision-overlay-card,
-.plan-card,
-.feature-card,
-.trust-block,
-.pricing-section,
-.pricing-section #home-pricing-cta {
-  background: var(--card);
-  border-color: var(--border);
-  color: var(--text);
-  box-shadow: var(--shadow);
-}
 
 .btn-primary,
 .primary-btn,
@@ -303,16 +281,6 @@ html[data-theme="light"] .logo-text,
 html[data-theme="light"] .topbar-brand,
 html[data-theme="light"] .topbar-brand .logo-text,
 html[data-theme="light"] .sidebar .logo-text,
-html:not([data-theme="dark"]) .brand,
-html:not([data-theme="dark"]) .logo-text,
-html:not([data-theme="dark"]) .topbar-brand,
-html:not([data-theme="dark"]) .topbar-brand .logo-text,
-html:not([data-theme="dark"]) .sidebar .logo-text {
-  color: #111827 !important;
-}
-
-html:not([data-theme="dark"]) .tool-pane {
-  background: #ffffff;
   box-shadow: 0 18px 40px rgba(15, 23, 42, 0.12);
 }
 
@@ -373,6 +341,28 @@ html:not([data-theme="dark"]) .section {
   padding: 60px 0;
 }
 
+html:not([data-theme="dark"]) .card,
+html:not([data-theme="dark"]) .modal-content,
+html:not([data-theme="dark"]) .modal-card,
+html:not([data-theme="dark"]) .plan-card,
+html:not([data-theme="dark"]) .feature-card,
+html:not([data-theme="dark"]) .tool-pane,
+html:not([data-theme="dark"]) .tool-pane-head,
+html:not([data-theme="dark"]) .profile-card,
+html:not([data-theme="dark"]) .profile-stat-card,
+html:not([data-theme="dark"]) .rewrite-proof,
+html:not([data-theme="dark"]) .usage-guide,
+html:not([data-theme="dark"]) .status-card,
+html:not([data-theme="dark"]) .paywall-section,
+html:not([data-theme="dark"]) .decision-overlay-card,
+html:not([data-theme="dark"]) .trust-block,
+html:not([data-theme="dark"]) .pricing-section,
+html:not([data-theme="dark"]) .pricing-section #home-pricing-cta {
+  background: #ffffff;
+  border-color: #e5e7eb;
+  color: #111827;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
 
 html:not([data-theme="dark"]) .section h1,
 html:not([data-theme="dark"]) .section h2,
