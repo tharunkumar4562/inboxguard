@@ -1,8 +1,36 @@
-/* --- Modal Dropdown Fix: Prevent Clipping --- */
+/* === PRICING MODAL FINAL OVERRIDES === */
 .modal-content {
-    overflow: visible !important;
-    max-height: none !important;
+    width: 95% !important;
+    max-width: 1200px !important;
+    margin: auto;
+    overflow-x: hidden !important;
 }
+.pricing-cards {
+    display: grid !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 20px;
+    overflow-x: hidden !important;
+}
+.card {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+}
+.price {
+    font-size: 28px;
+    font-weight: bold;
+    white-space: nowrap;
+}
+.card button {
+    width: 100%;
+}
+@media (max-width: 900px) {
+    .pricing-cards {
+        grid-template-columns: 1fr !important;
+    }
+}
+/* --- Modal Dropdown Fix: Prevent Clipping --- */
+/* Removed old overflow/nowrap/flex-wrap for modal/pricing-cards */
 
 /* InboxGuard UX: Section Spacing & Card System */
 .section {
