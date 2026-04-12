@@ -171,6 +171,8 @@ RAZORPAY_ANNUAL_PLAN_ID = os.getenv("INBOXGUARD_RAZORPAY_ANNUAL_PLAN_ID", os.get
 RAZORPAY_TRIAL_PLAN_ID = os.getenv("INBOXGUARD_RAZORPAY_TRIAL_PLAN_ID", os.getenv("RAZORPAY_TRIAL_PLAN_ID", "")).strip()
 RAZORPAY_PRO_PLAN_ID = os.getenv("INBOXGUARD_RAZORPAY_PRO_PLAN_ID", "").strip()
 RAZORPAY_STARTER_PLAN_ID = os.getenv("INBOXGUARD_RAZORPAY_STARTER_PLAN_ID", "").strip()
+# INR pricing for legacy/India support (default 749)
+RAZORPAY_AMOUNT_INR = int(os.getenv("INBOXGUARD_RAZORPAY_AMOUNT_INR", "749"))
 TRIAL_DAYS = int(os.getenv("INBOXGUARD_TRIAL_DAYS", "7"))
 PAST_DUE_GRACE_DAYS = int(os.getenv("INBOXGUARD_PAST_DUE_GRACE_DAYS", "3"))
 GOOGLE_VERIFICATION_FILE = "googleab4b33a28d8dfb88.html"
@@ -3343,7 +3345,7 @@ async def razorpay_webhook(request: Request, x_razorpay_signature: str | None = 
                 promo_code=str(notes.get("promo_code", "") or ""),
                 plan=selected_plan,
                 checkout_type="subscription" if subscription_id else "order",
-                # discount_amount is now always USD
+                # discount_amount is now always USD; remove INR
             )
             track_event(
                 "payment_captured",
