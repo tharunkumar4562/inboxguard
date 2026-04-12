@@ -1,26 +1,5 @@
 // --- Modal Popup Logic ---
-const modal = document.getElementById('pricing-modal');
-
-function openModal() {
-    if (modal) {
-        modal.classList.remove('hidden');
-        document.body.style.overflow = 'hidden';
-    }
-}
-
-function closeModal() {
-    if (modal) {
-        modal.classList.add('hidden');
-        document.body.style.overflow = 'auto';
-    }
-}
-
-// Optional: Close modal if user clicks the dark background outside the box
-window.onclick = function (event) {
-    if (event.target === modal) {
-        closeModal();
-    }
-}
+// Only use openPricingModal and closeModal for pricing modal
 // --- Static Pricing Modal Logic ---
 
 // Razorpay Plan Mapping
