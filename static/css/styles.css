@@ -1,3 +1,17 @@
+.modal {
+    position: fixed;
+    inset: 0;
+    z-index: 999999;
+    background: rgba(0,0,0,0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-content {
+    position: relative;
+    z-index: 1000000;
+}
 /* === PRICING MODAL FINAL OVERRIDES === */
 
 /* MODAL WRAPPER */
