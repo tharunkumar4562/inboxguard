@@ -15,10 +15,12 @@ if not service_key:
 	print("⚠️ WARNING: SUPABASE_SERVICE_KEY is missing!")
 
 # 3. Create client safely
+supabase = None
+supabase_admin = None
 try:
-	# We .strip() to remove any accidental spaces or hidden characters
-	supabase = create_client(url.strip(), key.strip())
-	supabase_admin = create_client(url.strip(), service_key.strip())
-	print("✅ Supabase Client initialized successfully!")
+    # We .strip() to remove any accidental spaces or hidden characters
+    supabase = create_client(url.strip(), key.strip())
+    supabase_admin = create_client(url.strip(), service_key.strip())
+    print("✅ Supabase Client initialized successfully!")
 except Exception as e:
-	print(f"❌ CRITICAL ERROR: Could not initialize Supabase. {e}")
+    print(f"❌ CRITICAL ERROR: Could not initialize Supabase. {e}")
