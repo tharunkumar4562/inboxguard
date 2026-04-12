@@ -1,36 +1,150 @@
 /* === PRICING MODAL FINAL OVERRIDES === */
-.modal-content {
-    width: 95% !important;
-    max-width: 1200px !important;
+
+/* MODAL WRAPPER */
+.pricing-modal {
+    width: 100%;
+    max-width: 1100px;
     margin: auto;
-    overflow-x: hidden !important;
+    padding: 30px;
 }
+
+/* HEADER */
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 25px;
+}
+
+.modal-header h2 {
+    font-size: 24px;
+    font-weight: 700;
+}
+
+.close {
+    font-size: 20px;
+    cursor: pointer;
+}
+
+/* GRID LAYOUT */
 .pricing-cards {
-    display: grid !important;
-    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
-    gap: 20px;
-    overflow-x: hidden !important;
+    display: grid;
+    grid-template-columns: repeat(4, 260px);
+    justify-content: center;
+    gap: 28px;
 }
+
+/* CARD */
 .card {
-    width: 100%;
-    min-width: 0;
-    max-width: 100%;
+    background: #ffffff;
+    border-radius: 18px;
+    padding: 28px 22px;
+    border: 1px solid #e5e7eb;
+    text-align: center;
+    transition: all 0.2s ease;
 }
+
+.card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+}
+
+/* PRO CARD */
+.card.highlight {
+    border: 2px solid #3b82f6;
+    transform: scale(1.05);
+    box-shadow: 0 10px 40px rgba(59,130,246,0.2);
+}
+
+/* BADGE */
+.badge {
+    font-size: 12px;
+    color: #3b82f6;
+    font-weight: 600;
+    margin-bottom: 5px;
+}
+
+/* PRICE */
 .price {
-    font-size: 28px;
-    font-weight: bold;
-    white-space: nowrap;
+    font-size: 34px;
+    font-weight: 700;
+    color: #2563eb;
+    margin: 10px 0;
 }
+
+.interval {
+    font-size: 14px;
+    color: #6b7280;
+}
+
+/* FEATURES */
+.card ul {
+    margin: 16px 0;
+    padding: 0;
+    list-style: none;
+}
+
+.card ul li {
+    margin: 6px 0;
+    color: #374151;
+    font-size: 14px;
+}
+
+/* BUTTON */
 .card button {
+    margin-top: 16px;
     width: 100%;
+    padding: 12px;
+    border-radius: 10px;
+    border: none;
+    background: #3b82f6;
+    color: white;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.2s;
 }
-@media (max-width: 900px) {
+
+.card button:hover {
+    background: #2563eb;
+}
+
+/* FREE PLAN STYLE */
+.card.free {
+    opacity: 0.7;
+}
+
+.card.free button {
+    background: #e5e7eb;
+    color: #6b7280;
+    cursor: not-allowed;
+}
+
+/* CONTACT */
+.contact-text {
+    margin-top: 30px;
+    font-size: 14px;
+    text-align: center;
+    color: #6b7280;
+}
+
+.contact-text a {
+    color: #3b82f6;
+    font-weight: 500;
+    text-decoration: none;
+}
+
+/* RESPONSIVE */
+@media (max-width: 1100px) {
     .pricing-cards {
-        grid-template-columns: 1fr !important;
+        grid-template-columns: repeat(2, 260px);
     }
 }
-/* --- Modal Dropdown Fix: Prevent Clipping --- */
-/* Removed old overflow/nowrap/flex-wrap for modal/pricing-cards */
+
+@media (max-width: 600px) {
+    .pricing-cards {
+        grid-template-columns: 1fr;
+    }
+}
 
 /* InboxGuard UX: Section Spacing & Card System */
 .section {
