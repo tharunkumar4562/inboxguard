@@ -1,7 +1,49 @@
 // --- Static Pricing Modal Logic ---
-function startCheckout(plan) {
-    // TODO: Wire up Razorpay checkout for each plan
-    alert(`Checkout for plan: ${plan} (wire up Razorpay here)`);
+
+// Razorpay Plan Mapping
+const RAZORPAY_PLANS = {
+    starter: { id: 'plan_SZWV8NEvJagNab', price: 199, name: 'Starter' },
+    pro: { id: 'plan_SZWbPRZCN1aTkN', price: 999, name: 'Pro' },
+    growth: { id: 'plan_ScBQczGquzpbUA', price: 4000, name: 'Growth Annual' },
+    usage: { id: 'plan_ScBDHsF3daVe6z', price: 2, name: 'Usage-Based' },
+};
+
+// Razorpay Checkout Handler
+async function purchasePlan(planKey) {
+    const plan = RAZORPAY_PLANS[planKey];
+    if (!plan) {
+        alert('Invalid plan selected.');
+        return;
+    }
+    // 1. Create subscription on backend
+    const response = await fetch('/create-subscription', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan: planKey })
+    });
+    const data = await response.json();
+    if (!data.success || !data.subscription_id) {
+        alert('Could not start subscription: ' + (data.detail || 'Unknown error'));
+        return;
+    }
+    // 2. Open Razorpay Checkout
+    const options = {
+        key: data.key,
+        subscription_id: data.subscription_id,
+        name: 'InboxGuard',
+        description: `Upgrade to ${plan.name} Plan`,
+        image: 'https://inboxguard.me/static/branding/logo.png',
+        handler: function (response) {
+            alert('Payment Successful! Subscription ID: ' + response.razorpay_subscription_id);
+            // TODO: Send response.razorpay_subscription_id to backend for verification
+        },
+        prefill: {
+            // Optionally fill with user info if available
+        },
+        theme: { color: '#2563EB' }
+    };
+    const rzp = new Razorpay(options);
+    rzp.open();
 }
 
 function submitContactRequest() {

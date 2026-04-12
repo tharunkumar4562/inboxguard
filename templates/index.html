@@ -11,7 +11,6 @@
       gtag('config', 'G-WXGNG9TEFK');
     </script>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>{{ page_title or "InboxGuard | Fix risky emails before you send" }}</title>
     <meta name="description" content="{{ meta_description or 'InboxGuard detects deliverability threats before email send.' }}" />
     <meta name="application-name" content="InboxGuard" />
@@ -61,7 +60,6 @@
     <link rel="stylesheet" href="/static/css/cookie-consent.css?v=20260410-cookie-consent-1" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
-    <script type="application/ld+json">
       [
         {
           "@context": "https://schema.org",
@@ -112,6 +110,7 @@
             }
           ]
         }
+      ]
       ]
     </script>
   </head>
@@ -803,6 +802,7 @@ I noticed your recent post and had one short idea to improve reply rates."></tex
               <li>Email support</li>
             </ul>
             <button onclick="startCheckout('starter')">Get Starter</button>
+             <button onclick="purchasePlan('starter')">Get Starter</button>
           </div>
           <!-- PRO -->
           <div class="pricing-card highlight">
@@ -816,6 +816,7 @@ I noticed your recent post and had one short idea to improve reply rates."></tex
               <li>Priority support</li>
             </ul>
             <button onclick="startCheckout('pro')">Get Pro</button>
+             <button onclick="purchasePlan('pro')">Get Pro</button>
           </div>
           <!-- GROWTH -->
           <div class="pricing-card">
@@ -828,6 +829,7 @@ I noticed your recent post and had one short idea to improve reply rates."></tex
               <li>Annual billing</li>
             </ul>
             <button onclick="startCheckout('growth')">Get Growth</button>
+             <button onclick="purchasePlan('growth')">Get Growth</button>
           </div>
         </div>
         <p class="contact-text">
