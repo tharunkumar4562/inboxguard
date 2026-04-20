@@ -2585,7 +2585,7 @@ function highlightIssueSpans(text, spans = []) {
         }
         const escaped = safeSpan.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
         const regex = new RegExp(escaped, "gi");
-        html = html.replace(regex, (match) => `<span class=\"spam-word\">${match}</span>`);
+        html = html.replace(regex, (match) => `<span class="spam-word"> ${match}</span>`);
     });
     return html;
 }
@@ -4107,7 +4107,7 @@ async function runRewriteAsync() {
                     }
                     if (improvementEstimateNode) {
                         const delta = Number(job.result.score_delta || 0);
-                        improvementEstimateNode.textContent = `Spam Risk Reduced | Deliverability Score: ${delta >= 0 ? "+" : ""}${delta}`;
+                        improvementEstimateNode.textContent = `Spam Risk Reduced | Deliverability Score: ${delta >= 0 ? "+" : ""}${delta} | Higher chance of inbox placement`;
                     }
                     if (fixOutput) {
                         fixOutput.classList.remove("hidden");
