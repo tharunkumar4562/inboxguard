@@ -846,7 +846,7 @@ def rewrite_email_text(
 ) -> str:
     text = (original_text or "").strip()
     if not text:
-        return ""
+        return "Rewrite unavailable — upgrade to Pro for AI rewrites"
 
     profile = _normalize_learning_profile(learning_profile)
     style = _infer_rewrite_style(rewrite_style, aggressive)
@@ -864,6 +864,14 @@ def rewrite_email_text(
     )
     if ollama_candidate:
         text = ollama_candidate
+    elif not ollama_candidate:
+        # If no rewrite is possible (Ollama unavailable and no fallback), show a message
+        # Only do this if all fallback logic below would also not run (i.e., no cold outreach, no transactional, etc.)
+        normalized_intent = (intent_type or "").strip().lower()
+        issue_blob = " ".join(detected_issues or []).lower()
+        is_broadcast = "broadcast" in issue_blob or "personalization" in issue_blob or "mass" in issue_blob
+        if not (is_broadcast or "cold" in normalized_intent or "outreach" in normalized_intent or normalized_intent in {"informational/system", "transactional", "update"}):
+            return "Rewrite unavailable — upgrade to Pro for AI rewrites"
 
     parsed = _extract_subject_and_body(text)
     subject = parsed["subject"]
