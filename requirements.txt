@@ -12,3 +12,4 @@ scikit-learn==1.7.0
 starlette
 supabase==2.4.3
 razorpay==1.4.1
+psycopg2-binary

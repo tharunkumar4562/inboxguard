@@ -9,6 +9,7 @@ import hmac
 import hashlib
 import secrets
 import sqlite3
+import db as _db
 import csv
 import io
 import imaplib
@@ -82,6 +83,7 @@ import hmac
 import hashlib
 import secrets
 import sqlite3
+import db as _db
 import csv
 import io
 import imaplib
@@ -673,11 +675,14 @@ def _build_subject_line_intelligence(payload: dict[str, str]) -> dict[str, Any]:
     }
 
 
-def _auth_db_conn() -> sqlite3.Connection:
-    AUTH_DB_FILE.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(str(AUTH_DB_FILE))
-    conn.row_factory = sqlite3.Row
-    return conn
+def _auth_db_conn():
+    """Return a Postgres-backed connection that mimics the sqlite3 API.
+
+    Migrated from local SQLite (data/auth.db) to Supabase Postgres so that
+    auth, usage, saved_fixes, and related tables persist across serverless
+    invocations and across hosts.
+    """
+    return _db.get_conn()
 
 
 def _ensure_auth_db() -> None:
@@ -2078,7 +2083,13 @@ def _add_team_member(team_id: int, user_id: int, role: str) -> None:
     conn = _auth_db_conn()
     try:
         conn.execute(
-            "INSERT OR REPLACE INTO team_members(team_id, user_id, role, joined_at) VALUES (?, ?, ?, ?)",
+            """
+            INSERT INTO team_members(team_id, user_id, role, joined_at)
+            VALUES (?, ?, ?, ?)
+            ON CONFLICT(team_id, user_id) DO UPDATE SET
+                role = excluded.role,
+                joined_at = excluded.joined_at
+            """,
             (team_id, user_id, (role or "member")[:24], _now_iso()),
         )
         conn.commit()
