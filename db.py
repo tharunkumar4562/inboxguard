@@ -23,16 +23,44 @@ from psycopg2 import pool as pg_pool
 from psycopg2.extras import RealDictCursor
 
 
-_DB_URL = (
-    os.environ.get("SUPABASE_POOLER_URL")
-    or os.environ.get("SUPABASE_DB_URL")
-    or ""
-).strip()
-# Strip any leading/trailing brackets accidentally pasted from the Supabase
-# template (e.g. "...:[mypassword]@..."). Brackets are not valid in a DSN's
-# userinfo and break URL parsing.
-if "[" in _DB_URL or "]" in _DB_URL:
-    _DB_URL = _DB_URL.replace("[", "").replace("]", "")
+def _resolve_db_url() -> str:
+    """Build a usable Postgres DSN from the available Supabase env vars.
+
+    Accepts a few input shapes so that minor copy/paste mistakes do not
+    block local development:
+      * Full DSN in SUPABASE_DB_URL (preferred).
+      * Just a password in SUPABASE_DB_URL or SUPABASE_DB_PASSWORD; the rest
+        of the DSN is derived from SUPABASE_URL.
+      * Square brackets around the password (template artefact) are stripped.
+    """
+    raw = (
+        os.environ.get("SUPABASE_POOLER_URL")
+        or os.environ.get("SUPABASE_DB_URL")
+        or ""
+    ).strip().replace("[", "").replace("]", "")
+    if not raw:
+        return ""
+    # Already a full DSN
+    if "://" in raw:
+        return raw
+
+    # Otherwise treat the value as just a password and derive the rest.
+    password = raw
+    project_ref = ""
+    supabase_url = (os.environ.get("SUPABASE_URL") or "").strip()
+    if supabase_url:
+        # https://<ref>.supabase.co
+        m = re.match(r"https?://([^./]+)\.supabase\.co", supabase_url)
+        if m:
+            project_ref = m.group(1)
+    if not project_ref:
+        return ""
+    region = (os.environ.get("SUPABASE_REGION") or "ap-south-1").strip()
+    host = f"aws-1-{region}.pooler.supabase.com"
+    return f"postgresql://postgres.{project_ref}:{password}@{host}:6543/postgres"
+
+
+_DB_URL = _resolve_db_url()
 
 _POOL: Optional[pg_pool.ThreadedConnectionPool] = None
 _POOL_LOCK = threading.Lock()

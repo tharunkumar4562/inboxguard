@@ -942,7 +942,7 @@ def _ensure_token_system_tables() -> None:
             CREATE TABLE IF NOT EXISTS promo_usage (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 user_id INTEGER NOT NULL,
-                promo_id INTEGER NOT NULL,
+                promo_id TEXT NOT NULL,
                 used_at TEXT NOT NULL,
                 UNIQUE(user_id, promo_id),
                 FOREIGN KEY(user_id) REFERENCES users(id),

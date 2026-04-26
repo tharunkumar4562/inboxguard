@@ -14,6 +14,40 @@ InboxGuard is a FastAPI web app for pre-send email deliverability and risk check
 
 ## Notes
 - `INBOXGUARD_SITE_URL` defaults to `https://inboxguard.me` in `main.py`.
-- Supabase is optional at startup; if `SUPABASE_URL` and `SUPABASE_ANON_KEY` are not set, the app logs a warning and continues.
 - Optional Google OAuth, Razorpay, SMTP seed testing, admin dashboard, and Ollama rewrite features are controlled by environment variables documented in `README.md`.
 - Runtime local data is stored under `data/` and ignored by git.
+
+## Persistence (Phase 1 — Supabase Postgres)
+The auth/user/usage layer was migrated from local SQLite (`data/auth.db`) to
+Supabase Postgres so the sidebar features persist across serverless hosts
+(Vercel) and across container restarts.
+
+- `db.py` is a thin sqlite3-compatible adapter over `psycopg2` that translates
+  the SQLite SQL the app already speaks (`?` placeholders, `PRAGMA table_info`,
+  `INSERT OR IGNORE`, `INTEGER PRIMARY KEY AUTOINCREMENT`, `sqlite_master`,
+  `excluded.col` in `ON CONFLICT DO UPDATE`) into Postgres on the fly. It also
+  appends `RETURNING id` to INSERTs against tables with a serial `id` column so
+  `cursor.lastrowid` keeps working.
+- `_auth_db_conn()` in `main.py` now returns a `db.get_conn()` wrapper instead
+  of `sqlite3.connect(...)`. All ~80 existing call sites work unmodified.
+- 18 tables now live in the Supabase `public` schema: `users`, `usage`,
+  `anon_usage`, `user_daily_activity`, `user_feedback`, `payments`,
+  `lead_captures`, `saved_fixes`, `api_keys`, `teams`, `team_members`,
+  `async_jobs`, `seed_tests`, `email_outcomes`, `promo_codes`, `promo_usage`,
+  `subscriptions`, `usage_logs`.
+- `supabase_client.py` now prefers `SUPABASE_SERVICE_ROLE_KEY` over the anon
+  key for server-side writes.
+
+### Required secrets
+- `SUPABASE_URL` — `https://<project-ref>.supabase.co`
+- `SUPABASE_SERVICE_ROLE_KEY` — Project Settings → API
+- `SUPABASE_DB_URL` — full Postgres connection URI from Project Settings →
+  Database → Connection string → **Transaction** pooler (port 6543, host
+  `aws-1-<region>.pooler.supabase.com`). The IPv6-only direct host
+  (`db.<ref>.supabase.co`) does not work from Replit/Vercel free tiers.
+- Optional `SUPABASE_REGION` (default `ap-south-1`) — only used when
+  `SUPABASE_DB_URL` contains just a password and the rest is derived.
+
+### Out of scope for Phase 1 (still file-backed)
+- `data/analytics.json` (event log)
+- `data/rewrite_feedback.json` and `data/rewrite_model.json` (rewrite ML state)
