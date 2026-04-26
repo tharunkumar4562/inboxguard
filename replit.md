@@ -51,3 +51,35 @@ Supabase Postgres so the sidebar features persist across serverless hosts
 ### Out of scope for Phase 1 (still file-backed)
 - `data/analytics.json` (event log)
 - `data/rewrite_feedback.json` and `data/rewrite_model.json` (rewrite ML state)
+
+## Vercel deployment (Phase 2)
+The repo ships with a Vercel adapter so the same FastAPI app that runs locally
+on Replit can be served from `inboxguard.me` via Vercel serverless functions.
+
+- `api/index.py` — small ASGI entry point that adjusts `sys.path`, `chdir`s to
+  the project root, and re-exports `app` from `main.py`.
+- `vercel.json` — uses the `@vercel/python` builder, bundles all `*.py`
+  modules, the `*.pkl` ML models, `plans.json`, the Google site-verification
+  HTML, and the `templates/` and `static/` folders into the lambda. All
+  requests are routed to `api/index.py` except `/static/*`, which is served
+  directly.
+
+### Vercel project settings to configure once
+- Framework preset: **Other** (do not pick FastAPI/Python preset — `vercel.json`
+  drives the build).
+- Build & Output: leave empty; Vercel reads `requirements.txt` automatically.
+- Environment Variables (Production + Preview): copy these from Replit:
+  - `SUPABASE_URL`
+  - `SUPABASE_SERVICE_ROLE_KEY`
+  - `SUPABASE_DB_URL` (must be the Transaction pooler URI, port 6543)
+  - any other secrets the app uses (Google OAuth, Razorpay, etc.)
+
+### Caveats
+- Vercel's filesystem is read-only at runtime, so anything that writes under
+  `data/` (analytics, rewrite feedback) will silently fail on Vercel until
+  Phase 3 moves those into Supabase too.
+- Cold-start memory: scikit-learn + supabase-py + razorpay can push the
+  unzipped lambda close to Vercel Hobby's 50 MB limit. If a deploy fails
+  with `FUNCTION_PAYLOAD_TOO_LARGE`, slim `requirements.txt` (e.g. drop
+  `scikit-learn` if the rule-based rewriter is the only one used) or move
+  to a Pro plan.
