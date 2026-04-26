@@ -23,7 +23,16 @@ from psycopg2 import pool as pg_pool
 from psycopg2.extras import RealDictCursor
 
 
-_DB_URL = (os.environ.get("SUPABASE_DB_URL") or "").strip()
+_DB_URL = (
+    os.environ.get("SUPABASE_POOLER_URL")
+    or os.environ.get("SUPABASE_DB_URL")
+    or ""
+).strip()
+# Strip any leading/trailing brackets accidentally pasted from the Supabase
+# template (e.g. "...:[mypassword]@..."). Brackets are not valid in a DSN's
+# userinfo and break URL parsing.
+if "[" in _DB_URL or "]" in _DB_URL:
+    _DB_URL = _DB_URL.replace("[", "").replace("]", "")
 
 _POOL: Optional[pg_pool.ThreadedConnectionPool] = None
 _POOL_LOCK = threading.Lock()
