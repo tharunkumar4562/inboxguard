@@ -1,86 +1,228 @@
 {% extends "base_app.html" %}
 
 {% block content %}
-      <section class="card" style="padding: 22px; margin: 20px;">
-        <p class="workflow-step">Subject Line Intelligence</p>
-        <h1 style="margin-top: 6px;">Write subject lines for a specific product and ICP</h1>
-        <p class="micro">Generate short internal-looking subject lines and score them for fit, spam risk, and body alignment.</p>
+<div class="max-w-[1200px] mx-auto">
+  <!-- Page Header -->
+  <div class="mb-8">
+    <div class="flex items-center gap-2 text-primary dark:text-primary-fixed font-semibold text-xs tracking-wider uppercase mb-1.5">
+      <span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">psychology</span>
+      Subject Line Intelligence
+    </div>
+    <h1 class="text-3xl font-bold tracking-tight text-on-surface dark:text-white">Write high-converting subject lines</h1>
+    <p class="text-secondary dark:text-secondary-fixed-dim text-sm mt-1 max-w-2xl">
+      Generate short, internal-looking subject lines and automatically score them for customer fit, spam risk, and body alignment.
+    </p>
+  </div>
 
-        <div class="inline-fields" style="margin-top: 12px;">
-          <div>
-            <label for="subject-product-name">Product</label>
-            <input id="subject-product-name" type="text" value="InboxGuard" autocomplete="off" />
-          </div>
-          <div>
-            <label for="subject-target-role">Target role</label>
-            <input id="subject-target-role" type="text" placeholder="Sales Head" autocomplete="off" />
-          </div>
-          <div>
-            <label for="subject-industry">Industry</label>
-            <input id="subject-industry" type="text" placeholder="SaaS" autocomplete="off" />
-          </div>
-          <div>
-            <label for="subject-goal">Goal</label>
-            <input id="subject-goal" type="text" placeholder="increase reply rate" autocomplete="off" />
-          </div>
+  <!-- Main Grid -->
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-gutter items-start">
+    
+    <!-- Left Column: Input Form (7 cols) -->
+    <form class="lg:col-span-7 bg-surface-container-lowest dark:bg-slate-900/40 border border-outline-variant/30 dark:border-outline/30 rounded-2xl p-6 md:p-8 shadow-sm space-y-6">
+      
+      <!-- Input Grid -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label for="subject-product-name" class="block text-xs font-semibold text-secondary dark:text-secondary-fixed-dim uppercase tracking-wider mb-2">Product Name</label>
+          <input id="subject-product-name" type="text" value="InboxGuard" autocomplete="off" class="w-full rounded-xl border border-outline-variant dark:border-outline bg-surface-container-lowest dark:bg-on-secondary-fixed text-on-surface dark:text-secondary-fixed focus:border-primary focus:ring-1 focus:ring-primary px-3.5 py-2.5 text-sm" />
         </div>
-
-        <div class="inline-fields" style="margin-top: 10px;">
-          <div>
-            <label for="subject-email-type">Email type</label>
-            <select id="subject-email-type">
-              <option value="cold" selected>Cold</option>
-              <option value="followup">Follow-up</option>
-              <option value="warm">Warm</option>
-            </select>
-          </div>
-          <div>
-            <label for="subject-tone">Tone</label>
-            <select id="subject-tone">
-              <option value="internal" selected>Internal</option>
-              <option value="casual">Casual</option>
-              <option value="direct">Direct</option>
-            </select>
-          </div>
+        <div>
+          <label for="subject-target-role" class="block text-xs font-semibold text-secondary dark:text-secondary-fixed-dim uppercase tracking-wider mb-2">Target ICP/Role</label>
+          <input id="subject-target-role" type="text" placeholder="Sales Head" autocomplete="off" class="w-full rounded-xl border border-outline-variant dark:border-outline bg-surface-container-lowest dark:bg-on-secondary-fixed text-on-surface dark:text-secondary-fixed focus:border-primary focus:ring-1 focus:ring-primary px-3.5 py-2.5 text-sm" />
         </div>
-
-        <div style="margin-top: 10px;">
-          <label for="subject-context">Context</label>
-          <textarea id="subject-context" rows="3" placeholder="Sending cold outreach to SaaS sales teams..."></textarea>
+        <div>
+          <label for="subject-industry" class="block text-xs font-semibold text-secondary dark:text-secondary-fixed-dim uppercase tracking-wider mb-2">Industry</label>
+          <input id="subject-industry" type="text" placeholder="SaaS" autocomplete="off" class="w-full rounded-xl border border-outline-variant dark:border-outline bg-surface-container-lowest dark:bg-on-secondary-fixed text-on-surface dark:text-secondary-fixed focus:border-primary focus:ring-1 focus:ring-primary px-3.5 py-2.5 text-sm" />
         </div>
-
-        <div style="margin-top: 10px;">
-          <label for="subject-body">Body snippet</label>
-          <textarea id="subject-body" rows="4" placeholder="Paste the email body so subject/body fit can be checked."></textarea>
+        <div>
+          <label for="subject-goal" class="block text-xs font-semibold text-secondary dark:text-secondary-fixed-dim uppercase tracking-wider mb-2">Goal / Offer</label>
+          <input id="subject-goal" type="text" placeholder="increase reply rate" autocomplete="off" class="w-full rounded-xl border border-outline-variant dark:border-outline bg-surface-container-lowest dark:bg-on-secondary-fixed text-on-surface dark:text-secondary-fixed focus:border-primary focus:ring-1 focus:ring-primary px-3.5 py-2.5 text-sm" />
         </div>
+      </div>
 
-        <button id="generate-subjects" type="button" class="btn-primary" style="margin-top: 10px;">Generate Subject Lines</button>
-
-        <div id="subject-intel-summary" class="rewrite-proof" style="margin-top: 12px;">
-          <p class="rewrite-proof-title">Top pick</p>
-          <p id="subject-intel-top-pick" class="main-issue">Run generation to see the best subject.</p>
-          <p id="subject-intel-top-reason" class="micro">Subject/ICP fit will appear here.</p>
+      <!-- Dropdowns Grid -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label for="subject-email-type" class="block text-xs font-semibold text-secondary dark:text-secondary-fixed-dim uppercase tracking-wider mb-2">Email type</label>
+          <select id="subject-email-type" class="w-full rounded-xl border border-outline-variant dark:border-outline bg-surface-container-lowest dark:bg-on-secondary-fixed text-on-surface dark:text-secondary-fixed focus:border-primary focus:ring-1 focus:ring-primary px-3.5 py-2.5 text-sm">
+            <option value="cold" selected>Cold Outreach</option>
+            <option value="followup">Follow-up</option>
+            <option value="warm">Warm / Newsletter</option>
+          </select>
         </div>
-
-        <div id="subject-intel-warning" class="rewrite-proof" style="margin-top: 10px;">
-          <p class="rewrite-proof-title">Warnings</p>
-          <ul id="subject-intel-warning-list" class="compact-list">
-            <li>Generate subjects to see body-match and spam-risk notes.</li>
-          </ul>
+        <div>
+          <label for="subject-tone" class="block text-xs font-semibold text-secondary dark:text-secondary-fixed-dim uppercase tracking-wider mb-2">Tone</label>
+          <select id="subject-tone" class="w-full rounded-xl border border-outline-variant dark:border-outline bg-surface-container-lowest dark:bg-on-secondary-fixed text-on-surface dark:text-secondary-fixed focus:border-primary focus:ring-1 focus:ring-primary px-3.5 py-2.5 text-sm">
+            <option value="internal" selected>Internal-looking</option>
+            <option value="casual">Casual / Friendly</option>
+            <option value="direct">Direct / Value-first</option>
+          </select>
         </div>
+      </div>
 
-        <div class="rewrite-proof" style="margin-top: 10px;">
-          <p class="rewrite-proof-title">Top picks</p>
-          <ul id="subject-intel-top-list" class="compact-list">
-            <li>High-performing subject suggestions will appear here.</li>
-          </ul>
-        </div>
+      <!-- Context Area -->
+      <div>
+        <label for="subject-context" class="block text-xs font-semibold text-secondary dark:text-secondary-fixed-dim uppercase tracking-wider mb-2">Context (Optional)</label>
+        <textarea id="subject-context" rows="3" placeholder="Describe context, e.g. sending outbound outreach to SaaS sales directors..." class="w-full rounded-xl border border-outline-variant dark:border-outline bg-surface-container-lowest dark:bg-on-secondary-fixed text-on-surface dark:text-secondary-fixed focus:border-primary focus:ring-1 focus:ring-primary px-3.5 py-2.5 text-sm"></textarea>
+      </div>
 
-        <div class="rewrite-proof" style="margin-top: 10px;">
-          <p class="rewrite-proof-title">All generated options</p>
-          <ul id="subject-intel-all-list" class="compact-list">
-            <li>Generated subject lines will be scored and listed here.</li>
-          </ul>
+      <!-- Body snippet Area -->
+      <div>
+        <label for="subject-body" class="block text-xs font-semibold text-secondary dark:text-secondary-fixed-dim uppercase tracking-wider mb-2">Email body snippet (Highly Recommended)</label>
+        <textarea id="subject-body" rows="4" placeholder="Paste the first few paragraphs of your email body to scan alignment and check subject/body fit." class="w-full rounded-xl border border-outline-variant dark:border-outline bg-surface-container-lowest dark:bg-on-secondary-fixed text-on-surface dark:text-secondary-fixed focus:border-primary focus:ring-1 focus:ring-primary px-3.5 py-2.5 text-sm"></textarea>
+      </div>
+
+      <!-- Generate Button -->
+      <button id="generate-subjects" type="button" class="w-full bg-primary hover:bg-surface-tint text-on-primary font-semibold py-3 px-4 rounded-xl transition-all shadow-md flex items-center justify-center gap-sm">
+        <span class="material-symbols-outlined text-xl" style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
+        Generate Subject Lines
+      </button>
+    </form>
+
+    <!-- Right Column: Results Section (5 cols) -->
+    <div class="lg:col-span-5 space-y-6">
+      
+      <!-- Top Pick Card -->
+      <div id="subject-intel-summary" class="bg-surface-container-lowest dark:bg-slate-900/40 border border-outline-variant/30 dark:border-outline/30 rounded-2xl p-6 shadow-sm">
+        <div class="flex items-center justify-between mb-3">
+          <span class="text-xs font-semibold text-primary dark:text-primary-fixed uppercase tracking-wider flex items-center gap-1.5">
+            <span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">star</span>
+            Top Pick
+          </span>
         </div>
-      </section>
+        <p id="subject-intel-top-pick" class="text-lg font-bold text-on-surface dark:text-white leading-snug">Run generation to see the best subject.</p>
+        <p id="subject-intel-top-reason" class="text-xs text-secondary dark:text-secondary-fixed-dim mt-2 border-t border-outline-variant/10 dark:border-outline/10 pt-2 leading-relaxed font-medium">Subject/ICP fit will appear here.</p>
+      </div>
+
+      <!-- Warnings Card -->
+      <div id="subject-intel-warning" class="bg-surface-container-lowest dark:bg-slate-900/40 border border-outline-variant/30 dark:border-outline/30 rounded-2xl p-6 shadow-sm">
+        <div class="flex items-center justify-between mb-4">
+          <span class="text-xs font-semibold text-error dark:text-error uppercase tracking-wider flex items-center gap-1.5">
+            <span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">warning</span>
+            Risk Analysis & Warnings
+          </span>
+        </div>
+        <ul id="subject-intel-warning-list" class="space-y-2">
+          <li class="text-sm text-secondary dark:text-secondary-fixed-dim leading-relaxed p-3.5 bg-surface dark:bg-slate-900 border border-outline-variant/10 dark:border-outline/10 rounded-xl">
+            Generate subjects to see body-match and spam-risk notes.
+          </li>
+        </ul>
+      </div>
+
+      <!-- Top Picks Card -->
+      <div class="bg-surface-container-lowest dark:bg-slate-900/40 border border-outline-variant/30 dark:border-outline/30 rounded-2xl p-6 shadow-sm">
+        <div class="flex items-center justify-between mb-4">
+          <span class="text-xs font-semibold text-primary dark:text-primary-fixed uppercase tracking-wider flex items-center gap-1.5">
+            <span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">recommend</span>
+            Top Suggested Subjects
+          </span>
+        </div>
+        <ul id="subject-intel-top-list" class="space-y-2">
+          <li class="text-sm text-secondary dark:text-secondary-fixed-dim leading-relaxed p-3.5 bg-surface dark:bg-slate-900 border border-outline-variant/10 dark:border-outline/10 rounded-xl">
+            High-performing subject suggestions will appear here.
+          </li>
+        </ul>
+      </div>
+
+      <!-- All Generated Options Card -->
+      <div class="bg-surface-container-lowest dark:bg-slate-900/40 border border-outline-variant/30 dark:border-outline/30 rounded-2xl p-6 shadow-sm">
+        <div class="flex items-center justify-between mb-4">
+          <span class="text-xs font-semibold text-secondary dark:text-secondary-fixed-dim uppercase tracking-wider flex items-center gap-1.5">
+            <span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">list</span>
+            All Strategies Checked
+          </span>
+        </div>
+        <ul id="subject-intel-all-list" class="space-y-2">
+          <li class="text-sm text-secondary dark:text-secondary-fixed-dim leading-relaxed p-3.5 bg-surface dark:bg-slate-900 border border-outline-variant/10 dark:border-outline/10 rounded-xl">
+            Generated subject lines will be scored and listed here.
+          </li>
+        </ul>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<style>
+  #subject-intel-warning-list li {
+    padding: 12px 14px;
+    border-radius: 12px;
+    font-size: 13.5px;
+    line-height: 20px;
+    background-color: rgba(254, 242, 242, 0.8);
+    color: #93000a;
+    border: 1px solid #ffdad6;
+  }
+  .dark #subject-intel-warning-list li {
+    background-color: rgba(186, 26, 26, 0.1);
+    color: #ffdad6;
+    border-color: rgba(186, 26, 26, 0.3);
+  }
+
+  #subject-intel-warning-list li:only-child {
+    background-color: transparent;
+    color: #545f73;
+    border-color: rgba(188, 202, 193, 0.3);
+  }
+  .dark #subject-intel-warning-list li:only-child {
+    background-color: transparent;
+    color: #bcc7de;
+    border-color: rgba(109, 122, 115, 0.3);
+  }
+
+  #subject-intel-top-list li {
+    padding: 12px 14px;
+    border-radius: 12px;
+    font-size: 13.5px;
+    line-height: 20px;
+    background-color: #f0fdf4;
+    color: #166534;
+    border: 1px solid #bbf7d0;
+    font-weight: 500;
+  }
+  .dark #subject-intel-top-list li {
+    background-color: rgba(22, 163, 74, 0.1);
+    color: #86f8c9;
+    border-color: rgba(22, 163, 74, 0.2);
+  }
+
+  #subject-intel-top-list li:only-child {
+    background-color: transparent;
+    color: #545f73;
+    border-color: rgba(188, 202, 193, 0.3);
+    font-weight: normal;
+  }
+  .dark #subject-intel-top-list li:only-child {
+    background-color: transparent;
+    color: #bcc7de;
+    border-color: rgba(109, 122, 115, 0.3);
+    font-weight: normal;
+  }
+
+  #subject-intel-all-list li {
+    padding: 12px 14px;
+    border-radius: 12px;
+    font-size: 13.5px;
+    line-height: 20px;
+    background-color: #f8f9ff;
+    color: #0b1c30;
+    border: 1px solid #e5eeff;
+  }
+  .dark #subject-intel-all-list li {
+    background-color: rgba(21, 32, 50, 0.4);
+    color: #d8e3fb;
+    border-color: rgba(21, 32, 50, 0.8);
+  }
+
+  #subject-intel-all-list li:only-child {
+    background-color: transparent;
+    color: #545f73;
+    border-color: rgba(188, 202, 193, 0.3);
+  }
+  .dark #subject-intel-all-list li:only-child {
+    background-color: transparent;
+    color: #bcc7de;
+    border-color: rgba(109, 122, 115, 0.3);
+  }
+</style>
 {% endblock %}

@@ -1,28 +1,63 @@
-<div class="brand-wrap">
-  <div class="brand" aria-label="InboxGuard">
-    <img src="/static/branding/logo.png" class="logo-icon" alt="InboxGuard logo" />
-    <span class="logo-text">InboxGuard</span>
-  </div>
-  <p class="sub">Fix Before You Send</p>
+<div class="mb-lg px-2">
+  <a href="/" class="text-headline-sm font-headline-sm font-bold text-primary dark:text-primary-fixed flex items-center gap-xs">
+    <span class="material-symbols-outlined" data-weight="fill" style="font-variation-settings: 'FILL' 1;">security</span>
+    InboxGuard
+  </a>
+  <p class="font-label-sm text-label-sm text-on-surface-variant dark:text-secondary-fixed-dim">Deliverability Suite</p>
 </div>
-<nav>
-  <p class="nav-group-label">Core</p>
-  <button id="tab-threat-scan" class="nav-item {{ 'active' if current_page == 'app' else '' }}" type="button" onclick="window.location.href='/app?tab=threat-scan'">Scan Email</button>
 
-  <p class="nav-group-label">Create</p>
-  <button class="nav-item {{ 'active' if current_page == 'subject-generator' else '' }}" type="button" onclick="window.location.href='/subject-generator'">Subject Generator</button>
+<button class="w-full bg-primary text-on-primary rounded-lg py-3 px-4 font-label-md text-label-md flex items-center justify-center gap-sm mb-lg hover:opacity-90 transition-opacity" type="button" onclick="window.location.href='/app?tab=threat-scan'">
+  <span class="material-symbols-outlined">add</span>
+  New Scan
+</button>
 
-  <p class="nav-group-label">Advanced</p>
+<nav class="flex flex-col gap-xs flex-grow">
+  <p class="font-label-sm text-label-sm text-secondary uppercase tracking-wider mb-2 px-2">Core</p>
+  <button id="tab-threat-scan" class="flex items-center gap-sm px-3 py-2 w-full text-left rounded-lg font-label-md text-label-md transition-all {{ 'bg-secondary-container dark:bg-secondary text-on-secondary-container dark:text-on-secondary scale-[0.98]' if current_page == 'app' else 'text-on-surface-variant dark:text-secondary-fixed-dim hover:bg-surface-container-high dark:hover:bg-secondary-fixed-variant' }}" type="button" {% if current_page != 'app' %}onclick="window.location.href='/app?tab=threat-scan'"{% endif %}>
+    <span class="material-symbols-outlined">document_scanner</span>
+    Scan Email
+  </button>
+
+  <p class="font-label-sm text-label-sm text-secondary uppercase tracking-wider my-2 px-2">Create</p>
+  <button class="flex items-center gap-sm px-3 py-2 w-full text-left rounded-lg font-label-md text-label-md transition-all {{ 'bg-secondary-container dark:bg-secondary text-on-secondary-container dark:text-on-secondary scale-[0.98]' if current_page == 'subject-generator' else 'text-on-surface-variant dark:text-secondary-fixed-dim hover:bg-surface-container-high dark:hover:bg-secondary-fixed-variant' }}" type="button" onclick="window.location.href='/subject-generator'">
+    <span class="material-symbols-outlined">edit_note</span>
+    Subject Generator
+  </button>
+
+  <p class="font-label-sm text-label-sm text-secondary uppercase tracking-wider my-2 px-2">Advanced</p>
   <details class="sidebar-more" open>
-    <summary>Show advanced tools</summary>
-    <button class="nav-item tool-nav-btn advanced-tool" type="button" data-tool="campaign-debugger" onclick="window.location.href='/app?tool=campaign-debugger'">Campaign Debugger</button>
-    <button class="nav-item tool-nav-btn advanced-tool" type="button" data-tool="blacklist" onclick="window.location.href='/app?tool=blacklist'">Domain Check</button>
-    <button class="nav-item tool-nav-btn advanced-tool" type="button" data-tool="seed" onclick="window.location.href='/app?tool=seed'">Seed Testing</button>
-    <button class="nav-item tool-nav-btn advanced-tool" type="button" data-tool="bulk" onclick="window.location.href='/app?tool=bulk'">Bulk Scan</button>
-    <button class="nav-item tool-nav-btn advanced-tool" type="button" data-tool="ops" onclick="window.location.href='/app?tool=ops'">API + Team</button>
+    <summary class="font-label-sm text-label-sm text-secondary uppercase tracking-wider mb-2 px-2 cursor-pointer hover:text-primary transition-colors">Show advanced tools</summary>
+    <div class="flex flex-col gap-xs pl-2">
+      <button class="nav-item tool-nav-btn advanced-tool flex items-center gap-sm px-3 py-2 w-full text-left rounded-lg font-label-md text-label-md text-on-surface-variant dark:text-secondary-fixed-dim hover:bg-surface-container-high dark:hover:bg-secondary-fixed-variant transition-colors" type="button" data-tool="campaign-debugger" {% if current_page != 'app' %}onclick="window.location.href='/app?tool=campaign-debugger'"{% endif %}>
+        <span class="material-symbols-outlined">bug_report</span>
+        Campaign Debugger
+      </button>
+      <button class="nav-item tool-nav-btn advanced-tool flex items-center gap-sm px-3 py-2 w-full text-left rounded-lg font-label-md text-label-md text-on-surface-variant dark:text-secondary-fixed-dim hover:bg-surface-container-high dark:hover:bg-secondary-fixed-variant transition-colors" type="button" data-tool="blacklist" {% if current_page != 'app' %}onclick="window.location.href='/app?tool=blacklist'"{% endif %}>
+        <span class="material-symbols-outlined">dns</span>
+        Domain Check
+      </button>
+      <button class="nav-item tool-nav-btn advanced-tool flex items-center gap-sm px-3 py-2 w-full text-left rounded-lg font-label-md text-label-md text-on-surface-variant dark:text-secondary-fixed-dim hover:bg-surface-container-high dark:hover:bg-secondary-fixed-variant transition-colors" type="button" data-tool="seed" {% if current_page != 'app' %}onclick="window.location.href='/app?tool=seed'"{% endif %}>
+        <span class="material-symbols-outlined">science</span>
+        Seed Testing
+      </button>
+      <button class="nav-item tool-nav-btn advanced-tool flex items-center gap-sm px-3 py-2 w-full text-left rounded-lg font-label-md text-label-md text-on-surface-variant dark:text-secondary-fixed-dim hover:bg-surface-container-high dark:hover:bg-secondary-fixed-variant transition-colors" type="button" data-tool="bulk" {% if current_page != 'app' %}onclick="window.location.href='/app?tool=bulk'"{% endif %}>
+        <span class="material-symbols-outlined">mark_as_unread</span>
+        Bulk Scan
+      </button>
+      <button class="nav-item tool-nav-btn advanced-tool flex items-center gap-sm px-3 py-2 w-full text-left rounded-lg font-label-md text-label-md text-on-surface-variant dark:text-secondary-fixed-dim hover:bg-surface-container-high dark:hover:bg-secondary-fixed-variant transition-colors" type="button" data-tool="ops" {% if current_page != 'app' %}onclick="window.location.href='/app?tool=ops'"{% endif %}>
+        <span class="material-symbols-outlined">group</span>
+        API + Team
+      </button>
+    </div>
   </details>
 
-  <p class="nav-group-label">System</p>
-  <button class="nav-item" type="button" onclick="window.location.href='/pricing'">Pricing</button>
-  <button class="nav-item" type="button" onclick="window.location.href='/profile'">Profile</button>
+  <p class="font-label-sm text-label-sm text-secondary uppercase tracking-wider my-2 px-2">System</p>
+  <button class="flex items-center gap-sm px-3 py-2 w-full text-left rounded-lg font-label-md text-label-md text-on-surface-variant dark:text-secondary-fixed-dim hover:bg-surface-container-high dark:hover:bg-secondary-fixed-variant transition-colors" type="button" onclick="window.location.href='/pricing'">
+    <span class="material-symbols-outlined">payments</span>
+    Pricing
+  </button>
+  <button class="flex items-center gap-sm px-3 py-2 w-full text-left rounded-lg font-label-md text-label-md text-on-surface-variant dark:text-secondary-fixed-dim hover:bg-surface-container-high dark:hover:bg-secondary-fixed-variant transition-colors" type="button" onclick="window.location.href='/profile'">
+    <span class="material-symbols-outlined">person</span>
+    Profile
+  </button>
 </nav>

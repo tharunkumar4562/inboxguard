@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html class="light" lang="en">
   <head>
     <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-WXGNG9TEFK"></script>
@@ -12,7 +12,7 @@
     </script>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#f8fafc" />
+    <meta name="theme-color" content="#f8f9ff" />
     <script>
       (function () {
         try {
@@ -25,7 +25,7 @@
           root.style.colorScheme = theme === "dark" ? "dark" : "light";
           const meta = document.querySelector('meta[name="theme-color"]');
           if (meta) {
-            meta.setAttribute("content", theme === "dark" ? "#0f172a" : "#f8fafc");
+            meta.setAttribute("content", theme === "dark" ? "#111c2d" : "#f8f9ff");
           }
         } catch (error) {
         }
@@ -34,13 +34,126 @@
     <title>{{ page_title }}</title>
     <meta name="description" content="{{ meta_description }}" />
     <link rel="canonical" href="{{ canonical_url }}" />
-    <link rel="icon" type="image/png" href="/static/branding/logo.png" />
-    <link rel="shortcut icon" href="/static/branding/logo.png" />
+    <link rel="icon" type="image/png" sizes="48x48" href="/static/branding/favicon-48.png?v=20260408-favicon-1" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/static/branding/favicon-192.png?v=20260408-favicon-1" />
+    <link rel="shortcut icon" href="/favicon.ico?v=20260408-favicon-1" />
+    
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="/static/css/styles.css?v=20260406-seo-fix-1" />
-    <link rel="stylesheet" href="/static/theme-overrides.css?v=20260410-theme-adapt-3" />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+
+    <style>
+      .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      }
+      .fill-icon {
+        font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      }
+    </style>
+
+    <script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+              "on-secondary-fixed": "#111c2d",
+              "surface-container": "#e5eeff",
+              "primary": "#1d9e75",
+              "on-error-container": "#93000a",
+              "on-primary-fixed": "#002115",
+              "surface-dim": "#cbdbf5",
+              "secondary": "#545f73",
+              "on-primary-fixed-variant": "#00513a",
+              "outline-variant": "#bccac1",
+              "primary-container": "#d4f8e6",
+              "on-surface-variant": "#3d4943",
+              "tertiary-fixed": "#d8e2ff",
+              "secondary-fixed": "#d8e3fb",
+              "surface-container-lowest": "#ffffff",
+              "primary-fixed-dim": "#68dbae",
+              "inverse-primary": "#68dbae",
+              "on-tertiary-container": "#fefcff",
+              "on-secondary-container": "#586377",
+              "on-secondary-fixed-variant": "#3c475a",
+              "tertiary-container": "#2170e4",
+              "inverse-on-surface": "#eaf1ff",
+              "outline": "#6d7a73",
+              "tertiary-fixed-dim": "#adc6ff",
+              "on-primary": "#ffffff",
+              "on-primary-container": "#002115",
+              "primary-fixed": "#86f8c9",
+              "surface": "#f8f9ff",
+              "on-tertiary-fixed": "#001a42",
+              "background": "#f8f9ff",
+              "surface-container-high": "#dce9ff",
+              "on-tertiary": "#ffffff",
+              "on-tertiary-fixed-variant": "#004395",
+              "on-secondary": "#ffffff",
+              "surface-container-low": "#eff4ff",
+              "on-error": "#ffffff",
+              "surface-bright": "#f8f9ff",
+              "on-surface": "#0b1c30",
+              "surface-variant": "#d3e4fe",
+              "surface-tint": "#1d9e75",
+              "error-container": "#ffdad6",
+              "secondary-fixed-dim": "#bcc7de",
+              "tertiary": "#0058be",
+              "surface-container-highest": "#d3e4fe",
+              "error": "#ba1a1a",
+              "secondary-container": "#d5e0f8",
+              "on-background": "#0b1c30",
+              "inverse-surface": "#213145"
+            },
+            "borderRadius": {
+              "DEFAULT": "0.25rem",
+              "lg": "0.5rem",
+              "xl": "0.75rem",
+              "full": "9999px",
+              "2xl": "1rem"
+            },
+            "spacing": {
+              "sm": "12px",
+              "lg": "24px",
+              "md": "16px",
+              "margin-desktop": "40px",
+              "xxl": "48px",
+              "xs": "4px",
+              "xl": "32px",
+              "base": "8px",
+              "margin-mobile": "16px",
+              "gutter": "24px"
+            },
+            "fontFamily": {
+              "body-md": ["Inter"],
+              "headline-md": ["Inter"],
+              "label-md": ["Inter"],
+              "headline-lg-mobile": ["Inter"],
+              "label-sm": ["Inter"],
+              "body-sm": ["Inter"],
+              "body-lg": ["Inter"],
+              "headline-lg": ["Inter"],
+              "display-lg": ["Inter"],
+              "headline-sm": ["Inter"]
+            },
+            "fontSize": {
+              "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+              "headline-md": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+              "label-md": ["14px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600" }],
+              "headline-lg-mobile": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+              "label-sm": ["12px", { "lineHeight": "16px", "fontWeight": "500" }],
+              "body-sm": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+              "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }],
+              "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+              "display-lg": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+              "headline-sm": ["20px", { "lineHeight": "28px", "fontWeight": "600" }]
+            }
+          }
+        }
+      }
+    </script>
     <script>
       (function () {
         const storageKey = "ig_theme";
@@ -60,7 +173,7 @@
         function syncThemeColor(theme) {
           const themeColorMeta = document.querySelector('meta[name="theme-color"]');
           if (themeColorMeta) {
-            themeColorMeta.setAttribute("content", theme === "dark" ? "#0f172a" : "#f8fafc");
+            themeColorMeta.setAttribute("content", theme === "dark" ? "#111c2d" : "#f8f9ff");
           }
         }
 
@@ -88,114 +201,171 @@
           syncThemeColor(nextTheme);
           syncThemeButton(nextTheme);
         };
-
-        if (!stored && typeof window.matchMedia === "function") {
-          const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
-          const syncSystemTheme = () => {
-            if (!getStoredTheme()) {
-              const systemTheme = mediaQuery.matches ? "dark" : "light";
-              root.dataset.theme = systemTheme;
-              root.classList.toggle("dark", systemTheme === "dark");
-              root.style.colorScheme = systemTheme === "dark" ? "dark" : "light";
-              syncThemeColor(systemTheme);
-              syncThemeButton(systemTheme);
-            }
-          };
-
-          if (typeof mediaQuery.addEventListener === "function") {
-            mediaQuery.addEventListener("change", syncSystemTheme);
-          } else if (typeof mediaQuery.addListener === "function") {
-            mediaQuery.addListener(syncSystemTheme);
-          }
-        }
       })();
     </script>
   </head>
-  <body>
-    <div class="profile-shell">
-      <header class="profile-topbar">
-        <button id="theme-toggle" type="button" class="profile-back theme-toggle" data-theme-toggle onclick="toggleInboxGuardTheme()" aria-pressed="false">🌙 Dark</button>
-        <a class="profile-back" href="/app">Back to scan</a>
-        {% if authenticated and profile.is_admin %}
-        <a class="profile-back" href="/admin">Admin dashboard</a>
-        {% endif %}
-        {% if authenticated %}
-        <form method="post" action="/auth/logout">
-          <button type="submit" class="profile-logout">Log out</button>
-        </form>
-        {% endif %}
-      </header>
+  <body class="bg-background dark:bg-on-secondary-fixed text-on-surface dark:text-secondary-fixed font-body-md antialiased min-h-screen flex flex-col">
+    <!-- TopNavBar -->
+    <nav class="bg-surface-container-lowest dark:bg-on-secondary-fixed border-b border-outline-variant dark:border-outline flat no shadows z-50 sticky top-0">
+      <div class="flex justify-between items-center w-full px-margin-mobile md:px-margin-desktop max-w-[1200px] mx-auto h-16">
+        <div class="flex items-center gap-lg">
+          <a class="text-headline-sm font-headline-sm font-bold text-primary dark:text-primary-fixed flex items-center gap-xs no-underline" href="/">
+            <span class="material-symbols-outlined fill-icon text-primary dark:text-primary-fixed">security</span>
+            InboxGuard
+          </a>
+        </div>
+        <div class="flex items-center gap-md">
+          <button id="theme-toggle" type="button" class="text-secondary dark:text-secondary-fixed-dim hover:text-primary dark:hover:text-primary-fixed-dim transition-colors font-body-md text-body-md" data-theme-toggle onclick="window.toggleInboxGuardTheme && window.toggleInboxGuardTheme()" aria-pressed="false">🌙 Dark</button>
+          <a class="text-secondary dark:text-secondary-fixed-dim hover:text-primary dark:hover:text-primary-fixed-dim transition-colors font-body-md text-body-md no-underline" href="/app">Back to scan</a>
+          {% if authenticated and profile.is_admin %}
+          <a class="text-secondary dark:text-secondary-fixed-dim hover:text-primary dark:hover:text-primary-fixed-dim transition-colors font-body-md text-body-md no-underline" href="/admin">Admin dashboard</a>
+          {% endif %}
+          {% if authenticated %}
+          <form method="post" action="/auth/logout" class="inline">
+            <button type="submit" class="bg-error/10 hover:bg-error/20 text-error px-3 py-1.5 rounded-lg font-label-md text-label-md transition-colors">Log out</button>
+          </form>
+          {% endif %}
+        </div>
+      </div>
+    </nav>
 
-      <main class="profile-main">
-        {% if not authenticated %}
-        <section class="profile-card">
-          <img id="profile-avatar-live" class="profile-avatar-large" src="/static/branding/logo.png" alt="InboxGuard" />
-          <div>
-            <h1 id="profile-name-live">Profile</h1>
-            <p id="profile-email-live" class="profile-email">Sign in to see your account, usage, and plan.</p>
+    <main class="flex-grow max-w-[1200px] mx-auto w-full px-margin-mobile md:px-margin-desktop py-xxl">
+      <!-- Title Header -->
+      <div class="mb-xl">
+        <h2 class="font-headline-lg text-headline-lg text-on-surface dark:text-secondary-fixed mb-xs">Profile & Settings</h2>
+        <p class="font-body-md text-body-md text-on-surface-variant dark:text-secondary-fixed-dim">Monitor your email health metrics, active streaks, and scan volume usage.</p>
+      </div>
+
+      {% if not authenticated %}
+      <!-- Guest State -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-lg items-start">
+        <div class="lg:col-span-4 bg-surface-container-lowest dark:bg-on-secondary-fixed border border-outline-variant dark:border-outline rounded-2xl p-lg text-center shadow-sm">
+          <img id="profile-avatar-live" class="w-24 h-24 rounded-full mx-auto mb-md border-2 border-outline-variant object-cover" src="/static/branding/logo.png" alt="InboxGuard" />
+          <h3 id="profile-name-live" class="font-headline-sm text-headline-sm text-on-surface dark:text-secondary-fixed">Guest Profile</h3>
+          <p id="profile-email-live" class="text-sm text-on-surface-variant dark:text-secondary-fixed-dim mt-xs">Sign in to check your account stats and limits.</p>
+        </div>
+
+        <div class="lg:col-span-8 bg-surface-container-lowest dark:bg-on-secondary-fixed border border-outline-variant dark:border-outline rounded-2xl p-lg shadow-sm text-center">
+          <span class="material-symbols-outlined text-primary text-[48px] mb-md">account_circle</span>
+          <h4 class="font-headline-sm text-headline-sm text-on-surface dark:text-secondary-fixed mb-sm">Access Your Profile</h4>
+          <p class="text-on-surface-variant dark:text-secondary-fixed-dim max-w-md mx-auto mb-lg">
+            Authenticate to view your scanning dashboard metrics, recent scan history, streaks, and account privileges.
+          </p>
+          <div class="flex justify-center gap-md">
+            <a class="bg-primary hover:bg-surface-tint text-on-primary font-label-md text-label-md px-6 py-2.5 rounded-xl transition-all no-underline shadow-sm" href="/app?auth=1">Sign In Now</a>
+            <a class="border border-outline hover:bg-surface-container-low dark:border-outline dark:hover:bg-outline/10 text-on-surface dark:text-secondary-fixed font-label-md text-label-md px-6 py-2.5 rounded-xl transition-all no-underline" href="/subject-generator">Subject Generator</a>
+          </div>
+        </div>
+      </div>
+
+      {% else %}
+      <!-- Authenticated User State -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-lg items-start">
+        <!-- Left Column: User details & Health Circle -->
+        <section class="lg:col-span-4 bg-surface-container-lowest dark:bg-on-secondary-fixed border border-outline-variant dark:border-outline rounded-2xl p-lg shadow-sm text-center">
+          <div class="relative w-24 h-24 mx-auto mb-md">
+            <img id="profile-avatar-live" class="w-full h-full rounded-full border-2 border-primary object-cover" src="{{ profile.avatar_url }}" alt="{{ profile.name }}" />
+            <span class="absolute bottom-0 right-0 w-6 h-6 bg-primary border-2 border-surface-container-lowest dark:border-on-secondary-fixed rounded-full flex items-center justify-center">
+              <span class="material-symbols-outlined text-on-primary text-[14px] font-bold">verified_user</span>
+            </span>
+          </div>
+          <h3 id="profile-name-live" class="font-headline-sm text-headline-sm text-on-surface dark:text-secondary-fixed">{{ profile.name }}</h3>
+          <p id="profile-email-live" class="text-sm text-on-surface-variant dark:text-secondary-fixed-dim mt-xs mb-lg break-all">{{ profile.email }}</p>
+
+          <div class="border-t border-outline-variant dark:border-outline pt-lg">
+            <span class="text-xs font-bold text-primary uppercase tracking-wider">Overall Email Health</span>
+            <div class="mt-md flex justify-center items-center">
+              <!-- Radial score indicator -->
+              <div class="relative w-32 h-32 flex items-center justify-center">
+                <svg class="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                  <circle cx="50" cy="50" r="40" stroke="currentColor" stroke-width="8" class="text-surface-container-low dark:text-outline/10" fill="transparent"></circle>
+                  <circle cx="50" cy="50" r="40" stroke="currentColor" stroke-width="8" class="text-primary" fill="transparent"
+                          stroke-dasharray="251.2" stroke-dashoffset="{{ 251.2 - (251.2 * (profile.health_score or 0) / 100) }}"></circle>
+                </svg>
+                <div class="absolute flex flex-col items-center">
+                  <span id="usage-health-score" class="text-3xl font-bold text-on-surface dark:text-secondary-fixed">{{ profile.health_score or 0 }}</span>
+                  <span class="text-[10px] text-on-surface-variant dark:text-secondary-fixed-dim uppercase font-bold tracking-wider">Score</span>
+                </div>
+              </div>
+            </div>
+            <p class="text-xs text-on-surface-variant dark:text-secondary-fixed-dim mt-md">This score represents the mean health of your analyzed email templates.</p>
           </div>
         </section>
 
-        <section class="profile-stat-card" style="text-align:center; padding: 24px;">
-          <p class="profile-stat-label">Account access</p>
-          <p class="profile-small" style="margin-top: 8px;">Your profile lives here, not on the landing page.</p>
-          <div style="display:flex; gap:12px; justify-content:center; flex-wrap:wrap; margin-top:16px;">
-            <a class="profile-logout" href="/app?auth=1" style="text-decoration:none; display:inline-flex; align-items:center; justify-content:center;">Sign in</a>
-            <a class="profile-back" href="/subject-generator">Subject Generator</a>
+        <!-- Right Column: Stats Grid & Results -->
+        <section class="lg:col-span-8 space-y-lg">
+          <!-- Stats Grid -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-md">
+            <article class="bg-surface-container-lowest dark:bg-on-secondary-fixed border border-outline-variant dark:border-outline rounded-2xl p-md shadow-sm">
+              <span class="material-symbols-outlined text-primary text-[28px] mb-xs">local_fire_department</span>
+              <p class="text-xs font-medium text-on-surface-variant dark:text-secondary-fixed-dim uppercase tracking-wider">Current Streak</p>
+              <p id="usage-streak-days" class="text-2xl font-bold text-on-surface dark:text-secondary-fixed mt-xs">{{ profile.streak_days or 0 }} day(s)</p>
+            </article>
+
+            <article class="bg-surface-container-lowest dark:bg-on-secondary-fixed border border-outline-variant dark:border-outline rounded-2xl p-md shadow-sm">
+              <span class="material-symbols-outlined text-primary text-[28px] mb-xs">check_circle</span>
+              <p class="text-xs font-medium text-on-surface-variant dark:text-secondary-fixed-dim uppercase tracking-wider">Scans Used</p>
+              <p id="usage-scans-used" class="text-2xl font-bold text-on-surface dark:text-secondary-fixed mt-xs">{{ profile.scans_used }}</p>
+            </article>
+
+            <article class="bg-surface-container-lowest dark:bg-on-secondary-fixed border border-outline-variant dark:border-outline rounded-2xl p-md shadow-sm">
+              <span class="material-symbols-outlined text-primary text-[28px] mb-xs">alternate_email</span>
+              <p class="text-xs font-medium text-on-surface-variant dark:text-secondary-fixed-dim uppercase tracking-wider">Emails Scanned</p>
+              <p id="usage-emails-scanned" class="text-2xl font-bold text-on-surface dark:text-secondary-fixed mt-xs">{{ profile.emails_scanned_count }}</p>
+            </article>
+
+            <article class="bg-surface-container-lowest dark:bg-on-secondary-fixed border border-outline-variant dark:border-outline rounded-2xl p-md shadow-sm">
+              <span class="material-symbols-outlined text-primary text-[28px] mb-xs">auto_fix_high</span>
+              <p class="text-xs font-medium text-on-surface-variant dark:text-secondary-fixed-dim uppercase tracking-wider">Rewrite Clicks</p>
+              <p id="usage-rewrite-clicked" class="text-2xl font-bold text-on-surface dark:text-secondary-fixed mt-xs">{{ profile.rewrite_clicked }}</p>
+            </article>
+
+            <article class="bg-surface-container-lowest dark:bg-on-secondary-fixed border border-outline-variant dark:border-outline rounded-2xl p-md shadow-sm sm:col-span-2 md:col-span-2">
+              <span class="material-symbols-outlined text-primary text-[28px] mb-xs">schedule</span>
+              <p class="text-xs font-medium text-on-surface-variant dark:text-secondary-fixed-dim uppercase tracking-wider">Last Active</p>
+              <p id="usage-last-active" class="text-lg font-bold text-on-surface dark:text-secondary-fixed mt-sm truncate">{{ profile.last_active or '—' }}</p>
+            </article>
+          </div>
+
+          <!-- Recent Outcomes -->
+          <div class="bg-surface-container-lowest dark:bg-on-secondary-fixed border border-outline-variant dark:border-outline rounded-2xl p-lg shadow-sm">
+            <h4 class="font-headline-sm text-headline-sm text-on-surface dark:text-secondary-fixed mb-md flex items-center gap-xs">
+              <span class="material-symbols-outlined text-primary">history</span>
+              <span>Recent Outcomes</span>
+            </h4>
+            <ul id="usage-recent-results" class="space-y-sm divide-y divide-outline-variant dark:divide-outline/10">
+              {% if profile.recent_results %}
+                {% for item in profile.recent_results %}
+                <li class="pt-sm first:pt-0 flex items-center justify-between text-sm">
+                  <div class="flex items-center gap-xs">
+                    <span class="material-symbols-outlined text-primary text-[20px]">verified</span>
+                    <span class="font-medium text-on-surface dark:text-secondary-fixed">{{ item.outcome|capitalize }}</span>
+                  </div>
+                  <span class="text-xs px-2.5 py-0.5 rounded-full border border-outline-variant dark:border-outline text-on-surface-variant dark:text-secondary-fixed-dim bg-surface-container-low dark:bg-on-secondary-fixed/50">
+                    {{ item.to_risk_band or item.from_risk_band or 'No band' }}
+                  </span>
+                </li>
+                {% endfor %}
+              {% else %}
+                <li class="text-sm text-on-surface-variant dark:text-secondary-fixed-dim flex items-center gap-xs py-2">
+                  <span class="material-symbols-outlined text-outline text-[20px]">info</span>
+                  <span>No feedback yet. Send outcomes to improve prediction quality.</span>
+                </li>
+              {% endif %}
+            </ul>
           </div>
         </section>
-        {% else %}
-        <section class="profile-card">
-          <img id="profile-avatar-live" class="profile-avatar-large" src="{{ profile.avatar_url }}" alt="{{ profile.name }}" />
-          <div>
-            <h1 id="profile-name-live">{{ profile.name }}</h1>
-            <p id="profile-email-live" class="profile-email">{{ profile.email }}</p>
-          </div>
-        </section>
+      </div>
+      {% endif %}
+    </main>
 
-        <section class="profile-stats-grid">
-          <article class="profile-stat-card">
-            <p class="profile-stat-label">Email Health Score</p>
-            <p id="usage-health-score" class="profile-stat-value">{{ profile.health_score or 0 }}</p>
-          </article>
-          <article class="profile-stat-card">
-            <p class="profile-stat-label">Current Streak</p>
-            <p id="usage-streak-days" class="profile-stat-value">{{ profile.streak_days or 0 }} day(s)</p>
-          </article>
-          <article class="profile-stat-card">
-            <p class="profile-stat-label">Scans Used</p>
-            <p id="usage-scans-used" class="profile-stat-value">{{ profile.scans_used }}</p>
-          </article>
-          <article class="profile-stat-card">
-            <p class="profile-stat-label">Emails Scanned</p>
-            <p id="usage-emails-scanned" class="profile-stat-value">{{ profile.emails_scanned_count }}</p>
-          </article>
-          <article class="profile-stat-card">
-            <p class="profile-stat-label">Rewrite Clicks</p>
-            <p id="usage-rewrite-clicked" class="profile-stat-value">{{ profile.rewrite_clicked }}</p>
-          </article>
-          <article class="profile-stat-card">
-            <p class="profile-stat-label">Last Active</p>
-            <p id="usage-last-active" class="profile-stat-value profile-small">{{ profile.last_active or '—' }}</p>
-          </article>
-        </section>
+    <footer class="bg-surface-container-lowest dark:bg-on-secondary-fixed border-t border-outline-variant dark:border-outline full-width mt-auto">
+      <div class="px-margin-desktop py-lg max-w-[1200px] mx-auto text-center text-body-sm text-secondary dark:text-secondary-fixed-dim">
+        Built by M.Tharun Kumar • Used by 100+ users across multiple countries
+      </div>
+    </footer>
 
-        <section class="profile-stat-card">
-          <p class="profile-stat-label">Recent Outcomes</p>
-          <ul id="usage-recent-results" class="compact-list" style="margin-top: 8px;">
-            {% if profile.recent_results %}
-              {% for item in profile.recent_results %}
-              <li>{{ item.outcome|capitalize }} • {{ item.to_risk_band or item.from_risk_band or 'No band' }}</li>
-              {% endfor %}
-            {% else %}
-              <li>No feedback yet. Send outcomes to improve prediction quality.</li>
-            {% endif %}
-          </ul>
-        </section>
-        {% endif %}
-      </main>
-    </div>
-
+    <!-- Profile dynamic refresh script -->
     <script>
       (function () {
         const nameNode = document.getElementById("profile-name-live");
@@ -233,6 +403,13 @@
             }
             if (healthNode) {
               healthNode.textContent = String(profile.health_score ?? 0);
+              // Proactively update circle gauge if present
+              const pathCircle = document.querySelector('circle.text-primary');
+              if (pathCircle) {
+                const health = profile.health_score ?? 0;
+                const offset = 251.2 - (251.2 * health / 100);
+                pathCircle.setAttribute('stroke-dashoffset', offset);
+              }
             }
             if (streakNode) {
               streakNode.textContent = `${String(profile.streak_days ?? 0)} day(s)`;
@@ -251,14 +428,26 @@
               recentResultsNode.innerHTML = "";
               if (!list.length) {
                 const li = document.createElement("li");
-                li.textContent = "No feedback yet. Send outcomes to improve prediction quality.";
+                li.className = "text-sm text-on-surface-variant dark:text-secondary-fixed-dim flex items-center gap-xs py-2";
+                li.innerHTML = `<span class="material-symbols-outlined text-outline text-[20px]">info</span><span>No feedback yet. Send outcomes to improve prediction quality.</span>`;
                 recentResultsNode.appendChild(li);
               } else {
                 list.slice(0, 5).forEach(function (item) {
                   const li = document.createElement("li");
+                  li.className = "pt-sm first:pt-0 flex items-center justify-between text-sm";
                   const outcome = String(item && item.outcome ? item.outcome : "not_sure");
                   const band = String(item && (item.to_risk_band || item.from_risk_band || "No band"));
-                  li.textContent = `${outcome.charAt(0).toUpperCase()}${outcome.slice(1)} • ${band}`;
+                  
+                  const capOutcome = outcome.charAt(0).toUpperCase() + outcome.slice(1);
+                  li.innerHTML = `
+                    <div class="flex items-center gap-xs">
+                      <span class="material-symbols-outlined text-primary text-[20px]">verified</span>
+                      <span class="font-medium text-on-surface dark:text-secondary-fixed">${capOutcome}</span>
+                    </div>
+                    <span class="text-xs px-2.5 py-0.5 rounded-full border border-outline-variant dark:border-outline text-on-surface-variant dark:text-secondary-fixed-dim bg-surface-container-low dark:bg-on-secondary-fixed/50">
+                      ${band}
+                    </span>
+                  `;
                   recentResultsNode.appendChild(li);
                 });
               }
@@ -274,3 +463,4 @@
     </script>
   </body>
 </html>
+

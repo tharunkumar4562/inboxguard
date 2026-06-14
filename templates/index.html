@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html class="light" lang="en">
   <head>
     <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-WXGNG9TEFK"></script>
@@ -11,6 +11,7 @@
       gtag('config', 'G-WXGNG9TEFK');
     </script>
     <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>{{ page_title or "InboxGuard | Fix risky emails before you send" }}</title>
     <meta name="description" content="{{ meta_description or 'InboxGuard detects deliverability threats before email send.' }}" />
     <meta name="application-name" content="InboxGuard" />
@@ -26,7 +27,7 @@
     <meta name="twitter:title" content="{{ page_title or 'InboxGuard | Fix risky emails before you send' }}" />
     <meta name="twitter:description" content="{{ meta_description or 'Find out why emails that look fine still land in spam, then fix them before sending.' }}" />
     <meta name="twitter:image" content="https://inboxguard.me/static/branding/logo.png" />
-    <meta name="theme-color" content="#f8fafc" />
+    <meta name="theme-color" content="#f8f9ff" />
     <link rel="icon" type="image/png" sizes="48x48" href="/static/branding/favicon-48.png?v=20260408-favicon-1" />
     <link rel="icon" type="image/png" sizes="192x192" href="/static/branding/favicon-192.png?v=20260408-favicon-1" />
     <link rel="apple-touch-icon" sizes="180x180" href="/static/branding/favicon-192.png?v=20260408-favicon-1" />
@@ -44,22 +45,138 @@
           root.style.colorScheme = theme === "dark" ? "dark" : "light";
           var meta = document.querySelector('meta[name="theme-color"]');
           if (meta) {
-            meta.setAttribute("content", theme === "dark" ? "#0f172a" : "#f8fafc");
+            meta.setAttribute("content", theme === "dark" ? "#111c2d" : "#f8f9ff");
           }
         } catch (error) {
         }
       })();
     </script>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-    <link rel="preload" href="/static/css/styles.css?v=20260406-seo-fix-1" as="style" />
-    <link rel="stylesheet" href="/static/css/styles.css?v=20260406-seo-fix-1" />
-    <link rel="stylesheet" href="/static/css/styles.css?v=20260411-live-rewrite-1" />
-    <link rel="stylesheet" href="/static/theme-overrides.css?v=20260411-rewrite-premium-1" />
-    <link rel="stylesheet" href="/static/css/cookie-consent.css?v=20260410-cookie-consent-1" />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    <link rel="stylesheet" href="/static/css/cookie-consent.css?v=20260410-cookie-consent-1" />
+    
+    <style>
+      .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      }
+      .fill-icon {
+        font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      }
+      .scrollbar-hide::-webkit-scrollbar {
+        display: none;
+      }
+      .scrollbar-hide {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+      }
+    </style>
+
+    <script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+              "on-secondary-fixed": "#111c2d",
+              "surface-container": "#e5eeff",
+              "primary": "#1d9e75",
+              "on-error-container": "#93000a",
+              "on-primary-fixed": "#002115",
+              "surface-dim": "#cbdbf5",
+              "secondary": "#545f73",
+              "on-primary-fixed-variant": "#00513a",
+              "outline-variant": "#bccac1",
+              "primary-container": "#d4f8e6",
+              "on-surface-variant": "#3d4943",
+              "tertiary-fixed": "#d8e2ff",
+              "secondary-fixed": "#d8e3fb",
+              "surface-container-lowest": "#ffffff",
+              "primary-fixed-dim": "#68dbae",
+              "inverse-primary": "#68dbae",
+              "on-tertiary-container": "#fefcff",
+              "on-secondary-container": "#586377",
+              "on-secondary-fixed-variant": "#3c475a",
+              "tertiary-container": "#2170e4",
+              "inverse-on-surface": "#eaf1ff",
+              "outline": "#6d7a73",
+              "tertiary-fixed-dim": "#adc6ff",
+              "on-primary": "#ffffff",
+              "on-primary-container": "#002115",
+              "primary-fixed": "#86f8c9",
+              "surface": "#f8f9ff",
+              "on-tertiary-fixed": "#001a42",
+              "background": "#f8f9ff",
+              "surface-container-high": "#dce9ff",
+              "on-tertiary": "#ffffff",
+              "on-tertiary-fixed-variant": "#004395",
+              "on-secondary": "#ffffff",
+              "surface-container-low": "#eff4ff",
+              "on-error": "#ffffff",
+              "surface-bright": "#f8f9ff",
+              "on-surface": "#0b1c30",
+              "surface-variant": "#d3e4fe",
+              "surface-tint": "#1d9e75",
+              "error-container": "#ffdad6",
+              "secondary-fixed-dim": "#bcc7de",
+              "tertiary": "#0058be",
+              "surface-container-highest": "#d3e4fe",
+              "error": "#ba1a1a",
+              "secondary-container": "#d5e0f8",
+              "on-background": "#0b1c30",
+              "inverse-surface": "#213145"
+            },
+            "borderRadius": {
+              "DEFAULT": "0.25rem",
+              "lg": "0.5rem",
+              "xl": "0.75rem",
+              "full": "9999px",
+              "2xl": "1rem"
+            },
+            "spacing": {
+              "sm": "12px",
+              "lg": "24px",
+              "md": "16px",
+              "margin-desktop": "40px",
+              "xxl": "48px",
+              "xs": "4px",
+              "xl": "32px",
+              "base": "8px",
+              "margin-mobile": "16px",
+              "gutter": "24px"
+            },
+            "fontFamily": {
+              "body-md": ["Inter"],
+              "headline-md": ["Inter"],
+              "label-md": ["Inter"],
+              "headline-lg-mobile": ["Inter"],
+              "label-sm": ["Inter"],
+              "body-sm": ["Inter"],
+              "body-lg": ["Inter"],
+              "headline-lg": ["Inter"],
+              "display-lg": ["Inter"],
+              "headline-sm": ["Inter"]
+            },
+            "fontSize": {
+              "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+              "headline-md": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+              "label-md": ["14px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600" }],
+              "headline-lg-mobile": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+              "label-sm": ["12px", { "lineHeight": "16px", "fontWeight": "500" }],
+              "body-sm": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+              "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }],
+              "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+              "display-lg": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+              "headline-sm": ["20px", { "lineHeight": "28px", "fontWeight": "600" }]
+            }
+          }
+        }
+      }
+    </script>
     <script type="application/ld+json">
     [
       {
@@ -114,490 +231,913 @@
     ]
     </script>
   </head>
-  <body>
-    <div class="app-shell">
-      <aside class="sidebar">
-        <div class="brand-wrap">
-          <div class="brand" aria-label="InboxGuard">
-            <img src="/static/branding/logo.png" class="logo-icon" alt="InboxGuard logo" />
-            <span class="logo-text">InboxGuard</span>
-          </div>
-          <p class="sub">Fix Before You Send</p>
+  <body class="bg-background dark:bg-on-secondary-fixed text-on-surface dark:text-secondary-fixed font-body-md antialiased min-h-screen flex flex-col">
+    
+    <div class="flex-grow flex w-full max-w-[1440px] mx-auto min-h-screen">
+      <!-- SideNavBar Desktop -->
+      <aside class="hidden lg:flex flex-col p-md gap-base bg-surface-container-low dark:bg-on-secondary-fixed border-r border-outline-variant dark:border-outline w-[280px] shrink-0 sticky top-0 h-screen overflow-y-auto">
+        <div class="mb-lg px-2">
+          <a href="/" class="text-headline-sm font-headline-sm font-bold text-primary dark:text-primary-fixed flex items-center gap-xs no-underline">
+            <span class="material-symbols-outlined fill-icon" style="font-variation-settings: 'FILL' 1;">security</span>
+            InboxGuard
+          </a>
+          <p class="font-label-sm text-label-sm text-on-surface-variant dark:text-secondary-fixed-dim">Deliverability Suite</p>
         </div>
-        <nav>
-          <p class="nav-group-label">Core</p>
-          <button id="tab-threat-scan" class="nav-item active" type="button">Scan Email</button>
 
-          <p class="nav-group-label">Create</p>
-          <button class="nav-item" type="button" onclick="window.location.href='/subject-generator'">Subject Generator</button>
+        <button class="w-full bg-primary text-on-primary rounded-xl py-3 px-4 font-label-md text-label-md flex items-center justify-center gap-sm mb-lg hover:bg-surface-tint transition-all shadow-sm" type="button" onclick="openTool('scan')">
+          <span class="material-symbols-outlined">add</span>
+          New Scan
+        </button>
 
-          <p class="nav-group-label">Advanced</p>
-          <details class="sidebar-more">
-            <summary>Show advanced tools</summary>
-            <button class="nav-item tool-nav-btn advanced-tool" type="button" data-tool="campaign-debugger">Campaign Debugger</button>
-            <button class="nav-item tool-nav-btn advanced-tool" type="button" data-tool="blacklist">Domain Check</button>
-            <button class="nav-item tool-nav-btn advanced-tool" type="button" data-tool="seed">Seed Testing</button>
-            <button class="nav-item tool-nav-btn advanced-tool" type="button" data-tool="bulk">Bulk Scan</button>
-            <button class="nav-item tool-nav-btn advanced-tool" type="button" data-tool="ops">API + Team</button>
+        <nav class="flex flex-col gap-xs flex-grow">
+          <p class="font-label-sm text-label-sm text-secondary uppercase tracking-wider mb-2 px-2">Core</p>
+          <button id="tab-threat-scan" class="flex items-center gap-sm px-3 py-2 w-full text-left rounded-lg font-label-md text-label-md transition-all active bg-primary/10 text-primary dark:text-primary-fixed" type="button">
+            <span class="material-symbols-outlined">document_scanner</span>
+            Scan Email
+          </button>
+
+          <p class="font-label-sm text-label-sm text-secondary uppercase tracking-wider my-2 px-2">Create</p>
+          <button class="flex items-center gap-sm px-3 py-2 w-full text-left rounded-lg font-label-md text-label-md text-on-surface-variant dark:text-secondary-fixed-dim hover:bg-surface-container-high dark:hover:bg-secondary-fixed-variant transition-colors" type="button" onclick="window.location.href='/subject-generator'">
+            <span class="material-symbols-outlined">edit_note</span>
+            Subject Generator
+          </button>
+
+          <p class="font-label-sm text-label-sm text-secondary uppercase tracking-wider my-2 px-2">Advanced</p>
+          <details class="sidebar-more" open>
+            <summary class="font-label-sm text-label-sm text-secondary uppercase tracking-wider mb-2 px-2 cursor-pointer hover:text-primary transition-colors">Show advanced tools</summary>
+            <div class="flex flex-col gap-xs pl-2">
+              <button class="nav-item tool-nav-btn advanced-tool flex items-center gap-sm px-3 py-2 w-full text-left rounded-lg font-label-md text-label-md text-on-surface-variant dark:text-secondary-fixed-dim hover:bg-surface-container-high dark:hover:bg-secondary-fixed-variant transition-colors" type="button" data-tool="campaign-debugger">
+                <span class="material-symbols-outlined">bug_report</span>
+                Campaign Debugger
+              </button>
+              <button class="nav-item tool-nav-btn advanced-tool flex items-center gap-sm px-3 py-2 w-full text-left rounded-lg font-label-md text-label-md text-on-surface-variant dark:text-secondary-fixed-dim hover:bg-surface-container-high dark:hover:bg-secondary-fixed-variant transition-colors" type="button" data-tool="blacklist">
+                <span class="material-symbols-outlined">dns</span>
+                Domain Check
+              </button>
+              <button class="nav-item tool-nav-btn advanced-tool flex items-center gap-sm px-3 py-2 w-full text-left rounded-lg font-label-md text-label-md text-on-surface-variant dark:text-secondary-fixed-dim hover:bg-surface-container-high dark:hover:bg-secondary-fixed-variant transition-colors" type="button" data-tool="seed">
+                <span class="material-symbols-outlined">science</span>
+                Seed Testing
+              </button>
+              <button class="nav-item tool-nav-btn advanced-tool flex items-center gap-sm px-3 py-2 w-full text-left rounded-lg font-label-md text-label-md text-on-surface-variant dark:text-secondary-fixed-dim hover:bg-surface-container-high dark:hover:bg-secondary-fixed-variant transition-colors" type="button" data-tool="bulk">
+                <span class="material-symbols-outlined">mark_as_unread</span>
+                Bulk Scan
+              </button>
+              <button class="nav-item tool-nav-btn advanced-tool flex items-center gap-sm px-3 py-2 w-full text-left rounded-lg font-label-md text-label-md text-on-surface-variant dark:text-secondary-fixed-dim hover:bg-surface-container-high dark:hover:bg-secondary-fixed-variant transition-colors" type="button" data-tool="ops">
+                <span class="material-symbols-outlined">group</span>
+                API + Team
+              </button>
+            </div>
           </details>
+
+          <p class="font-label-sm text-label-sm text-secondary uppercase tracking-wider my-2 px-2">System</p>
+          <button class="flex items-center gap-sm px-3 py-2 w-full text-left rounded-lg font-label-md text-label-md text-on-surface-variant dark:text-secondary-fixed-dim hover:bg-surface-container-high dark:hover:bg-secondary-fixed-variant transition-colors" type="button" onclick="window.location.href='/pricing'">
+            <span class="material-symbols-outlined">payments</span>
+            Pricing
+          </button>
+          <button class="flex items-center gap-sm px-3 py-2 w-full text-left rounded-lg font-label-md text-label-md text-on-surface-variant dark:text-secondary-fixed-dim hover:bg-surface-container-high dark:hover:bg-secondary-fixed-variant transition-colors" type="button" onclick="window.location.href='/profile'">
+            <span class="material-symbols-outlined">person</span>
+            Profile
+          </button>
         </nav>
 
-        <a id="profile-link" class="profile-link hidden" href="/profile" aria-label="Open profile">
-          <img id="profile-avatar" class="profile-avatar" src="/static/branding/logo.png" alt="Profile avatar" />
-          <span id="profile-initial" class="profile-initial">U</span>
-          <span class="profile-label">Profile</span>
+        <!-- Profile Link card in sidebar -->
+        <a id="profile-link" class="profile-link hidden mt-auto flex items-center gap-xs px-3 py-2.5 border border-outline-variant rounded-xl bg-primary/5 hover:bg-primary/10 transition-all text-primary dark:text-primary-fixed no-underline" href="/profile" aria-label="Open profile">
+          <img id="profile-avatar" class="w-8 h-8 rounded-full border border-primary object-cover" src="/static/branding/logo.png" alt="Profile avatar" />
+          <span id="profile-initial" class="w-8 h-8 rounded-full bg-primary/20 text-primary dark:text-primary-fixed flex items-center justify-center font-bold text-xs">U</span>
+          <span class="profile-label font-medium text-xs truncate">Profile</span>
         </a>
       </aside>
 
-      <main class="main-area">
-        <header class="topbar">
-          <div class="brand topbar-brand" aria-label="InboxGuard">
-            <img src="/static/branding/logo.png" class="logo-icon" alt="InboxGuard logo" />
-            <span class="logo-text">InboxGuard</span>
+      <!-- Main Content Canvas -->
+      <main class="flex-grow p-margin-mobile md:p-margin-desktop bg-surface dark:bg-on-secondary-fixed min-h-screen flex flex-col justify-between">
+        
+        <!-- Top bar actions -->
+        <header class="flex items-center justify-between gap-md mb-lg p-md bg-surface-container-lowest dark:bg-on-secondary-fixed border border-outline-variant dark:border-outline rounded-2xl shadow-sm z-30">
+          <!-- Mobile logo view -->
+          <div class="lg:hidden flex items-center gap-xs">
+            <a class="text-headline-sm font-headline-sm font-bold text-primary flex items-center gap-xs no-underline" href="/">
+              <span class="material-symbols-outlined fill-icon text-primary">security</span>
+              InboxGuard
+            </a>
           </div>
-          <div class="topbar-actions">
-            <div id="token-display" class="token-badge hidden">
-              🔋 <span id="token-count">0</span>
-              <span id="plan-label" class="plan-label">FREE</span>
+          
+          <div class="flex items-center gap-md ml-auto">
+            <div id="token-display" class="token-badge hidden bg-primary-container dark:bg-primary text-on-primary-container dark:text-on-primary px-3 py-1.5 rounded-full text-xs font-semibold flex items-center gap-xs border border-outline-variant">
+              <span>🔋</span>
+              <span id="token-count">0</span>
+              <span id="plan-label" class="bg-primary text-on-primary dark:bg-primary-fixed dark:text-on-primary-fixed font-bold text-[9px] px-1.5 py-0.5 rounded-full ml-1 uppercase">FREE</span>
             </div>
-            <div id="token-empty-state" class="token-empty-state hidden">
-              <p>You're out of tokens. Upgrade to continue scanning.</p>
-              <a href="/pricing" class="btn-primary upgrade-cta">Upgrade Now</a>
+
+            <div id="token-empty-state" class="token-empty-state hidden bg-error-container/20 text-error border border-error/20 px-3 py-1.5 rounded-xl text-xs font-medium flex items-center gap-sm">
+              <span>Credits empty. Upgrade to scan.</span>
+              <a href="/pricing" class="bg-primary hover:bg-surface-tint text-on-primary px-3 py-1 rounded-full text-xs font-bold upgrade-cta no-underline">Upgrade Now</a>
             </div>
-              <button id="theme-toggle" type="button" class="access-link theme-toggle" data-theme-toggle aria-pressed="false">🌙 Dark</button>
-            <button id="admin-dashboard-btn" type="button" class="access-link hidden">Admin</button>
-            <button id="get-access-btn" onclick="openPricingModal()" style="background: linear-gradient(180deg, #34d058 0%, #22c55e 100%); color: #fff; border: none; border-radius: 9999px; padding: 10px 32px; font-size: 1rem; font-weight: 700; box-shadow: 0 4px 16px 0 rgba(34,197,94,0.18); display: inline-block;">Get Access</button>
+
+            <button id="theme-toggle" type="button" class="text-secondary dark:text-secondary-fixed-dim hover:text-primary dark:hover:text-primary-fixed-dim transition-colors font-body-md text-body-md" data-theme-toggle onclick="window.toggleInboxGuardTheme && window.toggleInboxGuardTheme()" aria-pressed="false">🌙 Dark</button>
+            <button id="admin-dashboard-btn" type="button" class="border border-outline-variant hover:bg-surface-container-low dark:border-outline dark:hover:bg-outline/10 text-on-surface-variant dark:text-secondary-fixed px-3 py-1.5 rounded-lg text-xs font-semibold hidden" onclick="window.location.href='/admin'">Admin</button>
+            <button id="get-access-btn" type="button" class="bg-primary hover:bg-surface-tint text-on-primary px-4 py-2 rounded-xl font-label-md text-label-md transition-all shadow-sm" onclick="openPricingModal()">Get Access</button>
           </div>
         </header>
 
-        <section class="flow-progress" aria-label="Onboarding progress">
-          <div id="progress-step-1" class="flow-step active">Step 1: Run your first scan</div>
-          <div id="progress-step-2" class="flow-step locked">Step 2: Optimize your email</div>
-          <div id="progress-step-3" class="flow-step locked">Step 3: Scale campaigns</div>
+        <!-- Onboarding Progress timeline -->
+        <section class="flow-progress flex flex-col sm:flex-row justify-between gap-md mb-lg p-2.5 bg-surface-container-low dark:bg-on-secondary-fixed/50 border border-outline-variant dark:border-outline rounded-2xl text-[11px] font-bold text-center" aria-label="Onboarding progress">
+          <div id="progress-step-1" class="flow-step flex-grow py-2.5 rounded-xl transition-all active bg-primary/10 text-primary dark:text-primary-fixed">Step 1: Run your first scan</div>
+          <div id="progress-step-2" class="flow-step flex-grow py-2.5 rounded-xl transition-all locked text-on-surface-variant/40 dark:text-secondary-fixed-dim/40">Step 2: Optimize your email</div>
+          <div id="progress-step-3" class="flow-step flex-grow py-2.5 rounded-xl transition-all locked text-on-surface-variant/40 dark:text-secondary-fixed-dim/40">Step 3: Scale campaigns</div>
         </section>
 
-        <section id="home">
-
-        <section class="hero-story card home-only">
-          <h1>Scan first, then fix, then upgrade when it matters</h1>
-          <p>Open the scan, check the risk, and keep the advanced tools out of the way until you need them.</p>
-          <div class="hero-actions">
-            <button id="home-scan-btn" class="primary-btn" type="button" onclick="openTool('scan')">Scan an Email</button>
-            <button class="secondary-btn" type="button" onclick="document.getElementById('scan-panel').scrollIntoView({ behavior: 'smooth', block: 'start' })">See the scan flow</button>
-          </div>
-          <p class="hero-note">Start with Scan Email and fix risk before it damages your domain.</p>
-        </section>
-
-        <section id="feature-grid-panel" class="card home-only">
-          <h2 class="section-title">Core flow</h2>
-
-          <section id="core-tools" class="feature-grid core-tools">
-            <article class="feature-card core-card">
-              <div class="feature-cost">1 token • Core Tool</div>
-              <h3 class="feature-title">📨 Scan Email</h3>
-              <p class="feature-description">Check if your email will land in inbox or spam across Gmail, Outlook, and other providers.</p>
-              <button id="card-scan-open-btn" class="feature-open-btn" onclick="openTool('scan');">Open</button>
-            </article>
-
-            <article class="feature-card core-card lockable" data-plan-required="starter">
-              <div class="feature-cost">2 tokens • Core Tool</div>
-              <h3 class="feature-title">🧭 Campaign Debugger</h3>
-              <p class="feature-description">Diagnose why your emails are failing. Analyze campaign signals and find the exact issue.</p>
-              <button class="feature-open-btn" onclick="openTool('campaign-debugger');">Open</button>
-            </article>
-          </section>
-
-          <details class="secondary-tools-wrap">
-            <summary>Secondary tools</summary>
-            <section id="feature-grid" class="feature-grid secondary-tools">
-              <article class="feature-card secondary-card">
-                <div class="feature-cost">1 token</div>
-                <h3 class="feature-title">🌐 Domain Check</h3>
-                <p class="feature-description">Check if your domain is blacklisted on major blocklists before launch.</p>
-                <button class="feature-open-btn" onclick="openTool('blacklist');">Open</button>
-              </article>
-
-              <article class="feature-card secondary-card lockable" data-plan-required="growth">
-                <div class="feature-cost">5 tokens</div>
-                <h3 class="feature-title">🧪 Seed Testing</h3>
-                <p class="feature-description">Send test emails to seed inboxes and track delivery across providers.</p>
-                <button class="feature-open-btn" onclick="openTool('seed');">Open</button>
-              </article>
-
-              <article class="feature-card secondary-card lockable" data-plan-required="growth">
-                <div class="feature-cost">3 tokens</div>
-                <h3 class="feature-title">📦 Bulk Scan</h3>
-                <p class="feature-description">Upload CSV emails and scan all variants at once.</p>
-                <button class="feature-open-btn" onclick="openTool('bulk');">Open</button>
-              </article>
-
-              <article class="feature-card secondary-card">
-                <div class="feature-cost">Custom</div>
-                <h3 class="feature-title">👥 API + Team</h3>
-                <p class="feature-description">Integrate InboxGuard into your workflow and manage secure team access.</p>
-                <button class="feature-open-btn" onclick="openTool('ops');">Open</button>
-              </article>
-            </section>
-          </details>
-          </section>
-        </section>
-
-        <section class="pricing-section card home-only" id="home-pricing-cta">
-            <!-- Pricing section removed: /app is now product-only UI. -->
-        </section>
-
-        <section class="trust-block card home-only" id="trust-block">
-          <h3>Built for teams that care about inboxing</h3>
-          <p>No fake metrics. Real deliverability signals.</p>
-          <p><a href="/pricing">View pricing</a> and <a href="/blog">learn about deliverability</a>.</p>
-        </section>
-
-        <section class="card home-only" aria-label="Structured product explanation">
-          <h2>What does InboxGuard do?</h2>
-          <p>InboxGuard analyzes email content before sending and predicts whether it will land in inbox or spam.</p>
-        </section>
-
-        <section class="card home-only" aria-label="Frequently asked questions">
-          <h2>FAQ</h2>
-          <h3>How does InboxGuard work?</h3>
-          <p>It scans email content and structure, detects spam triggers, and recommends safer wording before you send.</p>
-          <h3>Who should use InboxGuard?</h3>
-          <p>Agencies, cold email teams, marketers, and founders who need better inbox placement consistency.</p>
-        </section>
-
-        </section>
-
-        <section id="tool-panel" class="hidden">
-        <button type="button" class="btn-secondary" onclick="goHome()" style="margin-bottom: 10px;">← Back</button>
-
-        <section id="scan-panel" class="scan-panel card hidden scan-only">
-          <form id="risk-form" class="scan-form">
-            <label class="input-label" for="raw-email">Paste The Email You Plan To Send</label>
-            <textarea id="raw-email" name="raw_email" rows="8" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Paste your email (subject + message)
-
-Example:
-Subject: Quick question
-
-Hi John,
-I noticed your recent post and had one short idea to improve reply rates."></textarea>
-            <button type="button" id="fill-example" class="btn-secondary">✨ Try Example Email</button>
-
-            <p id="token-cost-hint" class="micro">This will cost 1 credit. Sign in to see your balance.</p>
-            <p id="token-after-hint" class="micro hidden">Credits remaining: --</p>
-
-            <section id="realtime-lint-panel" class="realtime-lint-panel" aria-live="polite">
-              <div class="realtime-lint-head">
-                <h4>Real-time Spam Checker</h4>
-                <span id="realtime-lint-band" class="realtime-lint-band risk-low">Low risk</span>
+        <!-- Idle Dashboard Section (Overview) -->
+        <section id="home" class="home-only space-y-lg flex-grow">
+          <section class="bg-surface-container-lowest dark:bg-on-secondary-fixed border border-outline-variant dark:border-outline rounded-3xl p-lg md:p-xl shadow-md text-center md:text-left flex flex-col md:flex-row justify-between items-center gap-lg relative overflow-hidden">
+            <div class="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3"></div>
+            <div class="z-10 flex-grow">
+              <h1 class="font-display-lg text-display-lg text-primary dark:text-primary-fixed mb-md">Scan first, then fix, then upgrade when it matters.</h1>
+              <p class="text-on-surface-variant dark:text-secondary-fixed-dim max-w-2xl mb-lg">
+                Verify content risks and authenticate domain records before you broadcast campaigns. Keep the spam rates under control with pre-send checks.
+              </p>
+              <div class="flex flex-wrap gap-md justify-center md:justify-start">
+                <button id="home-scan-btn" class="bg-primary hover:bg-surface-tint text-on-primary font-label-md text-label-md px-6 py-3 rounded-xl transition-all shadow-md" type="button" onclick="openTool('scan')">Scan an Email</button>
+                <button class="border border-outline hover:bg-surface-container-low dark:border-outline dark:hover:bg-outline/10 text-on-surface dark:text-secondary-fixed font-label-md text-label-md px-6 py-3 rounded-xl transition-all" type="button" onclick="document.getElementById('scan-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' })">See Scan Flow</button>
               </div>
-              <ul id="realtime-issues-list" class="realtime-issues-list">
-                <li>No live issues detected yet. Start typing to lint this draft in real time.</li>
-              </ul>
-            </section>
+            </div>
+          </section>
 
-            <details class="secondary-options">
-              <summary>Advanced options</summary>
-              <div class="inline-fields" style="margin-top: 8px;">
+          <!-- Core Tools Grid -->
+          <section id="feature-grid-panel" class="space-y-md">
+            <h2 class="font-headline-sm text-headline-sm text-on-surface dark:text-secondary-fixed mb-sm">Core Inboxing Flow</h2>
+            <div id="core-tools" class="grid grid-cols-1 md:grid-cols-2 gap-lg">
+              <article class="bg-surface-container-lowest dark:bg-on-secondary-fixed border border-outline-variant dark:border-outline rounded-2xl p-lg flex flex-col justify-between shadow-sm hover:shadow-md transition-all">
                 <div>
-                  <label for="domain">Domain (optional)</label>
-                  <input id="domain" name="domain" type="text" placeholder="yourdomain.com" autocomplete="off" />
+                  <span class="text-primary font-bold text-xs uppercase tracking-wider">1 credit &bull; Core tool</span>
+                  <h3 class="font-headline-sm text-headline-sm text-on-surface dark:text-secondary-fixed mt-1 mb-sm">📨 Scan Email</h3>
+                  <p class="text-on-surface-variant dark:text-secondary-fixed-dim text-body-sm">
+                    Checks spam-trigger filters, urgency levels, link counts, and ML classifications to predict placement.
+                  </p>
                 </div>
+                <button id="card-scan-open-btn" class="bg-primary hover:bg-surface-tint text-on-primary font-label-md text-label-md w-full py-2.5 rounded-xl transition-all mt-lg" onclick="openTool('scan');">Open Scan Console</button>
+              </article>
+
+              <article class="bg-surface-container-lowest dark:bg-on-secondary-fixed border border-outline-variant dark:border-outline rounded-2xl p-lg flex flex-col justify-between shadow-sm hover:shadow-md transition-all lockable">
                 <div>
-                  <label for="analysis-mode">Scan Mode</label>
-                  <select id="analysis-mode" name="analysis_mode">
-                    <option value="content" selected>Content only</option>
-                    <option value="full">Full (content + SPF/DKIM/DMARC)</option>
-                  </select>
+                  <span class="text-primary font-bold text-xs uppercase tracking-wider">2 credits &bull; Advanced tool</span>
+                  <h3 class="font-headline-sm text-headline-sm text-on-surface dark:text-secondary-fixed mt-1 mb-sm">🧭 Campaign Debugger</h3>
+                  <p class="text-on-surface-variant dark:text-secondary-fixed-dim text-body-sm">
+                    Enter open, click, and bounce rates of sent campaigns to diagnose deliverability vs copy conversion bottlenecks.
+                  </p>
+                </div>
+                <button class="bg-primary hover:bg-surface-tint text-on-primary font-label-md text-label-md w-full py-2.5 rounded-xl transition-all mt-lg" onclick="openTool('campaign-debugger');">Open Debugger</button>
+              </article>
+            </div>
+
+            <!-- Secondary Tools wrapper -->
+            <details class="sidebar-more bg-surface-container-lowest dark:bg-on-secondary-fixed border border-outline-variant dark:border-outline rounded-2xl p-md shadow-sm">
+              <summary class="cursor-pointer font-headline-sm text-headline-sm text-on-surface dark:text-secondary-fixed py-2 select-none hover:text-primary transition-colors flex items-center justify-between">
+                <span>Secondary deliverability utilities</span>
+                <span class="material-symbols-outlined">expand_more</span>
+              </summary>
+              <div id="feature-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-md pt-lg">
+                <div class="bg-surface-container-low dark:bg-on-secondary-fixed border border-outline-variant dark:border-outline rounded-xl p-md flex flex-col justify-between">
+                  <div>
+                    <span class="text-xs font-semibold text-secondary">1 credit</span>
+                    <h4 class="font-medium text-sm text-on-surface dark:text-secondary-fixed mt-1">🌐 Domain Check</h4>
+                  </div>
+                  <button class="text-primary dark:text-primary-fixed hover:underline text-xs font-semibold mt-md text-left" onclick="openTool('blacklist');">Open &rarr;</button>
+                </div>
+
+                <div class="bg-surface-container-low dark:bg-on-secondary-fixed border border-outline-variant dark:border-outline rounded-xl p-md flex flex-col justify-between lockable" data-plan-required="growth">
+                  <div>
+                    <span class="text-xs font-semibold text-secondary">5 credits</span>
+                    <h4 class="font-medium text-sm text-on-surface dark:text-secondary-fixed mt-1">🧪 Seed Testing</h4>
+                  </div>
+                  <button class="text-primary dark:text-primary-fixed hover:underline text-xs font-semibold mt-md text-left" onclick="openTool('seed');">Open &rarr;</button>
+                </div>
+
+                <div class="bg-surface-container-low dark:bg-on-secondary-fixed border border-outline-variant dark:border-outline rounded-xl p-md flex flex-col justify-between lockable" data-plan-required="growth">
+                  <div>
+                    <span class="text-xs font-semibold text-secondary">3 credits</span>
+                    <h4 class="font-medium text-sm text-on-surface dark:text-secondary-fixed mt-1">📦 Bulk Scan</h4>
+                  </div>
+                  <button class="text-primary dark:text-primary-fixed hover:underline text-xs font-semibold mt-md text-left" onclick="openTool('bulk');">Open &rarr;</button>
+                </div>
+
+                <div class="bg-surface-container-low dark:bg-on-secondary-fixed border border-outline-variant dark:border-outline rounded-xl p-md flex flex-col justify-between">
+                  <div>
+                    <span class="text-xs font-semibold text-secondary">Custom</span>
+                    <h4 class="font-medium text-sm text-on-surface dark:text-secondary-fixed mt-1">👥 API + Team</h4>
+                  </div>
+                  <button class="text-primary dark:text-primary-fixed hover:underline text-xs font-semibold mt-md text-left" onclick="openTool('ops');">Open &rarr;</button>
                 </div>
               </div>
             </details>
+          </section>
 
-            <button type="submit" id="run-check" class="btn-primary rounded-xl py-3 font-semibold">Check Before Sending</button>
-            <button type="button" id="run-check-async" class="btn-secondary" style="margin-top:8px;">Analyze In Background</button>
-
-            <div id="result-loading" class="loading-panel hidden">
-              <p class="loading-title">Analyzing your email...</p>
-              <ul class="loading-steps">
-                <li id="load-step-1">Checking content signals...</li>
-                <li id="load-step-2">Detecting spam patterns...</li>
-                <li id="load-step-3">Evaluating provider rules...</li>
-                <li id="load-step-4">Scoring risk signals...</li>
-              </ul>
-              <p class="loading-current"><span class="spinner"></span><span id="loading-step">Initializing scan...</span></p>
-              <div class="progress-track"><div id="progressBar" class="progress-bar"></div></div>
+          <!-- Social Proof testimonials -->
+          <section id="trust-social-proof" class="bg-surface-container-lowest dark:bg-on-secondary-fixed border border-outline-variant dark:border-outline rounded-2xl p-lg shadow-sm">
+            <h4 class="font-headline-sm text-headline-sm text-on-surface dark:text-secondary-fixed mb-sm">Trusted by sending operations</h4>
+            <div class="space-y-sm mb-lg text-body-sm text-on-surface-variant dark:text-secondary-fixed-dim">
+              <p id="live-stats-summary">Live performance metrics load from recent outcomes...</p>
+              <p id="live-stats-breakdown">Sign in to view your latest inbox-rate benchmark.</p>
+              <p id="live-stats-status">Outcome-driven scoring updates dynamically.</p>
             </div>
-          </form>
-        </section>
-
-        <section id="idle-note" class="card idle-note scan-only hidden">
-          <p>No analysis yet. Paste your email and run scan to detect deliverability risks.</p>
-        </section>
-        
-        <div id="paywall" class="hidden paywall-section scan-only">
-          <h3>You've found your biggest risk. Fixing one email isn't enough.</h3>
-          <p>Get Access to run your next check before the next campaign goes out.</p>
-          <button type="button" onclick="openPricingModal()" style="background: linear-gradient(180deg, #34d058 0%, #22c55e 100%); color: #fff; border: none; border-radius: 9999px; padding: 10px 32px; font-size: 1rem; font-weight: 700; box-shadow: 0 4px 16px 0 rgba(34,197,94,0.18); display: inline-block;">Get Access</button>
-        </div>
-
-        <section id="result" class="scan-only hidden">
-          <div id="result-screen" class="hidden result-screen">
-            <!-- STATUS OVERVIEW (TOP BLOCK) -->
-            <section id="status-overview" class="status-overview status-hero">
-              <div id="status-hero"></div>
-              <div id="status-badge" class="status-badge">SCAN REQUIRED</div>
-              <h2 id="status-headline" class="status-headline">Run analysis now to reveal placement risk before sending.</h2>
-              <p id="status-sub" class="status-sub">Top campaigns that land in inbox usually score 85+...</p>
-            </section>
-
-            <!-- EMAIL TYPE DETECTED (ML CLASSIFIER) -->
-            <div class="card" style="margin-top: 24px;">
-              <div class="label">Email Type</div>
-              <div class="value" id="email-type">—</div>
-            </div>
-
-            <section class="card decision-panel">
-              <h3 class="decision-panel-label">DECISION GRID</h3>
-              <div id="decision-grid" class="decision-grid">
-                <div class="card decision-card risk-high" id="status-risk-card">
-                  <span>RISK STATUS</span>
-                  <h3 id="status-risk">High Risk</h3>
-                </div>
-
-                <div class="card decision-card">
-                  <span>PRIMARY ISSUE</span>
-                  <h3 id="primary-issue">Spam phrases detected</h3>
-                </div>
-
-                <div class="card decision-card">
-                  <span>CONFIDENCE</span>
-                  <h3 id="status-confidence">Medium</h3>
-                </div>
-              </div>
-            </section>
-
-            <section id="biggest-risk-block" class="card result-block">
-              <h3 id="biggest-risk-title">Biggest Risk</h3>
-              <p id="biggest-risk-text">Your email has <strong>spam-like phrases</strong></p>
-            </section>
-
-            <div class="result-duo">
-              <section class="card result-block">
-                <h3>What is hurting deliverability</h3>
-                <p id="deliverability-summary">Overly salesy language, spam triggers used</p>
-              </section>
-
-              <section class="card result-block">
-                <h3>Top Fixes</h3>
-                <ul id="top-fixes-list" class="result-fix-list">
-                  <li>Remove spam phrases</li>
-                  <li>Personalize messaging</li>
-                </ul>
-              </section>
-            </div>
-
-            <section id="rewrite-section" class="card result-fix-card rewrite-container hidden">
-              <div class="rewrite-header">
-                <h2 id="fix-title">Fix Your Email</h2>
-                <p id="rewrite-summary" class="rewrite-subtitle">We found issues that hurt deliverability.</p>
-              </div>
-              <p id="fix-preview-text" class="rewrite-subtitle">Before and after transformation so you can ship a safer draft with confidence.</p>
-              <p id="rewrite-live-status" class="rewrite-live-status" aria-live="polite">Live rewrite adapts as you type and learns from feedback.</p>
-              <div id="rewrite-tags" class="rewrite-tags">
-                <span class="tag success">Removed spam triggers</span>
-                <span class="tag success">Improved CTA clarity</span>
-                <span class="tag success">Simplified structure</span>
-              </div>
-              <div class="rewrite-actions-top">
-                <button id="fix-issue-btn" class="danger-btn" type="button">Fix this issue</button>
-                <div class="rewrite-modes" role="group" aria-label="Rewrite modes">
-                  <button id="rewrite-safe-btn" type="button">Safe</button>
-                  <button id="rewrite-engaging-btn" type="button">Casual</button>
-                  <button id="rewrite-direct-btn" type="button">Direct</button>
-                  <button id="rewrite-converting-btn" type="button">Sales</button>
-                </div>
-              </div>
-              <div class="rewrite-grid">
-                <div class="rewrite-box before">
-                  <div class="rewrite-label">Your Email</div>
-                  <div id="before-email" class="rewrite-content"></div>
-                </div>
-                <div class="rewrite-box after">
-                  <div class="rewrite-label">Improved Version</div>
-                  <div id="after-email" class="rewrite-content"></div>
-                </div>
-              </div>
-              <div id="issue-list" class="issue-list"></div>
-              <div class="rewrite-diff">
-                <h4>What changed</h4>
-                <div id="diff-summary" class="diff-summary"></div>
-              </div>
-              <div id="rewrite-notes" class="rewrite-notes">
-                <p>✔ Optimized for inbox placement and reply rate</p>
-                <p>✔ Removed bulk-style phrasing patterns</p>
-              </div>
-              <div class="result-fix-actions">
-                <button id="copy-fixed-btn" class="primary" type="button">Copy Fixed Email</button>
-              </div>
-            </section>
-
-            <section id="step3-block" class="card result-step3 hidden">
-              <h3><strong>Step 3:</strong> This is safer, but not guaranteed inbox placement</h3>
-              <ul class="result-checklist">
-                <li>Run real inbox test</li>
-                <li>Compare Gmail / Outlook</li>
-                <li>Track performance</li>
-              </ul>
-              <button id="run-test-btn" class="cta" type="button">Run Real Inbox Test</button>
-            </section>
-
-            <!-- Old decision block for backwards compat -->
-            <section id="decision-section-legacy" class="card hidden">
-              <div class="alert-box">
-                <strong>SCAN REQUIRED</strong>
-                <p>Run analysis now to reveal placement risk before sending.</p>
-              </div>
-
-              <div class="decision-box">
-                <h3>Decision: <span id="decision-title">Analyze before sending</span></h3>
-                <p id="primary-issue-old">Waiting for scan</p>
-              </div>
-            </section>
-
-            <section id="step2-fix-block-legacy" class="card hidden">
-              <h3>Safer version generated</h3>
-
-              <div class="success-bar">
-                ✅ Spam Risk Reduced | Higher inbox chance
-              </div>
-
-              <div class="tags">
-                <span>Removed spam triggers</span>
-                <span>Added personalization</span>
-                <span>Simplified structure</span>
-              </div>
-
-              <div class="grid">
-                <div>
-                  <h4>BEFORE</h4>
-                  <pre id="before-email-legacy"></pre>
-                </div>
-
-                <div>
-                  <h4>AFTER</h4>
-                  <pre id="after-email-legacy"></pre>
-                </div>
-              </div>
-
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-lg border-t border-outline-variant dark:border-outline pt-lg">
               <div>
-                <h4>Diff summary</h4>
-                <div id="diff-summary-legacy"></div>
+                <p class="italic text-body-sm text-on-surface-variant dark:text-secondary-fixed-dim">
+                  "InboxGuard caught what our manual QA process missed, saving full campaign runs from deliverability threats."
+                </p>
+                <span class="block text-xs font-bold text-on-surface dark:text-secondary-fixed mt-xs">&mdash; B2B Agency Founder</span>
+              </div>
+              <div>
+                <p class="italic text-body-sm text-on-surface-variant dark:text-secondary-fixed-dim">
+                  "Pre-send check is non-negotiable for outbound. We run every draft through the scanner before touching volume."
+                </p>
+                <span class="block text-xs font-bold text-on-surface dark:text-secondary-fixed mt-xs">&mdash; Growth Lead, SaaS outbound</span>
+              </div>
+            </div>
+          </section>
+        </section>
+
+        <!-- Tool panel Workspace Area -->
+        <section id="tool-panel" class="hidden flex-grow space-y-lg">
+          <button type="button" class="border border-outline-variant hover:bg-surface-container-low dark:border-outline dark:hover:bg-outline/10 text-on-surface dark:text-secondary-fixed font-label-md text-label-md px-4 py-2 rounded-xl transition-all flex items-center gap-xs" onclick="goHome()">
+            <span class="material-symbols-outlined">arrow_back</span>
+            Back to Dashboard
+          </button>
+
+          <!-- SCAN EMAIL PANEL -->
+          <section id="scan-panel" class="scan-panel bg-surface-container-lowest dark:bg-on-secondary-fixed border border-outline-variant dark:border-outline rounded-2xl p-lg shadow-sm scan-only hidden">
+            <form id="risk-form" class="space-y-md">
+              <div>
+                <label class="block text-sm font-medium text-on-surface dark:text-secondary-fixed mb-2" for="raw-email">Paste the draft you plan to check</label>
+                <textarea id="raw-email" name="raw_email" rows="8" class="w-full rounded-xl border border-outline-variant dark:border-outline bg-surface-container-lowest dark:bg-on-secondary-fixed text-on-surface dark:text-secondary-fixed focus:border-primary focus:ring-1 focus:ring-primary" placeholder="Subject: Quick outreach&#10;&#10;Hi John,&#10;I noticed your recent newsletter. Let me know if you are open for a check."></textarea>
               </div>
 
-              <div class="actions">
-                <button id="copy-fixed-btn-legacy" class="primary" type="button">Copy Fixed Email</button>
-                <button id="restore-btn" type="button">Restore Original</button>
-                <button id="gmail-btn" type="button">Open in Gmail</button>
+              <div class="flex items-center justify-between">
+                <button type="button" id="fill-example" class="border border-outline hover:bg-surface-container-low dark:border-outline dark:hover:bg-outline/10 text-on-surface dark:text-secondary-fixed font-label-sm text-label-sm px-4 py-2 rounded-xl transition-all">✨ Try Example Email</button>
+                <span id="token-cost-hint" class="text-xs text-on-surface-variant dark:text-secondary-fixed-dim">Cost: 1 scan credit</span>
+                <span id="token-after-hint" class="text-xs text-on-surface-variant dark:text-secondary-fixed-dim hidden">Credits remaining: --</span>
               </div>
-            </section>
 
-            <section id="step3-block-legacy" class="card hidden">
-              <div class="warning-box">
-                <strong>This is safer now, but not guaranteed inbox placement.</strong>
-
-                <ul>
-                  <li>Run a real inbox test</li>
-                  <li>Compare Gmail / Outlook</li>
-                  <li>Track future performance</li>
+              <!-- Real-time spam checker card -->
+              <div id="realtime-lint-panel" class="bg-surface-container-low dark:bg-on-secondary-fixed/50 border border-outline-variant dark:border-outline rounded-xl p-md" aria-live="polite">
+                <div class="flex justify-between items-center mb-sm">
+                  <h4 class="font-medium text-sm text-on-surface dark:text-secondary-fixed flex items-center gap-xs">
+                    <span class="material-symbols-outlined text-primary">analytics</span>
+                    <span>Real-time Draft Linting</span>
+                  </h4>
+                  <span id="realtime-lint-band" class="text-xs px-2.5 py-0.5 rounded-full border border-primary/20 text-primary bg-primary-container/25 font-semibold">Low risk</span>
+                </div>
+                <ul id="realtime-issues-list" class="space-y-1 text-xs text-on-surface-variant dark:text-secondary-fixed-dim">
+                  <li>No issues detected. Start typing to audit your draft in real-time.</li>
                 </ul>
-
-                <button id="run-test-btn-legacy" class="cta" type="button">Run Real Inbox Test</button>
               </div>
-            </section>
+
+              <!-- Advanced options dropdown -->
+              <details class="secondary-options bg-surface-container-low dark:bg-on-secondary-fixed/50 border border-outline-variant dark:border-outline rounded-xl p-md">
+                <summary class="cursor-pointer font-medium text-xs text-on-surface dark:text-secondary-fixed select-none hover:text-primary transition-colors flex items-center justify-between">
+                  <span>Advanced analysis parameters</span>
+                  <span class="material-symbols-outlined">expand_more</span>
+                </summary>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-md pt-md">
+                  <div>
+                    <label class="block text-xs font-semibold text-secondary uppercase tracking-wider mb-1" for="domain">Domain (optional)</label>
+                    <input id="domain" name="domain" type="text" class="w-full rounded-xl border border-outline-variant dark:border-outline bg-surface-container-lowest dark:bg-on-secondary-fixed text-on-surface dark:text-secondary-fixed focus:border-primary focus:ring-1 focus:ring-primary" placeholder="yourdomain.com" autocomplete="off" />
+                  </div>
+                  <div>
+                    <label class="block text-xs font-semibold text-secondary uppercase tracking-wider mb-1" for="analysis-mode">Scan Mode</label>
+                    <select id="analysis-mode" name="analysis_mode" class="w-full rounded-xl border border-outline-variant dark:border-outline bg-surface-container-lowest dark:bg-on-secondary-fixed text-on-surface dark:text-secondary-fixed focus:border-primary focus:ring-1 focus:ring-primary">
+                      <option value="content" selected>Content checks only</option>
+                      <option value="full">Full check (Content + DNS)</option>
+                    </select>
+                  </div>
+                </div>
+              </details>
+
+              <div class="flex flex-col sm:flex-row gap-2 pt-2">
+                <button type="submit" id="run-check" class="flex-1 bg-primary hover:bg-surface-tint text-on-primary font-label-md text-label-md py-3 rounded-xl transition-all shadow-md flex items-center justify-center gap-sm">
+                  <span class="material-symbols-outlined">security</span>
+                  <span>Scan Email Draft</span>
+                </button>
+                <button type="button" id="run-check-async" class="border border-outline hover:bg-surface-container-low dark:border-outline dark:hover:bg-outline/10 text-on-surface dark:text-secondary-fixed font-label-md text-label-md py-3 px-6 rounded-xl transition-all">Analyze In Background</button>
+              </div>
+
+              <!-- Loading state -->
+              <div id="result-loading" class="hidden bg-surface-container-lowest dark:bg-on-secondary-fixed border border-outline-variant dark:border-outline rounded-2xl p-lg text-center shadow-md">
+                <h4 class="font-headline-sm text-headline-sm text-primary dark:text-primary-fixed mb-md">Analyzing Draft Signals</h4>
+                <div class="max-w-xs mx-auto mb-lg">
+                  <ul class="text-xs text-on-surface-variant dark:text-secondary-fixed-dim text-left space-y-2">
+                    <li id="load-step-1" class="flex items-center gap-xs opacity-30"><span class="material-symbols-outlined text-[16px]">hourglass_empty</span><span>Evaluating content syntax...</span></li>
+                    <li id="load-step-2" class="flex items-center gap-xs opacity-30"><span class="material-symbols-outlined text-[16px]">hourglass_empty</span><span>Identifying spam urgency tags...</span></li>
+                    <li id="load-step-3" class="flex items-center gap-xs opacity-30"><span class="material-symbols-outlined text-[16px]">hourglass_empty</span><span>Matching provider filters...</span></li>
+                    <li id="load-step-4" class="flex items-center gap-xs opacity-30"><span class="material-symbols-outlined text-[16px]">hourglass_empty</span><span>Scoring final risk values...</span></li>
+                  </ul>
+                </div>
+                <div class="flex items-center justify-center gap-xs text-sm font-semibold text-on-surface dark:text-secondary-fixed mb-md">
+                  <span class="spinner w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin"></span>
+                  <span id="loading-step">Initializing scan engine...</span>
+                </div>
+                <div class="progress-track w-full h-2 bg-surface-container-low dark:bg-on-secondary-fixed/50 rounded-full overflow-hidden">
+                  <div id="progressBar" class="progress-bar w-0 h-full bg-primary transition-all duration-300"></div>
+                </div>
+              </div>
+            </form>
+          </section>
+
+          <section id="idle-note" class="bg-surface-container-lowest dark:bg-on-secondary-fixed border border-outline-variant dark:border-outline rounded-2xl p-lg text-center shadow-sm idle-note scan-only hidden">
+            <span class="material-symbols-outlined text-outline text-[48px] mb-md">drafts</span>
+            <p class="text-on-surface-variant dark:text-secondary-fixed-dim">Paste draft and submit check to inspect placement warnings.</p>
+          </section>
+
+          <!-- PAYWALL / OUT OF CREDITS SECTION -->
+          <div id="paywall" class="hidden bg-surface-container-lowest dark:bg-on-secondary-fixed border-2 border-primary rounded-2xl p-lg text-center shadow-md paywall-section">
+            <h3 class="font-headline-sm text-headline-sm text-primary dark:text-primary-fixed mb-sm">Unlock Safe Sending</h3>
+            <p class="text-on-surface-variant dark:text-secondary-fixed-dim max-w-md mx-auto mb-lg">You have accessed your largest deliverability risks. Upgrade to Pro for unlimited scans and advanced records monitoring.</p>
+            <button type="button" onclick="openPricingModal()" class="bg-primary hover:bg-surface-tint text-on-primary font-label-md text-label-md px-8 py-3 rounded-xl transition-all shadow-md">Get Pro Access</button>
           </div>
 
-        <div id="cookie-banner" class="cookie-banner hidden" role="dialog" aria-live="polite" aria-label="Cookie consent" aria-hidden="true">
-          <p>We use cookies to keep you signed in and improve your experience.</p>
-          <div class="cookie-banner__actions">
-            <button type="button" class="cookie-banner__button" data-cookie-accept>Accept</button>
+          <!-- RESULT VIEW SCREEN -->
+          <section id="result" class="scan-only hidden space-y-lg">
+            <div id="result-screen" class="hidden space-y-lg">
+              
+              <!-- Premium circle score gauge overview -->
+              <section id="status-overview" class="bg-surface-container-lowest dark:bg-on-secondary-fixed border border-outline-variant dark:border-outline rounded-3xl p-lg md:p-xl flex flex-col md:flex-row items-center gap-lg shadow-sm relative overflow-hidden">
+                <div class="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3"></div>
+                <div class="flex-shrink-0 relative w-32 h-32 flex items-center justify-center">
+                  <svg class="w-full h-full transform -rotate-90" viewBox="0 0 120 120">
+                    <circle class="text-surface-container-low dark:text-outline/10" cx="60" cy="60" fill="none" r="54" stroke="currentColor" stroke-width="10"></circle>
+                    <circle id="gauge-score-circle" class="text-primary transition-all duration-1000 ease-out" cx="60" cy="60" fill="none" r="54" stroke="currentColor" stroke-dasharray="339.292" stroke-dashoffset="339.292" stroke-width="10"></circle>
+                  </svg>
+                  <div class="absolute flex flex-col items-center">
+                    <span id="gauge-score-value" class="text-3xl font-bold text-on-surface dark:text-secondary-fixed">--</span>
+                    <span class="text-[9px] font-bold text-on-surface-variant dark:text-secondary-fixed-dim uppercase tracking-wider">Score</span>
+                  </div>
+                </div>
+
+                <div class="flex-grow text-center md:text-left z-10 space-y-xs">
+                  <div class="flex items-center justify-center md:justify-start gap-xs">
+                    <span id="status-badge" class="text-xs px-2.5 py-0.5 rounded-full border border-primary/20 text-primary bg-primary-container/25 font-bold uppercase tracking-wider">SCAN COMPLETED</span>
+                  </div>
+                  <h2 id="status-headline" class="font-headline-md text-headline-md text-on-surface dark:text-secondary-fixed mt-1">Review Placement Probability</h2>
+                  <p id="status-sub" class="text-on-surface-variant dark:text-secondary-fixed-dim text-body-md">Risk outcomes show deliverability metrics based on signals.</p>
+                </div>
+              </section>
+
+              <!-- Classification and Decision Cards Grid -->
+              <div class="grid grid-cols-1 md:grid-cols-4 gap-md">
+                <div class="bg-surface-container-lowest dark:bg-on-secondary-fixed border border-outline-variant dark:border-outline rounded-2xl p-md shadow-sm">
+                  <span class="text-xs font-semibold text-secondary uppercase tracking-wider block">Email Category</span>
+                  <div id="email-type" class="font-headline-sm text-headline-sm text-on-surface dark:text-secondary-fixed mt-sm truncate">—</div>
+                </div>
+
+                <div id="status-risk-card" class="bg-surface-container-lowest dark:bg-on-secondary-fixed border border-outline-variant dark:border-outline rounded-2xl p-md shadow-sm">
+                  <span class="text-xs font-semibold text-secondary uppercase tracking-wider block">Placement Risk</span>
+                  <div id="status-risk" class="font-headline-sm text-headline-sm text-on-surface dark:text-secondary-fixed mt-sm">—</div>
+                </div>
+
+                <div class="bg-surface-container-lowest dark:bg-on-secondary-fixed border border-outline-variant dark:border-outline rounded-2xl p-md shadow-sm">
+                  <span class="text-xs font-semibold text-secondary uppercase tracking-wider block">Primary Bottleneck</span>
+                  <div id="primary-issue" class="font-headline-sm text-headline-sm text-on-surface dark:text-secondary-fixed mt-sm truncate">—</div>
+                </div>
+
+                <div class="bg-surface-container-lowest dark:bg-on-secondary-fixed border border-outline-variant dark:border-outline rounded-2xl p-md shadow-sm">
+                  <span class="text-xs font-semibold text-secondary uppercase tracking-wider block">Scan Confidence</span>
+                  <div id="status-confidence" class="font-headline-sm text-headline-sm text-on-surface dark:text-secondary-fixed mt-sm">—</div>
+                </div>
+              </div>
+
+              <!-- Biggest Risk Warn block -->
+              <section id="biggest-risk-block" class="bg-error-container/10 border border-error/20 rounded-2xl p-md flex items-start gap-xs shadow-sm">
+                <span class="material-symbols-outlined text-error shrink-0 text-[22px]">warning</span>
+                <div>
+                  <h4 id="biggest-risk-title" class="font-bold text-sm text-error uppercase tracking-wider">Primary Deliverability Threat</h4>
+                  <p id="biggest-risk-text" class="text-on-surface-variant dark:text-secondary-fixed-dim text-sm mt-xs"></p>
+                </div>
+              </section>
+
+              <!-- Deliverability details & fixes split grid -->
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-lg">
+                <div class="bg-surface-container-lowest dark:bg-on-secondary-fixed border border-outline-variant dark:border-outline rounded-2xl p-lg shadow-sm">
+                  <h3 class="font-medium text-sm text-on-surface dark:text-secondary-fixed uppercase tracking-wider border-b border-outline-variant dark:border-outline pb-2 mb-md">Scan Findings</h3>
+                  <p id="deliverability-summary" class="text-on-surface-variant dark:text-secondary-fixed-dim text-body-sm"></p>
+                </div>
+
+                <div class="bg-surface-container-lowest dark:bg-on-secondary-fixed border border-outline-variant dark:border-outline rounded-2xl p-lg shadow-sm">
+                  <h3 class="font-medium text-sm text-on-surface dark:text-secondary-fixed uppercase tracking-wider border-b border-outline-variant dark:border-outline pb-2 mb-md">Recommended Fixes</h3>
+                  <ul id="top-fixes-list" class="space-y-sm text-body-sm text-on-surface-variant dark:text-secondary-fixed-dim">
+                    <li>Remove spam triggers</li>
+                    <li>Personalize messaging</li>
+                  </ul>
+                </div>
+              </div>
+
+              <!-- AI REWRITE WIDGET -->
+              <section id="rewrite-section" class="bg-surface-container-lowest dark:bg-on-secondary-fixed border border-outline-variant dark:border-outline rounded-2xl shadow-md overflow-hidden hidden">
+                <div class="bg-surface-container-low dark:bg-on-secondary-fixed/50 px-lg py-md border-b border-outline-variant dark:border-outline flex flex-col sm:flex-row justify-between items-start sm:items-center gap-md">
+                  <div>
+                    <h3 id="fix-title" class="font-headline-sm text-headline-sm text-on-surface dark:text-secondary-fixed">Transform Draft</h3>
+                    <p id="rewrite-summary" class="text-xs text-on-surface-variant dark:text-secondary-fixed-dim mt-xs">Before and after draft transformation.</p>
+                  </div>
+                  <div class="flex gap-2">
+                    <button id="copy-fixed-btn" type="button" class="bg-primary hover:bg-surface-tint text-on-primary font-label-md text-label-md px-4 py-2 rounded-xl transition-all shadow-sm flex items-center gap-xs">
+                      <span class="material-symbols-outlined text-[16px]">content_copy</span>
+                      <span>Copy Improved Draft</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div class="p-lg space-y-md">
+                  <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-sm">
+                    <p id="rewrite-live-status" class="text-xs text-on-surface-variant dark:text-secondary-fixed-dim">Transformation adjusts dynamically based on tone selection.</p>
+                    
+                    <div class="rewrite-modes flex bg-surface-container-low dark:bg-on-secondary-fixed/50 border border-outline-variant dark:border-outline rounded-xl p-1 gap-1" role="group" aria-label="Rewrite modes">
+                      <button id="rewrite-safe-btn" type="button" class="text-xs font-semibold px-3 py-1.5 rounded-lg text-secondary dark:text-secondary-fixed-dim hover:text-primary transition-all">Safe</button>
+                      <button id="rewrite-engaging-btn" type="button" class="text-xs font-semibold px-3 py-1.5 rounded-lg text-secondary dark:text-secondary-fixed-dim hover:text-primary transition-all">Casual</button>
+                      <button id="rewrite-direct-btn" type="button" class="text-xs font-semibold px-3 py-1.5 rounded-lg text-secondary dark:text-secondary-fixed-dim hover:text-primary transition-all">Direct</button>
+                      <button id="rewrite-converting-btn" type="button" class="text-xs font-semibold px-3 py-1.5 rounded-lg text-secondary dark:text-secondary-fixed-dim hover:text-primary transition-all">Sales</button>
+                    </div>
+                  </div>
+
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-md">
+                    <div class="border border-outline-variant dark:border-outline rounded-xl p-md bg-surface-container-low dark:bg-on-secondary-fixed/50">
+                      <span class="text-[10px] font-bold text-secondary uppercase tracking-wider block mb-sm">Original Draft</span>
+                      <div id="before-email" class="font-code text-code text-on-surface dark:text-secondary-fixed max-h-60 overflow-y-auto whitespace-pre-wrap"></div>
+                    </div>
+                    <div class="border border-outline-variant dark:border-outline rounded-xl p-md bg-surface-container-low dark:bg-on-secondary-fixed/50">
+                      <span class="text-[10px] font-bold text-primary uppercase tracking-wider block mb-sm">Optimized Draft</span>
+                      <div id="after-email" class="font-code text-code text-on-surface dark:text-secondary-fixed max-h-60 overflow-y-auto whitespace-pre-wrap"></div>
+                    </div>
+                  </div>
+
+                  <div id="issue-list" class="space-y-sm pt-2"></div>
+                  <div class="rewrite-diff border-t border-outline-variant dark:border-outline pt-md mt-md">
+                    <h5 class="text-xs font-bold text-on-surface dark:text-secondary-fixed mb-sm">Change Log</h5>
+                    <div id="diff-summary" class="text-xs text-on-surface-variant dark:text-secondary-fixed-dim bg-surface-container-low dark:bg-on-secondary-fixed/50 p-3 rounded-xl border border-outline-variant dark:border-outline"></div>
+                  </div>
+                </div>
+              </section>
+
+              <!-- Next Steps real seed test -->
+              <section id="step3-block" class="bg-surface-container-lowest dark:bg-on-secondary-fixed border border-outline-variant dark:border-outline rounded-2xl p-lg shadow-sm hidden text-center">
+                <span class="material-symbols-outlined text-primary text-[36px] mb-sm">rocket_launch</span>
+                <h4 class="font-headline-sm text-headline-sm text-on-surface dark:text-secondary-fixed mb-xs">Ensure Placement Consistency</h4>
+                <p class="text-on-surface-variant dark:text-secondary-fixed-dim text-body-sm max-w-md mx-auto mb-md">Verify deliverability across actual inbox providers using our automated test network.</p>
+                <button id="run-test-btn" class="bg-primary hover:bg-surface-tint text-on-primary font-label-md text-label-md px-6 py-2.5 rounded-xl transition-all shadow-sm" type="button">Initiate Inbox Test</button>
+              </section>
+            </div>
+          </section>
+
+          <!-- ADVANCED TOOLS CONTAINER WIDGETS -->
+
+          <!-- Campaign Debugger -->
+          <section id="campaign-debugger" data-tool-pane="campaign-debugger" class="bg-surface-container-lowest dark:bg-on-secondary-fixed border border-outline-variant dark:border-outline rounded-2xl p-lg shadow-sm tool-pane">
+            <div class="tool-pane-head flex justify-between items-center border-b border-outline-variant dark:border-outline pb-sm mb-md">
+              <h2 class="font-headline-sm text-headline-sm text-on-surface dark:text-secondary-fixed">Campaign Failure Debugger</h2>
+              <button type="button" class="border border-outline-variant hover:bg-surface-container-low text-on-surface dark:text-secondary-fixed px-3 py-1 rounded-lg text-xs font-semibold" data-tool-close>Close</button>
+            </div>
+            <p class="text-xs text-on-surface-variant dark:text-secondary-fixed-dim mb-md">Enter campaign metrics to diagnose copy conversions vs deliverability blocks.</p>
+            <form class="space-y-md">
+              <div class="grid grid-cols-2 gap-md">
+                <div>
+                  <label class="block text-xs font-semibold text-secondary uppercase tracking-wider mb-1" for="cd-open">Open Rate (%)</label>
+                  <input id="cd-open" type="number" min="0" max="100" step="0.1" class="w-full rounded-xl border border-outline-variant dark:border-outline bg-surface-container-lowest dark:bg-on-secondary-fixed text-on-surface dark:text-secondary-fixed" placeholder="e.g. 22.5" />
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-secondary uppercase tracking-wider mb-1" for="cd-reply">Reply Rate (%)</label>
+                  <input id="cd-reply" type="number" min="0" max="100" step="0.1" class="w-full rounded-xl border border-outline-variant dark:border-outline bg-surface-container-lowest dark:bg-on-secondary-fixed text-on-surface dark:text-secondary-fixed" placeholder="e.g. 1.8" />
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-secondary uppercase tracking-wider mb-1" for="cd-bounce">Bounce Rate (%)</label>
+                  <input id="cd-bounce" type="number" min="0" max="100" step="0.1" class="w-full rounded-xl border border-outline-variant dark:border-outline bg-surface-container-lowest dark:bg-on-secondary-fixed text-on-surface dark:text-secondary-fixed" placeholder="e.g. 4.2" />
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-secondary uppercase tracking-wider mb-1" for="cd-sent">Emails Sent</label>
+                  <input id="cd-sent" type="number" min="1" step="1" class="w-full rounded-xl border border-outline-variant dark:border-outline bg-surface-container-lowest dark:bg-on-secondary-fixed text-on-surface dark:text-secondary-fixed" placeholder="e.g. 500" />
+                </div>
+              </div>
+              <button id="cd-run" type="button" class="w-full bg-primary hover:bg-surface-tint text-on-primary font-label-md text-label-md py-3 rounded-xl transition-all shadow-md">Diagnose Campaign</button>
+
+              <div id="diagnosis-output" class="hidden bg-surface-container-low dark:bg-on-secondary-fixed/50 border border-outline-variant dark:border-outline rounded-xl p-md mt-md space-y-sm">
+                <p id="diagnosis-primary" class="font-bold text-on-surface dark:text-secondary-fixed text-sm">-</p>
+                <p id="diagnosis-confidence" class="text-xs text-on-surface-variant dark:text-secondary-fixed-dim font-medium">-</p>
+                <p id="diagnosis-why" class="text-xs text-on-surface-variant dark:text-secondary-fixed-dim">-</p>
+                <ul id="diagnosis-actions" class="space-y-1 text-xs text-on-surface-variant dark:text-secondary-fixed-dim pl-4 list-disc"></ul>
+              </div>
+
+              <div id="cd-result" class="text-xs text-on-surface-variant dark:text-secondary-fixed-dim mt-sm">Submit campaign metrics above.</div>
+            </form>
+          </section>
+
+          <!-- Domain Check -->
+          <section id="blacklist-checker" data-tool-pane="blacklist" class="bg-surface-container-lowest dark:bg-on-secondary-fixed border border-outline-variant dark:border-outline rounded-2xl p-lg shadow-sm tool-pane">
+            <div class="tool-pane-head flex justify-between items-center border-b border-outline-variant dark:border-outline pb-sm mb-md">
+              <h2 class="font-headline-sm text-headline-sm text-on-surface dark:text-secondary-fixed">Domain Reputation Check</h2>
+              <button type="button" class="border border-outline-variant hover:bg-surface-container-low text-on-surface dark:text-secondary-fixed px-3 py-1 rounded-lg text-xs font-semibold" data-tool-close>Close</button>
+            </div>
+            <p class="text-xs text-on-surface-variant dark:text-secondary-fixed-dim mb-md">Scan blocks and dns records configuration health.</p>
+            <form class="space-y-md">
+              <div>
+                <label class="block text-xs font-semibold text-secondary uppercase tracking-wider mb-1" for="blacklist-domain">Sender Domain</label>
+                <input id="blacklist-domain" type="text" class="w-full rounded-xl border border-outline-variant dark:border-outline bg-surface-container-lowest dark:bg-on-secondary-fixed text-on-surface dark:text-secondary-fixed" placeholder="yourdomain.com" />
+              </div>
+              <button id="run-blacklist-check" type="button" class="w-full bg-primary hover:bg-surface-tint text-on-primary font-label-md text-label-md py-3 rounded-xl transition-all shadow-md">Check Domain Reputation</button>
+              <p id="blacklist-result" class="text-xs text-on-surface-variant dark:text-secondary-fixed-dim mt-sm">No analysis run yet.</p>
+            </form>
+          </section>
+
+          <!-- Seed Inbox Testing -->
+          <section id="seed-inbox-tracker" data-tool-pane="seed" class="bg-surface-container-lowest dark:bg-on-secondary-fixed border border-outline-variant dark:border-outline rounded-2xl p-lg shadow-sm tool-pane">
+            <div class="tool-pane-head flex justify-between items-center border-b border-outline-variant dark:border-outline pb-sm mb-md">
+              <h2 class="font-headline-sm text-headline-sm text-on-surface dark:text-secondary-fixed">Seed testing</h2>
+              <button type="button" class="border border-outline-variant hover:bg-surface-container-low text-on-surface dark:text-secondary-fixed px-3 py-1 rounded-lg text-xs font-semibold" data-tool-close>Close</button>
+            </div>
+            <p class="text-xs text-on-surface-variant dark:text-secondary-fixed-dim mb-md">Check delivery rates on active seed addresses.</p>
+            <form class="space-y-md">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-md">
+                <div>
+                  <label class="block text-xs font-semibold text-secondary uppercase tracking-wider mb-1" for="seed-campaign">Campaign ID</label>
+                  <input id="seed-campaign" type="text" class="w-full rounded-xl border border-outline-variant dark:border-outline bg-surface-container-lowest dark:bg-on-secondary-fixed text-on-surface dark:text-secondary-fixed" placeholder="Campaign identifier" />
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-secondary uppercase tracking-wider mb-1" for="seed-provider">Email Provider</label>
+                  <select id="seed-provider" class="w-full rounded-xl border border-outline-variant dark:border-outline bg-surface-container-lowest dark:bg-on-secondary-fixed text-on-surface dark:text-secondary-fixed">
+                    <option value="gmail">Gmail</option>
+                    <option value="outlook">Outlook</option>
+                    <option value="yahoo">Yahoo</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-secondary uppercase tracking-wider mb-1" for="seed-inbox-count">Inbox Count</label>
+                  <input id="seed-inbox-count" type="number" min="0" step="1" class="w-full rounded-xl border border-outline-variant dark:border-outline bg-surface-container-lowest dark:bg-on-secondary-fixed text-on-surface dark:text-secondary-fixed" placeholder="Deliveries" />
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-secondary uppercase tracking-wider mb-1" for="seed-spam-count">Spam Count</label>
+                  <input id="seed-spam-count" type="number" min="0" step="1" class="w-full rounded-xl border border-outline-variant dark:border-outline bg-surface-container-lowest dark:bg-on-secondary-fixed text-on-surface dark:text-secondary-fixed" placeholder="Spam folder hits" />
+                </div>
+              </div>
+              <div class="flex flex-col gap-2 pt-2">
+                <button id="save-seed-test" type="button" class="w-full bg-primary hover:bg-surface-tint text-on-primary font-label-md text-label-md py-3 rounded-xl transition-all shadow-md">Save Seed Outcome</button>
+                <button id="run-seed-sync" type="button" class="border border-outline hover:bg-surface-container-low text-on-surface dark:text-secondary-fixed py-2 rounded-xl text-xs font-semibold">Run Instant Seed Probe</button>
+                <button id="run-seed-auto" type="button" class="border border-outline hover:bg-surface-container-low text-on-surface dark:text-secondary-fixed py-2 rounded-xl text-xs font-semibold">Run Automated Seed Test</button>
+              </div>
+              <ul id="seed-test-list" class="space-y-1 text-xs text-on-surface-variant dark:text-secondary-fixed-dim pt-md">
+                <li>No seed tests logged.</li>
+              </ul>
+            </form>
+          </section>
+
+          <!-- Bulk Scan -->
+          <section id="bulk-scan" data-tool-pane="bulk" class="bg-surface-container-lowest dark:bg-on-secondary-fixed border border-outline-variant dark:border-outline rounded-2xl p-lg shadow-sm tool-pane">
+            <div class="tool-pane-head flex justify-between items-center border-b border-outline-variant dark:border-outline pb-sm mb-md">
+              <h2 class="font-headline-sm text-headline-sm text-on-surface dark:text-secondary-fixed">Bulk Scan CSV</h2>
+              <button type="button" class="border border-outline-variant hover:bg-surface-container-low text-on-surface dark:text-secondary-fixed px-3 py-1 rounded-lg text-xs font-semibold" data-tool-close>Close</button>
+            </div>
+            <p class="text-xs text-on-surface-variant dark:text-secondary-fixed-dim mb-md">Upload CSV of drafts for automated list checks.</p>
+            <form class="space-y-md">
+              <input id="bulk-file" type="file" accept=".csv,text/csv" class="w-full rounded-xl border border-outline-variant dark:border-outline text-xs p-md" />
+              <button id="run-bulk-scan" type="button" class="w-full bg-primary hover:bg-surface-tint text-on-primary font-label-md text-label-md py-3 rounded-xl transition-all shadow-md">Run Bulk Scanner</button>
+              <ul id="bulk-results" class="space-y-1 text-xs text-on-surface-variant dark:text-secondary-fixed-dim pt-md">
+                <li>No bulk jobs checked.</li>
+              </ul>
+            </form>
+          </section>
+
+          <!-- API & Team Ops -->
+          <section id="ops-api-team" data-tool-pane="ops" class="bg-surface-container-lowest dark:bg-on-secondary-fixed border border-outline-variant dark:border-outline rounded-2xl p-lg shadow-sm tool-pane">
+            <div class="tool-pane-head flex justify-between items-center border-b border-outline-variant dark:border-outline pb-sm mb-md">
+              <h2 class="font-headline-sm text-headline-sm text-on-surface dark:text-secondary-fixed">API &amp; Team</h2>
+              <button type="button" class="border border-outline-variant hover:bg-surface-container-low text-on-surface dark:text-secondary-fixed px-3 py-1 rounded-lg text-xs font-semibold" data-tool-close>Close</button>
+            </div>
+            <p class="text-xs text-on-surface-variant dark:text-secondary-fixed-dim mb-md">Configure programmatic integrations or manage members.</p>
+            <form class="space-y-md">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-md">
+                <div>
+                  <label class="block text-xs font-semibold text-secondary uppercase tracking-wider mb-1" for="api-key-name">API key label</label>
+                  <input id="api-key-name" type="text" class="w-full rounded-xl border border-outline-variant dark:border-outline bg-surface-container-lowest dark:bg-on-secondary-fixed text-on-surface dark:text-secondary-fixed" placeholder="Production token label" />
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-secondary uppercase tracking-wider mb-1" for="team-name">Team Name</label>
+                  <input id="team-name" type="text" class="w-full rounded-xl border border-outline-variant dark:border-outline bg-surface-container-lowest dark:bg-on-secondary-fixed text-on-surface dark:text-secondary-fixed" placeholder="Workspace name" />
+                </div>
+              </div>
+              <div class="grid grid-cols-2 gap-2">
+                <button id="create-api-key" type="button" class="border border-outline hover:bg-surface-container-low text-on-surface dark:text-secondary-fixed py-2 rounded-xl text-xs font-semibold">Create API Token</button>
+                <button id="list-api-keys" type="button" class="border border-outline hover:bg-surface-container-low text-on-surface dark:text-secondary-fixed py-2 rounded-xl text-xs font-semibold">List Keys</button>
+                <button id="create-team" type="button" class="border border-outline hover:bg-surface-container-low text-on-surface dark:text-secondary-fixed py-2 rounded-xl text-xs font-semibold">Create Workspace</button>
+                <button id="list-teams" type="button" class="border border-outline hover:bg-surface-container-low text-on-surface dark:text-secondary-fixed py-2 rounded-xl text-xs font-semibold">List Teams</button>
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-md border-t border-outline-variant dark:border-outline pt-md mt-md">
+                <div>
+                  <label class="block text-xs font-semibold text-secondary uppercase tracking-wider mb-1" for="revoke-key-id">Revoke Key ID</label>
+                  <input id="revoke-key-id" type="number" class="w-full rounded-xl border border-outline-variant dark:border-outline bg-surface-container-lowest dark:bg-on-secondary-fixed text-on-surface dark:text-secondary-fixed" placeholder="Key ID number" />
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-secondary uppercase tracking-wider mb-1" for="team-member-team-id">Target Team ID</label>
+                  <input id="team-member-team-id" type="number" class="w-full rounded-xl border border-outline-variant dark:border-outline bg-surface-container-lowest dark:bg-on-secondary-fixed text-on-surface dark:text-secondary-fixed" placeholder="Team ID number" />
+                </div>
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-md">
+                <div>
+                  <label class="block text-xs font-semibold text-secondary uppercase tracking-wider mb-1" for="team-member-email">Invite Email Address</label>
+                  <input id="team-member-email" type="email" class="w-full rounded-xl border border-outline-variant dark:border-outline bg-surface-container-lowest dark:bg-on-secondary-fixed text-on-surface dark:text-secondary-fixed" placeholder="partner@company.com" />
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-secondary uppercase tracking-wider mb-1" for="team-member-role">Assign Role</label>
+                  <select id="team-member-role" class="w-full rounded-xl border border-outline-variant dark:border-outline bg-surface-container-lowest dark:bg-on-secondary-fixed text-on-surface dark:text-secondary-fixed">
+                    <option value="member" selected>Member</option>
+                    <option value="admin">Admin</option>
+                    <option value="viewer">Viewer</option>
+                    <option value="owner">Owner</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-2 gap-2 pt-2">
+                <button id="revoke-api-key" type="button" class="bg-error/10 hover:bg-error/20 text-error py-2.5 rounded-xl text-xs font-semibold">Revoke Token</button>
+                <button id="add-team-member" type="button" class="bg-primary hover:bg-surface-tint text-on-primary py-2.5 rounded-xl text-xs font-semibold">Invite Member</button>
+              </div>
+
+              <ul id="api-key-list" class="space-y-1 text-xs text-on-surface-variant dark:text-secondary-fixed-dim pt-sm">
+                <li>No active tokens.</li>
+              </ul>
+              <ul id="team-list" class="space-y-1 text-xs text-on-surface-variant dark:text-secondary-fixed-dim pt-sm">
+                <li>No teams loaded.</li>
+              </ul>
+              <ul id="ops-output" class="space-y-1 text-xs text-on-surface-variant dark:text-secondary-fixed-dim pt-sm bg-surface-container-low dark:bg-on-secondary-fixed/50 p-2.5 rounded-xl">
+                <li>No activities.</li>
+              </ul>
+            </form>
+          </section>
+
+          <!-- Insights -->
+          <section id="operator-insights" data-tool-pane="insights" class="bg-surface-container-lowest dark:bg-on-secondary-fixed border border-outline-variant dark:border-outline rounded-2xl p-lg shadow-sm tool-pane">
+            <div class="tool-pane-head flex justify-between items-center border-b border-outline-variant dark:border-outline pb-sm mb-md">
+              <h2 class="font-headline-sm text-headline-sm text-on-surface dark:text-secondary-fixed">Operator Insights</h2>
+              <button type="button" class="border border-outline-variant hover:bg-surface-container-low text-on-surface dark:text-secondary-fixed px-3 py-1 rounded-lg text-xs font-semibold" data-tool-close>Close</button>
+            </div>
+            <p class="text-xs text-on-surface-variant dark:text-secondary-fixed-dim mb-md">Inspect processing queue status and download reports.</p>
+            <form class="space-y-md">
+              <div class="grid grid-cols-2 gap-2">
+                <button id="refresh-outcome-stats" type="button" class="border border-outline-variant hover:bg-surface-container-low text-on-surface dark:text-secondary-fixed py-2 rounded-xl text-xs font-semibold">Refresh stats</button>
+                <button id="refresh-jobs" type="button" class="border border-outline-variant hover:bg-surface-container-low text-on-surface dark:text-secondary-fixed py-2 rounded-xl text-xs font-semibold">Refresh async queue</button>
+              </div>
+              <ul id="outcome-stats-list" class="space-y-1 text-xs text-on-surface-variant dark:text-secondary-fixed-dim pt-sm">
+                <li>Outcome stats empty.</li>
+              </ul>
+              <ul id="job-list" class="space-y-1 text-xs text-on-surface-variant dark:text-secondary-fixed-dim pt-sm">
+                <li>Queue empty.</li>
+              </ul>
+              <div class="flex flex-col sm:flex-row gap-2 border-t border-outline-variant dark:border-outline pt-md mt-md">
+                <a href="/results.csv" class="flex-1 inline-flex items-center justify-center rounded-xl border border-outline-variant dark:border-outline text-on-surface dark:text-secondary-fixed hover:bg-surface-container-low py-2.5 font-label-md text-label-md no-underline">Download Results CSV</a>
+                <a href="/reports.csv" class="flex-1 inline-flex items-center justify-center rounded-xl border border-outline-variant dark:border-outline text-on-surface dark:text-secondary-fixed hover:bg-surface-container-low py-2.5 font-label-md text-label-md no-underline">Download Reports CSV</a>
+              </div>
+            </form>
+          </section>
+
+        </section>
+
+        <!-- Footer -->
+        <footer class="mt-xl pt-lg border-t border-outline-variant dark:border-outline">
+          <div class="flex flex-col sm:flex-row justify-between items-center gap-md text-body-sm text-secondary dark:text-secondary-fixed-dim">
+            <span>Built by Tharun Kumar &bull; deliverability audit network.</span>
+            <div class="flex gap-lg font-semibold">
+              <a href="/about" class="text-on-surface-variant dark:text-secondary-fixed-dim hover:text-primary no-underline">About</a>
+              <a href="/privacy" class="text-on-surface-variant dark:text-secondary-fixed-dim hover:text-primary no-underline">Privacy</a>
+              <a href="/terms" class="text-on-surface-variant dark:text-secondary-fixed-dim hover:text-primary no-underline">Terms</a>
+              <a href="/blog" class="text-on-surface-variant dark:text-secondary-fixed-dim hover:text-primary no-underline">Blog</a>
+            </div>
+          </div>
+        </footer>
+      </main>
+    </div>
+
+    <!-- Lead Capture Modal -->
+    <div id="lead-capture-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="lead-capture-title">
+      <div class="modal-card bg-surface-container-lowest dark:bg-on-secondary-fixed border border-outline-variant dark:border-outline rounded-2xl p-lg max-w-sm w-full text-center shadow-2xl relative">
+        <h3 id="lead-capture-title" class="font-headline-sm text-headline-sm text-on-surface dark:text-secondary-fixed mb-sm">Unlock Next Scan</h3>
+        <p class="text-xs text-on-surface-variant dark:text-secondary-fixed-dim mb-lg">To preserve scans and fix history, please provide your primary email address.</p>
+        <div class="space-y-sm">
+          <input id="lead-capture-email" class="w-full rounded-xl border border-outline-variant dark:border-outline bg-surface-container-lowest dark:bg-on-secondary-fixed text-on-surface dark:text-secondary-fixed px-3 py-2.5 text-sm focus:border-primary focus:ring-1 focus:ring-primary" type="email" placeholder="you@company.com" />
+          <button id="lead-capture-continue" type="button" class="w-full bg-primary hover:bg-surface-tint text-on-primary font-label-md text-label-md py-3 rounded-xl transition-all shadow-md">Continue &amp; Save Draft</button>
+        </div>
+        <button id="lead-capture-close" type="button" class="text-xs text-on-surface-variant hover:text-primary mt-4 underline bg-transparent border-none" onclick="window.igLeadCaptureClose && window.igLeadCaptureClose()">Skip for now</button>
+      </div>
+    </div>
+
+    <!-- Auth Modal -->
+    <div id="auth-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="auth-modal-title">
+      <div class="modal-card bg-surface-container-lowest dark:bg-on-secondary-fixed border border-outline-variant dark:border-outline rounded-2xl p-lg max-w-sm w-full text-center shadow-2xl relative">
+        <h3 id="auth-modal-title" class="font-headline-sm text-headline-sm text-on-surface dark:text-secondary-fixed mb-sm">Continue check limits</h3>
+        <p class="text-xs text-on-surface-variant dark:text-secondary-fixed-dim mb-lg">You have run out of free checks. Authenticate to sync your dashboard.</p>
+        <div class="space-y-sm">
+          <button id="auth-signin" type="button" class="w-full bg-primary hover:bg-surface-tint text-on-primary font-label-md text-label-md py-3 rounded-xl transition-all shadow-md flex items-center justify-center gap-xs" onclick="window.igAuthSignIn && window.igAuthSignIn()">
+            <span>Continue with Google</span>
+          </button>
+          <div class="relative flex py-2 items-center">
+            <div class="flex-grow border-t border-outline-variant dark:border-outline"></div>
+            <span class="flex-shrink mx-4 text-xs text-on-surface-variant dark:text-secondary-fixed-dim uppercase tracking-wider font-semibold">or email</span>
+            <div class="flex-grow border-t border-outline-variant dark:border-outline"></div>
+          </div>
+          <input id="auth-email" class="w-full rounded-xl border border-outline-variant dark:border-outline bg-surface-container-lowest dark:bg-on-secondary-fixed text-on-surface dark:text-secondary-fixed px-3 py-2.5 text-sm focus:border-primary focus:ring-1 focus:ring-primary" type="email" placeholder="you@company.com" />
+          <button id="auth-create" type="button" class="w-full border border-outline hover:bg-surface-container-low text-on-surface dark:text-secondary-fixed font-label-md text-label-md py-3 rounded-xl transition-all" onclick="window.igAuthCreate && window.igAuthCreate()">Send Magic Link</button>
+        </div>
+        <button id="auth-close" type="button" class="text-xs text-on-surface-variant hover:text-primary mt-4 underline bg-transparent border-none" onclick="window.igAuthClose && window.igAuthClose()">Close</button>
+      </div>
+    </div>
+
+    <!-- Backdrop -->
+    <div id="toolWorkspaceBackdrop" class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm z-20 hidden" aria-hidden="true"></div>
+
+    <!-- Pricing Modal Popup -->
+    <div id="pricing-modal" class="hidden fixed inset-0 bg-gray-950/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+      <div class="bg-surface-container-lowest dark:bg-on-secondary-fixed border border-outline-variant dark:border-outline rounded-3xl shadow-2xl max-w-4xl w-full p-lg md:p-xl relative max-h-[90vh] overflow-y-auto">
+        <button onclick="closeModal()" class="absolute top-4 right-6 text-on-surface-variant dark:text-secondary-fixed-dim hover:text-on-surface text-3xl font-bold bg-transparent border-none">&times;</button>
+        <h2 class="font-headline-lg text-headline-lg text-center text-primary dark:text-primary-fixed mb-xl">Choose your InboxGuard plan</h2>
+        
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-lg">
+          <!-- STARTER -->
+          <div class="bg-surface-container-lowest dark:bg-on-secondary-fixed border border-outline-variant dark:border-outline rounded-2xl p-lg flex flex-col justify-between shadow-sm">
+            <div>
+              <h3 class="font-headline-sm text-headline-sm text-on-surface dark:text-secondary-fixed mb-sm">Starter</h3>
+              <div class="pricing-price text-3xl font-bold text-primary dark:text-primary-fixed mb-xs">$9</div>
+              <div class="interval text-xs text-on-surface-variant dark:text-secondary-fixed-dim mb-lg">/ month</div>
+              <ul class="space-y-sm text-xs text-on-surface-variant dark:text-secondary-fixed-dim mb-xl">
+                <li class="flex items-center gap-xs"><span class="material-symbols-outlined text-primary text-[16px]">check</span><span>10 scans / month</span></li>
+                <li class="flex items-center gap-xs"><span class="material-symbols-outlined text-primary text-[16px]">check</span><span>Email support</span></li>
+              </ul>
+            </div>
+            <button onclick="purchasePlan('starter')" class="w-full bg-primary hover:bg-surface-tint text-on-primary font-label-md text-label-md py-2.5 rounded-xl transition-all shadow-sm">Get Starter</button>
+          </div>
+          <!-- PRO -->
+          <div class="bg-surface-container-lowest dark:bg-on-secondary-fixed border-2 border-primary rounded-2xl p-lg flex flex-col justify-between shadow-md relative">
+            <div class="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-primary text-on-primary font-label-sm text-label-sm px-3 py-0.5 rounded-full uppercase tracking-wider">Most Popular</div>
+            <div>
+              <h3 class="font-headline-sm text-headline-sm text-on-surface dark:text-secondary-fixed mb-sm mt-1">Pro</h3>
+              <div class="pricing-price text-3xl font-bold text-primary dark:text-primary-fixed mb-xs">$29</div>
+              <div class="interval text-xs text-on-surface-variant dark:text-secondary-fixed-dim mb-lg">/ month</div>
+              <ul class="space-y-sm text-xs text-on-surface-variant dark:text-secondary-fixed-dim mb-xl">
+                <li class="flex items-center gap-xs"><span class="material-symbols-outlined text-primary text-[16px]">check</span><span>Unlimited scans</span></li>
+                <li class="flex items-center gap-xs"><span class="material-symbols-outlined text-primary text-[16px]">check</span><span>Batch testing</span></li>
+                <li class="flex items-center gap-xs"><span class="material-symbols-outlined text-primary text-[16px]">check</span><span>Priority support</span></li>
+              </ul>
+            </div>
+            <button onclick="purchasePlan('pro')" class="w-full bg-primary hover:bg-surface-tint text-on-primary font-label-md text-label-md py-2.5 rounded-xl transition-all shadow-md">Get Pro</button>
+          </div>
+          <!-- GROWTH -->
+          <div class="bg-surface-container-lowest dark:bg-on-secondary-fixed border border-outline-variant dark:border-outline rounded-2xl p-lg flex flex-col justify-between shadow-sm">
+            <div>
+              <h3 class="font-headline-sm text-headline-sm text-on-surface dark:text-secondary-fixed mb-sm">Growth</h3>
+              <div class="pricing-price text-3xl font-bold text-primary dark:text-primary-fixed mb-xs">$99</div>
+              <div class="interval text-xs text-on-surface-variant dark:text-secondary-fixed-dim mb-lg">/ year</div>
+              <ul class="space-y-sm text-xs text-on-surface-variant dark:text-secondary-fixed-dim mb-xl">
+                <li class="flex items-center gap-xs"><span class="material-symbols-outlined text-primary text-[16px]">check</span><span>Unlimited scans</span></li>
+                <li class="flex items-center gap-xs"><span class="material-symbols-outlined text-primary text-[16px]">check</span><span>Team access</span></li>
+                <li class="flex items-center gap-xs"><span class="material-symbols-outlined text-primary text-[16px]">check</span><span>Annual billing</span></li>
+              </ul>
+            </div>
+            <button onclick="purchasePlan('growth')" class="w-full bg-primary hover:bg-surface-tint text-on-primary font-label-md text-label-md py-2.5 rounded-xl transition-all shadow-sm">Get Growth</button>
           </div>
         </div>
+        
+        <p class="text-xs text-on-surface-variant dark:text-secondary-fixed-dim text-center mt-lg">
+          Need custom deliverability tracking? 
+          <a href="mailto:you@company.com" class="text-primary hover:underline font-semibold ml-1">Contact Outbound Ops</a>
+        </p>
+      </div>
+    </div>
 
-        <script src="/static/js/cookie-consent.js?v=20260410-cookie-consent-1"></script>
+    <!-- Legacy Compatibility Overlay -->
+    <div id="decisionOverlay" class="decision-overlay hidden" role="status" aria-live="polite">
+      <div class="decision-overlay-card">
+        <p id="decisionOverlayText">Decision</p>
+      </div>
+    </div>
 
-        <section class="card tool-pane tool-blue" id="campaign-debugger" data-tool-pane="campaign-debugger" style="margin-top: 12px;">
-          <div class="tool-pane-head">
-            <h2 class="tool-pane-title">Campaign Failure Debugger</h2>
-            <button type="button" class="tool-pane-head-close" data-tool-close>Close</button>
-          </div>
-          <p class="micro">Sent a campaign already? Enter outcomes to diagnose whether failure is deliverability, copy, or targeting.</p>
-          <div class="inline-fields" style="margin-top: 10px;">
-            <div>
-              <label for="cd-open">Open Rate (%)</label>
-              <input id="cd-open" type="number" min="0" max="100" step="0.1" placeholder="e.g. 22.5" />
-            </div>
-            <div>
-              <label for="cd-reply">Reply Rate (%)</label>
-              <input id="cd-reply" type="number" min="0" max="100" step="0.1" placeholder="e.g. 1.8" />
-            </div>
-          </div>
-          <div class="inline-fields" style="margin-top: 8px;">
-            <div>
-              <label for="cd-bounce">Bounce Rate (%)</label>
-              <input id="cd-bounce" type="number" min="0" max="100" step="0.1" placeholder="e.g. 4.2" />
-            </div>
-            <div>
-              <label for="cd-sent">Emails Sent</label>
-              <input id="cd-sent" type="number" min="1" step="1" placeholder="e.g. 500" />
-            </div>
-          </div>
-          <button id="cd-run" type="button" class="btn-tool-primary tool-pane-primary" style="margin-top: 10px;">Diagnose Campaign</button>
+    <script>
+      (function () {
+        const buttons = Array.from(document.querySelectorAll('.tool-nav-btn'));
+        const panes = Array.from(document.querySelectorAll('.tool-pane'));
+        const closeButtons = Array.from(document.querySelectorAll('[data-tool-close]'));
+        const mainArea = document.querySelector('.main-area');
 
-          <div id="diagnosis-output" class="card hidden" style="margin-top: 12px; background: #ffffff; border: 1px solid #e5e7eb;">
-            <p id="diagnosis-primary" class="main-issue">-</p>
-            <p id="diagnosis-confidence" class="micro">-</p>
-            <p id="diagnosis-why" class="micro">-</p>
-            <ul id="diagnosis-actions" class="compact-list"></ul>
-          </div>
+        function closePanes() {
+          panes.forEach((pane) => pane.classList.remove('active'));
+          buttons.forEach((btn) => btn.classList.remove('active'));
+          if (mainArea) {
+            mainArea.classList.remove('tool-panel-open');
+          }
+        }
 
-          <div id="cd-result" class="micro" style="margin-top: 10px; color: #cbd5e1;">Run diagnosis to see issue, reason, and action.</div>
-        </section>
+        function openPane(key) {
+          closePanes();
+          const pane = panes.find((item) => item.getAttribute('data-tool-pane') === key);
+          const btn = buttons.find((item) => item.getAttribute('data-tool') === key);
+          if (!pane || !btn) {
+            console.error('Missing panel for:', key);
+            return;
+          }
+          pane.classList.add('active');
+          btn.classList.add('active');
+          if (mainArea) {
+            mainArea.classList.add('tool-panel-open');
+          }
+          if (typeof window.igOnToolPaneOpened === 'function') {
+            window.igOnToolPaneOpened(key, pane);
+          }
+          const firstInput = pane.querySelector('input,select,textarea,button');
+          if (firstInput && typeof firstInput.focus === 'function') {
+            setTimeout(() => firstInput.focus(), 60);
+          }
+        }
 
-        <section class="card panel tool tool-pane tool-red" id="blacklist-checker" data-tool-pane="blacklist" style="margin-top: 12px;">
-          <div class="tool-pane-head">
-            <h2 class="tool-pane-title">Domain Blacklist Checker</h2>
-            <button type="button" class="tool-pane-head-close" data-tool-close>Close</button>
-          </div>
-          <p class="micro">Quickly check if your sender domain appears in a known risky list.</p>
-          <div class="action-block" style="margin-top: 8px;">
-            <div>
-              <label for="blacklist-domain">Domain</label>
-              <input id="blacklist-domain" class="input input-field" type="text" placeholder="yourdomain.com" />
-            </div>
-            <button id="run-blacklist-check" type="button" class="btn btn-primary btn-tool-primary tool-pane-primary">Check Domain Risk</button>
-          </div>
-          <p id="blacklist-result" class="micro" style="margin-top: 8px;">No check yet.</p>
-        </section>
+        buttons.forEach((button) => {
+          button.addEventListener('click', () => {
+            const key = button.getAttribute('data-tool') || '';
+            if (typeof window.openTool === 'function') {
+              window.openTool(key);
+              return;
+            }
+            openPane(key);
+          });
+        });
 
-        <section class="card panel tool tool-pane tool-yellow" id="seed-inbox-tracker" data-tool-pane="seed" style="margin-top: 12px;">
-          <div class="tool-pane-head">
-            <h2 class="tool-pane-title">Seed Inbox Testing</h2>
-            <button type="button" class="tool-pane-head-close" data-tool-close>Close</button>
-          </div>
-          <p class="micro">Log seed account outcomes per provider to catch placement drift before full rollout.</p>
-          <div class="inline-fields" style="margin-top: 8px;">
-            <div>
-              <label for="seed-campaign">Campaign</label>
-              <input id="seed-campaign" class="input" type="text" placeholder="April cold outreach batch" />
-            </div>
-            <div>
-              <label for="seed-provider">Provider</label>
-              <select id="seed-provider" class="input">
-                <option value="gmail">Gmail</option>
-                <option value="outlook">Outlook</option>
-                <option value="yahoo">Yahoo</option>
-              </select>
-            </div>
-          </div>
+        closeButtons.forEach((button) => {
+          button.addEventListener('click', () => {
+            if (typeof window.goHome === 'function') {
+              window.goHome();
+              return;
+            }
+            closePanes();
+          });
+        });
+
+        window.closeTool = closePanes;
+        window.igOpenToolPane = openPane;
+        window.igCloseToolPane = closePanes;
+
+        document.addEventListener('keydown', (event) => {
+          if (event.key === 'Escape') {
+            closePanes();
+          }
+        });
+      })();
+    </script>
+
+    <script src="/static/js/cookie-consent.js?v=20260410-cookie-consent-1"></script>
+    <script src="/static/js/flow.js?v=20260410-progressive-exposure-1"></script>
+    <script src="/static/js/app.js?v=20260411-flow-rewrite-1"></script>
+
+    <!-- Custom Dynamic circular Score Gauge Renderer Hook -->
+    <script>
+      (function() {
+        const origRender = window.renderConversionResult;
+        if (origRender) {
+          window.renderConversionResult = function(data) {
+            origRender.call(this, data);
+            
+            try {
+              const summary = data && typeof data.summary === "object" ? data.summary : {};
+              const baseScore = Number((summary && summary.score) ?? data.score ?? 0);
+              const issues = Array.isArray(data && data.issues)
+                  ? data.issues
+                  : Array.isArray(data && data.findings)
+                      ? data.findings
+                      : [];
+              const inferredRiskScore = Number.isFinite(baseScore)
+                  ? Math.max(0, Math.min(100, 100 - baseScore))
+                  : (issues.length ? 75 : 20);
+              const riskScore = Number((summary && summary.risk_score) ?? data.risk_score ?? inferredRiskScore);
+              
+              const displayScore = Number.isFinite(baseScore) && baseScore > 0 ? baseScore : Math.max(0, 100 - riskScore);
+              
+              const scoreTextNode = document.getElementById("gauge-score-value");
+              const scoreCircleNode = document.getElementById("gauge-score-circle");
+              if (scoreTextNode) {
+                scoreTextNode.textContent = String(displayScore);
+              }
+              if (scoreCircleNode) {
+                const offset = 339.292 - (339.292 * displayScore / 100);
+                scoreCircleNode.setAttribute("stroke-dashoffset", String(offset));
+                
+                scoreCircleNode.classList.remove("text-primary", "text-warning", "text-error");
+                if (displayScore >= 80) {
+                  scoreCircleNode.classList.add("text-primary");
+                } else if (displayScore >= 60) {
+                  scoreCircleNode.classList.add("text-warning");
+                } else {
+                  scoreCircleNode.classList.add("text-error");
+                }
+              }
+            } catch(e) {
+              console.error("Score gauge sync error:", e);
+            }
+          };
+        }
+      })();
+    </script>
+  </body>
+</html>
+
           <div class="inline-fields" style="margin-top: 8px;">
             <div>
               <label for="seed-inbox-count">Inbox Count</label>
