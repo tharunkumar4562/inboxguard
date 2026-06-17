@@ -103,5 +103,5 @@ for signal in result3['summary']['detected_signals']:
 print(f"\nFindings Count: {len(result3['partial_findings'])}")
 
 print("\n" + "=" * 70)
-print("✅ TEST COMPLETE - New features are working!")
+print("TEST COMPLETE - New features are working!")
 print("=" * 70)

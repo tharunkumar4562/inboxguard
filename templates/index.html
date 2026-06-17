@@ -1,5 +1,5 @@
 <!doctype html>
-<html class="light" lang="en">
+<html class="light" data-theme="light" lang="en">
   <head>
     <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-WXGNG9TEFK"></script>
@@ -34,22 +34,25 @@
     <link rel="shortcut icon" href="/favicon.ico?v=20260408-favicon-1" />
     <link rel="manifest" href="/static/site.webmanifest?v=20260408-favicon-1" />
     <script>
-      (function () {
-        try {
-          var savedTheme = localStorage.getItem("ig_theme");
-          var systemDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
-          var theme = savedTheme === "dark" || savedTheme === "light" ? savedTheme : (systemDark ? "dark" : "light");
-          var root = document.documentElement;
-          root.dataset.theme = theme;
-          root.classList.toggle("dark", theme === "dark");
-          root.style.colorScheme = theme === "dark" ? "dark" : "light";
-          var meta = document.querySelector('meta[name="theme-color"]');
-          if (meta) {
-            meta.setAttribute("content", theme === "dark" ? "#111c2d" : "#f8f9ff");
-          }
-        } catch (error) {
+      (function() {
+      try {
+        var root = document.documentElement;
+        var theme = "light";
+        root.dataset.theme = theme;
+        if (theme === "dark") {
+          root.classList.add("dark");
+          root.style.colorScheme = "dark";
+        } else {
+          root.classList.remove("dark");
+          root.style.colorScheme = "light";
         }
-      })();
+        var meta = document.querySelector('meta[name="theme-color"]');
+        if (meta) {
+          meta.setAttribute("content", theme === "dark" ? "#111c2d" : "#f8f9ff");
+        }
+      } catch (error) {
+      }
+    })();
     </script>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -58,7 +61,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
-    <link rel="stylesheet" href="/static/css/cookie-consent.css?v=20260410-cookie-consent-1" />
+    <link rel="stylesheet" href="/static/css/cookie-consent.css?v=20260614-force-light-1" />
     
     <style>
       .material-symbols-outlined {
@@ -74,6 +77,161 @@
         -ms-overflow-style: none;
         scrollbar-width: none;
       }
+
+      /* Sidebar and Mobile Drawer CSS */
+      @media (min-width: 768px) {
+        .sidebar {
+          display: block !important;
+          width: 220px;
+          flex-shrink: 0;
+        }
+
+        .app-layout {
+          display: flex;
+          flex-direction: row;
+          gap: 40px;
+        }
+
+        .main-content {
+          flex: 1;
+          min-width: 0;
+        }
+      }
+
+      .sidebar-nav-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 12px;
+        border-radius: 6px;
+        font-size: 14px;
+        color: #4B5563;
+        text-decoration: none;
+        cursor: pointer;
+        transition: background 0.15s ease;
+      }
+
+      .sidebar-nav-item:hover {
+        background: #F8F9FA;
+        color: #0D0D0D;
+      }
+
+      .sidebar-nav-item.active {
+        background: #F0FDF9;
+        color: #1D9E75;
+        font-weight: 500;
+      }
+
+      .hamburger-btn {
+        display: none;
+        flex-direction: column;
+        gap: 5px;
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 8px;
+      }
+
+      .hamburger-btn span {
+        display: block;
+        width: 22px;
+        height: 2px;
+        background: #0D0D0D;
+        border-radius: 2px;
+        transition: all 0.2s ease;
+      }
+
+      @media (max-width: 767px) {
+        .hamburger-btn { display: flex; }
+        .desktop-nav { display: none; }
+      }
+
+      .mobile-drawer {
+        position: fixed;
+        top: 0;
+        right: 0;
+        width: 280px;
+        height: 100vh;
+        background: #ffffff;
+        box-shadow: -4px 0 24px rgba(0,0,0,0.12);
+        z-index: 1000;
+        transform: translateX(100%);
+        transition: transform 0.25s ease;
+        display: flex;
+        flex-direction: column;
+        overflow-y: auto;
+      }
+
+      .mobile-drawer.open {
+        transform: translateX(0);
+      }
+
+      .drawer-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.4);
+        z-index: 999;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.25s ease;
+      }
+
+      .drawer-overlay.visible {
+        opacity: 1;
+        pointer-events: all;
+      }
+
+      .drawer-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 20px 24px;
+        border-bottom: 1px solid #E5E7EB;
+      }
+
+      .drawer-logo {
+        font-size: 16px;
+        font-weight: 600;
+        color: #1D9E75;
+      }
+
+      .drawer-close {
+        background: none;
+        border: none;
+        font-size: 24px;
+        color: #9CA3AF;
+        cursor: pointer;
+        line-height: 1;
+      }
+
+      .drawer-nav {
+        padding: 16px 12px;
+        flex: 1;
+      }
+
+      .drawer-nav-item {
+        display: block;
+        padding: 12px 12px;
+        font-size: 15px;
+        color: #0D0D0D;
+        text-decoration: none;
+        border-radius: 8px;
+      }
+
+      .drawer-nav-item:hover {
+        background: #F8F9FA;
+        color: #1D9E75;
+      }
+
+      .drawer-footer {
+        padding: 20px 24px;
+        border-top: 1px solid #E5E7EB;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .drawer-btn { width: 100%; text-align: center; }
     </style>
 
     <script id="tailwind-config">
@@ -233,88 +391,22 @@
   </head>
   <body class="bg-background dark:bg-on-secondary-fixed text-on-surface dark:text-secondary-fixed font-body-md antialiased min-h-screen flex flex-col">
     
-    <div class="flex-grow flex w-full max-w-[1440px] mx-auto min-h-screen">
+    <div class="flex-grow flex w-full max-w-[1440px] mx-auto min-h-screen app-layout">
       <!-- SideNavBar Desktop -->
-      <aside class="hidden lg:flex flex-col p-md gap-base bg-surface-container-low dark:bg-on-secondary-fixed border-r border-outline-variant dark:border-outline w-[280px] shrink-0 sticky top-0 h-screen overflow-y-auto">
-        <div class="mb-lg px-2">
-          <a href="/" class="text-headline-sm font-headline-sm font-bold text-primary dark:text-primary-fixed flex items-center gap-xs no-underline">
-            <span class="material-symbols-outlined fill-icon" style="font-variation-settings: 'FILL' 1;">security</span>
-            InboxGuard
-          </a>
-          <p class="font-label-sm text-label-sm text-on-surface-variant dark:text-secondary-fixed-dim">Deliverability Suite</p>
-        </div>
-
-        <button class="w-full bg-primary text-on-primary rounded-xl py-3 px-4 font-label-md text-label-md flex items-center justify-center gap-sm mb-lg hover:bg-surface-tint transition-all shadow-sm" type="button" onclick="openTool('scan')">
-          <span class="material-symbols-outlined">add</span>
-          New Scan
-        </button>
-
-        <nav class="flex flex-col gap-xs flex-grow">
-          <p class="font-label-sm text-label-sm text-secondary uppercase tracking-wider mb-2 px-2">Core</p>
-          <button id="tab-threat-scan" class="flex items-center gap-sm px-3 py-2 w-full text-left rounded-lg font-label-md text-label-md transition-all active bg-primary/10 text-primary dark:text-primary-fixed" type="button">
-            <span class="material-symbols-outlined">document_scanner</span>
-            Scan Email
-          </button>
-
-          <p class="font-label-sm text-label-sm text-secondary uppercase tracking-wider my-2 px-2">Create</p>
-          <button class="flex items-center gap-sm px-3 py-2 w-full text-left rounded-lg font-label-md text-label-md text-on-surface-variant dark:text-secondary-fixed-dim hover:bg-surface-container-high dark:hover:bg-secondary-fixed-variant transition-colors" type="button" onclick="window.location.href='/subject-generator'">
-            <span class="material-symbols-outlined">edit_note</span>
-            Subject Generator
-          </button>
-
-          <p class="font-label-sm text-label-sm text-secondary uppercase tracking-wider my-2 px-2">Advanced</p>
-          <details class="sidebar-more" open>
-            <summary class="font-label-sm text-label-sm text-secondary uppercase tracking-wider mb-2 px-2 cursor-pointer hover:text-primary transition-colors">Show advanced tools</summary>
-            <div class="flex flex-col gap-xs pl-2">
-              <button class="nav-item tool-nav-btn advanced-tool flex items-center gap-sm px-3 py-2 w-full text-left rounded-lg font-label-md text-label-md text-on-surface-variant dark:text-secondary-fixed-dim hover:bg-surface-container-high dark:hover:bg-secondary-fixed-variant transition-colors" type="button" data-tool="campaign-debugger">
-                <span class="material-symbols-outlined">bug_report</span>
-                Campaign Debugger
-              </button>
-              <button class="nav-item tool-nav-btn advanced-tool flex items-center gap-sm px-3 py-2 w-full text-left rounded-lg font-label-md text-label-md text-on-surface-variant dark:text-secondary-fixed-dim hover:bg-surface-container-high dark:hover:bg-secondary-fixed-variant transition-colors" type="button" data-tool="blacklist">
-                <span class="material-symbols-outlined">dns</span>
-                Domain Check
-              </button>
-              <button class="nav-item tool-nav-btn advanced-tool flex items-center gap-sm px-3 py-2 w-full text-left rounded-lg font-label-md text-label-md text-on-surface-variant dark:text-secondary-fixed-dim hover:bg-surface-container-high dark:hover:bg-secondary-fixed-variant transition-colors" type="button" data-tool="seed">
-                <span class="material-symbols-outlined">science</span>
-                Seed Testing
-              </button>
-              <button class="nav-item tool-nav-btn advanced-tool flex items-center gap-sm px-3 py-2 w-full text-left rounded-lg font-label-md text-label-md text-on-surface-variant dark:text-secondary-fixed-dim hover:bg-surface-container-high dark:hover:bg-secondary-fixed-variant transition-colors" type="button" data-tool="bulk">
-                <span class="material-symbols-outlined">mark_as_unread</span>
-                Bulk Scan
-              </button>
-              <button class="nav-item tool-nav-btn advanced-tool flex items-center gap-sm px-3 py-2 w-full text-left rounded-lg font-label-md text-label-md text-on-surface-variant dark:text-secondary-fixed-dim hover:bg-surface-container-high dark:hover:bg-secondary-fixed-variant transition-colors" type="button" data-tool="ops">
-                <span class="material-symbols-outlined">group</span>
-                API + Team
-              </button>
-            </div>
-          </details>
-
-          <p class="font-label-sm text-label-sm text-secondary uppercase tracking-wider my-2 px-2">System</p>
-          <button class="flex items-center gap-sm px-3 py-2 w-full text-left rounded-lg font-label-md text-label-md text-on-surface-variant dark:text-secondary-fixed-dim hover:bg-surface-container-high dark:hover:bg-secondary-fixed-variant transition-colors" type="button" onclick="window.location.href='/pricing'">
-            <span class="material-symbols-outlined">payments</span>
-            Pricing
-          </button>
-          <button class="flex items-center gap-sm px-3 py-2 w-full text-left rounded-lg font-label-md text-label-md text-on-surface-variant dark:text-secondary-fixed-dim hover:bg-surface-container-high dark:hover:bg-secondary-fixed-variant transition-colors" type="button" onclick="window.location.href='/profile'">
-            <span class="material-symbols-outlined">person</span>
-            Profile
-          </button>
-        </nav>
-
-        <!-- Profile Link card in sidebar -->
-        <a id="profile-link" class="profile-link hidden mt-auto flex items-center gap-xs px-3 py-2.5 border border-outline-variant rounded-xl bg-primary/5 hover:bg-primary/10 transition-all text-primary dark:text-primary-fixed no-underline" href="/profile" aria-label="Open profile">
-          <img id="profile-avatar" class="w-8 h-8 rounded-full border border-primary object-cover" src="/static/branding/logo.png" alt="Profile avatar" />
-          <span id="profile-initial" class="w-8 h-8 rounded-full bg-primary/20 text-primary dark:text-primary-fixed flex items-center justify-center font-bold text-xs">U</span>
-          <span class="profile-label font-medium text-xs truncate">Profile</span>
-        </a>
+      <aside class="sidebar hidden lg:flex flex-col p-md gap-base bg-surface-container-low border-r border-outline-variant w-[280px] shrink-0 sticky top-0 h-screen overflow-y-auto">
+        {% include 'components/sidebar.html' %}
       </aside>
 
       <!-- Main Content Canvas -->
-      <main class="flex-grow p-margin-mobile md:p-margin-desktop bg-surface dark:bg-on-secondary-fixed min-h-screen flex flex-col justify-between">
+      <main class="main-content flex-grow p-margin-mobile md:p-margin-desktop bg-surface dark:bg-on-secondary-fixed min-h-screen flex flex-col justify-between">
         
         <!-- Top bar actions -->
         <header class="flex items-center justify-between gap-md mb-lg p-md bg-surface-container-lowest dark:bg-on-secondary-fixed border border-outline-variant dark:border-outline rounded-2xl shadow-sm z-30">
           <!-- Mobile logo view -->
           <div class="lg:hidden flex items-center gap-xs">
+            <button id="mobile-hamburger" type="button" class="text-on-surface dark:text-secondary-fixed hover:text-primary transition-colors p-1" aria-label="Open menu">
+              <span class="material-symbols-outlined text-2xl">menu</span>
+            </button>
             <a class="text-headline-sm font-headline-sm font-bold text-primary flex items-center gap-xs no-underline" href="/">
               <span class="material-symbols-outlined fill-icon text-primary">security</span>
               InboxGuard
@@ -333,9 +425,9 @@
               <a href="/pricing" class="bg-primary hover:bg-surface-tint text-on-primary px-3 py-1 rounded-full text-xs font-bold upgrade-cta no-underline">Upgrade Now</a>
             </div>
 
-            <button id="theme-toggle" type="button" class="text-secondary dark:text-secondary-fixed-dim hover:text-primary dark:hover:text-primary-fixed-dim transition-colors font-body-md text-body-md" data-theme-toggle onclick="window.toggleInboxGuardTheme && window.toggleInboxGuardTheme()" aria-pressed="false">🌙 Dark</button>
-            <button id="admin-dashboard-btn" type="button" class="border border-outline-variant hover:bg-surface-container-low dark:border-outline dark:hover:bg-outline/10 text-on-surface-variant dark:text-secondary-fixed px-3 py-1.5 rounded-lg text-xs font-semibold hidden" onclick="window.location.href='/admin'">Admin</button>
-            <button id="get-access-btn" type="button" class="bg-primary hover:bg-surface-tint text-on-primary px-4 py-2 rounded-xl font-label-md text-label-md transition-all shadow-sm" onclick="openPricingModal()">Get Access</button>
+            <button id="theme-toggle" type="button" class="text-secondary dark:text-secondary-fixed-dim hover:text-primary dark:hover:text-primary-fixed-dim transition-colors font-body-md text-body-md" data-theme-toggle aria-pressed="false">🌙 Dark</button>
+            <button id="admin-dashboard-btn" type="button" class="border border-outline-variant hover:bg-surface-container-low dark:border-outline dark:hover:bg-outline/10 text-on-surface-variant dark:text-secondary-fixed px-3 py-1.5 rounded-lg text-xs font-semibold hidden">Admin</button>
+            <button id="get-access-btn" type="button" class="bg-primary hover:bg-surface-tint text-on-primary px-4 py-2 rounded-xl font-label-md text-label-md transition-all shadow-sm">Get Access</button>
           </div>
         </header>
 
@@ -356,8 +448,8 @@
                 Verify content risks and authenticate domain records before you broadcast campaigns. Keep the spam rates under control with pre-send checks.
               </p>
               <div class="flex flex-wrap gap-md justify-center md:justify-start">
-                <button id="home-scan-btn" class="bg-primary hover:bg-surface-tint text-on-primary font-label-md text-label-md px-6 py-3 rounded-xl transition-all shadow-md" type="button" onclick="openTool('scan')">Scan an Email</button>
-                <button class="border border-outline hover:bg-surface-container-low dark:border-outline dark:hover:bg-outline/10 text-on-surface dark:text-secondary-fixed font-label-md text-label-md px-6 py-3 rounded-xl transition-all" type="button" onclick="document.getElementById('scan-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' })">See Scan Flow</button>
+                <button id="home-scan-btn" class="bg-primary hover:bg-surface-tint text-on-primary font-label-md text-label-md px-6 py-3 rounded-xl transition-all shadow-md" type="button">Scan an Email</button>
+                <button class="border border-outline hover:bg-surface-container-low dark:border-outline dark:hover:bg-outline/10 text-on-surface dark:text-secondary-fixed font-label-md text-label-md px-6 py-3 rounded-xl transition-all" type="button">See Scan Flow</button>
               </div>
             </div>
           </section>
@@ -374,7 +466,7 @@
                     Checks spam-trigger filters, urgency levels, link counts, and ML classifications to predict placement.
                   </p>
                 </div>
-                <button id="card-scan-open-btn" class="bg-primary hover:bg-surface-tint text-on-primary font-label-md text-label-md w-full py-2.5 rounded-xl transition-all mt-lg" onclick="openTool('scan');">Open Scan Console</button>
+                <button id="card-scan-open-btn" class="bg-primary hover:bg-surface-tint text-on-primary font-label-md text-label-md w-full py-2.5 rounded-xl transition-all mt-lg">Open Scan Console</button>
               </article>
 
               <article class="bg-surface-container-lowest dark:bg-on-secondary-fixed border border-outline-variant dark:border-outline rounded-2xl p-lg flex flex-col justify-between shadow-sm hover:shadow-md transition-all lockable">
@@ -385,7 +477,7 @@
                     Enter open, click, and bounce rates of sent campaigns to diagnose deliverability vs copy conversion bottlenecks.
                   </p>
                 </div>
-                <button class="bg-primary hover:bg-surface-tint text-on-primary font-label-md text-label-md w-full py-2.5 rounded-xl transition-all mt-lg" onclick="openTool('campaign-debugger');">Open Debugger</button>
+                <button class="bg-primary hover:bg-surface-tint text-on-primary font-label-md text-label-md w-full py-2.5 rounded-xl transition-all mt-lg">Open Debugger</button>
               </article>
             </div>
 
@@ -401,7 +493,7 @@
                     <span class="text-xs font-semibold text-secondary">1 credit</span>
                     <h4 class="font-medium text-sm text-on-surface dark:text-secondary-fixed mt-1">🌐 Domain Check</h4>
                   </div>
-                  <button class="text-primary dark:text-primary-fixed hover:underline text-xs font-semibold mt-md text-left" onclick="openTool('blacklist');">Open &rarr;</button>
+                  <button class="text-primary dark:text-primary-fixed hover:underline text-xs font-semibold mt-md text-left">Open &rarr;</button>
                 </div>
 
                 <div class="bg-surface-container-low dark:bg-on-secondary-fixed border border-outline-variant dark:border-outline rounded-xl p-md flex flex-col justify-between lockable" data-plan-required="growth">
@@ -409,7 +501,7 @@
                     <span class="text-xs font-semibold text-secondary">5 credits</span>
                     <h4 class="font-medium text-sm text-on-surface dark:text-secondary-fixed mt-1">🧪 Seed Testing</h4>
                   </div>
-                  <button class="text-primary dark:text-primary-fixed hover:underline text-xs font-semibold mt-md text-left" onclick="openTool('seed');">Open &rarr;</button>
+                  <button class="text-primary dark:text-primary-fixed hover:underline text-xs font-semibold mt-md text-left">Open &rarr;</button>
                 </div>
 
                 <div class="bg-surface-container-low dark:bg-on-secondary-fixed border border-outline-variant dark:border-outline rounded-xl p-md flex flex-col justify-between lockable" data-plan-required="growth">
@@ -417,7 +509,7 @@
                     <span class="text-xs font-semibold text-secondary">3 credits</span>
                     <h4 class="font-medium text-sm text-on-surface dark:text-secondary-fixed mt-1">📦 Bulk Scan</h4>
                   </div>
-                  <button class="text-primary dark:text-primary-fixed hover:underline text-xs font-semibold mt-md text-left" onclick="openTool('bulk');">Open &rarr;</button>
+                  <button class="text-primary dark:text-primary-fixed hover:underline text-xs font-semibold mt-md text-left">Open &rarr;</button>
                 </div>
 
                 <div class="bg-surface-container-low dark:bg-on-secondary-fixed border border-outline-variant dark:border-outline rounded-xl p-md flex flex-col justify-between">
@@ -425,7 +517,7 @@
                     <span class="text-xs font-semibold text-secondary">Custom</span>
                     <h4 class="font-medium text-sm text-on-surface dark:text-secondary-fixed mt-1">👥 API + Team</h4>
                   </div>
-                  <button class="text-primary dark:text-primary-fixed hover:underline text-xs font-semibold mt-md text-left" onclick="openTool('ops');">Open &rarr;</button>
+                  <button class="text-primary dark:text-primary-fixed hover:underline text-xs font-semibold mt-md text-left">Open &rarr;</button>
                 </div>
               </div>
             </details>
@@ -458,7 +550,7 @@
 
         <!-- Tool panel Workspace Area -->
         <section id="tool-panel" class="hidden flex-grow space-y-lg">
-          <button type="button" class="border border-outline-variant hover:bg-surface-container-low dark:border-outline dark:hover:bg-outline/10 text-on-surface dark:text-secondary-fixed font-label-md text-label-md px-4 py-2 rounded-xl transition-all flex items-center gap-xs" onclick="goHome()">
+          <button type="button" class="border border-outline-variant hover:bg-surface-container-low dark:border-outline dark:hover:bg-outline/10 text-on-surface dark:text-secondary-fixed font-label-md text-label-md px-4 py-2 rounded-xl transition-all flex items-center gap-xs">
             <span class="material-symbols-outlined">arrow_back</span>
             Back to Dashboard
           </button>
@@ -514,11 +606,11 @@
 
               <div class="flex flex-col sm:flex-row gap-2 pt-2">
                 <button type="submit" id="run-check" class="flex-1 bg-primary hover:bg-surface-tint text-on-primary font-label-md text-label-md py-3 rounded-xl transition-all shadow-md flex items-center justify-center gap-sm">
-                  <span class="material-symbols-outlined">security</span>
-                  <span>Scan Email Draft</span>
+                  <span>Scan Now &rarr;</span>
                 </button>
                 <button type="button" id="run-check-async" class="border border-outline hover:bg-surface-container-low dark:border-outline dark:hover:bg-outline/10 text-on-surface dark:text-secondary-fixed font-label-md text-label-md py-3 px-6 rounded-xl transition-all">Analyze In Background</button>
               </div>
+              <p id="scan-validation-msg" style="display:none; color:#DC2626; font-size:13px; margin-top:8px;"></p>
 
               <!-- Loading state -->
               <div id="result-loading" class="hidden bg-surface-container-lowest dark:bg-on-secondary-fixed border border-outline-variant dark:border-outline rounded-2xl p-lg text-center shadow-md">
@@ -551,11 +643,22 @@
           <div id="paywall" class="hidden bg-surface-container-lowest dark:bg-on-secondary-fixed border-2 border-primary rounded-2xl p-lg text-center shadow-md paywall-section">
             <h3 class="font-headline-sm text-headline-sm text-primary dark:text-primary-fixed mb-sm">Unlock Safe Sending</h3>
             <p class="text-on-surface-variant dark:text-secondary-fixed-dim max-w-md mx-auto mb-lg">You have accessed your largest deliverability risks. Upgrade to Pro for unlimited scans and advanced records monitoring.</p>
-            <button type="button" onclick="openPricingModal()" class="bg-primary hover:bg-surface-tint text-on-primary font-label-md text-label-md px-8 py-3 rounded-xl transition-all shadow-md">Get Pro Access</button>
+            <button type="button" class="bg-primary hover:bg-surface-tint text-on-primary font-label-md text-label-md px-8 py-3 rounded-xl transition-all shadow-md">Get Pro Access</button>
           </div>
 
           <!-- RESULT VIEW SCREEN -->
           <section id="result" class="scan-only hidden space-y-lg">
+            <!-- Scan Failure State Panel -->
+            <div id="scan-error-panel" class="hidden bg-surface-container-lowest border border-error/20 rounded-2xl p-lg text-center shadow-md max-w-md mx-auto my-lg">
+              <span class="material-symbols-outlined text-red-600 text-[48px] mb-md">warning</span>
+              <h4 class="font-headline-sm text-headline-sm text-on-surface mb-sm">Scan failed</h4>
+              <p id="scan-error-msg" class="text-xs text-on-surface-variant mb-lg">We couldn't analyze this email. Please check the draft content and try again.</p>
+              <button type="button" class="bg-primary hover:bg-surface-tint text-on-primary font-label-md text-label-md py-2.5 px-6 rounded-xl transition-all shadow-md inline-flex items-center gap-sm">
+                <span class="material-symbols-outlined">refresh</span>
+                <span>Retry Scan</span>
+              </button>
+            </div>
+
             <div id="result-screen" class="hidden space-y-lg">
               
               <!-- Premium circle score gauge overview -->
@@ -920,7 +1023,7 @@
           <input id="lead-capture-email" class="w-full rounded-xl border border-outline-variant dark:border-outline bg-surface-container-lowest dark:bg-on-secondary-fixed text-on-surface dark:text-secondary-fixed px-3 py-2.5 text-sm focus:border-primary focus:ring-1 focus:ring-primary" type="email" placeholder="you@company.com" />
           <button id="lead-capture-continue" type="button" class="w-full bg-primary hover:bg-surface-tint text-on-primary font-label-md text-label-md py-3 rounded-xl transition-all shadow-md">Continue &amp; Save Draft</button>
         </div>
-        <button id="lead-capture-close" type="button" class="text-xs text-on-surface-variant hover:text-primary mt-4 underline bg-transparent border-none" onclick="window.igLeadCaptureClose && window.igLeadCaptureClose()">Skip for now</button>
+        <button id="lead-capture-close" type="button" class="text-xs text-on-surface-variant hover:text-primary mt-4 underline bg-transparent border-none">Skip for now</button>
       </div>
     </div>
 
@@ -930,7 +1033,7 @@
         <h3 id="auth-modal-title" class="font-headline-sm text-headline-sm text-on-surface dark:text-secondary-fixed mb-sm">Continue check limits</h3>
         <p class="text-xs text-on-surface-variant dark:text-secondary-fixed-dim mb-lg">You have run out of free checks. Authenticate to sync your dashboard.</p>
         <div class="space-y-sm">
-          <button id="auth-signin" type="button" class="w-full bg-primary hover:bg-surface-tint text-on-primary font-label-md text-label-md py-3 rounded-xl transition-all shadow-md flex items-center justify-center gap-xs" onclick="window.igAuthSignIn && window.igAuthSignIn()">
+          <button id="auth-signin" type="button" class="w-full bg-primary hover:bg-surface-tint text-on-primary font-label-md text-label-md py-3 rounded-xl transition-all shadow-md flex items-center justify-center gap-xs">
             <span>Continue with Google</span>
           </button>
           <div class="relative flex py-2 items-center">
@@ -939,9 +1042,9 @@
             <div class="flex-grow border-t border-outline-variant dark:border-outline"></div>
           </div>
           <input id="auth-email" class="w-full rounded-xl border border-outline-variant dark:border-outline bg-surface-container-lowest dark:bg-on-secondary-fixed text-on-surface dark:text-secondary-fixed px-3 py-2.5 text-sm focus:border-primary focus:ring-1 focus:ring-primary" type="email" placeholder="you@company.com" />
-          <button id="auth-create" type="button" class="w-full border border-outline hover:bg-surface-container-low text-on-surface dark:text-secondary-fixed font-label-md text-label-md py-3 rounded-xl transition-all" onclick="window.igAuthCreate && window.igAuthCreate()">Send Magic Link</button>
+          <button id="auth-create" type="button" class="w-full border border-outline hover:bg-surface-container-low text-on-surface dark:text-secondary-fixed font-label-md text-label-md py-3 rounded-xl transition-all">Send Magic Link</button>
         </div>
-        <button id="auth-close" type="button" class="text-xs text-on-surface-variant hover:text-primary mt-4 underline bg-transparent border-none" onclick="window.igAuthClose && window.igAuthClose()">Close</button>
+        <button id="auth-close" type="button" class="text-xs text-on-surface-variant hover:text-primary mt-4 underline bg-transparent border-none">Close</button>
       </div>
     </div>
 
@@ -950,9 +1053,32 @@
 
     <!-- Pricing Modal Popup -->
     <div id="pricing-modal" class="hidden fixed inset-0 bg-gray-950/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-      <div class="bg-surface-container-lowest dark:bg-on-secondary-fixed border border-outline-variant dark:border-outline rounded-3xl shadow-2xl max-w-4xl w-full p-lg md:p-xl relative max-h-[90vh] overflow-y-auto">
-        <button onclick="closeModal()" class="absolute top-4 right-6 text-on-surface-variant dark:text-secondary-fixed-dim hover:text-on-surface text-3xl font-bold bg-transparent border-none">&times;</button>
-        <h2 class="font-headline-lg text-headline-lg text-center text-primary dark:text-primary-fixed mb-xl">Choose your InboxGuard plan</h2>
+      <div class="bg-surface-container-lowest border border-outline-variant rounded-3xl shadow-2xl max-w-4xl w-full p-lg md:p-xl relative max-h-[90vh] overflow-y-auto">
+        <button class="absolute top-4 right-6 text-on-surface-variant hover:text-on-surface text-3xl font-bold bg-transparent border-none">&times;</button>
+        <h2 class="font-headline-lg text-headline-lg text-center text-primary mb-md">Choose your InboxGuard plan</h2>
+        
+        <!-- Upgrade Info Box -->
+        <div class="bg-primary/5 rounded-2xl p-md mb-lg border border-primary/10 text-center max-w-2xl mx-auto">
+          <p class="text-sm font-semibold text-primary mb-sm">🔋 Upgrade to unlock the full Deliverability Suite.</p>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-sm text-left text-xs text-on-surface-variant max-w-xl mx-auto">
+            <div class="flex items-center gap-xs">
+              <span class="material-symbols-outlined text-primary text-[16px]">check_circle</span>
+              <span><strong>Free Scan:</strong> Basic spam placement warning only</span>
+            </div>
+            <div class="flex items-center gap-xs">
+              <span class="material-symbols-outlined text-primary text-[16px]">bolt</span>
+              <span><strong>Unlimited Scans:</strong> AI rewrites & debuggers</span>
+            </div>
+            <div class="flex items-center gap-xs">
+              <span class="material-symbols-outlined text-primary text-[16px]">bolt</span>
+              <span><strong>Domain Health:</strong> Real-time blacklist alerts</span>
+            </div>
+            <div class="flex items-center gap-xs">
+              <span class="material-symbols-outlined text-primary text-[16px]">bolt</span>
+              <span><strong>Seed Testing:</strong> Inbox/Spam placement check</span>
+            </div>
+          </div>
+        </div>
         
         <div class="grid grid-cols-1 md:grid-cols-3 gap-lg">
           <!-- STARTER -->
@@ -966,7 +1092,7 @@
                 <li class="flex items-center gap-xs"><span class="material-symbols-outlined text-primary text-[16px]">check</span><span>Email support</span></li>
               </ul>
             </div>
-            <button onclick="purchasePlan('starter')" class="w-full bg-primary hover:bg-surface-tint text-on-primary font-label-md text-label-md py-2.5 rounded-xl transition-all shadow-sm">Get Starter</button>
+            <button class="w-full bg-primary hover:bg-surface-tint text-on-primary font-label-md text-label-md py-2.5 rounded-xl transition-all shadow-sm">Get Starter</button>
           </div>
           <!-- PRO -->
           <div class="bg-surface-container-lowest dark:bg-on-secondary-fixed border-2 border-primary rounded-2xl p-lg flex flex-col justify-between shadow-md relative">
@@ -981,7 +1107,7 @@
                 <li class="flex items-center gap-xs"><span class="material-symbols-outlined text-primary text-[16px]">check</span><span>Priority support</span></li>
               </ul>
             </div>
-            <button onclick="purchasePlan('pro')" class="w-full bg-primary hover:bg-surface-tint text-on-primary font-label-md text-label-md py-2.5 rounded-xl transition-all shadow-md">Get Pro</button>
+            <button class="w-full bg-primary hover:bg-surface-tint text-on-primary font-label-md text-label-md py-2.5 rounded-xl transition-all shadow-md">Get Pro</button>
           </div>
           <!-- GROWTH -->
           <div class="bg-surface-container-lowest dark:bg-on-secondary-fixed border border-outline-variant dark:border-outline rounded-2xl p-lg flex flex-col justify-between shadow-sm">
@@ -995,7 +1121,7 @@
                 <li class="flex items-center gap-xs"><span class="material-symbols-outlined text-primary text-[16px]">check</span><span>Annual billing</span></li>
               </ul>
             </div>
-            <button onclick="purchasePlan('growth')" class="w-full bg-primary hover:bg-surface-tint text-on-primary font-label-md text-label-md py-2.5 rounded-xl transition-all shadow-sm">Get Growth</button>
+            <button class="w-full bg-primary hover:bg-surface-tint text-on-primary font-label-md text-label-md py-2.5 rounded-xl transition-all shadow-sm">Get Growth</button>
           </div>
         </div>
         
@@ -1003,6 +1129,45 @@
           Need custom deliverability tracking? 
           <a href="mailto:you@company.com" class="text-primary hover:underline font-semibold ml-1">Contact Outbound Ops</a>
         </p>
+      </div>
+    </div>
+
+    <!-- Paywall Modal Popup -->
+    <div id="paywall-modal" class="modal-overlay hidden" style="display:none;">
+      <div class="modal-card">
+        <button class="modal-close">×</button>
+
+        <div class="modal-icon">⚡</div>
+
+        <h2 class="modal-title">You've used all your free scans</h2>
+        <p class="modal-sub">
+          Your scans reset on <span id="reset-date"></span> —
+          or upgrade now for unlimited scanning.
+        </p>
+
+        <div class="modal-plan-highlight">
+          <div class="plan-left text-left">
+            <div class="plan-name">Pro · $12/month</div>
+            <ul class="plan-features">
+              <li>✓ Unlimited scans</li>
+              <li>✓ Full scan history</li>
+              <li>✓ Domain health checker</li>
+              <li>✓ Priority support</li>
+            </ul>
+          </div>
+          <button class="bg-primary hover:bg-surface-tint text-on-primary font-label-md text-label-md px-4 py-2 rounded-xl transition-all shadow-sm shrink-0">
+            Start Free Trial →
+          </button>
+        </div>
+
+        <div class="modal-alternatives">
+          <a href="/pricing#usage" class="modal-alt-link">
+            Or pay per scan: $0.02/scan →
+          </a>
+          <p class="modal-reset-text">
+            Or wait until <span id="reset-date-2"></span> for free scans to reset.
+          </p>
+        </div>
       </div>
     </div>
 
@@ -1083,9 +1248,29 @@
       })();
     </script>
 
+    <!-- Mobile Sidebar Drawer -->
+    <div id="mobile-sidebar" class="fixed inset-0 z-50 hidden lg:hidden" role="dialog" aria-modal="true">
+      <!-- Backdrop -->
+      <div class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm"></div>
+      <!-- Drawer Menu Content -->
+      <aside class="fixed top-0 left-0 bottom-0 w-[280px] bg-surface-container-low border-r border-outline-variant p-md flex flex-col gap-base overflow-y-auto">
+        {% include 'components/sidebar.html' %}
+      </aside>
+    </div>
+
+    <script>
+      function toggleMobileSidebar() {
+        var sidebar = document.getElementById("mobile-sidebar");
+        if (sidebar) {
+          sidebar.classList.toggle("hidden");
+        }
+      }
+      window.toggleMobileSidebar = toggleMobileSidebar;
+    </script>
+
     <script src="/static/js/cookie-consent.js?v=20260410-cookie-consent-1"></script>
-    <script src="/static/js/flow.js?v=20260410-progressive-exposure-1"></script>
-    <script src="/static/js/app.js?v=20260411-flow-rewrite-1"></script>
+    <script src="/static/js/flow.js?v=20260614-force-light-1"></script>
+    <script src="/static/js/app.js?v=20260614-force-light-1"></script>
 
     <!-- Custom Dynamic circular Score Gauge Renderer Hook -->
     <script>
@@ -1135,383 +1320,16 @@
         }
       })();
     </script>
-  </body>
-</html>
-
-          <div class="inline-fields" style="margin-top: 8px;">
-            <div>
-              <label for="seed-inbox-count">Inbox Count</label>
-              <input id="seed-inbox-count" class="input" type="number" min="0" step="1" placeholder="e.g. 17" />
-            </div>
-            <div>
-              <label for="seed-spam-count">Spam Count</label>
-              <input id="seed-spam-count" class="input" type="number" min="0" step="1" placeholder="e.g. 3" />
-            </div>
-          </div>
-          <button id="save-seed-test" type="button" class="btn btn-primary btn-tool-primary tool-pane-primary" style="margin-top: 10px;">Save Seed Result</button>
-          <button id="run-seed-sync" type="button" class="btn btn-secondary" style="margin-top: 8px;">Run Instant Seed Probe</button>
-          <button id="run-seed-auto" type="button" class="btn btn-secondary" style="margin-top: 8px;">Run Automated Seed Test</button>
-          <ul id="seed-test-list" class="compact-list" style="margin-top: 8px;">
-            <li>No seed tests logged yet.</li>
-          </ul>
-        </section>
-
-        <section class="card tool-pane tool-purple" id="bulk-scan" data-tool-pane="bulk" style="margin-top: 12px;">
-          <div class="tool-pane-head">
-            <h2 class="tool-pane-title">Bulk Scan (CSV)</h2>
-            <button type="button" class="tool-pane-head-close" data-tool-close>Close</button>
-          </div>
-          <p class="micro">Upload up to 100 rows with columns: raw_email OR (subject/body), plus optional domain.</p>
-          <input id="bulk-file" type="file" accept=".csv,text/csv" />
-          <button id="run-bulk-scan" type="button" class="btn-tool-primary tool-pane-primary" style="margin-top: 10px;">Run Bulk Scan</button>
-          <ul id="bulk-results" class="compact-list" style="margin-top: 8px;">
-            <li>No bulk scan yet.</li>
-          </ul>
-        </section>
-
-        <section class="card tool-pane tool-teal" id="ops-api-team" data-tool-pane="ops" style="margin-top: 12px;">
-          <div class="tool-pane-head">
-            <h2 class="tool-pane-title">API + Team Ops</h2>
-            <button type="button" class="tool-pane-head-close" data-tool-close>Close</button>
-          </div>
-          <p class="micro">Create API keys, add teams, and collaborate with role-based access.</p>
-          <div class="inline-fields" style="margin-top: 8px;">
-            <div>
-              <label for="api-key-name">API key label</label>
-              <input id="api-key-name" type="text" placeholder="Primary integration" />
-            </div>
-            <div>
-              <label for="team-name">Team name</label>
-              <input id="team-name" type="text" placeholder="Outbound Ops" />
-            </div>
-          </div>
-          <div class="actions" style="margin-top:10px;">
-            <button id="create-api-key" type="button" class="btn-tool-primary">Create API Key</button>
-            <button id="list-api-keys" type="button" class="btn-tool-primary tool-pane-primary">List API Keys</button>
-            <button id="create-team" type="button" class="btn-tool-primary">Create Team</button>
-            <button id="list-teams" type="button" class="btn-tool-primary">List Teams</button>
-          </div>
-          <div class="inline-fields" style="margin-top: 10px;">
-            <div>
-              <label for="revoke-key-id">Revoke API key ID</label>
-              <input id="revoke-key-id" type="number" min="1" step="1" placeholder="e.g. 12" />
-            </div>
-            <div>
-              <label for="team-member-team-id">Team ID</label>
-              <input id="team-member-team-id" type="number" min="1" step="1" placeholder="e.g. 3" />
-            </div>
-          </div>
-          <div class="inline-fields" style="margin-top: 8px;">
-            <div>
-              <label for="team-member-email">Member email</label>
-              <input id="team-member-email" type="email" placeholder="teammate@company.com" />
-            </div>
-            <div>
-              <label for="team-member-role">Role</label>
-              <select id="team-member-role">
-                <option value="member" selected>member</option>
-                <option value="admin">admin</option>
-                <option value="viewer">viewer</option>
-                <option value="owner">owner</option>
-              </select>
-            </div>
-          </div>
-          <div class="actions" style="margin-top:10px;">
-            <button id="revoke-api-key" type="button" class="btn-tool-primary">Revoke API Key</button>
-            <button id="add-team-member" type="button" class="btn-tool-primary">Add Team Member</button>
-          </div>
-          <ul id="api-key-list" class="compact-list" style="margin-top:8px;">
-            <li>No API keys loaded.</li>
-          </ul>
-          <ul id="team-list" class="compact-list" style="margin-top:8px;">
-            <li>No teams loaded.</li>
-          </ul>
-          <ul id="ops-output" class="compact-list" style="margin-top:8px;">
-            <li>No operations run yet.</li>
-          </ul>
-        </section>
-
-        <section class="card tool-pane tool-cyan" id="operator-insights" data-tool-pane="insights" style="margin-top: 12px;">
-          <div class="tool-pane-head">
-            <h2 class="tool-pane-title">Operator Insights</h2>
-            <button type="button" class="tool-pane-head-close" data-tool-close>Close</button>
-          </div>
-          <p class="micro">Monitor feedback outcomes and async queue status from the dashboard.</p>
-          <div class="actions" style="margin-top: 10px;">
-            <button id="refresh-outcome-stats" type="button" class="btn-tool-primary tool-pane-primary">Refresh Outcome Stats</button>
-            <button id="refresh-jobs" type="button" class="btn-tool-primary">Refresh Async Jobs</button>
-          </div>
-          <ul id="outcome-stats-list" class="compact-list" style="margin-top:8px;">
-            <li>No outcome stats loaded.</li>
-          </ul>
-          <ul id="job-list" class="compact-list" style="margin-top:8px;">
-            <li>No async jobs loaded.</li>
-          </ul>
-          <div class="actions" style="margin-top:10px;">
-            <a href="/results.csv" class="btn-tool-primary">Download Results CSV</a>
-            <a href="/reports.csv" class="btn-tool-primary">Download Reports CSV</a>
-          </div>
-        </section>
-
-        </section>
-
-        <section class="card home-only" id="trust-social-proof" style="margin-top: 12px;">
-          <h3>Trusted by teams who send before sunrise</h3>
-          <p id="live-stats-summary" class="micro">Live performance metrics load from recent outcomes.</p>
-          <p id="live-stats-breakdown" class="micro">Sign in to view your latest inbox-rate benchmark and sample counts.</p>
-          <p id="live-stats-status" class="micro">Outcome-driven scoring improves as feedback is submitted.</p>
-          <p class="micro">"InboxGuard caught what our QA missed and saved a full campaign run."</p>
-          <p class="micro">- Founder, B2B outbound team (38K contacts/month)</p>
-          <p class="micro">"We now run every campaign through it before touching volume."</p>
-          <p class="micro">- Growth lead, SaaS sales motion</p>
-          <p class="micro">Built by Tharun, indie developer focused on fixing spam placement before campaigns go live.</p>
-          <p class="micro" style="margin-top: 10px;">Read deliverability guides on <a href="/blog" class="link-action">the InboxGuard blog</a>.</p>
-        </section>
-
-        <div class="home-only" style="margin-top: 14px; display: flex; flex-wrap: wrap; gap: 12px; color: #94a3b8; font-size: 0.92rem;">
-          <a href="/about" class="link-action">About</a>
-          <a href="/privacy" class="link-action">Privacy</a>
-          <a href="/terms" class="link-action">Terms</a>
-          <a href="/seed-inbox" class="link-action">Seed Inbox</a>
-          <a href="/blog" class="link-action">Blog</a>
-        </div>
-      </main>
-    </div>
-
-    <div id="lead-capture-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="lead-capture-title">
-      <div class="modal-card">
-        <h3 id="lead-capture-title">Get your next scan unlocked</h3>
-        <p class="micro">Before the second scan, tell us where to send saved fixes and follow-up tips.</p>
-        <div style="display:grid; gap:8px; margin-top:6px;">
-          <input id="lead-capture-email" class="input" type="email" placeholder="you@company.com" style="padding:10px 12px; border-radius:10px;" />
-          <button id="lead-capture-continue" type="button" class="btn-primary">Continue to scan</button>
-        </div>
-        <button id="lead-capture-close" type="button" class="link-action" onclick="window.igLeadCaptureClose && window.igLeadCaptureClose()">Not now</button>
+    <!-- Mobile Hamburger Drawer -->
+    <div id="mobile-drawer" class="mobile-drawer" aria-hidden="true">
+      <div class="drawer-header">
+        <span class="drawer-logo">InboxGuard</span>
+        <button id="close-drawer-btn" class="drawer-close" aria-label="Close menu">&times;</button>
       </div>
+      <nav class="drawer-nav">
+        {% include 'components/sidebar.html' %}
+      </nav>
     </div>
-
-    <div id="auth-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="auth-modal-title">
-      <div class="modal-card">
-        <h3 id="auth-modal-title">Continue your scans</h3>
-        <p class="micro">You've used your free scans. Continue where you left off.</p>
-        <div class="modal-actions">
-          <button id="auth-signin" type="button" class="btn-primary" onclick="window.igAuthSignIn && window.igAuthSignIn()">Continue with Google</button>
-        </div>
-        <p class="micro" style="margin-top: 10px;">or continue with email</p>
-        <div style="display:grid; gap:8px; margin-top:6px;">
-          <input id="auth-email" class="input" type="email" placeholder="you@company.com" style="padding:10px 12px; border-radius:10px;" />
-          <button id="auth-create" type="button" class="btn-secondary" onclick="window.igAuthCreate && window.igAuthCreate()">Continue with Email</button>
-        </div>
-        <button id="auth-close" type="button" class="link-action" onclick="window.igAuthClose && window.igAuthClose()">Not now</button>
-      </div>
-    </div>
-
-    <div id="decisionOverlay" class="decision-overlay hidden" role="status" aria-live="polite">
-      <div class="decision-overlay-card">
-        <p id="decisionOverlayText">Decision</p>
-      </div>
-    </div>
-
-
-
-    <!-- Pricing Modal at root for proper isolation -->
-    <!-- Modal Overlay and Content -->
-    <div id="pricing-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div class="bg-white rounded-2xl shadow-2xl max-w-5xl w-full p-8 relative">
-        <button onclick="closeModal()" class="absolute top-4 right-6 text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
-        <h2 class="text-2xl font-bold text-center text-gray-800 mb-10">Choose your InboxGuard plan</h2>
-        <div class="pricing-grid">
-          <!-- FREE -->
-          <div class="pricing-card free">
-            <h3>Free</h3>
-            <div class="pricing-price">$0</div>
-            <ul>
-              <li>1 scan</li>
-              <li>1 fix</li>
-            </ul>
-            <button disabled>Current Plan</button>
-          </div>
-          <!-- STARTER -->
-          <div class="pricing-card">
-            <h3>Starter</h3>
-            <div class="pricing-price">$9</div>
-            <div class="interval">/ month</div>
-            <ul>
-              <li>10 scans / month</li>
-              <li>Email support</li>
-            </ul>
-            <button onclick="startCheckout('starter')">Get Starter</button>
-             <button onclick="purchasePlan('starter')">Get Starter</button>
-          </div>
-          <!-- PRO -->
-          <div class="pricing-card highlight">
-            <div class="badge">Most Popular</div>
-            <h3>Pro</h3>
-            <div class="pricing-price">$29</div>
-            <div class="interval">/ month</div>
-            <ul>
-              <li>Unlimited scans</li>
-              <li>Batch testing</li>
-              <li>Priority support</li>
-            </ul>
-            <button onclick="startCheckout('pro')">Get Pro</button>
-             <button onclick="purchasePlan('pro')">Get Pro</button>
-          </div>
-          <!-- GROWTH -->
-          <div class="pricing-card">
-            <h3>Growth</h3>
-            <div class="pricing-price">$99</div>
-            <div class="interval">/ year</div>
-            <ul>
-              <li>Unlimited scans</li>
-              <li>Team access</li>
-              <li>Annual billing</li>
-            </ul>
-            <button onclick="startCheckout('growth')">Get Growth</button>
-             <button onclick="purchasePlan('growth')">Get Growth</button>
-          </div>
-        </div>
-        <p class="contact-text">
-          Need enterprise or custom pricing?
-          <a href="mailto:you@company.com">Contact us</a>
-        </p>
-      </div>
-    </div>
-
-    <div id="toolWorkspaceBackdrop" class="tool-workspace-backdrop hidden" aria-hidden="true"></div>
-
-    <script>
-      (function () {
-        const buttons = Array.from(document.querySelectorAll('.tool-nav-btn'));
-        const panes = Array.from(document.querySelectorAll('.tool-pane'));
-        const closeButtons = Array.from(document.querySelectorAll('[data-tool-close]'));
-        const mainArea = document.querySelector('.main-area');
-
-        function closePanes() {
-          panes.forEach((pane) => pane.classList.remove('active'));
-          buttons.forEach((btn) => btn.classList.remove('active'));
-          if (mainArea) {
-            mainArea.classList.remove('tool-panel-open');
-          }
-        }
-
-        function openPane(key) {
-          closePanes();
-          const pane = panes.find((item) => item.getAttribute('data-tool-pane') === key);
-          const btn = buttons.find((item) => item.getAttribute('data-tool') === key);
-          if (!pane || !btn) {
-            console.error('Missing panel for:', key);
-            return;
-          }
-          pane.classList.add('active');
-          btn.classList.add('active');
-          if (mainArea) {
-            mainArea.classList.add('tool-panel-open');
-          }
-          if (typeof window.igOnToolPaneOpened === 'function') {
-            window.igOnToolPaneOpened(key, pane);
-          }
-          const firstInput = pane.querySelector('input,select,textarea,button');
-          if (firstInput && typeof firstInput.focus === 'function') {
-            setTimeout(() => firstInput.focus(), 60);
-          }
-        }
-
-        buttons.forEach((button) => {
-          button.addEventListener('click', () => {
-            const key = button.getAttribute('data-tool') || '';
-            if (typeof window.openTool === 'function') {
-              window.openTool(key);
-              return;
-            }
-            openPane(key);
-          });
-        });
-
-        closeButtons.forEach((button) => {
-          button.addEventListener('click', () => {
-            if (typeof window.goHome === 'function') {
-              window.goHome();
-              return;
-            }
-            closePanes();
-          });
-        });
-
-        window.closeTool = closePanes;
-        window.igOpenToolPane = openPane;
-        window.igCloseToolPane = closePanes;
-
-        document.addEventListener('keydown', (event) => {
-          if (event.key === 'Escape') {
-            closePanes();
-          }
-        });
-      })();
-    </script>
-
-    <script src="/static/js/flow.js?v=20260410-progressive-exposure-1"></script>
-    <script src="/static/js/app.js?v=20260411-flow-rewrite-1"></script>
-    <!-- Pricing Modal at root for proper isolation -->
-    <div id="pricing-modal" class="modal pricing-modal hidden" role="dialog" aria-modal="true" aria-labelledby="pricing-modal-title">
-      <div class="pricing-content">
-        <div class="modal-header">
-          <h2 id="pricing-modal-title">Choose your InboxGuard plan</h2>
-          <span class="close" onclick="closePricingModal()">&times;</span>
-        </div>
-        <div class="pricing-grid">
-          <!-- FREE -->
-          <div class="pricing-card free">
-            <h3>Free</h3>
-            <div class="pricing-price">$0</div>
-            <ul>
-              <li>1 scan</li>
-              <li>1 fix</li>
-            </ul>
-            <button disabled>Current Plan</button>
-          </div>
-          <!-- STARTER -->
-          <div class="pricing-card">
-            <h3>Starter</h3>
-            <div class="pricing-price">$9</div>
-            <div class="interval">/ month</div>
-            <ul>
-              <li>10 scans / month</li>
-              <li>Email support</li>
-            </ul>
-            <button onclick="startCheckout('starter')">Get Starter</button>
-          </div>
-          <!-- PRO -->
-          <div class="pricing-card highlight">
-            <div class="badge">Most Popular</div>
-            <h3>Pro</h3>
-            <div class="pricing-price">$29</div>
-            <div class="interval">/ month</div>
-            <ul>
-              <li>Unlimited scans</li>
-              <li>Batch testing</li>
-              <li>Priority support</li>
-            </ul>
-            <button onclick="startCheckout('pro')">Get Pro</button>
-          </div>
-          <!-- GROWTH -->
-          <div class="pricing-card">
-            <h3>Growth</h3>
-            <div class="pricing-price">$99</div>
-            <div class="interval">/ year</div>
-            <ul>
-              <li>Unlimited scans</li>
-              <li>Team access</li>
-              <li>Annual billing</li>
-            </ul>
-            <button onclick="startCheckout('growth')">Get Growth</button>
-          </div>
-        </div>
-        <p class="contact-text">
-          Need enterprise or custom pricing?
-          <a href="mailto:you@company.com">Contact us</a>
-        </p>
-      </div>
-    </div>
+    <div id="drawer-overlay" class="drawer-overlay"></div>
   </body>
 </html>

@@ -15,8 +15,8 @@ supabase_admin = None
 if url and key:
     try:
         supabase_admin = create_client(url.strip(), key.strip())
-        print("✅ Supabase connected")
+        print("[Supabase] Connected successfully")
     except Exception as e:
-        print(f"❌ Connection failed: {e}")
+        print(f"[Supabase] Connection failed: {e}")
 else:
-    print("⚠️ Missing Supabase keys in Environment Variables")
+    print("[Supabase] Missing Supabase keys in Environment Variables")

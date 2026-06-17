@@ -1,63 +1,59 @@
 <div class="mb-lg px-2">
-  <a href="/" class="text-headline-sm font-headline-sm font-bold text-primary dark:text-primary-fixed flex items-center gap-xs">
+  <a href="/" class="text-headline-sm font-headline-sm font-bold text-primary flex items-center gap-xs no-underline">
     <span class="material-symbols-outlined" data-weight="fill" style="font-variation-settings: 'FILL' 1;">security</span>
     InboxGuard
   </a>
-  <p class="font-label-sm text-label-sm text-on-surface-variant dark:text-secondary-fixed-dim">Deliverability Suite</p>
+  <p class="font-label-sm text-label-sm text-on-surface-variant">Deliverability Suite</p>
 </div>
 
-<button class="w-full bg-primary text-on-primary rounded-lg py-3 px-4 font-label-md text-label-md flex items-center justify-center gap-sm mb-lg hover:opacity-90 transition-opacity" type="button" onclick="window.location.href='/app?tab=threat-scan'">
+<a href="/" class="w-full bg-primary text-on-primary rounded-lg py-3 px-4 font-label-md text-label-md flex items-center justify-center gap-sm mb-lg hover:opacity-90 transition-opacity no-underline">
   <span class="material-symbols-outlined">add</span>
   New Scan
-</button>
+</a>
 
 <nav class="flex flex-col gap-xs flex-grow">
-  <p class="font-label-sm text-label-sm text-secondary uppercase tracking-wider mb-2 px-2">Core</p>
-  <button id="tab-threat-scan" class="flex items-center gap-sm px-3 py-2 w-full text-left rounded-lg font-label-md text-label-md transition-all {{ 'bg-secondary-container dark:bg-secondary text-on-secondary-container dark:text-on-secondary scale-[0.98]' if current_page == 'app' else 'text-on-surface-variant dark:text-secondary-fixed-dim hover:bg-surface-container-high dark:hover:bg-secondary-fixed-variant' }}" type="button" {% if current_page != 'app' %}onclick="window.location.href='/app?tab=threat-scan'"{% endif %}>
-    <span class="material-symbols-outlined">document_scanner</span>
-    Scan Email
-  </button>
+  <!-- Overview -->
+  <a href="/dashboard" class="sidebar-nav-item flex items-center gap-sm px-3 py-2 w-full text-left rounded-lg font-label-md text-label-md transition-all text-on-surface-variant hover:bg-surface-container-high no-underline">
+    <span class="material-symbols-outlined">dashboard</span>
+    Overview
+  </a>
+  
+  <!-- Domain Health -->
+  <a href="/domain-health" class="sidebar-nav-item flex items-center gap-sm px-3 py-2 w-full text-left rounded-lg font-label-md text-label-md text-on-surface-variant hover:bg-surface-container-high transition-colors no-underline">
+    <span class="material-symbols-outlined">dns</span>
+    Domain Health
+  </a>
 
-  <p class="font-label-sm text-label-sm text-secondary uppercase tracking-wider my-2 px-2">Create</p>
-  <button class="flex items-center gap-sm px-3 py-2 w-full text-left rounded-lg font-label-md text-label-md transition-all {{ 'bg-secondary-container dark:bg-secondary text-on-secondary-container dark:text-on-secondary scale-[0.98]' if current_page == 'subject-generator' else 'text-on-surface-variant dark:text-secondary-fixed-dim hover:bg-surface-container-high dark:hover:bg-secondary-fixed-variant' }}" type="button" onclick="window.location.href='/subject-generator'">
-    <span class="material-symbols-outlined">edit_note</span>
-    Subject Generator
-  </button>
+  <!-- Scan History -->
+  <a href="/history" class="sidebar-nav-item flex items-center gap-sm px-3 py-2 w-full text-left rounded-lg font-label-md text-label-md transition-all text-on-surface-variant hover:bg-surface-container-high no-underline">
+    <span class="material-symbols-outlined">history</span>
+    Scan History
+  </a>
 
-  <p class="font-label-sm text-label-sm text-secondary uppercase tracking-wider my-2 px-2">Advanced</p>
-  <details class="sidebar-more" open>
-    <summary class="font-label-sm text-label-sm text-secondary uppercase tracking-wider mb-2 px-2 cursor-pointer hover:text-primary transition-colors">Show advanced tools</summary>
-    <div class="flex flex-col gap-xs pl-2">
-      <button class="nav-item tool-nav-btn advanced-tool flex items-center gap-sm px-3 py-2 w-full text-left rounded-lg font-label-md text-label-md text-on-surface-variant dark:text-secondary-fixed-dim hover:bg-surface-container-high dark:hover:bg-secondary-fixed-variant transition-colors" type="button" data-tool="campaign-debugger" {% if current_page != 'app' %}onclick="window.location.href='/app?tool=campaign-debugger'"{% endif %}>
-        <span class="material-symbols-outlined">bug_report</span>
-        Campaign Debugger
-      </button>
-      <button class="nav-item tool-nav-btn advanced-tool flex items-center gap-sm px-3 py-2 w-full text-left rounded-lg font-label-md text-label-md text-on-surface-variant dark:text-secondary-fixed-dim hover:bg-surface-container-high dark:hover:bg-secondary-fixed-variant transition-colors" type="button" data-tool="blacklist" {% if current_page != 'app' %}onclick="window.location.href='/app?tool=blacklist'"{% endif %}>
-        <span class="material-symbols-outlined">dns</span>
-        Domain Check
-      </button>
-      <button class="nav-item tool-nav-btn advanced-tool flex items-center gap-sm px-3 py-2 w-full text-left rounded-lg font-label-md text-label-md text-on-surface-variant dark:text-secondary-fixed-dim hover:bg-surface-container-high dark:hover:bg-secondary-fixed-variant transition-colors" type="button" data-tool="seed" {% if current_page != 'app' %}onclick="window.location.href='/app?tool=seed'"{% endif %}>
-        <span class="material-symbols-outlined">science</span>
-        Seed Testing
-      </button>
-      <button class="nav-item tool-nav-btn advanced-tool flex items-center gap-sm px-3 py-2 w-full text-left rounded-lg font-label-md text-label-md text-on-surface-variant dark:text-secondary-fixed-dim hover:bg-surface-container-high dark:hover:bg-secondary-fixed-variant transition-colors" type="button" data-tool="bulk" {% if current_page != 'app' %}onclick="window.location.href='/app?tool=bulk'"{% endif %}>
-        <span class="material-symbols-outlined">mark_as_unread</span>
-        Bulk Scan
-      </button>
-      <button class="nav-item tool-nav-btn advanced-tool flex items-center gap-sm px-3 py-2 w-full text-left rounded-lg font-label-md text-label-md text-on-surface-variant dark:text-secondary-fixed-dim hover:bg-surface-container-high dark:hover:bg-secondary-fixed-variant transition-colors" type="button" data-tool="ops" {% if current_page != 'app' %}onclick="window.location.href='/app?tool=ops'"{% endif %}>
-        <span class="material-symbols-outlined">group</span>
-        API + Team
-      </button>
-    </div>
-  </details>
-
-  <p class="font-label-sm text-label-sm text-secondary uppercase tracking-wider my-2 px-2">System</p>
-  <button class="flex items-center gap-sm px-3 py-2 w-full text-left rounded-lg font-label-md text-label-md text-on-surface-variant dark:text-secondary-fixed-dim hover:bg-surface-container-high dark:hover:bg-secondary-fixed-variant transition-colors" type="button" onclick="window.location.href='/pricing'">
+  <!-- Billing -->
+  <a href="/billing" class="sidebar-nav-item flex items-center gap-sm px-3 py-2 w-full text-left rounded-lg font-label-md text-label-md text-on-surface-variant hover:bg-surface-container-high transition-colors no-underline">
     <span class="material-symbols-outlined">payments</span>
-    Pricing
-  </button>
-  <button class="flex items-center gap-sm px-3 py-2 w-full text-left rounded-lg font-label-md text-label-md text-on-surface-variant dark:text-secondary-fixed-dim hover:bg-surface-container-high dark:hover:bg-secondary-fixed-variant transition-colors" type="button" onclick="window.location.href='/profile'">
-    <span class="material-symbols-outlined">person</span>
-    Profile
-  </button>
+    Billing
+  </a>
+
+  <!-- Settings -->
+  <a href="/settings" class="sidebar-nav-item flex items-center gap-sm px-3 py-2 w-full text-left rounded-lg font-label-md text-label-md transition-all text-on-surface-variant hover:bg-surface-container-high no-underline">
+    <span class="material-symbols-outlined">settings</span>
+    Settings
+  </a>
+
+  <!-- Logout -->
+  <form method="post" action="/auth/logout" class="w-full mt-auto">
+    <button type="submit" class="flex items-center gap-sm px-3 py-2 w-full text-left rounded-lg font-label-md text-label-md text-on-surface-variant hover:bg-surface-container-high transition-colors">
+      <span class="material-symbols-outlined">logout</span>
+      Logout
+    </button>
+  </form>
 </nav>
+
+<!-- Profile Link card in sidebar -->
+<a id="profile-link" class="profile-link hidden mt-auto flex items-center gap-xs px-3 py-2.5 border border-outline-variant rounded-xl bg-primary/5 hover:bg-primary/10 transition-all text-primary no-underline" href="/profile" aria-label="Open profile">
+  <img id="profile-avatar" class="w-8 h-8 rounded-full border border-primary object-cover" src="/static/branding/logo.png" alt="Profile avatar" />
+  <span id="profile-initial" class="w-8 h-8 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold text-xs">U</span>
+  <span class="profile-label font-medium text-xs truncate">Profile</span>
+</a>

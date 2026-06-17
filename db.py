@@ -407,10 +407,41 @@ class Connection:
         return Cursor(cur)
 
 
-def get_conn() -> Connection:
-    """Return a Connection from the pool with a sqlite3-style API."""
-    raw = _get_pool().getconn()
-    return Connection(raw)
+def get_conn():
+    """Return a Connection from the pool with a sqlite3-style API.
+    Falls back to local SQLite if Postgres is not configured or fails.
+    """
+    import sqlite3
+    db_dir = os.path.dirname(os.path.abspath(__file__))
+    data_dir = os.path.join(db_dir, "data")
+    os.makedirs(data_dir, exist_ok=True)
+    db_path = os.path.join(data_dir, "auth.db")
+
+    if not _DB_URL:
+        # Fallback to local SQLite
+        try:
+            conn = sqlite3.connect(db_path)
+            conn.row_factory = sqlite3.Row
+            return conn
+        except Exception:
+            conn = sqlite3.connect(":memory:")
+            conn.row_factory = sqlite3.Row
+            return conn
+
+    try:
+        raw = _get_pool().getconn()
+        return Connection(raw)
+    except Exception as e:
+        # If Postgres fails, fallback to local SQLite as last resort
+        print(f"[Database] Postgres connection failed: {e}. Falling back to SQLite.")
+        try:
+            conn = sqlite3.connect(db_path)
+            conn.row_factory = sqlite3.Row
+            return conn
+        except Exception:
+            conn = sqlite3.connect(":memory:")
+            conn.row_factory = sqlite3.Row
+            return conn
 
 
 def is_configured() -> bool:

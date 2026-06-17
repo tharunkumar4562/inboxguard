@@ -22,3 +22,6 @@ Thumbs.db
 
 # Runtime analytics store
 data/
+.vercel
+.gemini/
+design-reference/

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html class="light" lang="en">
+<html class="light" data-theme="light" lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -125,16 +125,19 @@
   </script>
 
   <script>
-    (function () {
+    (function() {
       try {
-        const savedTheme = localStorage.getItem("ig_theme");
-        const systemDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
-        const theme = savedTheme === "dark" || savedTheme === "light" ? savedTheme : (systemDark ? "dark" : "light");
-        const root = document.documentElement;
+        var root = document.documentElement;
+        var theme = "light";
         root.dataset.theme = theme;
-        root.classList.toggle("dark", theme === "dark");
-        root.style.colorScheme = theme === "dark" ? "dark" : "light";
-        const meta = document.querySelector('meta[name="theme-color"]');
+        if (theme === "dark") {
+          root.classList.add("dark");
+          root.style.colorScheme = "dark";
+        } else {
+          root.classList.remove("dark");
+          root.style.colorScheme = "light";
+        }
+        var meta = document.querySelector('meta[name="theme-color"]');
         if (meta) {
           meta.setAttribute("content", theme === "dark" ? "#111c2d" : "#f8f9ff");
         }
@@ -430,7 +433,7 @@
     </div>
   </footer>
 
-  <script src="/static/js/app.js"></script>
+  <script src="/static/js/app.js?v=20260614-force-light-1"></script>
   
   <!-- Helper function to select card and scroll down -->
   <script>

@@ -18,7 +18,7 @@ _LOCK = threading.Lock()
 OLLAMA_ENABLED = os.getenv("INBOXGUARD_OLLAMA_ENABLED", "0").strip().lower() in {"1", "true", "yes"}
 OLLAMA_HOST = os.getenv("INBOXGUARD_OLLAMA_HOST", "http://127.0.0.1:11434").strip().rstrip("/")
 OLLAMA_MODEL = os.getenv("INBOXGUARD_OLLAMA_MODEL", "llama3.1:8b").strip()
-OLLAMA_TIMEOUT_SECONDS = float(os.getenv("INBOXGUARD_OLLAMA_TIMEOUT_SECONDS", "8"))
+OLLAMA_TIMEOUT_SECONDS = float(os.getenv("INBOXGUARD_OLLAMA_TIMEOUT_SECONDS") or "8")
 
 SPAM_LINE_PATTERNS = [
     r"\blast\s+chance\b",

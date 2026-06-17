@@ -154,43 +154,43 @@ SITE_URL = os.getenv("INBOXGUARD_SITE_URL", "https://inboxguard.me")
 ADMIN_TOKEN = os.getenv("INBOXGUARD_ADMIN_TOKEN", "")
 ADMIN_EMAIL = os.getenv("INBOXGUARD_ADMIN_EMAIL", os.getenv("INBOXGUARD_ADMIN_ALLOWED_EMAIL", "")).strip().lower()
 SECRET_KEY = os.getenv("SECRET_KEY", os.getenv("INBOXGUARD_SESSION_SECRET", "change-me-in-production"))
-SESSION_MAX_AGE_SECONDS = int(os.getenv("INBOXGUARD_SESSION_MAX_AGE_SECONDS", str(60 * 60 * 24 * 7)))
-SESSION_HTTPS_ONLY = os.getenv("INBOXGUARD_SESSION_HTTPS_ONLY", "0").strip().lower() in {"1", "true", "yes"}
+SESSION_MAX_AGE_SECONDS = int(os.getenv("INBOXGUARD_SESSION_MAX_AGE_SECONDS") or str(60 * 60 * 24 * 7))
+SESSION_HTTPS_ONLY = (os.getenv("INBOXGUARD_SESSION_HTTPS_ONLY") or "0").strip().lower() in {"1", "true", "yes"}
 AUTH_DB_FILE = BASE_DIR / "data" / "auth.db"
-ANON_SCAN_LIMIT = int(os.getenv("INBOXGUARD_ANON_SCAN_LIMIT", "3"))
-FIRST_VALUE_FREE_SCAN_LIMIT = int(os.getenv("INBOXGUARD_FIRST_VALUE_FREE_SCAN_LIMIT", "1"))
-FREE_USER_SCAN_LIMIT = int(os.getenv("INBOXGUARD_FREE_USER_SCAN_LIMIT", "50"))
-FREE_SCANS_LIMIT = int(os.getenv("INBOXGUARD_FREE_SCANS_LIMIT", "2"))
-GOOGLE_OAUTH_ENABLED = os.getenv("INBOXGUARD_GOOGLE_OAUTH_ENABLED", "0").strip().lower() in {"1", "true", "yes"}
-GOOGLE_CLIENT_ID = os.getenv("INBOXGUARD_GOOGLE_CLIENT_ID", os.getenv("GOOGLE_CLIENT_ID", "")).strip()
-GOOGLE_CLIENT_SECRET = os.getenv("INBOXGUARD_GOOGLE_CLIENT_SECRET", os.getenv("GOOGLE_CLIENT_SECRET", "")).strip()
-RAZORPAY_KEY = os.getenv("INBOXGUARD_RAZORPAY_KEY", os.getenv("RAZORPAY_KEY", "")).strip()
-RAZORPAY_SECRET = os.getenv("INBOXGUARD_RAZORPAY_SECRET", os.getenv("RAZORPAY_SECRET", "")).strip()
-RAZORPAY_WEBHOOK_SECRET = os.getenv("INBOXGUARD_RAZORPAY_WEBHOOK_SECRET", os.getenv("RAZORPAY_WEBHOOK_SECRET", "")).strip()
-RAZORPAY_AMOUNT_USD = float(os.getenv("INBOXGUARD_RAZORPAY_AMOUNT_USD", "9"))  # Growth Monthly Pro: $9
-RAZORPAY_STARTER_AMOUNT_USD = float(os.getenv("INBOXGUARD_RAZORPAY_STARTER_AMOUNT_USD", "2"))
-RAZORPAY_ANNUAL_AMOUNT_USD = float(os.getenv("INBOXGUARD_RAZORPAY_ANNUAL_AMOUNT_USD", "49"))  # Growth Annual: $49
-RAZORPAY_USAGE_AMOUNT_USD = float(os.getenv("INBOXGUARD_RAZORPAY_USAGE_AMOUNT_USD", "0.02"))  # Usage: $0.02 per scan
-RAZORPAY_DISPLAY_PRICE_USD = os.getenv("INBOXGUARD_RAZORPAY_DISPLAY_PRICE_USD", "$9").strip()
-RAZORPAY_PLAN_ID = os.getenv("INBOXGUARD_RAZORPAY_PLAN_ID", os.getenv("RAZORPAY_PLAN_ID", "")).strip()
-RAZORPAY_ANNUAL_PLAN_ID = os.getenv("INBOXGUARD_RAZORPAY_ANNUAL_PLAN_ID", os.getenv("RAZORPAY_ANNUAL_PLAN_ID", "")).strip()
-RAZORPAY_TRIAL_PLAN_ID = os.getenv("INBOXGUARD_RAZORPAY_TRIAL_PLAN_ID", os.getenv("RAZORPAY_TRIAL_PLAN_ID", "")).strip()
-RAZORPAY_PRO_PLAN_ID = os.getenv("INBOXGUARD_RAZORPAY_PRO_PLAN_ID", "").strip()
-RAZORPAY_STARTER_PLAN_ID = os.getenv("INBOXGUARD_RAZORPAY_STARTER_PLAN_ID", "").strip()
+ANON_SCAN_LIMIT = int(os.getenv("INBOXGUARD_ANON_SCAN_LIMIT") or "3")
+FIRST_VALUE_FREE_SCAN_LIMIT = int(os.getenv("INBOXGUARD_FIRST_VALUE_FREE_SCAN_LIMIT") or "1")
+FREE_USER_SCAN_LIMIT = int(os.getenv("INBOXGUARD_FREE_USER_SCAN_LIMIT") or "50")
+FREE_SCANS_LIMIT = int(os.getenv("INBOXGUARD_FREE_SCANS_LIMIT") or "2")
+GOOGLE_OAUTH_ENABLED = (os.getenv("INBOXGUARD_GOOGLE_OAUTH_ENABLED") or "0").strip().lower() in {"1", "true", "yes"}
+GOOGLE_CLIENT_ID = (os.getenv("INBOXGUARD_GOOGLE_CLIENT_ID") or os.getenv("GOOGLE_CLIENT_ID") or "").strip()
+GOOGLE_CLIENT_SECRET = (os.getenv("INBOXGUARD_GOOGLE_CLIENT_SECRET") or os.getenv("GOOGLE_CLIENT_SECRET") or "").strip()
+RAZORPAY_KEY = (os.getenv("INBOXGUARD_RAZORPAY_KEY") or os.getenv("RAZORPAY_KEY") or "").strip()
+RAZORPAY_SECRET = (os.getenv("INBOXGUARD_RAZORPAY_SECRET") or os.getenv("RAZORPAY_SECRET") or "").strip()
+RAZORPAY_WEBHOOK_SECRET = (os.getenv("INBOXGUARD_RAZORPAY_WEBHOOK_SECRET") or os.getenv("RAZORPAY_WEBHOOK_SECRET") or "").strip()
+RAZORPAY_AMOUNT_USD = float(os.getenv("INBOXGUARD_RAZORPAY_AMOUNT_USD") or "9")  # Growth Monthly Pro: $9
+RAZORPAY_STARTER_AMOUNT_USD = float(os.getenv("INBOXGUARD_RAZORPAY_STARTER_AMOUNT_USD") or "2")
+RAZORPAY_ANNUAL_AMOUNT_USD = float(os.getenv("INBOXGUARD_RAZORPAY_ANNUAL_AMOUNT_USD") or "49")  # Growth Annual: $49
+RAZORPAY_USAGE_AMOUNT_USD = float(os.getenv("INBOXGUARD_RAZORPAY_USAGE_AMOUNT_USD") or "0.02")  # Usage: $0.02 per scan
+RAZORPAY_DISPLAY_PRICE_USD = (os.getenv("INBOXGUARD_RAZORPAY_DISPLAY_PRICE_USD") or "$9").strip()
+RAZORPAY_PLAN_ID = (os.getenv("INBOXGUARD_RAZORPAY_PLAN_ID") or os.getenv("RAZORPAY_PLAN_ID") or "").strip()
+RAZORPAY_ANNUAL_PLAN_ID = (os.getenv("INBOXGUARD_RAZORPAY_ANNUAL_PLAN_ID") or os.getenv("RAZORPAY_ANNUAL_PLAN_ID") or "").strip()
+RAZORPAY_TRIAL_PLAN_ID = (os.getenv("INBOXGUARD_RAZORPAY_TRIAL_PLAN_ID") or os.getenv("RAZORPAY_TRIAL_PLAN_ID") or "").strip()
+RAZORPAY_PRO_PLAN_ID = (os.getenv("INBOXGUARD_RAZORPAY_PRO_PLAN_ID") or "").strip()
+RAZORPAY_STARTER_PLAN_ID = (os.getenv("INBOXGUARD_RAZORPAY_STARTER_PLAN_ID") or "").strip()
 # INR pricing for legacy/India support (default 749)
-RAZORPAY_AMOUNT_INR = int(os.getenv("INBOXGUARD_RAZORPAY_AMOUNT_INR", "749"))
-TRIAL_DAYS = int(os.getenv("INBOXGUARD_TRIAL_DAYS", "7"))
-PAST_DUE_GRACE_DAYS = int(os.getenv("INBOXGUARD_PAST_DUE_GRACE_DAYS", "3"))
+RAZORPAY_AMOUNT_INR = int(os.getenv("INBOXGUARD_RAZORPAY_AMOUNT_INR") or "749")
+TRIAL_DAYS = int(os.getenv("INBOXGUARD_TRIAL_DAYS") or "7")
+PAST_DUE_GRACE_DAYS = int(os.getenv("INBOXGUARD_PAST_DUE_GRACE_DAYS") or "3")
 GOOGLE_VERIFICATION_FILE = "googleab4b33a28d8dfb88.html"
 AUTH_DB_READY = False
-ASYNC_JOB_MAX_RETRIES = int(os.getenv("INBOXGUARD_ASYNC_MAX_RETRIES", "3"))
-ASYNC_JOB_TIMEOUT_SECONDS = int(os.getenv("INBOXGUARD_ASYNC_TIMEOUT_SECONDS", "25"))
-SEED_SMTP_HOST = os.getenv("INBOXGUARD_SEED_SMTP_HOST", "").strip()
-SEED_SMTP_PORT = int(os.getenv("INBOXGUARD_SEED_SMTP_PORT", "587"))
-SEED_SMTP_USER = os.getenv("INBOXGUARD_SEED_SMTP_USER", "").strip()
-SEED_SMTP_PASS = os.getenv("INBOXGUARD_SEED_SMTP_PASS", "").strip()
-SEED_SMTP_FROM = os.getenv("INBOXGUARD_SEED_SMTP_FROM", "").strip()
-SEED_ACCOUNTS_JSON = os.getenv("INBOXGUARD_SEED_ACCOUNTS_JSON", "").strip()
+ASYNC_JOB_MAX_RETRIES = int(os.getenv("INBOXGUARD_ASYNC_MAX_RETRIES") or "3")
+ASYNC_JOB_TIMEOUT_SECONDS = int(os.getenv("INBOXGUARD_ASYNC_TIMEOUT_SECONDS") or "25")
+SEED_SMTP_HOST = (os.getenv("INBOXGUARD_SEED_SMTP_HOST") or "").strip()
+SEED_SMTP_PORT = int(os.getenv("INBOXGUARD_SEED_SMTP_PORT") or "587")
+SEED_SMTP_USER = (os.getenv("INBOXGUARD_SEED_SMTP_USER") or "").strip()
+SEED_SMTP_PASS = (os.getenv("INBOXGUARD_SEED_SMTP_PASS") or "").strip()
+SEED_SMTP_FROM = (os.getenv("INBOXGUARD_SEED_SMTP_FROM") or "").strip()
+SEED_ACCOUNTS_JSON = (os.getenv("INBOXGUARD_SEED_ACCOUNTS_JSON") or "").strip()
 BLACKLISTED_DOMAINS = {
     "tempmail.com",
     "mailinator.com",
@@ -2781,6 +2781,7 @@ def _auth_status_payload(request: Request) -> dict:
                 "is_admin": _is_admin_email(user["email"]),
                 "status": str(user.get("status", "inactive")),
                 "subscription_id": str(user.get("subscription_id", "")),
+                "token_reset_at": user.get("token_reset_at"),
             }
         )
     return payload
@@ -3607,6 +3608,7 @@ def _build_user_profile(user: dict, include_saved_fixes: bool = False) -> dict:
         "tokens": tokens,
         "plan": plan,
         "is_admin": _is_admin_email(user["email"]),
+        "token_reset_at": user.get("token_reset_at"),
     }
     if include_saved_fixes:
         profile["saved_fixes"] = _recent_saved_fixes(user["id"], limit=8)
@@ -3645,8 +3647,28 @@ def profile_page(request: Request):
     )
 
 @app.get("/dashboard")
-async def dashboard_redirect() -> RedirectResponse:
-    return RedirectResponse(url="/profile", status_code=307)
+def dashboard_redirect():
+    return RedirectResponse(url="/app?tab=dashboard", status_code=307)
+
+@app.get("/history")
+def history_redirect():
+    return RedirectResponse(url="/profile#history", status_code=307)
+
+@app.get("/domain-health")
+def domain_health_redirect():
+    return RedirectResponse(url="/app?tool=blacklist", status_code=307)
+
+@app.get("/campaign-debugger")
+def campaign_debugger_redirect():
+    return RedirectResponse(url="/app?tool=campaign-debugger", status_code=307)
+
+@app.get("/billing")
+def billing_redirect():
+    return RedirectResponse(url="/pricing", status_code=307)
+
+@app.get("/settings")
+def settings_redirect():
+    return RedirectResponse(url="/profile#settings", status_code=307)
 
 
 def _page_section(title: str, body: str, bullets: list[str] | None = None) -> dict:
@@ -4344,6 +4366,9 @@ def auth_logout(request: Request):
     request.session.pop("user_email", None)
     request.session.pop("user_name", None)
     request.session.pop("user_picture", None)
+    accept = request.headers.get("accept", "")
+    if "text/html" in accept or request.headers.get("content-type") == "application/x-www-form-urlencoded":
+        return RedirectResponse(url="/", status_code=303)
     return {"ok": True}
 
 

@@ -8,7 +8,7 @@ from correction_engine import rewrite_email_text, get_learning_profile
 # Test email: classic broadcast
 test_email = """Subject: Revolutionary Funding Platform - Secure Your Education Loan Today
 
-Get funding up to ₹1.25 crore for overseas education.
+Get funding up to Rs. 1.25 crore for overseas education.
 
 We offer:
 - Flexible repayment options
@@ -32,7 +32,7 @@ Why choose us:
 - Fast turnaround (apply today, funds in 48 hours)
 - Completely online process
 
-APPLY NOW and get ₹10,000 cashback on your first disbursement!
+APPLY NOW and get Rs. 10,000 cashback on your first disbursement!
 
 [Button: Get Started]
 

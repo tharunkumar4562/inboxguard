@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html class="light" data-theme="light" lang="en">
   <head>
     <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-WXGNG9TEFK"></script>
@@ -14,22 +14,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#f8fafc" />
     <script>
-      (function () {
-        try {
-          const savedTheme = localStorage.getItem("ig_theme");
-          const systemDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
-          const theme = savedTheme === "dark" || savedTheme === "light" ? savedTheme : (systemDark ? "dark" : "light");
-          const root = document.documentElement;
-          root.dataset.theme = theme;
-          root.classList.toggle("dark", theme === "dark");
-          root.style.colorScheme = theme === "dark" ? "dark" : "light";
-          const meta = document.querySelector('meta[name="theme-color"]');
-          if (meta) {
-            meta.setAttribute("content", theme === "dark" ? "#0f172a" : "#f8fafc");
-          }
-        } catch (error) {
+      (function() {
+      try {
+        var root = document.documentElement;
+        var theme = "light";
+        root.dataset.theme = theme;
+        if (theme === "dark") {
+          root.classList.add("dark");
+          root.style.colorScheme = "dark";
+        } else {
+          root.classList.remove("dark");
+          root.style.colorScheme = "light";
         }
-      })();
+        var meta = document.querySelector('meta[name="theme-color"]');
+        if (meta) {
+          meta.setAttribute("content", theme === "dark" ? "#111c2d" : "#f8f9ff");
+        }
+      } catch (error) {
+      }
+    })();
     </script>
     <title>{{ page_title or "InboxGuard Admin Dashboard" }}</title>
     <link rel="icon" type="image/png" href="/static/branding/logo.png" />
@@ -38,8 +41,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="/static/css/styles.css?v=20260406-seo-fix-1" />
-    <link rel="stylesheet" href="/static/theme-overrides.css?v=20260410-theme-adapt-3" />
+    <link rel="stylesheet" href="/static/css/styles.css?v=20260614-force-light-1" />
+    <link rel="stylesheet" href="/static/theme-overrides.css?v=20260614-force-light-1" />
   </head>
   <body class="bg-ink text-slate-100 min-h-screen antialiased">
     <main class="relative mx-auto max-w-6xl px-5 py-8 md:py-10">
