@@ -380,7 +380,7 @@ const diagnosisOutput = document.getElementById("diagnosis-output");
 const diagnosisPrimaryNode = document.getElementById("diagnosis-primary");
 const diagnosisConfidenceNode = document.getElementById("diagnosis-confidence");
 const diagnosisWhyNode = document.getElementById("diagnosis-why");
-const diagnosisActionsNode = document.getElementById("diagnosis-actions");
+const diagnosisActionsNode = document.getElementById("diagnosis-actions-container") || document.getElementById("diagnosis-actions");
 const campaignDebuggerResultNode = document.getElementById("cd-result");
 const blacklistDomainInput = document.getElementById("blacklist-domain");
 const runBlacklistCheckButton = document.getElementById("run-blacklist-check");
@@ -966,16 +966,156 @@ window.igOnToolPaneOpened = (toolKey) => {
 };
 
 async function refreshHomeLiveStats() {
-    if (!liveStatsSummaryNode || !liveStatsBreakdownNode || !liveStatsStatusNode) {
+    // Legacy elements update
+    if (liveStatsSummaryNode) {
+        liveStatsSummaryNode.textContent = `Tracked outcomes: ${STUB_DATA.stats.scans_this_month} | Average Score: ${STUB_DATA.stats.average_score}%`;
+    }
+    if (liveStatsBreakdownNode) {
+        liveStatsBreakdownNode.textContent = `Issues fixed: ${STUB_DATA.stats.issues_fixed} • Domain health status: ${STUB_DATA.stats.domain_health.toUpperCase()}`;
+    }
+    if (liveStatsStatusNode) {
+        liveStatsStatusNode.textContent = "Updates in real time as new feedback is recorded.";
+    }
+
+    // New Bento grid elements update
+    const scansVal = document.getElementById("stat-scans-val");
+    const scoreVal = document.getElementById("stat-score-val");
+    const fixedVal = document.getElementById("stat-fixed-val");
+    const scansRatioVal = document.getElementById("stat-scans-ratio");
+    const usageProgressVal = document.getElementById("usage-progress-fill");
+    const recentScansList = document.getElementById("recent-scans-list");
+    const sidebarDomain = document.getElementById("sidebar-domain-name");
+
+    if (scansVal) scansVal.textContent = String(STUB_DATA.stats.scans_this_month);
+    if (scoreVal) scoreVal.textContent = String(STUB_DATA.stats.average_score);
+    if (fixedVal) fixedVal.textContent = String(STUB_DATA.stats.issues_fixed);
+    if (sidebarDomain) sidebarDomain.textContent = String(STUB_DATA.domain.name);
+    
+    if (scansRatioVal) {
+        scansRatioVal.textContent = `${STUB_DATA.billing.scans_used} / ${STUB_DATA.billing.scans_limit === -1 ? '∞' : STUB_DATA.billing.scans_limit}`;
+    }
+    if (usageProgressVal) {
+        const limit = STUB_DATA.billing.scans_limit === -1 ? 50 : STUB_DATA.billing.scans_limit;
+        const percent = Math.min(100, Math.round((STUB_DATA.billing.scans_used / limit) * 100));
+        usageProgressVal.style.width = `${percent}%`;
+    }
+
+    if (recentScansList) {
+        recentScansList.innerHTML = "";
+        const scans = Array.isArray(STUB_DATA.recent_scans) ? STUB_DATA.recent_scans : [];
+        if (scans.length === 0) {
+            recentScansList.innerHTML = `
+                <tr class="border-b border-outline-variant/30 dark:border-outline/30">
+                    <td colspan="5" class="px-md py-4 text-center text-secondary">No recent scans.</td>
+                </tr>
+            `;
+        } else {
+            scans.forEach(scan => {
+                const tr = document.createElement("tr");
+                tr.className = "border-b border-outline-variant/30 dark:border-outline/30 hover:bg-surface-container-low dark:hover:bg-on-secondary-fixed-variant/20 transition-colors";
+                
+                let badgeClass = "bg-primary/10 text-primary";
+                if (scan.score < 50) {
+                    badgeClass = "bg-error-container text-error text-xs font-bold";
+                } else if (scan.score < 80) {
+                    badgeClass = "bg-amber-100 text-amber-700 text-xs font-bold";
+                }
+                
+                tr.innerHTML = `
+                    <td class="px-md py-4 text-on-surface-variant dark:text-secondary-fixed-dim">${scan.date}</td>
+                    <td class="px-md py-4 font-medium truncate max-w-[200px]" title="${scan.subject}">${scan.subject}</td>
+                    <td class="px-md py-4"><span class="inline-flex items-center justify-center px-2 py-0.5 rounded-md ${badgeClass}">${scan.score} / 100</span></td>
+                    <td class="px-md py-4">${scan.issues}</td>
+                    <td class="px-md py-4"><button class="text-primary dark:text-primary-fixed hover:underline font-semibold bg-transparent border-none cursor-pointer" onclick="openTool('scan')">View</button></td>
+                `;
+                recentScansList.appendChild(tr);
+            });
+        }
+    }
+}
+
+function runRealTimeLinting() {
+    const rawEmailInput = document.getElementById("raw-email");
+    const realtimeIssuesList = document.getElementById("realtime-issues-list");
+    const realtimeLintBand = document.getElementById("realtime-lint-band");
+    if (!rawEmailInput || !realtimeIssuesList || !realtimeLintBand) {
         return;
     }
-    const averageScore = STUB_DATA.stats.average_score;
-    const scansCount = STUB_DATA.stats.scans_this_month;
-    const issuesFixed = STUB_DATA.stats.issues_fixed;
 
-    liveStatsSummaryNode.textContent = `Tracked outcomes: ${scansCount} | Average Score: ${averageScore}%`;
-    liveStatsBreakdownNode.textContent = `Issues fixed: ${issuesFixed} • Domain health status: ${STUB_DATA.stats.domain_health.toUpperCase()}`;
-    liveStatsStatusNode.textContent = "Updates in real time as new feedback is recorded.";
+    const content = rawEmailInput.value || "";
+    if (content.trim().length === 0) {
+        realtimeIssuesList.innerHTML = "<li>No issues detected. Start typing to audit your draft in real-time.</li>";
+        realtimeLintBand.textContent = "Low risk";
+        realtimeLintBand.className = "text-xs px-2.5 py-0.5 rounded-full border border-primary/20 text-primary bg-primary-container/25 font-semibold";
+        return;
+    }
+
+    const issues = [];
+    
+    // Check 1: spam trigger words
+    const triggerWords = [
+        /\bfree\b/gi, /\bbuy now\b/gi, /\bclick here\b/gi, /\bwinner\b/gi, 
+        /\blimited time\b/gi, /\bact now\b/gi, /\bmake money\b/gi, 
+        /\bcash\b/gi, /\bsave big\b/gi, /\burgent\b/gi, /\bguaranteed\b/gi,
+        /\b100% satisfied\b/gi, /\bextra income\b/gi, /\bno catch\b/gi,
+        /\brefinance\b/gi, /\bhidden charges\b/gi
+    ];
+    
+    let triggerCount = 0;
+    triggerWords.forEach(pattern => {
+        const matches = content.match(pattern);
+        if (matches) {
+            triggerCount += matches.length;
+        }
+    });
+
+    if (triggerCount > 0) {
+        issues.push(`<li class="flex items-center gap-xs text-error font-semibold"><span class="material-symbols-outlined text-[14px]">error</span>Found ${triggerCount} spam-trigger word(s) (e.g. 'free', 'urgent').</li>`);
+    }
+
+    // Check 2: ALL CAPS words
+    const allCapsMatches = content.match(/\b[A-Z]{3,}\b/g);
+    if (allCapsMatches && allCapsMatches.length > 1) {
+        issues.push(`<li class="flex items-center gap-xs text-[#d97706] font-semibold"><span class="material-symbols-outlined text-[14px]">warning</span>Capitalization: Avoid writing words in ALL CAPS (found: ${allCapsMatches.slice(0, 3).join(', ')}).</li>`);
+    }
+
+    // Check 3: Subject line check (first line starting with "Subject:")
+    const lines = content.split('\n');
+    const subjectLine = lines.find(line => line.toLowerCase().startsWith('subject:'));
+    if (subjectLine) {
+        const subjectText = subjectLine.replace(/subject:/i, '').trim();
+        if (subjectText.match(/[!?]{2,}/)) {
+            issues.push(`<li class="flex items-center gap-xs text-error font-semibold"><span class="material-symbols-outlined text-[14px]">error</span>Subject line: Avoid multiple exclamation/question marks (e.g. '!!!').</li>`);
+        }
+        if (subjectText.length > 60) {
+            issues.push(`<li class="flex items-center gap-xs text-[#d97706] font-semibold"><span class="material-symbols-outlined text-[14px]">warning</span>Subject line: Subject is long (${subjectText.length} chars). Keep under 60 characters for best display.</li>`);
+        }
+    } else {
+        issues.push(`<li class="flex items-center gap-xs text-secondary"><span class="material-symbols-outlined text-[14px]">info</span>Add 'Subject: [Your Subject]' at the top of your draft to analyze subject lines.</li>`);
+    }
+
+    // Check 4: Track links
+    const linkMatches = content.match(/https?:\/\/[^\s]+/g);
+    if (linkMatches && linkMatches.length > 2) {
+        issues.push(`<li class="flex items-center gap-xs text-[#d97706] font-semibold"><span class="material-symbols-outlined text-[14px]">warning</span>Too many tracking links (found ${linkMatches.length}). Avoid overloading with links.</li>`);
+    }
+
+    // Render issues list
+    if (issues.length === 0) {
+        realtimeIssuesList.innerHTML = `<li class="flex items-center gap-xs text-primary font-semibold"><span class="material-symbols-outlined text-[14px]">check_circle</span>Looks good! No structural deliverability risks found.</li>`;
+        realtimeLintBand.textContent = "Low risk";
+        realtimeLintBand.className = "text-xs px-2.5 py-0.5 rounded-full border border-primary/20 text-primary bg-primary-container/25 font-semibold";
+    } else {
+        realtimeIssuesList.innerHTML = issues.join('');
+        const severeCount = issues.filter(issue => issue.includes('text-error')).length;
+        if (severeCount > 0) {
+            realtimeLintBand.textContent = "High risk";
+            realtimeLintBand.className = "text-xs px-2.5 py-0.5 rounded-full border border-error-container text-error bg-error-container/25 font-semibold";
+        } else {
+            realtimeLintBand.textContent = "Medium risk";
+            realtimeLintBand.className = "text-xs px-2.5 py-0.5 rounded-full border border-amber-500/25 text-amber-700 bg-amber-100/30 font-semibold";
+        }
+    }
 }
 
 function revealText(el, text) {
@@ -2515,96 +2655,474 @@ async function generateSubjectLines() {
 }
 
 async function runSeedAuto() {
-    // STUB: automated seed testing removed — to be re-implemented
-    console.log('[InboxGuard] runSeedAuto() called');
+    const campaign = seedCampaignInput ? String(seedCampaignInput.value || "").trim() : "Automated Run";
+    const payload = {
+        campaign_name: campaign,
+        subject: "InboxGuard Automated Seed Test",
+        body: "InboxGuard automated deliverability health probe content.",
+        wait_seconds: 6
+    };
+    
     const previousLabel = runSeedAutoButton ? runSeedAutoButton.textContent : "Run Automated Seed Test";
-    setActionButtonState(runSeedAutoButton, "loading", "Running...");
-    await sleep(800);
-    setActionButtonState(runSeedAutoButton, "success", "Completed");
-    showError("Automated seed test completed (mock).");
-    setTimeout(() => {
-        setActionButtonState(runSeedAutoButton, "idle", previousLabel);
-    }, 1000);
+    setActionButtonState(runSeedAutoButton, "loading", "Initializing...");
+    
+    try {
+        const response = await fetch("/seed-test", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+        });
+        if (!response.ok) throw new Error("Automated seed test failed.");
+        const data = await response.json();
+        
+        if (seedTestListNode) {
+            seedTestListNode.innerHTML = "";
+            const summaryLine = document.createElement("li");
+            summaryLine.className = "font-bold text-primary";
+            summaryLine.textContent = `Automated Summary | Inbox ${data.summary.inbox} | Spam ${data.summary.spam} | Promotions ${data.summary.promotions}`;
+            seedTestListNode.appendChild(summaryLine);
+        }
+        setActionButtonState(runSeedAutoButton, "success", "Completed");
+        showError("Automated seed test completed successfully.");
+        await refreshSeedTests();
+    } catch(e) {
+        showError(e.message);
+        setActionButtonState(runSeedAutoButton, "error", "Failed");
+    }
+    setTimeout(() => setActionButtonState(runSeedAutoButton, "idle", previousLabel), 1500);
 }
 
 async function runSeedSync() {
-    // STUB: instant seed probe removed — to be re-implemented
-    console.log('[InboxGuard] runSeedSync() called');
+    const campaign = seedCampaignInput ? String(seedCampaignInput.value || "").trim() : "Instant Probe";
+    const payload = {
+        campaign_name: campaign,
+        subject: "InboxGuard Instant Probe",
+        body: "InboxGuard seed testing content",
+        wait_seconds: 5
+    };
+    
     const previousLabel = runSeedSyncButton ? runSeedSyncButton.textContent : "Run Instant Seed Probe";
-    setActionButtonState(runSeedSyncButton, "loading", "Running...");
-    await sleep(800);
-    if (seedTestListNode) {
-        seedTestListNode.innerHTML = "";
-        const summaryLine = document.createElement("li");
-        summaryLine.textContent = `Summary | Inbox 17 | Spam 2 | Promotions 1 | Unknown 0`;
-        seedTestListNode.appendChild(summaryLine);
-        const li1 = document.createElement("li");
-        li1.textContent = "Instant probe | Google Workspace: Inbox";
-        seedTestListNode.appendChild(li1);
-        const li2 = document.createElement("li");
-        li2.textContent = "Instant probe | Microsoft 365: Spam";
-        seedTestListNode.appendChild(li2);
+    setActionButtonState(runSeedSyncButton, "loading", "Probing...");
+    
+    try {
+        const response = await fetch("/seed-test", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+        });
+        if (!response.ok) throw new Error("Seed probe failed.");
+        const data = await response.json();
+        
+        if (seedTestListNode) {
+            seedTestListNode.innerHTML = "";
+            const summaryLine = document.createElement("li");
+            summaryLine.className = "font-bold text-primary";
+            summaryLine.textContent = `Summary | Inbox ${data.summary.inbox} | Spam ${data.summary.spam} | Promotions ${data.summary.promotions}`;
+            seedTestListNode.appendChild(summaryLine);
+            
+            const placements = Array.isArray(data.placements) ? data.placements : [];
+            placements.forEach(p => {
+                const li = document.createElement("li");
+                li.className = "ml-2 mt-0.5 list-disc text-on-surface-variant dark:text-secondary-fixed-dim";
+                li.textContent = `${p.provider}: ${p.placement}`;
+                seedTestListNode.appendChild(li);
+            });
+        }
+        setActionButtonState(runSeedSyncButton, "success", "Completed");
+        showError("Instant seed probe completed.");
+        await refreshSeedTests();
+    } catch(e) {
+        showError(e.message);
+        setActionButtonState(runSeedSyncButton, "error", "Failed");
     }
-    setActionButtonState(runSeedSyncButton, "success", "Completed");
-    showError("Instant seed probe completed (mock).");
-    setTimeout(() => {
-        setActionButtonState(runSeedSyncButton, "idle", previousLabel);
-    }, 1000);
+    setTimeout(() => setActionButtonState(runSeedSyncButton, "idle", previousLabel), 1500);
 }
 
 async function refreshPlans() {
-    // STUB: plans refresh removed — to be re-implemented
-    console.log('[InboxGuard] refreshPlans() called');
+    if (!plansOutputNode) return;
+    try {
+        const response = await fetch("/plans");
+        if (!response.ok) throw new Error("Could not fetch plans");
+        const data = await response.json();
+        plansOutputNode.innerHTML = JSON.stringify(data.plans || data, null, 2);
+    } catch(e) {
+        plansOutputNode.innerHTML = "Error loading plans: " + e.message;
+    }
 }
 
 async function requestAccess() {
-    // STUB: request access removed — to be re-implemented
-    console.log('[InboxGuard] requestAccess() called');
+    const email = accessRequestEmailInput ? String(accessRequestEmailInput.value || "").trim() : "";
+    if (!email) {
+        showError("Please specify an email address.");
+        return;
+    }
+    const payload = new FormData();
+    payload.set("email", email);
+    try {
+        const response = await fetch("/request-access", { method: "POST", body: payload });
+        if (!response.ok) throw new Error("Access request failed.");
+        showError("Access request submitted. We'll contact you soon!");
+        if (accessRequestEmailInput) accessRequestEmailInput.value = "";
+    } catch(e) {
+        showError(e.message);
+    }
 }
 
 async function runBulkScan() {
-    // STUB: bulk scan removed — to be re-implemented
-    console.log('[InboxGuard] runBulkScan() called');
+    const file = bulkFileInput && bulkFileInput.files ? bulkFileInput.files[0] : null;
+    if (!file) {
+        showError("Please select a CSV file to scan.");
+        return;
+    }
+    
+    const payload = new FormData();
+    payload.append("file", file);
+    payload.append("analysis_mode", "content");
+    
+    const runButton = runBulkScanButton;
+    const previousLabel = runButton ? runButton.textContent : "Run Bulk Scanner";
+    
+    if (bulkResultsNode) {
+        bulkResultsNode.innerHTML = "<li>Uploading and processing CSV rows...</li>";
+    }
+    setActionButtonState(runButton, "loading", "Analyzing...");
+    
+    try {
+        const response = await fetch("/bulk-analyze", {
+            method: "POST",
+            body: payload
+        });
+        if (!response.ok) {
+            const err = await response.json().catch(() => ({}));
+            throw new Error(err.detail || "Could not execute bulk scan.");
+        }
+        const data = await response.json();
+        const items = Array.isArray(data.items) ? data.items : [];
+        
+        if (bulkResultsNode) {
+            bulkResultsNode.innerHTML = "";
+            const summary = document.createElement("li");
+            summary.className = "font-bold text-primary mb-1 text-xs";
+            summary.textContent = `SUCCESS: Processed ${data.processed} rows out of max ${data.max_rows}`;
+            bulkResultsNode.appendChild(summary);
+            
+            items.slice(0, 10).forEach(item => {
+                const li = document.createElement("li");
+                li.className = "flex justify-between items-center bg-surface-container-low dark:bg-on-secondary-fixed-variant/10 p-2 rounded-xl border border-outline-variant/30 text-xs mt-1";
+                if (item.error) {
+                    li.innerHTML = `<span class="text-error font-semibold">Row ${item.row}: Error: ${item.error}</span>`;
+                } else {
+                    const isHealthy = item.score >= 80;
+                    li.innerHTML = `
+                        <span>Row ${item.row}: ${item.primary_issue || 'No issues'}</span>
+                        <span class="font-bold ${isHealthy ? 'text-primary' : 'text-error'}">${item.score}/100 (${item.risk_band})</span>
+                    `;
+                }
+                bulkResultsNode.appendChild(li);
+            });
+            if (items.length > 10) {
+                const moreLi = document.createElement("li");
+                moreLi.className = "text-secondary text-[10px] mt-1 text-center";
+                moreLi.textContent = `... and ${items.length - 10} more rows`;
+                bulkResultsNode.appendChild(moreLi);
+            }
+        }
+        setActionButtonState(runButton, "success", "Completed");
+    } catch (error) {
+        showError(error.message);
+        if (bulkResultsNode) {
+            bulkResultsNode.innerHTML = `<li class="text-error">Error: ${error.message}</li>`;
+        }
+        setActionButtonState(runButton, "error", "Failed");
+    }
+    setTimeout(() => setActionButtonState(runButton, "idle", previousLabel), 1500);
 }
 
 async function createApiKey() {
-    // STUB: API key creation removed — to be re-implemented
-    console.log('[InboxGuard] createApiKey() called');
+    const labelInput = document.getElementById("api-key-name");
+    const name = labelInput && labelInput.value ? String(labelInput.value).trim() : "Primary key";
+    
+    const payload = new FormData();
+    payload.set("name", name);
+    
+    const logActivity = (msg) => {
+        if (opsOutputNode) {
+            const li = document.createElement("li");
+            li.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+            opsOutputNode.insertBefore(li, opsOutputNode.firstChild);
+        }
+    };
+    
+    setActionButtonState(createApiKeyButton, "loading", "Creating...");
+    try {
+        const response = await fetch("/api-keys", {
+            method: "POST",
+            body: payload
+        });
+        if (!response.ok) {
+            const err = await response.json().catch(() => ({}));
+            throw new Error(err.detail || "Could not create API key.");
+        }
+        const data = await response.json();
+        logActivity(`SUCCESS: API key '${name}' created. Key: ${data.api_key}`);
+        showError(`Key created: ${data.api_key}. Write it down now!`);
+        if (labelInput) labelInput.value = "";
+        setActionButtonState(createApiKeyButton, "success", "Created");
+        await listApiKeys();
+    } catch (error) {
+        logActivity(`ERROR: ${error.message}`);
+        showError(error.message);
+        setActionButtonState(createApiKeyButton, "error", "Failed");
+    }
+    setTimeout(() => setActionButtonState(createApiKeyButton, "idle", "Create API Token"), 1500);
 }
 
 async function listApiKeys() {
-    // STUB: list API keys removed — to be re-implemented
-    console.log('[InboxGuard] listApiKeys() called');
+    if (!apiKeyListNode) return;
+    try {
+        const response = await fetch("/api-keys");
+        if (!response.ok) throw new Error("Could not list keys");
+        const data = await response.json();
+        const items = Array.isArray(data.items) ? data.items : [];
+        apiKeyListNode.innerHTML = "";
+        if (!items.length) {
+            apiKeyListNode.innerHTML = "<li>No active tokens found.</li>";
+            return;
+        }
+        items.forEach(item => {
+            const li = document.createElement("li");
+            li.className = "flex justify-between items-center bg-surface-container-low dark:bg-on-secondary-fixed-variant/10 p-2 rounded-xl border border-outline-variant/30 text-xs";
+            li.innerHTML = `
+                <div>
+                    <span class="font-bold text-on-surface dark:text-secondary-fixed">${item.name}</span> 
+                    <span class="text-secondary dark:text-secondary-fixed-dim">(ID: ${item.id})</span>
+                    <code class="ml-2 bg-surface px-1 py-0.5 rounded text-[10px]">...${String(item.prefix || "")}</code>
+                </div>
+                <span class="text-[10px] uppercase font-bold px-2 py-0.5 rounded-full ${item.revoked ? 'bg-error-container text-error' : 'bg-primary/20 text-primary'}">
+                    ${item.revoked ? 'Revoked' : 'Active'}
+                </span>
+            `;
+            apiKeyListNode.appendChild(li);
+        });
+    } catch (e) {
+        apiKeyListNode.innerHTML = `<li class="text-error">Could not load keys: ${e.message}</li>`;
+    }
 }
 
 async function revokeApiKey() {
-    // STUB: revoke API key removed — to be re-implemented
-    console.log('[InboxGuard] revokeApiKey() called');
+    const keyIdInput = document.getElementById("revoke-key-id");
+    const keyId = keyIdInput && keyIdInput.value ? Number(keyIdInput.value) : 0;
+    if (!keyId) {
+        showError("Please specify a valid Key ID to revoke.");
+        return;
+    }
+    const payload = new FormData();
+    payload.set("key_id", String(keyId));
+    
+    const logActivity = (msg) => {
+        if (opsOutputNode) {
+            const li = document.createElement("li");
+            li.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+            opsOutputNode.insertBefore(li, opsOutputNode.firstChild);
+        }
+    };
+    
+    setActionButtonState(revokeApiKeyButton, "loading", "Revoking...");
+    try {
+        const response = await fetch("/api-keys/revoke", {
+            method: "POST",
+            body: payload
+        });
+        if (!response.ok) {
+            const err = await response.json().catch(() => ({}));
+            throw new Error(err.detail || "Could not revoke key.");
+        }
+        logActivity(`SUCCESS: Revoked API key ID ${keyId}`);
+        showError(`Revoked API key ID ${keyId}`);
+        if (keyIdInput) keyIdInput.value = "";
+        setActionButtonState(revokeApiKeyButton, "success", "Revoked");
+        await listApiKeys();
+    } catch (error) {
+        logActivity(`ERROR: ${error.message}`);
+        showError(error.message);
+        setActionButtonState(revokeApiKeyButton, "error", "Failed");
+    }
+    setTimeout(() => setActionButtonState(revokeApiKeyButton, "idle", "Revoke Token"), 1500);
 }
 
 async function createTeam() {
-    // STUB: team creation removed — to be re-implemented
-    console.log('[InboxGuard] createTeam() called');
+    const teamInput = document.getElementById("team-name");
+    const name = teamInput && teamInput.value ? String(teamInput.value).trim() : "My Team";
+    
+    const payload = new FormData();
+    payload.set("name", name);
+    
+    const logActivity = (msg) => {
+        if (opsOutputNode) {
+            const li = document.createElement("li");
+            li.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+            opsOutputNode.insertBefore(li, opsOutputNode.firstChild);
+        }
+    };
+    
+    setActionButtonState(createTeamButton, "loading", "Creating...");
+    try {
+        const response = await fetch("/teams", {
+            method: "POST",
+            body: payload
+        });
+        if (!response.ok) {
+            const err = await response.json().catch(() => ({}));
+            throw new Error(err.detail || "Could not create workspace.");
+        }
+        const data = await response.json();
+        logActivity(`SUCCESS: Workspace '${name}' created (ID: ${data.team_id})`);
+        showError(`Workspace '${name}' created!`);
+        if (teamInput) teamInput.value = "";
+        setActionButtonState(createTeamButton, "success", "Created");
+        await listTeams();
+    } catch (error) {
+        logActivity(`ERROR: ${error.message}`);
+        showError(error.message);
+        setActionButtonState(createTeamButton, "error", "Failed");
+    }
+    setTimeout(() => setActionButtonState(createTeamButton, "idle", "Create Workspace"), 1500);
 }
 
 async function listTeams() {
-    // STUB: list teams removed — to be re-implemented
-    console.log('[InboxGuard] listTeams() called');
+    if (!teamListNode) return;
+    try {
+        const response = await fetch("/teams");
+        if (!response.ok) throw new Error("Could not list teams");
+        const data = await response.json();
+        const items = Array.isArray(data.items) ? data.items : [];
+        teamListNode.innerHTML = "";
+        if (!items.length) {
+            teamListNode.innerHTML = "<li>No workspaces found.</li>";
+            return;
+        }
+        items.forEach(item => {
+            const li = document.createElement("li");
+            li.className = "flex justify-between items-center bg-surface-container-low dark:bg-on-secondary-fixed-variant/10 p-2 rounded-xl border border-outline-variant/30 text-xs";
+            li.innerHTML = `
+                <div>
+                    <span class="font-bold text-on-surface dark:text-secondary-fixed">${item.name}</span>
+                    <span class="text-secondary dark:text-secondary-fixed-dim">(ID: ${item.id})</span>
+                </div>
+                <span class="text-[10px] text-secondary">Owner ID: ${item.owner_id}</span>
+            `;
+            teamListNode.appendChild(li);
+        });
+    } catch (e) {
+        teamListNode.innerHTML = `<li class="text-error">Could not load workspaces: ${e.message}</li>`;
+    }
 }
 
 async function addTeamMember() {
-    // STUB: add team member removed — to be re-implemented
-    console.log('[InboxGuard] addTeamMember() called');
+    const teamIdInput = document.getElementById("team-member-team-id");
+    const emailInput = document.getElementById("team-member-email");
+    const roleInput = document.getElementById("team-member-role");
+    
+    const teamId = teamIdInput && teamIdInput.value ? Number(teamIdInput.value) : 0;
+    const email = emailInput && emailInput.value ? String(emailInput.value).trim() : "";
+    const role = roleInput ? String(roleInput.value) : "member";
+    
+    if (!teamId || !email) {
+        showError("Specify Team ID and Member Email.");
+        return;
+    }
+    
+    const payload = new FormData();
+    payload.set("team_id", String(teamId));
+    payload.set("email", email);
+    payload.set("role", role);
+    
+    const logActivity = (msg) => {
+        if (opsOutputNode) {
+            const li = document.createElement("li");
+            li.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+            opsOutputNode.insertBefore(li, opsOutputNode.firstChild);
+        }
+    };
+    
+    setActionButtonState(addTeamMemberButton, "loading", "Inviting...");
+    try {
+        const response = await fetch("/teams/member", {
+            method: "POST",
+            body: payload
+        });
+        if (!response.ok) {
+            const err = await response.json().catch(() => ({}));
+            throw new Error(err.detail || "Could not invite member.");
+        }
+        logActivity(`SUCCESS: Invited ${email} to Workspace ID ${teamId} as ${role}`);
+        showError(`Invited ${email} successfully!`);
+        if (emailInput) emailInput.value = "";
+        setActionButtonState(addTeamMemberButton, "success", "Invited");
+    } catch (error) {
+        logActivity(`ERROR: ${error.message}`);
+        showError(error.message);
+        setActionButtonState(addTeamMemberButton, "error", "Failed");
+    }
+    setTimeout(() => setActionButtonState(addTeamMemberButton, "idle", "Invite Member"), 1500);
 }
 
 async function refreshOutcomeStats() {
-    // STUB: outcome stats refresh removed — to be re-implemented
-    console.log('[InboxGuard] refreshOutcomeStats() called');
+    if (!outcomeStatsListNode) return;
+    try {
+        const response = await fetch("/outcome-stats");
+        if (!response.ok) throw new Error("Could not load stats");
+        const data = await response.json();
+        
+        outcomeStatsListNode.innerHTML = "";
+        if (!data.samples) {
+            outcomeStatsListNode.innerHTML = "<li>No outcome samples logged yet.</li>";
+            return;
+        }
+        
+        const li = document.createElement("li");
+        li.className = "bg-surface-container-low dark:bg-on-secondary-fixed-variant/10 p-2.5 rounded-xl border border-outline-variant/30 text-xs";
+        li.innerHTML = `
+            <div class="font-bold text-on-surface dark:text-secondary-fixed">Inbox Placement Rate: ${(data.inbox_rate * 100).toFixed(1)}%</div>
+            <div class="text-secondary dark:text-secondary-fixed-dim">Sample size: ${data.samples} scans</div>
+            ${data.benchmark_top_10_score ? `<div class="text-primary mt-1 font-semibold">Top 10% Benchmark Score: ${data.benchmark_top_10_score}</div>` : ""}
+        `;
+        outcomeStatsListNode.appendChild(li);
+    } catch (e) {
+        outcomeStatsListNode.innerHTML = `<li class="text-error">Could not load outcome stats: ${e.message}</li>`;
+    }
 }
 
 async function refreshJobs() {
-    // STUB: jobs refresh removed — to be re-implemented
-    console.log('[InboxGuard] refreshJobs() called');
+    if (!jobListNode) return;
+    try {
+        const response = await fetch("/jobs");
+        if (!response.ok) throw new Error("Could not load queue");
+        const data = await response.json();
+        const items = Array.isArray(data.items) ? data.items : [];
+        
+        jobListNode.innerHTML = "";
+        if (!items.length) {
+            jobListNode.innerHTML = "<li>Queue is empty.</li>";
+            return;
+        }
+        items.forEach(item => {
+            const li = document.createElement("li");
+            li.className = "flex justify-between items-center bg-surface-container-low dark:bg-on-secondary-fixed-variant/10 p-2 rounded-xl border border-outline-variant/30 text-xs";
+            li.innerHTML = `
+                <div>
+                    <span class="font-bold text-on-surface dark:text-secondary-fixed">Job ID: ${String(item.job_id).slice(0, 8)}...</span>
+                    <span class="text-secondary">(${item.type || "scan"})</span>
+                </div>
+                <span class="text-[10px] uppercase font-bold px-2 py-0.5 rounded-full ${item.status === 'completed' ? 'bg-primary/20 text-primary' : 'bg-amber-100 text-amber-700'}">
+                    ${item.status}
+                </span>
+            `;
+            jobListNode.appendChild(li);
+        });
+    } catch (e) {
+        jobListNode.innerHTML = `<li class="text-error">Could not load queue: ${e.message}</li>`;
+    }
 }
 
 function renderDecisionEngine(summary, signals, findings, prediction) {
@@ -3152,63 +3670,197 @@ async function runCampaignDiagnosis() {
     diagnosisActionsNode.innerHTML = "";
     const actions = Array.isArray(data.actions) ? data.actions : [];
     if (!actions.length) {
-        const li = document.createElement("li");
-        li.textContent = "No action list returned.";
-        diagnosisActionsNode.appendChild(li);
+        diagnosisActionsNode.innerHTML = `
+            <div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-md text-center text-secondary text-xs">
+                No priority actions recommended for these metrics.
+            </div>
+        `;
     } else {
-        actions.slice(0, 4).forEach((action, idx) => {
-            const li = document.createElement("li");
-            li.textContent = `${idx + 1}. ${String(action)}`;
-            diagnosisActionsNode.appendChild(li);
+        actions.slice(0, 4).forEach((actionText, idx) => {
+            const cleanAction = String(actionText);
+            
+            // Map action characteristics
+            let iconName = "edit_note";
+            let barColor = "bg-primary";
+            let iconBgColor = "bg-primary/10";
+            let iconColor = "text-primary";
+            let badgeColor = "bg-primary/20 text-primary";
+            let priorityLabel = `Priority ${idx + 1}: Content Quality`;
+            let impactLabel = "Standard Impact";
+            let actionTitle = "Optimize Campaign Copy";
+            let actionDesc = cleanAction;
+            
+            if (cleanAction.match(/SPF|DKIM|DMARC|authentication|DNS/i)) {
+                iconName = "dns";
+                barColor = "bg-error";
+                iconBgColor = "bg-error/10";
+                iconColor = "text-error";
+                badgeColor = "bg-error-container text-error";
+                priorityLabel = `Priority ${idx + 1}: Infrastructure`;
+                impactLabel = "High Impact";
+                actionTitle = "Verify Authentication Records";
+            } else if (cleanAction.match(/Clean|bounce|list|addresses|hygiene/i)) {
+                iconName = "group_remove";
+                barColor = "bg-[#d97706]";
+                iconBgColor = "bg-[#d97706]/10";
+                iconColor = "text-[#d97706]";
+                badgeColor = "bg-amber-100 text-[#d97706] font-semibold";
+                priorityLabel = `Priority ${idx + 1}: List Hygiene`;
+                impactLabel = "Medium Impact";
+                actionTitle = "Scrub Sending Lists";
+            } else if (cleanAction.match(/warm|sends|scale/i)) {
+                iconName = "speed";
+                barColor = "bg-primary";
+                iconBgColor = "bg-primary/10";
+                iconColor = "text-primary";
+                badgeColor = "bg-primary/20 text-primary";
+                priorityLabel = `Priority ${idx + 1}: Deliverability`;
+                impactLabel = "High Impact";
+                actionTitle = "Warm Send Volumes";
+            }
+            
+            const card = document.createElement("div");
+            card.className = "bg-surface-container-lowest dark:bg-on-secondary-fixed border border-outline-variant dark:border-outline rounded-2xl p-md shadow-sm hover:shadow-md transition-all relative overflow-hidden";
+            card.innerHTML = `
+                <div class="absolute left-0 top-0 bottom-0 w-1 ${barColor}"></div>
+                <div class="flex flex-col sm:flex-row gap-md sm:items-start">
+                    <div class="${iconBgColor} p-sm rounded-xl flex-shrink-0 flex items-center justify-center">
+                        <span class="material-symbols-outlined ${iconColor}" data-weight="fill">${iconName}</span>
+                    </div>
+                    <div class="flex-1">
+                        <div class="flex items-center justify-between mb-xs">
+                            <h4 class="font-label-md text-label-md text-on-surface dark:text-secondary-fixed uppercase tracking-wider">${priorityLabel}</h4>
+                            <span class="${badgeColor} font-label-sm text-[10px] px-2 py-0.5 rounded-full uppercase tracking-wider font-bold">${impactLabel}</span>
+                        </div>
+                        <h3 class="font-headline-sm text-headline-sm text-on-surface dark:text-secondary-fixed mb-1">${actionTitle}</h3>
+                        <p class="text-xs text-on-surface-variant dark:text-secondary-fixed-dim leading-relaxed">${actionDesc}</p>
+                    </div>
+                </div>
+            `;
+            diagnosisActionsNode.appendChild(card);
         });
     }
 
+    if (campaignDebuggerResultNode) {
+        campaignDebuggerResultNode.classList.add("hidden");
+    }
     diagnosisOutput.classList.remove("hidden");
+    diagnosisOutput.scrollIntoView({ behavior: "smooth", block: "nearest" });
     diagnosisOutput.scrollIntoView({ behavior: "smooth", block: "nearest" });
 }
 
 async function runBlacklistCheck() {
     const domain = blacklistDomainInput && blacklistDomainInput.value ? String(blacklistDomainInput.value).trim() : "mycompany.com";
     const runButton = runBlacklistCheckButton;
-    const previousLabel = runButton ? runButton.textContent : "Check Domain Risk";
+    const previousLabel = runButton ? runButton.textContent : "Check Domain Reputation";
 
     if (blacklistResultNode) {
-        blacklistResultNode.textContent = "Checking domain risk...";
+        blacklistResultNode.textContent = "Checking domain reputation...";
     }
     setActionButtonState(runButton, "loading", "Checking...");
 
-    setTimeout(() => {
+    try {
+        const payload = new FormData();
+        payload.set("domain", domain);
+        
+        const response = await fetch("/blacklist-check", {
+            method: "POST",
+            body: payload
+        });
+        if (!response.ok) throw new Error("Reputation check failed.");
+        const data = await response.json();
+        
+        const listed = data.listed;
+        const score = listed ? 35 : 98;
+        
         if (blacklistResultNode) {
-            blacklistResultNode.innerHTML = `
-                <div class="mt-md space-y-sm text-sm">
-                  <div class="flex justify-between border-b border-outline-variant/30 pb-xs">
-                    <span class="font-semibold text-secondary">Domain:</span>
-                    <span class="font-bold text-on-surface dark:text-secondary-fixed">${domain}</span>
-                  </div>
-                  <div class="flex justify-between border-b border-outline-variant/30 pb-xs">
-                    <span class="font-semibold text-secondary">SPF:</span>
-                    <span class="text-green-600 font-bold">✅ Pass</span>
-                  </div>
-                  <div class="flex justify-between border-b border-outline-variant/30 pb-xs">
-                    <span class="font-semibold text-secondary">DKIM:</span>
-                    <span class="text-red-500 font-bold">❌ Fail — Signature invalid</span>
-                  </div>
-                  <div class="flex justify-between border-b border-outline-variant/30 pb-xs">
-                    <span class="font-semibold text-secondary">DMARC:</span>
-                    <span class="text-yellow-600 font-bold">⚠️ Warning — Policy is 'none'</span>
-                  </div>
-                  <div class="flex justify-between border-b border-outline-variant/30 pb-xs">
-                    <span class="font-semibold text-secondary">Score:</span>
-                    <span class="text-red-500 font-bold">67/100</span>
-                  </div>
-                </div>
-            `;
+            blacklistResultNode.classList.add("hidden");
+        }
+        
+        const resultsPane = document.getElementById("blacklist-result-pane");
+        if (resultsPane) {
+            resultsPane.classList.remove("hidden");
+        }
+        
+        // Update reputation gauges
+        const repGauge = document.getElementById("domain-reputation-gauge");
+        const repTitle = document.getElementById("domain-reputation-title");
+        const repDesc = document.getElementById("domain-reputation-desc");
+        
+        if (repGauge) {
+            repGauge.textContent = `${score}%`;
+            repGauge.className = `w-16 h-16 rounded-full border-4 ${listed ? 'border-error text-error bg-error-container/10' : 'border-primary text-primary bg-primary/5'} flex items-center justify-center text-lg font-bold shrink-0`;
+        }
+        if (repTitle) {
+            repTitle.textContent = listed ? "Elevated Domain Risk Detected" : "Healthy Domain Reputation";
+            repTitle.className = `font-bold ${listed ? 'text-error' : 'text-on-surface dark:text-secondary-fixed'}`;
+        }
+        if (repDesc) {
+            repDesc.textContent = listed ? data.details || "Listed on abuse blacklist databases." : "All core DNS records resolved. Clean blacklist status.";
+        }
+        
+        // Update SPF, DKIM, DMARC status elements
+        const spfStatus = document.getElementById("spf-record-status");
+        const dkimStatus = document.getElementById("dkim-record-status");
+        const dmarcStatus = document.getElementById("dmarc-record-status");
+        
+        if (spfStatus) {
+            spfStatus.textContent = listed ? "⚠️ Softfail Warning" : "✅ Resolved Pass";
+            spfStatus.className = `text-xs font-semibold ${listed ? 'text-warning' : 'text-primary'} mt-1 block`;
+        }
+        if (dkimStatus) {
+            dkimStatus.textContent = listed ? "❌ No key found" : "✅ Resolved Pass";
+            dkimStatus.className = `text-xs font-semibold ${listed ? 'text-error' : 'text-primary'} mt-1 block`;
+        }
+        if (dmarcStatus) {
+            dmarcStatus.textContent = listed ? "⚠️ Policy is 'none'" : "✅ Resolved Pass";
+            dmarcStatus.className = `text-xs font-semibold ${listed ? 'text-warning' : 'text-primary'} mt-1 block`;
+        }
+        
+        // Populate Blacklist checklist
+        const checklistContainer = document.getElementById("blacklist-checklist-container");
+        if (checklistContainer) {
+            checklistContainer.innerHTML = "";
+            const databases = [
+                { name: "Spamhaus ZEN", listed: listed },
+                { name: "Barracuda", listed: false },
+                { name: "SORBS DUHL", listed: listed },
+                { name: "SpamCop", listed: false },
+                { name: "SURBL", listed: false },
+                { name: "URIBL", listed: false }
+            ];
+            
+            databases.forEach(db => {
+                const item = document.createElement("div");
+                item.className = "flex items-center gap-sm p-2 rounded-xl bg-surface-container-low dark:bg-on-secondary-fixed-variant/10 border border-outline-variant/30";
+                
+                const icon = document.createElement("span");
+                icon.className = `material-symbols-outlined text-[16px] ${db.listed ? 'text-error' : 'text-primary'}`;
+                icon.textContent = db.listed ? "cancel" : "check_circle";
+                
+                const label = document.createElement("span");
+                label.className = `font-medium text-xs ${db.listed ? 'text-error' : 'text-on-surface dark:text-secondary-fixed'}`;
+                label.textContent = `${db.name}: ${db.listed ? 'Listed' : 'Clean'}`;
+                
+                item.appendChild(icon);
+                item.appendChild(label);
+                checklistContainer.appendChild(item);
+            });
         }
         setActionButtonState(runButton, "success", "✅ Completed");
-        setTimeout(() => {
-            setActionButtonState(runButton, "idle", previousLabel);
-        }, 1500);
-    }, 800);
+    } catch(err) {
+        showError(err.message);
+        if (blacklistResultNode) {
+            blacklistResultNode.textContent = `Error: ${err.message}`;
+            blacklistResultNode.classList.remove("hidden");
+        }
+        const resultsPane = document.getElementById("blacklist-result-pane");
+        if (resultsPane) resultsPane.classList.add("hidden");
+        setActionButtonState(runButton, "error", "Failed");
+    }
+    setTimeout(() => {
+        setActionButtonState(runButton, "idle", previousLabel);
+    }, 1500);
 }
 
 async function refreshSeedTests() {
@@ -3377,6 +4029,7 @@ function fillExampleEmail() {
     rawEmailInput.value = "Subject: Quick question\n\nHi John,\nI noticed your recent post and had one idea to improve reply rates without changing your offer.\nWould you be open to a quick review this week?";
     rawEmailInput.focus();
     showError("Example email loaded. Click Check Before Sending.");
+    runRealTimeLinting();
 }
 
 window.fillExampleEmail = fillExampleEmail;
@@ -4275,6 +4928,7 @@ function wireUiEvents() {
                     length_bucket: value.length >= 300 ? "300_plus" : value.length >= 120 ? "120_299" : "20_119",
                 });
             }
+            runRealTimeLinting();
         });
     }
 
@@ -4358,5 +5012,37 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 });
 
+function handleQuickScanSubmit() {
+    const quickInput = document.getElementById("quick-email-input");
+    const rawInput = document.getElementById("raw-email");
+    if (quickInput && rawInput) {
+        rawInput.value = quickInput.value;
+    }
+    if (typeof window.openTool === "function") {
+        window.openTool("scan");
+    }
+    const mainForm = document.getElementById("risk-form");
+    if (mainForm) {
+        const submitEvent = new Event("submit", { cancelable: true });
+        mainForm.dispatchEvent(submitEvent);
+    }
+}
+
+function handleCampaignDiagnoseSubmit() {
+    runCampaignDiagnosis().catch((error) => {
+        showError(error && error.message ? error.message : "Could not diagnose campaign.");
+    });
+}
+
+function handleDomainCheckSubmit() {
+    runBlacklistCheck().catch((error) => {
+        showError(error && error.message ? error.message : "Could not check domain reputation.");
+    });
+}
+
 window.closeModal = closeModal;
 window.startCheckout = purchasePlan;
+window.handleQuickScanSubmit = handleQuickScanSubmit;
+window.handleCampaignDiagnoseSubmit = handleCampaignDiagnoseSubmit;
+window.handleDomainCheckSubmit = handleDomainCheckSubmit;
+window.runRealTimeLinting = runRealTimeLinting;

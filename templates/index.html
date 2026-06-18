@@ -347,112 +347,158 @@
 
         <!-- Idle Dashboard Section (Overview) -->
         <section id="home" class="home-only space-y-lg flex-grow">
-          <section class="bg-surface-container-lowest dark:bg-on-secondary-fixed border border-outline-variant dark:border-outline rounded-3xl p-lg md:p-xl shadow-md text-center md:text-left flex flex-col md:flex-row justify-between items-center gap-lg relative overflow-hidden">
-            <div class="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3"></div>
-            <div class="z-10 flex-grow">
-              <h1 class="font-display-lg text-display-lg text-primary dark:text-primary-fixed mb-md">Scan first, then fix, then upgrade when it matters.</h1>
-              <p class="text-on-surface-variant dark:text-secondary-fixed-dim max-w-2xl mb-lg">
-                Verify content risks and authenticate domain records before you broadcast campaigns. Keep the spam rates under control with pre-send checks.
-              </p>
-              <div class="flex flex-wrap gap-md justify-center md:justify-start">
-                <button id="home-scan-btn" class="bg-primary hover:bg-surface-tint text-on-primary font-label-md text-label-md px-6 py-3 rounded-xl transition-all shadow-md" type="button" onclick="openTool('scan')">Scan an Email</button>
-                <button class="border border-outline hover:bg-surface-container-low dark:border-outline dark:hover:bg-outline/10 text-on-surface dark:text-secondary-fixed font-label-md text-label-md px-6 py-3 rounded-xl transition-all" type="button" onclick="document.getElementById('scan-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' })">See Scan Flow</button>
+          <!-- Welcome Header -->
+          <div class="mb-lg">
+            <h2 class="text-headline-lg font-headline-lg text-on-surface dark:text-secondary-fixed mb-xs">Good morning, M. Tharun Kumar 👋</h2>
+            <p class="text-body-lg text-on-surface-variant dark:text-secondary-fixed-dim">Your email health at a glance.</p>
+          </div>
+
+          <!-- Stats Row -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-md mb-lg">
+            <!-- Scans -->
+            <div class="bg-surface-container-lowest dark:bg-on-secondary-fixed rounded-2xl border border-outline-variant dark:border-outline p-md shadow-sm">
+              <h3 class="text-label-sm font-label-sm text-secondary dark:text-secondary-fixed-dim uppercase tracking-wider mb-2">Scans This Month</h3>
+              <div class="flex items-baseline gap-2">
+                <span class="text-headline-md font-headline-md text-on-surface dark:text-secondary-fixed" id="stat-scans-val">7</span>
+                <span class="text-body-sm text-on-surface-variant dark:text-secondary-fixed-dim">/ unlimited</span>
               </div>
             </div>
-          </section>
-
-          <!-- Core Tools Grid -->
-          <section id="feature-grid-panel" class="space-y-md">
-            <h2 class="font-headline-sm text-headline-sm text-on-surface dark:text-secondary-fixed mb-sm">Core Inboxing Flow</h2>
-            <div id="core-tools" class="grid grid-cols-1 md:grid-cols-2 gap-lg">
-              <article class="bg-surface-container-lowest dark:bg-on-secondary-fixed border border-outline-variant dark:border-outline rounded-2xl p-lg flex flex-col justify-between shadow-sm hover:shadow-md transition-all">
-                <div>
-                  <span class="text-primary font-bold text-xs uppercase tracking-wider">1 credit &bull; Core tool</span>
-                  <h3 class="font-headline-sm text-headline-sm text-on-surface dark:text-secondary-fixed mt-1 mb-sm">📨 Scan Email</h3>
-                  <p class="text-on-surface-variant dark:text-secondary-fixed-dim text-body-sm">
-                    Checks spam-trigger filters, urgency levels, link counts, and ML classifications to predict placement.
-                  </p>
-                </div>
-                <button id="card-scan-open-btn" class="bg-primary hover:bg-surface-tint text-on-primary font-label-md text-label-md w-full py-2.5 rounded-xl transition-all mt-lg" onclick="openTool('scan');">Open Scan Console</button>
-              </article>
-
-              <article class="bg-surface-container-lowest dark:bg-on-secondary-fixed border border-outline-variant dark:border-outline rounded-2xl p-lg flex flex-col justify-between shadow-sm hover:shadow-md transition-all lockable">
-                <div>
-                  <span class="text-primary font-bold text-xs uppercase tracking-wider">2 credits &bull; Advanced tool</span>
-                  <h3 class="font-headline-sm text-headline-sm text-on-surface dark:text-secondary-fixed mt-1 mb-sm">🧭 Campaign Debugger</h3>
-                  <p class="text-on-surface-variant dark:text-secondary-fixed-dim text-body-sm">
-                    Enter open, click, and bounce rates of sent campaigns to diagnose deliverability vs copy conversion bottlenecks.
-                  </p>
-                </div>
-                <button class="bg-primary hover:bg-surface-tint text-on-primary font-label-md text-label-md w-full py-2.5 rounded-xl transition-all mt-lg" onclick="openTool('campaign-debugger');">Open Debugger</button>
-              </article>
-            </div>
-
-            <!-- Secondary Tools wrapper -->
-            <details class="sidebar-more bg-surface-container-lowest dark:bg-on-secondary-fixed border border-outline-variant dark:border-outline rounded-2xl p-md shadow-sm">
-              <summary class="cursor-pointer font-headline-sm text-headline-sm text-on-surface dark:text-secondary-fixed py-2 select-none hover:text-primary transition-colors flex items-center justify-between">
-                <span>Secondary deliverability utilities</span>
-                <span class="material-symbols-outlined">expand_more</span>
-              </summary>
-              <div id="feature-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-md pt-lg">
-                <div class="bg-surface-container-low dark:bg-on-secondary-fixed border border-outline-variant dark:border-outline rounded-xl p-md flex flex-col justify-between">
-                  <div>
-                    <span class="text-xs font-semibold text-secondary">1 credit</span>
-                    <h4 class="font-medium text-sm text-on-surface dark:text-secondary-fixed mt-1">🌐 Domain Check</h4>
-                  </div>
-                  <button class="text-primary dark:text-primary-fixed hover:underline text-xs font-semibold mt-md text-left" onclick="openTool('blacklist');">Open &rarr;</button>
-                </div>
-
-                <div class="bg-surface-container-low dark:bg-on-secondary-fixed border border-outline-variant dark:border-outline rounded-xl p-md flex flex-col justify-between lockable" data-plan-required="growth">
-                  <div>
-                    <span class="text-xs font-semibold text-secondary">5 credits</span>
-                    <h4 class="font-medium text-sm text-on-surface dark:text-secondary-fixed mt-1">🧪 Seed Testing</h4>
-                  </div>
-                  <button class="text-primary dark:text-primary-fixed hover:underline text-xs font-semibold mt-md text-left" onclick="openTool('seed');">Open &rarr;</button>
-                </div>
-
-                <div class="bg-surface-container-low dark:bg-on-secondary-fixed border border-outline-variant dark:border-outline rounded-xl p-md flex flex-col justify-between lockable" data-plan-required="growth">
-                  <div>
-                    <span class="text-xs font-semibold text-secondary">3 credits</span>
-                    <h4 class="font-medium text-sm text-on-surface dark:text-secondary-fixed mt-1">📦 Bulk Scan</h4>
-                  </div>
-                  <button class="text-primary dark:text-primary-fixed hover:underline text-xs font-semibold mt-md text-left" onclick="openTool('bulk');">Open &rarr;</button>
-                </div>
-
-                <div class="bg-surface-container-low dark:bg-on-secondary-fixed border border-outline-variant dark:border-outline rounded-xl p-md flex flex-col justify-between">
-                  <div>
-                    <span class="text-xs font-semibold text-secondary">Custom</span>
-                    <h4 class="font-medium text-sm text-on-surface dark:text-secondary-fixed mt-1">👥 API + Team</h4>
-                  </div>
-                  <button class="text-primary dark:text-primary-fixed hover:underline text-xs font-semibold mt-md text-left" onclick="openTool('ops');">Open &rarr;</button>
-                </div>
-              </div>
-            </details>
-          </section>
-
-          <!-- Social Proof testimonials -->
-          <section id="trust-social-proof" class="bg-surface-container-lowest dark:bg-on-secondary-fixed border border-outline-variant dark:border-outline rounded-2xl p-lg shadow-sm">
-            <h4 class="font-headline-sm text-headline-sm text-on-surface dark:text-secondary-fixed mb-sm">Trusted by sending operations</h4>
-            <div class="space-y-sm mb-lg text-body-sm text-on-surface-variant dark:text-secondary-fixed-dim">
-              <p id="live-stats-summary">Live performance metrics load from recent outcomes...</p>
-              <p id="live-stats-breakdown">Sign in to view your latest inbox-rate benchmark.</p>
-              <p id="live-stats-status">Outcome-driven scoring updates dynamically.</p>
-            </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-lg border-t border-outline-variant dark:border-outline pt-lg">
-              <div>
-                <p class="italic text-body-sm text-on-surface-variant dark:text-secondary-fixed-dim">
-                  "InboxGuard caught what our manual QA process missed, saving full campaign runs from deliverability threats."
-                </p>
-                <span class="block text-xs font-bold text-on-surface dark:text-secondary-fixed mt-xs">&mdash; B2B Agency Founder</span>
-              </div>
-              <div>
-                <p class="italic text-body-sm text-on-surface-variant dark:text-secondary-fixed-dim">
-                  "Pre-send check is non-negotiable for outbound. We run every draft through the scanner before touching volume."
-                </p>
-                <span class="block text-xs font-bold text-on-surface dark:text-secondary-fixed mt-xs">&mdash; Growth Lead, SaaS outbound</span>
+            <!-- Avg Score -->
+            <div class="bg-surface-container-lowest dark:bg-on-secondary-fixed rounded-2xl border border-outline-variant dark:border-outline p-md shadow-sm">
+              <h3 class="text-label-sm font-label-sm text-secondary dark:text-secondary-fixed-dim uppercase tracking-wider mb-2">Average Score</h3>
+              <div class="flex items-center gap-2">
+                <span class="text-headline-md font-headline-md text-on-surface dark:text-secondary-fixed" id="stat-score-val">34</span>
+                <span class="material-symbols-outlined text-primary text-[20px]">arrow_downward</span>
               </div>
             </div>
-          </section>
+            <!-- Issues Fixed -->
+            <div class="bg-surface-container-lowest dark:bg-on-secondary-fixed rounded-2xl border border-outline-variant dark:border-outline p-md shadow-sm">
+              <h3 class="text-label-sm font-label-sm text-secondary dark:text-secondary-fixed-dim uppercase tracking-wider mb-2">Issues Fixed</h3>
+              <span class="text-headline-md font-headline-md text-on-surface dark:text-secondary-fixed" id="stat-fixed-val">12</span>
+            </div>
+            <!-- Domain Health -->
+            <div class="bg-surface-container-lowest dark:bg-on-secondary-fixed rounded-2xl border border-outline-variant dark:border-outline p-md shadow-sm flex flex-col justify-between">
+              <h3 class="text-label-sm font-label-sm text-secondary dark:text-secondary-fixed-dim uppercase tracking-wider mb-2">Domain Health</h3>
+              <div class="inline-flex items-center px-3 py-1 bg-primary/10 text-primary dark:text-primary-fixed rounded-full w-max">
+                <span class="material-symbols-outlined text-[16px] mr-1">check_circle</span>
+                <span class="text-label-sm font-label-sm font-semibold">Healthy</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Bento Layout Grid -->
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-md">
+            <!-- Center Column: Quick Scan & Recent Scans (Col-span-2) -->
+            <div class="lg:col-span-2 flex flex-col gap-md">
+              <!-- Quick Spam Check -->
+              <div class="relative bg-surface-container-lowest dark:bg-on-secondary-fixed rounded-2xl border border-outline-variant dark:border-outline p-lg shadow-sm overflow-hidden isolate">
+                <div class="absolute inset-0 bg-gradient-to-br from-primary-container/5 to-transparent z-[-1]"></div>
+                <div class="max-w-xl mx-auto text-center">
+                  <h2 class="text-headline-md font-headline-md text-on-surface dark:text-secondary-fixed mb-xs">Quick Spam Check</h2>
+                  <p class="text-body-md text-on-surface-variant dark:text-secondary-fixed-dim mb-md">Paste your email content or click below to open the full scan console.</p>
+                  <div class="bg-surface-container-lowest dark:bg-on-secondary-fixed rounded-xl border border-outline-variant dark:border-outline focus-within:border-primary transition-colors p-1.5 flex items-center shadow-sm gap-2">
+                    <span class="material-symbols-outlined text-secondary dark:text-secondary-fixed-dim ml-2">mail</span>
+                    <input id="quick-email-input" class="w-full bg-transparent border-none focus:ring-0 text-body-md text-on-surface dark:text-secondary-fixed placeholder:text-secondary/50 px-2 py-1.5" placeholder="Paste subject or email body here..." type="text"/>
+                    <button class="bg-primary hover:bg-surface-tint text-on-primary rounded-lg px-5 py-2.5 font-label-md text-label-md transition-all whitespace-nowrap" type="button" onclick="handleQuickScanSubmit()">
+                      Analyze Score
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Recent Scans Table -->
+              <div class="bg-surface-container-lowest dark:bg-on-secondary-fixed rounded-2xl border border-outline-variant dark:border-outline shadow-sm overflow-hidden">
+                <div class="px-md py-4 border-b border-outline-variant dark:border-outline flex justify-between items-center bg-surface-container-low dark:bg-on-secondary-fixed/30">
+                  <h3 class="text-headline-sm font-headline-sm text-on-surface dark:text-secondary-fixed">Recent Scans</h3>
+                  <button class="text-label-md font-label-md text-primary dark:text-primary-fixed hover:underline bg-transparent border-none cursor-pointer" type="button" onclick="openTool('scan')">View All</button>
+                </div>
+                <div class="overflow-x-auto">
+                  <table class="w-full text-left border-collapse">
+                    <thead>
+                      <tr class="border-b border-outline-variant dark:border-outline text-label-sm font-label-sm text-secondary dark:text-secondary-fixed-dim">
+                        <th class="px-md py-3 font-semibold">Date</th>
+                        <th class="px-md py-3 font-semibold">Subject</th>
+                        <th class="px-md py-3 font-semibold">Score</th>
+                        <th class="px-md py-3 font-semibold">Issues</th>
+                        <th class="px-md py-3 font-semibold">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody id="recent-scans-list" class="text-body-sm text-on-surface dark:text-secondary-fixed">
+                      <!-- Scans list items populated dynamically -->
+                      <tr class="border-b border-outline-variant/30 dark:border-outline/30 hover:bg-surface-container-low dark:hover:bg-on-secondary-fixed-variant/20 transition-colors">
+                        <td class="px-md py-4 text-on-surface-variant dark:text-secondary-fixed-dim">Today, 10:24 AM</td>
+                        <td class="px-md py-4 font-medium truncate max-w-[200px]">Welcome to our Newsletter!</td>
+                        <td class="px-md py-4"><span class="inline-flex items-center justify-center px-2 py-0.5 rounded-md bg-error-container text-error text-xs font-bold">82 / 100</span></td>
+                        <td class="px-md py-4">3</td>
+                        <td class="px-md py-4"><button class="text-primary dark:text-primary-fixed hover:underline font-semibold bg-transparent border-none cursor-pointer" onclick="openTool('scan')">View</button></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right Column Sidebar (Col-span-1) -->
+            <div class="flex flex-col gap-md">
+              <!-- Domain Health Info Widget -->
+              <div class="bg-surface-container-lowest dark:bg-on-secondary-fixed rounded-2xl border border-outline-variant dark:border-outline p-md shadow-sm">
+                <div class="flex items-center gap-sm mb-md">
+                  <div class="w-10 h-10 rounded-xl bg-surface-variant dark:bg-on-secondary-fixed-variant/50 flex items-center justify-center text-primary">
+                    <span class="material-symbols-outlined">domain</span>
+                  </div>
+                  <div>
+                    <h3 class="text-label-md font-label-md text-on-surface dark:text-secondary-fixed">Domain Signals</h3>
+                    <p class="text-body-sm text-on-surface-variant dark:text-secondary-fixed-dim" id="sidebar-domain-name">mycompany.com</p>
+                  </div>
+                </div>
+                <div class="flex flex-col gap-sm mb-md">
+                  <div class="flex items-center justify-between p-2 rounded-xl bg-surface-container-low dark:bg-on-secondary-fixed-variant/10">
+                    <span class="text-body-sm text-on-surface dark:text-secondary-fixed">SPF Record</span>
+                    <span class="material-symbols-outlined text-primary text-[20px]">check_circle</span>
+                  </div>
+                  <div class="flex items-center justify-between p-2 rounded-xl bg-error-container/20 border border-error/20">
+                    <span class="text-body-sm text-error">DKIM Signature</span>
+                    <span class="material-symbols-outlined text-error text-[20px]">cancel</span>
+                  </div>
+                  <div class="flex items-center justify-between p-2 rounded-xl bg-surface-container-low dark:bg-on-secondary-fixed-variant/10">
+                    <span class="text-body-sm text-on-surface dark:text-secondary-fixed">DMARC Policy</span>
+                    <span class="material-symbols-outlined text-primary text-[20px]">check_circle</span>
+                  </div>
+                </div>
+                <button class="w-full border border-primary text-primary hover:bg-primary/5 rounded-xl py-2.5 font-label-md text-label-md transition-all bg-transparent" onclick="openTool('blacklist')">
+                  Run Full Check
+                </button>
+              </div>
+
+              <!-- Usage Plan progress -->
+              <div class="bg-surface-container-lowest dark:bg-on-secondary-fixed rounded-2xl border border-outline-variant dark:border-outline p-md shadow-sm">
+                <div class="flex justify-between items-center mb-sm">
+                  <h3 class="text-label-md font-label-md text-on-surface dark:text-secondary-fixed">Plan Usage</h3>
+                  <span id="plan-badge-label" class="px-2 py-0.5 bg-primary/20 text-primary dark:text-primary-fixed rounded-full text-[10px] uppercase font-bold tracking-wider">Pro</span>
+                </div>
+                <div class="mb-2">
+                  <div class="flex justify-between text-body-sm mb-1">
+                    <span class="text-on-surface-variant dark:text-secondary-fixed-dim">Scans Used</span>
+                    <span class="text-on-surface dark:text-secondary-fixed font-semibold" id="stat-scans-ratio">7 / ∞</span>
+                  </div>
+                  <div class="w-full bg-surface-container-low dark:bg-on-secondary-fixed-variant/30 rounded-full h-2">
+                    <div class="bg-primary h-2 rounded-full transition-all duration-500" style="width: 15%" id="usage-progress-fill"></div>
+                  </div>
+                </div>
+                <p class="text-label-sm text-secondary dark:text-secondary-fixed-dim mt-2">Unlimited scans available on your current plan.</p>
+              </div>
+
+              <!-- Quick tip -->
+              <div class="bg-inverse-surface dark:bg-secondary rounded-2xl p-md text-inverse-on-surface relative overflow-hidden">
+                <span class="material-symbols-outlined absolute -right-4 -bottom-4 text-[80px] opacity-10">lightbulb</span>
+                <div class="flex items-center gap-2 mb-2 relative z-10">
+                  <span class="material-symbols-outlined text-primary-fixed text-[20px]">lightbulb</span>
+                  <h4 class="text-label-md font-label-md text-primary-fixed">Deliverability Tip</h4>
+                </div>
+                <p class="text-body-sm relative z-10 opacity-90 leading-relaxed">Avoid using ALL CAPS in your subject lines to prevent triggering spam block filters.</p>
+              </div>
+            </div>
+          </div>
         </section>
 
         <!-- Tool panel Workspace Area -->
@@ -687,63 +733,149 @@
           <!-- ADVANCED TOOLS CONTAINER WIDGETS -->
 
           <!-- Campaign Debugger -->
-          <section id="campaign-debugger" data-tool-pane="campaign-debugger" class="bg-surface-container-lowest dark:bg-on-secondary-fixed border border-outline-variant dark:border-outline rounded-2xl p-lg shadow-sm tool-pane">
+          <section id="campaign-debugger" data-tool-pane="campaign-debugger" class="bg-surface-container-lowest dark:bg-on-secondary-fixed border border-outline-variant dark:border-outline rounded-2xl p-lg shadow-sm tool-pane hidden">
             <div class="tool-pane-head flex justify-between items-center border-b border-outline-variant dark:border-outline pb-sm mb-md">
-              <h2 class="font-headline-sm text-headline-sm text-on-surface dark:text-secondary-fixed">Campaign Failure Debugger</h2>
+              <h2 class="font-headline-sm text-headline-sm text-on-surface dark:text-secondary-fixed flex items-center gap-sm">
+                <span class="material-symbols-outlined text-primary">bar_chart</span>
+                Campaign Failure Debugger
+              </h2>
               <button type="button" class="border border-outline-variant hover:bg-surface-container-low text-on-surface dark:text-secondary-fixed px-3 py-1 rounded-lg text-xs font-semibold" data-tool-close>Close</button>
             </div>
-            <p class="text-xs text-on-surface-variant dark:text-secondary-fixed-dim mb-md">Enter campaign metrics to diagnose copy conversions vs deliverability blocks.</p>
-            <form class="space-y-md">
-              <div class="grid grid-cols-2 gap-md">
-                <div>
+            <p class="text-xs text-on-surface-variant dark:text-secondary-fixed-dim mb-md">Enter your recent campaign metrics below. Our diagnostic engine will compare them against industry benchmarks to identify root causes and recommend prioritized fixes.</p>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-md items-start">
+              <!-- Left side inputs (Col-span-5) -->
+              <form class="lg:col-span-5 space-y-md" id="cd-form">
+                <div class="relative group">
                   <label class="block text-xs font-semibold text-secondary uppercase tracking-wider mb-1" for="cd-open">Open Rate (%)</label>
-                  <input id="cd-open" type="number" min="0" max="100" step="0.1" class="w-full rounded-xl border border-outline-variant dark:border-outline bg-surface-container-lowest dark:bg-on-secondary-fixed text-on-surface dark:text-secondary-fixed" placeholder="e.g. 22.5" />
+                  <div class="relative flex items-center">
+                    <input id="cd-open" type="number" min="0" max="100" step="0.1" class="w-full rounded-xl border border-outline-variant dark:border-outline bg-surface-container-lowest dark:bg-on-secondary-fixed text-on-surface dark:text-secondary-fixed pr-16" placeholder="e.g. 15" />
+                    <span class="absolute right-3 text-secondary text-[10px] bg-surface-container-low dark:bg-on-secondary-fixed-variant/50 px-1.5 py-0.5 rounded font-semibold">Avg: 21%</span>
+                  </div>
                 </div>
-                <div>
+                <div class="relative group">
                   <label class="block text-xs font-semibold text-secondary uppercase tracking-wider mb-1" for="cd-reply">Reply Rate (%)</label>
-                  <input id="cd-reply" type="number" min="0" max="100" step="0.1" class="w-full rounded-xl border border-outline-variant dark:border-outline bg-surface-container-lowest dark:bg-on-secondary-fixed text-on-surface dark:text-secondary-fixed" placeholder="e.g. 1.8" />
+                  <div class="relative flex items-center">
+                    <input id="cd-reply" type="number" min="0" max="100" step="0.1" class="w-full rounded-xl border border-outline-variant dark:border-outline bg-surface-container-lowest dark:bg-on-secondary-fixed text-on-surface dark:text-secondary-fixed pr-16" placeholder="e.g. 0.5" />
+                    <span class="absolute right-3 text-secondary text-[10px] bg-surface-container-low dark:bg-on-secondary-fixed-variant/50 px-1.5 py-0.5 rounded font-semibold">Avg: 1.0%</span>
+                  </div>
                 </div>
-                <div>
+                <div class="relative group">
                   <label class="block text-xs font-semibold text-secondary uppercase tracking-wider mb-1" for="cd-bounce">Bounce Rate (%)</label>
-                  <input id="cd-bounce" type="number" min="0" max="100" step="0.1" class="w-full rounded-xl border border-outline-variant dark:border-outline bg-surface-container-lowest dark:bg-on-secondary-fixed text-on-surface dark:text-secondary-fixed" placeholder="e.g. 4.2" />
+                  <div class="relative flex items-center">
+                    <input id="cd-bounce" type="number" min="0" max="100" step="0.1" class="w-full rounded-xl border border-outline-variant dark:border-outline bg-surface-container-lowest dark:bg-on-secondary-fixed text-on-surface dark:text-secondary-fixed pr-16" placeholder="e.g. 3.5" />
+                    <span class="absolute right-3 text-secondary text-[10px] bg-surface-container-low dark:bg-on-secondary-fixed-variant/50 px-1.5 py-0.5 rounded font-semibold">Avg: &lt;2%</span>
+                  </div>
                 </div>
-                <div>
+                <div class="relative group">
                   <label class="block text-xs font-semibold text-secondary uppercase tracking-wider mb-1" for="cd-sent">Emails Sent</label>
-                  <input id="cd-sent" type="number" min="1" step="1" class="w-full rounded-xl border border-outline-variant dark:border-outline bg-surface-container-lowest dark:bg-on-secondary-fixed text-on-surface dark:text-secondary-fixed" placeholder="e.g. 500" />
+                  <div class="relative flex items-center">
+                    <input id="cd-sent" type="number" min="1" step="1" class="w-full rounded-xl border border-outline-variant dark:border-outline bg-surface-container-lowest dark:bg-on-secondary-fixed text-on-surface dark:text-secondary-fixed pr-16" placeholder="e.g. 500" />
+                    <span class="absolute right-3 text-secondary text-[10px] bg-surface-container-low dark:bg-on-secondary-fixed-variant/50 px-1.5 py-0.5 rounded font-semibold">Size</span>
+                  </div>
+                </div>
+                <button id="cd-run" type="button" class="w-full bg-primary hover:bg-surface-tint text-on-primary font-label-md text-label-md py-3 rounded-xl transition-all shadow-md flex items-center justify-center gap-sm" onclick="handleCampaignDiagnoseSubmit()">
+                  <span class="material-symbols-outlined">troubleshoot</span>
+                  Diagnose Campaign
+                </button>
+              </form>
+
+              <!-- Right side outputs (Col-span-7) -->
+              <div class="lg:col-span-7 flex flex-col gap-md">
+                <div id="diagnosis-output" class="hidden flex flex-col gap-md">
+                  <!-- Critical Issue Warning Banner -->
+                  <div class="bg-surface-container-highest dark:bg-on-secondary-fixed-variant/20 rounded-xl p-md flex items-start gap-md border border-outline-variant dark:border-outline shadow-sm relative overflow-hidden">
+                    <div class="absolute inset-0 bg-error/5 pointer-events-none"></div>
+                    <span class="material-symbols-outlined text-error text-3xl mt-xs">warning</span>
+                    <div>
+                      <h3 id="diagnosis-primary" class="font-headline-sm text-headline-sm text-on-surface dark:text-secondary-fixed">Critical Issue Detected</h3>
+                      <p id="diagnosis-why" class="font-body-sm text-on-surface-variant dark:text-secondary-fixed-dim mt-xs"></p>
+                      <p id="diagnosis-confidence" class="text-xs text-primary font-semibold mt-xs"></p>
+                    </div>
+                  </div>
+
+                  <!-- Prioritized Fix Cards -->
+                  <div class="border-b border-outline-variant pb-sm">
+                    <h3 class="font-headline-sm text-headline-sm text-on-surface dark:text-secondary-fixed">Prioritized Fixes</h3>
+                  </div>
+                  <div id="diagnosis-actions-container" class="flex flex-col gap-sm">
+                    <!-- Cards will be populated here by JS -->
+                  </div>
+                </div>
+                <div id="cd-result" class="text-sm text-on-surface-variant dark:text-secondary-fixed-dim text-center py-xl border border-dashed border-outline-variant dark:border-outline rounded-xl bg-surface-container-low dark:bg-on-secondary-fixed/50">
+                  Submit campaign metrics on the left to inspect benchmarks.
                 </div>
               </div>
-              <button id="cd-run" type="button" class="w-full bg-primary hover:bg-surface-tint text-on-primary font-label-md text-label-md py-3 rounded-xl transition-all shadow-md">Diagnose Campaign</button>
-
-              <div id="diagnosis-output" class="hidden bg-surface-container-low dark:bg-on-secondary-fixed/50 border border-outline-variant dark:border-outline rounded-xl p-md mt-md space-y-sm">
-                <p id="diagnosis-primary" class="font-bold text-on-surface dark:text-secondary-fixed text-sm">-</p>
-                <p id="diagnosis-confidence" class="text-xs text-on-surface-variant dark:text-secondary-fixed-dim font-medium">-</p>
-                <p id="diagnosis-why" class="text-xs text-on-surface-variant dark:text-secondary-fixed-dim">-</p>
-                <ul id="diagnosis-actions" class="space-y-1 text-xs text-on-surface-variant dark:text-secondary-fixed-dim pl-4 list-disc"></ul>
-              </div>
-
-              <div id="cd-result" class="text-xs text-on-surface-variant dark:text-secondary-fixed-dim mt-sm">Submit campaign metrics above.</div>
-            </form>
+            </div>
           </section>
 
           <!-- Domain Check -->
-          <section id="blacklist-checker" data-tool-pane="blacklist" class="bg-surface-container-lowest dark:bg-on-secondary-fixed border border-outline-variant dark:border-outline rounded-2xl p-lg shadow-sm tool-pane">
+          <section id="blacklist-checker" data-tool-pane="blacklist" class="bg-surface-container-lowest dark:bg-on-secondary-fixed border border-outline-variant dark:border-outline rounded-2xl p-lg shadow-sm tool-pane hidden">
             <div class="tool-pane-head flex justify-between items-center border-b border-outline-variant dark:border-outline pb-sm mb-md">
-              <h2 class="font-headline-sm text-headline-sm text-on-surface dark:text-secondary-fixed">Domain Reputation Check</h2>
+              <h2 class="font-headline-sm text-headline-sm text-on-surface dark:text-secondary-fixed flex items-center gap-sm">
+                <span class="material-symbols-outlined text-primary">domain</span>
+                Domain Reputation Check
+              </h2>
               <button type="button" class="border border-outline-variant hover:bg-surface-container-low text-on-surface dark:text-secondary-fixed px-3 py-1 rounded-lg text-xs font-semibold" data-tool-close>Close</button>
             </div>
-            <p class="text-xs text-on-surface-variant dark:text-secondary-fixed-dim mb-md">Scan blocks and dns records configuration health.</p>
-            <form class="space-y-md">
-              <div>
-                <label class="block text-xs font-semibold text-secondary uppercase tracking-wider mb-1" for="blacklist-domain">Sender Domain</label>
-                <input id="blacklist-domain" type="text" class="w-full rounded-xl border border-outline-variant dark:border-outline bg-surface-container-lowest dark:bg-on-secondary-fixed text-on-surface dark:text-secondary-fixed" placeholder="yourdomain.com" />
+            <p class="text-xs text-on-surface-variant dark:text-secondary-fixed-dim mb-md">Scan SPF, DKIM, DMARC dns records, alignment configuration, and blacklist checks health.</p>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-md items-start">
+              <!-- Left form inputs (Col-span-5) -->
+              <form class="lg:col-span-5 space-y-md" id="blacklist-form">
+                <div>
+                  <label class="block text-xs font-semibold text-secondary uppercase tracking-wider mb-1" for="blacklist-domain">Sender Domain</label>
+                  <input id="blacklist-domain" type="text" class="w-full rounded-xl border border-outline-variant dark:border-outline bg-surface-container-lowest dark:bg-on-secondary-fixed text-on-surface dark:text-secondary-fixed" placeholder="yourdomain.com" />
+                </div>
+                <button id="run-blacklist-check" type="button" class="w-full bg-primary hover:bg-surface-tint text-on-primary font-label-md text-label-md py-3 rounded-xl transition-all shadow-md flex items-center justify-center gap-sm" onclick="handleDomainCheckSubmit()">
+                  <span class="material-symbols-outlined">dns</span>
+                  Check Domain Reputation
+                </button>
+              </form>
+
+              <!-- Right outputs (Col-span-7) -->
+              <div class="lg:col-span-7 space-y-md">
+                <div id="blacklist-result-pane" class="hidden space-y-md">
+                  <!-- Reputation score gauge -->
+                  <div class="flex items-center gap-lg bg-surface-container-low dark:bg-on-secondary-fixed/50 p-md rounded-xl border border-outline-variant dark:border-outline">
+                    <div id="domain-reputation-gauge" class="w-16 h-16 rounded-full border-4 border-primary flex items-center justify-center text-lg font-bold text-on-surface dark:text-secondary-fixed shrink-0">98%</div>
+                    <div>
+                      <h4 class="font-bold text-on-surface dark:text-secondary-fixed" id="domain-reputation-title">Healthy Domain Reputation</h4>
+                      <p class="text-xs text-on-surface-variant dark:text-secondary-fixed-dim" id="domain-reputation-desc">All core records resolved. Clean blacklist status.</p>
+                    </div>
+                  </div>
+                  <!-- Records status cards -->
+                  <div class="grid grid-cols-1 sm:grid-cols-3 gap-sm">
+                    <div class="p-sm bg-surface-container-lowest dark:bg-on-secondary-fixed border border-outline-variant dark:border-outline rounded-xl">
+                      <span class="text-[10px] font-bold text-secondary uppercase tracking-wider block">SPF Record</span>
+                      <span class="text-xs font-semibold text-primary mt-1 block" id="spf-record-status">Resolved Pass</span>
+                    </div>
+                    <div class="p-sm bg-surface-container-lowest dark:bg-on-secondary-fixed border border-outline-variant dark:border-outline rounded-xl">
+                      <span class="text-[10px] font-bold text-secondary uppercase tracking-wider block">DKIM Signature</span>
+                      <span class="text-xs font-semibold text-error mt-1 block" id="dkim-record-status">No key found</span>
+                    </div>
+                    <div class="p-sm bg-surface-container-lowest dark:bg-on-secondary-fixed border border-outline-variant dark:border-outline rounded-xl">
+                      <span class="text-[10px] font-bold text-secondary uppercase tracking-wider block">DMARC Policy</span>
+                      <span class="text-xs font-semibold text-primary mt-1 block" id="dmarc-record-status">Resolved Pass</span>
+                    </div>
+                  </div>
+                  <!-- Blacklist Checklist -->
+                  <div class="bg-surface-container-lowest dark:bg-on-secondary-fixed border border-outline-variant dark:border-outline rounded-xl p-md">
+                    <h5 class="text-xs font-bold text-on-surface dark:text-secondary-fixed mb-sm">Blacklist Databases Polled</h5>
+                    <div class="grid grid-cols-2 gap-2 text-xs" id="blacklist-checklist-container">
+                      <!-- List will be filled dynamically -->
+                    </div>
+                  </div>
+                </div>
+                <div id="blacklist-result" class="text-sm text-on-surface-variant dark:text-secondary-fixed-dim text-center py-xl border border-dashed border-outline-variant dark:border-outline rounded-xl bg-surface-container-low dark:bg-on-secondary-fixed/50">
+                  No analysis run yet. Enter a domain and check reputation.
+                </div>
               </div>
-              <button id="run-blacklist-check" type="button" class="w-full bg-primary hover:bg-surface-tint text-on-primary font-label-md text-label-md py-3 rounded-xl transition-all shadow-md">Check Domain Reputation</button>
-              <p id="blacklist-result" class="text-xs text-on-surface-variant dark:text-secondary-fixed-dim mt-sm">No analysis run yet.</p>
-            </form>
+            </div>
           </section>
 
           <!-- Seed Inbox Testing -->
-          <section id="seed-inbox-tracker" data-tool-pane="seed" class="bg-surface-container-lowest dark:bg-on-secondary-fixed border border-outline-variant dark:border-outline rounded-2xl p-lg shadow-sm tool-pane">
+          <section id="seed-inbox-tracker" data-tool-pane="seed" class="bg-surface-container-lowest dark:bg-on-secondary-fixed border border-outline-variant dark:border-outline rounded-2xl p-lg shadow-sm tool-pane hidden">
             <div class="tool-pane-head flex justify-between items-center border-b border-outline-variant dark:border-outline pb-sm mb-md">
               <h2 class="font-headline-sm text-headline-sm text-on-surface dark:text-secondary-fixed">Seed testing</h2>
               <button type="button" class="border border-outline-variant hover:bg-surface-container-low text-on-surface dark:text-secondary-fixed px-3 py-1 rounded-lg text-xs font-semibold" data-tool-close>Close</button>
@@ -784,7 +916,7 @@
           </section>
 
           <!-- Bulk Scan -->
-          <section id="bulk-scan" data-tool-pane="bulk" class="bg-surface-container-lowest dark:bg-on-secondary-fixed border border-outline-variant dark:border-outline rounded-2xl p-lg shadow-sm tool-pane">
+          <section id="bulk-scan" data-tool-pane="bulk" class="bg-surface-container-lowest dark:bg-on-secondary-fixed border border-outline-variant dark:border-outline rounded-2xl p-lg shadow-sm tool-pane hidden">
             <div class="tool-pane-head flex justify-between items-center border-b border-outline-variant dark:border-outline pb-sm mb-md">
               <h2 class="font-headline-sm text-headline-sm text-on-surface dark:text-secondary-fixed">Bulk Scan CSV</h2>
               <button type="button" class="border border-outline-variant hover:bg-surface-container-low text-on-surface dark:text-secondary-fixed px-3 py-1 rounded-lg text-xs font-semibold" data-tool-close>Close</button>
@@ -800,7 +932,7 @@
           </section>
 
           <!-- API & Team Ops -->
-          <section id="ops-api-team" data-tool-pane="ops" class="bg-surface-container-lowest dark:bg-on-secondary-fixed border border-outline-variant dark:border-outline rounded-2xl p-lg shadow-sm tool-pane">
+          <section id="ops-api-team" data-tool-pane="ops" class="bg-surface-container-lowest dark:bg-on-secondary-fixed border border-outline-variant dark:border-outline rounded-2xl p-lg shadow-sm tool-pane hidden">
             <div class="tool-pane-head flex justify-between items-center border-b border-outline-variant dark:border-outline pb-sm mb-md">
               <h2 class="font-headline-sm text-headline-sm text-on-surface dark:text-secondary-fixed">API &amp; Team</h2>
               <button type="button" class="border border-outline-variant hover:bg-surface-container-low text-on-surface dark:text-secondary-fixed px-3 py-1 rounded-lg text-xs font-semibold" data-tool-close>Close</button>
@@ -869,7 +1001,7 @@
           </section>
 
           <!-- Insights -->
-          <section id="operator-insights" data-tool-pane="insights" class="bg-surface-container-lowest dark:bg-on-secondary-fixed border border-outline-variant dark:border-outline rounded-2xl p-lg shadow-sm tool-pane">
+          <section id="operator-insights" data-tool-pane="insights" class="bg-surface-container-lowest dark:bg-on-secondary-fixed border border-outline-variant dark:border-outline rounded-2xl p-lg shadow-sm tool-pane hidden">
             <div class="tool-pane-head flex justify-between items-center border-b border-outline-variant dark:border-outline pb-sm mb-md">
               <h2 class="font-headline-sm text-headline-sm text-on-surface dark:text-secondary-fixed">Operator Insights</h2>
               <button type="button" class="border border-outline-variant hover:bg-surface-container-low text-on-surface dark:text-secondary-fixed px-3 py-1 rounded-lg text-xs font-semibold" data-tool-close>Close</button>
@@ -1134,384 +1266,7 @@
         }
       })();
     </script>
-  </body>
-</html>
 
-          <div class="inline-fields" style="margin-top: 8px;">
-            <div>
-              <label for="seed-inbox-count">Inbox Count</label>
-              <input id="seed-inbox-count" class="input" type="number" min="0" step="1" placeholder="e.g. 17" />
-            </div>
-            <div>
-              <label for="seed-spam-count">Spam Count</label>
-              <input id="seed-spam-count" class="input" type="number" min="0" step="1" placeholder="e.g. 3" />
-            </div>
-          </div>
-          <button id="save-seed-test" type="button" class="btn btn-primary btn-tool-primary tool-pane-primary" style="margin-top: 10px;">Save Seed Result</button>
-          <button id="run-seed-sync" type="button" class="btn btn-secondary" style="margin-top: 8px;">Run Instant Seed Probe</button>
-          <button id="run-seed-auto" type="button" class="btn btn-secondary" style="margin-top: 8px;">Run Automated Seed Test</button>
-          <ul id="seed-test-list" class="compact-list" style="margin-top: 8px;">
-            <li>No seed tests logged yet.</li>
-          </ul>
-        </section>
-
-        <section class="card tool-pane tool-purple" id="bulk-scan" data-tool-pane="bulk" style="margin-top: 12px;">
-          <div class="tool-pane-head">
-            <h2 class="tool-pane-title">Bulk Scan (CSV)</h2>
-            <button type="button" class="tool-pane-head-close" data-tool-close>Close</button>
-          </div>
-          <p class="micro">Upload up to 100 rows with columns: raw_email OR (subject/body), plus optional domain.</p>
-          <input id="bulk-file" type="file" accept=".csv,text/csv" />
-          <button id="run-bulk-scan" type="button" class="btn-tool-primary tool-pane-primary" style="margin-top: 10px;">Run Bulk Scan</button>
-          <ul id="bulk-results" class="compact-list" style="margin-top: 8px;">
-            <li>No bulk scan yet.</li>
-          </ul>
-        </section>
-
-        <section class="card tool-pane tool-teal" id="ops-api-team" data-tool-pane="ops" style="margin-top: 12px;">
-          <div class="tool-pane-head">
-            <h2 class="tool-pane-title">API + Team Ops</h2>
-            <button type="button" class="tool-pane-head-close" data-tool-close>Close</button>
-          </div>
-          <p class="micro">Create API keys, add teams, and collaborate with role-based access.</p>
-          <div class="inline-fields" style="margin-top: 8px;">
-            <div>
-              <label for="api-key-name">API key label</label>
-              <input id="api-key-name" type="text" placeholder="Primary integration" />
-            </div>
-            <div>
-              <label for="team-name">Team name</label>
-              <input id="team-name" type="text" placeholder="Outbound Ops" />
-            </div>
-          </div>
-          <div class="actions" style="margin-top:10px;">
-            <button id="create-api-key" type="button" class="btn-tool-primary">Create API Key</button>
-            <button id="list-api-keys" type="button" class="btn-tool-primary tool-pane-primary">List API Keys</button>
-            <button id="create-team" type="button" class="btn-tool-primary">Create Team</button>
-            <button id="list-teams" type="button" class="btn-tool-primary">List Teams</button>
-          </div>
-          <div class="inline-fields" style="margin-top: 10px;">
-            <div>
-              <label for="revoke-key-id">Revoke API key ID</label>
-              <input id="revoke-key-id" type="number" min="1" step="1" placeholder="e.g. 12" />
-            </div>
-            <div>
-              <label for="team-member-team-id">Team ID</label>
-              <input id="team-member-team-id" type="number" min="1" step="1" placeholder="e.g. 3" />
-            </div>
-          </div>
-          <div class="inline-fields" style="margin-top: 8px;">
-            <div>
-              <label for="team-member-email">Member email</label>
-              <input id="team-member-email" type="email" placeholder="teammate@company.com" />
-            </div>
-            <div>
-              <label for="team-member-role">Role</label>
-              <select id="team-member-role">
-                <option value="member" selected>member</option>
-                <option value="admin">admin</option>
-                <option value="viewer">viewer</option>
-                <option value="owner">owner</option>
-              </select>
-            </div>
-          </div>
-          <div class="actions" style="margin-top:10px;">
-            <button id="revoke-api-key" type="button" class="btn-tool-primary">Revoke API Key</button>
-            <button id="add-team-member" type="button" class="btn-tool-primary">Add Team Member</button>
-          </div>
-          <ul id="api-key-list" class="compact-list" style="margin-top:8px;">
-            <li>No API keys loaded.</li>
-          </ul>
-          <ul id="team-list" class="compact-list" style="margin-top:8px;">
-            <li>No teams loaded.</li>
-          </ul>
-          <ul id="ops-output" class="compact-list" style="margin-top:8px;">
-            <li>No operations run yet.</li>
-          </ul>
-        </section>
-
-        <section class="card tool-pane tool-cyan" id="operator-insights" data-tool-pane="insights" style="margin-top: 12px;">
-          <div class="tool-pane-head">
-            <h2 class="tool-pane-title">Operator Insights</h2>
-            <button type="button" class="tool-pane-head-close" data-tool-close>Close</button>
-          </div>
-          <p class="micro">Monitor feedback outcomes and async queue status from the dashboard.</p>
-          <div class="actions" style="margin-top: 10px;">
-            <button id="refresh-outcome-stats" type="button" class="btn-tool-primary tool-pane-primary">Refresh Outcome Stats</button>
-            <button id="refresh-jobs" type="button" class="btn-tool-primary">Refresh Async Jobs</button>
-          </div>
-          <ul id="outcome-stats-list" class="compact-list" style="margin-top:8px;">
-            <li>No outcome stats loaded.</li>
-          </ul>
-          <ul id="job-list" class="compact-list" style="margin-top:8px;">
-            <li>No async jobs loaded.</li>
-          </ul>
-          <div class="actions" style="margin-top:10px;">
-            <a href="/results.csv" class="btn-tool-primary">Download Results CSV</a>
-            <a href="/reports.csv" class="btn-tool-primary">Download Reports CSV</a>
-          </div>
-        </section>
-
-        </section>
-
-        <section class="card home-only" id="trust-social-proof" style="margin-top: 12px;">
-          <h3>Trusted by teams who send before sunrise</h3>
-          <p id="live-stats-summary" class="micro">Live performance metrics load from recent outcomes.</p>
-          <p id="live-stats-breakdown" class="micro">Sign in to view your latest inbox-rate benchmark and sample counts.</p>
-          <p id="live-stats-status" class="micro">Outcome-driven scoring improves as feedback is submitted.</p>
-          <p class="micro">"InboxGuard caught what our QA missed and saved a full campaign run."</p>
-          <p class="micro">- Founder, B2B outbound team (38K contacts/month)</p>
-          <p class="micro">"We now run every campaign through it before touching volume."</p>
-          <p class="micro">- Growth lead, SaaS sales motion</p>
-          <p class="micro">Built by Tharun, indie developer focused on fixing spam placement before campaigns go live.</p>
-          <p class="micro" style="margin-top: 10px;">Read deliverability guides on <a href="/blog" class="link-action">the InboxGuard blog</a>.</p>
-        </section>
-
-        <div class="home-only" style="margin-top: 14px; display: flex; flex-wrap: wrap; gap: 12px; color: #94a3b8; font-size: 0.92rem;">
-          <a href="/about" class="link-action">About</a>
-          <a href="/privacy" class="link-action">Privacy</a>
-          <a href="/terms" class="link-action">Terms</a>
-          <a href="/seed-inbox" class="link-action">Seed Inbox</a>
-          <a href="/blog" class="link-action">Blog</a>
-        </div>
-      </main>
-    </div>
-
-    <div id="lead-capture-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="lead-capture-title">
-      <div class="modal-card">
-        <h3 id="lead-capture-title">Get your next scan unlocked</h3>
-        <p class="micro">Before the second scan, tell us where to send saved fixes and follow-up tips.</p>
-        <div style="display:grid; gap:8px; margin-top:6px;">
-          <input id="lead-capture-email" class="input" type="email" placeholder="you@company.com" style="padding:10px 12px; border-radius:10px;" />
-          <button id="lead-capture-continue" type="button" class="btn-primary">Continue to scan</button>
-        </div>
-        <button id="lead-capture-close" type="button" class="link-action" onclick="window.igLeadCaptureClose && window.igLeadCaptureClose()">Not now</button>
-      </div>
-    </div>
-
-    <div id="auth-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="auth-modal-title">
-      <div class="modal-card">
-        <h3 id="auth-modal-title">Continue your scans</h3>
-        <p class="micro">You've used your free scans. Continue where you left off.</p>
-        <div class="modal-actions">
-          <button id="auth-signin" type="button" class="btn-primary" onclick="window.igAuthSignIn && window.igAuthSignIn()">Continue with Google</button>
-        </div>
-        <p class="micro" style="margin-top: 10px;">or continue with email</p>
-        <div style="display:grid; gap:8px; margin-top:6px;">
-          <input id="auth-email" class="input" type="email" placeholder="you@company.com" style="padding:10px 12px; border-radius:10px;" />
-          <button id="auth-create" type="button" class="btn-secondary" onclick="window.igAuthCreate && window.igAuthCreate()">Continue with Email</button>
-        </div>
-        <button id="auth-close" type="button" class="link-action" onclick="window.igAuthClose && window.igAuthClose()">Not now</button>
-      </div>
-    </div>
-
-    <div id="decisionOverlay" class="decision-overlay hidden" role="status" aria-live="polite">
-      <div class="decision-overlay-card">
-        <p id="decisionOverlayText">Decision</p>
-      </div>
-    </div>
-
-
-
-    <!-- Pricing Modal at root for proper isolation -->
-    <!-- Modal Overlay and Content -->
-    <div id="pricing-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div class="bg-white rounded-2xl shadow-2xl max-w-5xl w-full p-8 relative">
-        <button onclick="closeModal()" class="absolute top-4 right-6 text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
-        <h2 class="text-2xl font-bold text-center text-gray-800 mb-10">Choose your InboxGuard plan</h2>
-        <div class="pricing-grid">
-          <!-- FREE -->
-          <div class="pricing-card free">
-            <h3>Free</h3>
-            <div class="pricing-price">$0</div>
-            <ul>
-              <li>1 scan</li>
-              <li>1 fix</li>
-            </ul>
-            <button disabled>Current Plan</button>
-          </div>
-          <!-- STARTER -->
-          <div class="pricing-card">
-            <h3>Starter</h3>
-            <div class="pricing-price">$9</div>
-            <div class="interval">/ month</div>
-            <ul>
-              <li>10 scans / month</li>
-              <li>Email support</li>
-            </ul>
-            <button onclick="startCheckout('starter')">Get Starter</button>
-             <button onclick="purchasePlan('starter')">Get Starter</button>
-          </div>
-          <!-- PRO -->
-          <div class="pricing-card highlight">
-            <div class="badge">Most Popular</div>
-            <h3>Pro</h3>
-            <div class="pricing-price">$29</div>
-            <div class="interval">/ month</div>
-            <ul>
-              <li>Unlimited scans</li>
-              <li>Batch testing</li>
-              <li>Priority support</li>
-            </ul>
-            <button onclick="startCheckout('pro')">Get Pro</button>
-             <button onclick="purchasePlan('pro')">Get Pro</button>
-          </div>
-          <!-- GROWTH -->
-          <div class="pricing-card">
-            <h3>Growth</h3>
-            <div class="pricing-price">$99</div>
-            <div class="interval">/ year</div>
-            <ul>
-              <li>Unlimited scans</li>
-              <li>Team access</li>
-              <li>Annual billing</li>
-            </ul>
-            <button onclick="startCheckout('growth')">Get Growth</button>
-             <button onclick="purchasePlan('growth')">Get Growth</button>
-          </div>
-        </div>
-        <p class="contact-text">
-          Need enterprise or custom pricing?
-          <a href="mailto:you@company.com">Contact us</a>
-        </p>
-      </div>
-    </div>
-
-    <div id="toolWorkspaceBackdrop" class="tool-workspace-backdrop hidden" aria-hidden="true"></div>
-
-    <script>
-      (function () {
-        const buttons = Array.from(document.querySelectorAll('.tool-nav-btn'));
-        const panes = Array.from(document.querySelectorAll('.tool-pane'));
-        const closeButtons = Array.from(document.querySelectorAll('[data-tool-close]'));
-        const mainArea = document.querySelector('.main-area');
-
-        function closePanes() {
-          panes.forEach((pane) => pane.classList.remove('active'));
-          buttons.forEach((btn) => btn.classList.remove('active'));
-          if (mainArea) {
-            mainArea.classList.remove('tool-panel-open');
-          }
-        }
-
-        function openPane(key) {
-          closePanes();
-          const pane = panes.find((item) => item.getAttribute('data-tool-pane') === key);
-          const btn = buttons.find((item) => item.getAttribute('data-tool') === key);
-          if (!pane || !btn) {
-            console.error('Missing panel for:', key);
-            return;
-          }
-          pane.classList.add('active');
-          btn.classList.add('active');
-          if (mainArea) {
-            mainArea.classList.add('tool-panel-open');
-          }
-          if (typeof window.igOnToolPaneOpened === 'function') {
-            window.igOnToolPaneOpened(key, pane);
-          }
-          const firstInput = pane.querySelector('input,select,textarea,button');
-          if (firstInput && typeof firstInput.focus === 'function') {
-            setTimeout(() => firstInput.focus(), 60);
-          }
-        }
-
-        buttons.forEach((button) => {
-          button.addEventListener('click', () => {
-            const key = button.getAttribute('data-tool') || '';
-            if (typeof window.openTool === 'function') {
-              window.openTool(key);
-              return;
-            }
-            openPane(key);
-          });
-        });
-
-        closeButtons.forEach((button) => {
-          button.addEventListener('click', () => {
-            if (typeof window.goHome === 'function') {
-              window.goHome();
-              return;
-            }
-            closePanes();
-          });
-        });
-
-        window.closeTool = closePanes;
-        window.igOpenToolPane = openPane;
-        window.igCloseToolPane = closePanes;
-
-        document.addEventListener('keydown', (event) => {
-          if (event.key === 'Escape') {
-            closePanes();
-          }
-        });
-      })();
-    </script>
-
-    <script src="/static/js/flow.js?v=20260410-progressive-exposure-1"></script>
-    <script src="/static/js/app.js?v=20260411-flow-rewrite-1"></script>
-    <!-- Pricing Modal at root for proper isolation -->
-    <div id="pricing-modal" class="modal pricing-modal hidden" role="dialog" aria-modal="true" aria-labelledby="pricing-modal-title">
-      <div class="pricing-content">
-        <div class="modal-header">
-          <h2 id="pricing-modal-title">Choose your InboxGuard plan</h2>
-          <span class="close" onclick="closePricingModal()">&times;</span>
-        </div>
-        <div class="pricing-grid">
-          <!-- FREE -->
-          <div class="pricing-card free">
-            <h3>Free</h3>
-            <div class="pricing-price">$0</div>
-            <ul>
-              <li>1 scan</li>
-              <li>1 fix</li>
-            </ul>
-            <button disabled>Current Plan</button>
-          </div>
-          <!-- STARTER -->
-          <div class="pricing-card">
-            <h3>Starter</h3>
-            <div class="pricing-price">$9</div>
-            <div class="interval">/ month</div>
-            <ul>
-              <li>10 scans / month</li>
-              <li>Email support</li>
-            </ul>
-            <button onclick="startCheckout('starter')">Get Starter</button>
-          </div>
-          <!-- PRO -->
-          <div class="pricing-card highlight">
-            <div class="badge">Most Popular</div>
-            <h3>Pro</h3>
-            <div class="pricing-price">$29</div>
-            <div class="interval">/ month</div>
-            <ul>
-              <li>Unlimited scans</li>
-              <li>Batch testing</li>
-              <li>Priority support</li>
-            </ul>
-            <button onclick="startCheckout('pro')">Get Pro</button>
-          </div>
-          <!-- GROWTH -->
-          <div class="pricing-card">
-            <h3>Growth</h3>
-            <div class="pricing-price">$99</div>
-            <div class="interval">/ year</div>
-            <ul>
-              <li>Unlimited scans</li>
-              <li>Team access</li>
-              <li>Annual billing</li>
-            </ul>
-            <button onclick="startCheckout('growth')">Get Growth</button>
-          </div>
-        </div>
-        <p class="contact-text">
-          Need enterprise or custom pricing?
-          <a href="mailto:you@company.com">Contact us</a>
-        </p>
-      </div>
-    </div>
 
     <!-- Temporary Preview Controls -->
     <div class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 bg-white/90 dark:bg-on-secondary-fixed/90 backdrop-blur border border-outline-variant dark:border-outline p-3 rounded-2xl shadow-lg">
