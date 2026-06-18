@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html class="light" data-theme="light" lang="en">
+<html class="light" lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -125,19 +125,15 @@
   </script>
 
   <script>
-    (function() {
+    (function () {
       try {
-        var root = document.documentElement;
-        var theme = "light";
+        const savedTheme = localStorage.getItem("ig_theme");
+        const theme = savedTheme === "dark" || savedTheme === "light" ? savedTheme : "light";
+        const root = document.documentElement;
         root.dataset.theme = theme;
-        if (theme === "dark") {
-          root.classList.add("dark");
-          root.style.colorScheme = "dark";
-        } else {
-          root.classList.remove("dark");
-          root.style.colorScheme = "light";
-        }
-        var meta = document.querySelector('meta[name="theme-color"]');
+        root.classList.toggle("dark", theme === "dark");
+        root.style.colorScheme = theme === "dark" ? "dark" : "light";
+        const meta = document.querySelector('meta[name="theme-color"]');
         if (meta) {
           meta.setAttribute("content", theme === "dark" ? "#111c2d" : "#f8f9ff");
         }
@@ -433,7 +429,7 @@
     </div>
   </footer>
 
-  <script src="/static/js/app.js?v=20260614-force-light-1"></script>
+  <script src="/static/js/app.js"></script>
   
   <!-- Helper function to select card and scroll down -->
   <script>

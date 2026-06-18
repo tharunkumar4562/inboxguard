@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html class="light" data-theme="light" lang="en">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
@@ -131,19 +131,16 @@
     }
   </script>
   <script>
-    (function() {
+    (function () {
       try {
-        var root = document.documentElement;
-        var theme = "light";
+        const savedTheme = localStorage.getItem("ig_theme");
+        const systemDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+        const theme = savedTheme === "dark" || savedTheme === "light" ? savedTheme : (systemDark ? "dark" : "light");
+        const root = document.documentElement;
         root.dataset.theme = theme;
-        if (theme === "dark") {
-          root.classList.add("dark");
-          root.style.colorScheme = "dark";
-        } else {
-          root.classList.remove("dark");
-          root.style.colorScheme = "light";
-        }
-        var meta = document.querySelector('meta[name="theme-color"]');
+        root.classList.toggle("dark", theme === "dark");
+        root.style.colorScheme = theme === "dark" ? "dark" : "light";
+        const meta = document.querySelector('meta[name="theme-color"]');
         if (meta) {
           meta.setAttribute("content", theme === "dark" ? "#111c2d" : "#f8f9ff");
         }
@@ -151,7 +148,7 @@
       }
     })();
   </script>
-  <link rel="stylesheet" href="/static/css/cookie-consent.css?v=20260614-force-light-1">
+  <link rel="stylesheet" href="/static/css/cookie-consent.css?v=20260410-cookie-consent-1">
 </head>
 <body class="bg-background dark:bg-on-secondary-fixed text-on-background dark:text-secondary-fixed min-h-screen flex flex-col font-body-md selection:bg-primary-container selection:text-on-primary-container">
 
@@ -229,19 +226,17 @@
             </div>
             <div class="flex flex-col gap-md">
               <div class="flex flex-col gap-xs">
-                <label class="font-label-sm text-label-sm text-on-surface-variant pl-xs" for="subject">Email Subject</label>
-                <input class="w-full bg-surface border border-outline-variant rounded-lg px-md py-sm font-body-md text-body-md text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors placeholder:text-outline/70" id="subject" placeholder="Paste your email subject here..." type="text"/>
-                <div id="subject-error" class="text-red-600 text-xs hidden mt-1"></div>
+                <label class="font-label-sm text-label-sm text-on-surface-variant dark:text-secondary-fixed-dim pl-xs" for="subject">Email Subject</label>
+                <input class="w-full bg-surface dark:bg-on-secondary-fixed border border-outline-variant rounded-lg px-md py-sm font-body-md text-body-md text-on-surface dark:text-secondary-fixed focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors placeholder:text-outline/70" id="subject" placeholder="Paste your email subject here..." type="text"/>
               </div>
               <div class="flex flex-col gap-xs">
-                <label class="font-label-sm text-label-sm text-on-surface-variant pl-xs" for="body">Email Body</label>
-                <textarea class="w-full bg-surface border border-outline-variant rounded-lg px-md py-sm font-body-md text-body-md text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors placeholder:text-outline/70 resize-none h-40" id="body" placeholder="Paste your email body here... We'll check for:
+                <label class="font-label-sm text-label-sm text-on-surface-variant dark:text-secondary-fixed-dim pl-xs" for="body">Email Body</label>
+                <textarea class="w-full bg-surface dark:bg-on-secondary-fixed border border-outline-variant rounded-lg px-md py-sm font-body-md text-body-md text-on-surface dark:text-secondary-fixed focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors placeholder:text-outline/70 resize-none h-40" id="body" placeholder="Paste your email body here... We'll check for:
 • Spam trigger words...
 • Link density...
 • HTML formatting...
 • Subject line risk...
 • Authentication signals" rows="6"></textarea>
-                <div id="body-error" class="text-red-600 text-xs hidden mt-1"></div>
               </div>
             </div>
             <div class="flex flex-col gap-sm pt-sm">
@@ -418,69 +413,60 @@
       const subjectVal = String(subjectInput && subjectInput.value ? subjectInput.value : "").trim();
       const bodyVal = String(bodyInput && bodyInput.value ? bodyInput.value : "").trim();
 
-      const subjectError = document.getElementById("subject-error");
-      const bodyError = document.getElementById("body-error");
+      let email = "";
+      if (subjectVal) {
+        email += "Subject: " + subjectVal + "\n\n";
+      }
+      email += bodyVal;
 
-      if (subjectError) {
-        subjectError.textContent = "";
-        subjectError.classList.add("hidden");
+      if (email.trim()) {
+        localStorage.setItem("pending_scan_email", email);
       }
-      if (bodyError) {
-        bodyError.textContent = "";
-        bodyError.classList.add("hidden");
-      }
-
-      let isValid = true;
-      if (!subjectVal) {
-        if (subjectError) {
-          subjectError.textContent = "Please enter an email subject.";
-          subjectError.classList.remove("hidden");
-        }
-        isValid = false;
-      }
-      if (!bodyVal) {
-        if (bodyError) {
-          bodyError.textContent = "Please enter the email body copy.";
-          bodyError.classList.remove("hidden");
-        }
-        isValid = false;
-      } else if (bodyVal.length < 20) {
-        if (bodyError) {
-          bodyError.textContent = "Email body copy is too short. It must be at least 20 characters.";
-          bodyError.classList.remove("hidden");
-        }
-        isValid = false;
-      }
-
-      if (!isValid) {
-        return false;
-      }
-
-      let email = "Subject: " + subjectVal + "\n\n" + bodyVal;
-      localStorage.setItem("pending_scan_email", email);
-      localStorage.setItem("auto_trigger_scan", "true");
       window.location.href = "/app?tab=threat-scan";
       return false;
     }
 
     (function() {
-      try {
-        var root = document.documentElement;
-        var theme = "light";
-        root.dataset.theme = theme;
-        if (theme === "dark") {
-          root.classList.add("dark");
-          root.style.colorScheme = "dark";
-        } else {
-          root.classList.remove("dark");
-          root.style.colorScheme = "light";
-        }
-        var meta = document.querySelector('meta[name="theme-color"]');
-        if (meta) {
-          meta.setAttribute("content", theme === "dark" ? "#111c2d" : "#f8f9ff");
-        }
-      } catch (error) {
+      const storageKey = "ig_theme";
+      const root = document.documentElement;
+      function getSystemTheme() {
+        if (typeof window.matchMedia !== "function") return "light";
+        return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
       }
+      function getStoredTheme() {
+        const value = localStorage.getItem(storageKey);
+        return value === "dark" || value === "light" ? value : null;
+      }
+      function syncThemeColor(theme) {
+        const themeColorMeta = document.querySelector('meta[name="theme-color"]');
+        if (themeColorMeta) {
+          themeColorMeta.setAttribute("content", theme === "dark" ? "#111c2d" : "#f8f9ff");
+        }
+      }
+      function syncThemeButton(theme) {
+        const button = document.querySelector("[data-theme-toggle]");
+        if (button) {
+          button.textContent = theme === "dark" ? "☀ Light" : "🌙 Dark";
+          button.setAttribute("aria-pressed", theme === "dark" ? "true" : "false");
+        }
+      }
+      const stored = getStoredTheme();
+      const theme = stored || getSystemTheme();
+      root.dataset.theme = theme;
+      root.classList.toggle("dark", theme === "dark");
+      root.style.colorScheme = theme === "dark" ? "dark" : "light";
+      syncThemeColor(theme);
+      syncThemeButton(theme);
+
+      window.toggleInboxGuardTheme = function () {
+        const nextTheme = root.classList.contains("dark") ? "light" : "dark";
+        root.dataset.theme = nextTheme;
+        root.classList.toggle("dark", nextTheme === "dark");
+        root.style.colorScheme = nextTheme === "dark" ? "dark" : "light";
+        localStorage.setItem(storageKey, nextTheme);
+        syncThemeColor(nextTheme);
+        syncThemeButton(nextTheme);
+      };
     })();
   </script>
 </body>

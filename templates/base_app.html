@@ -1,5 +1,5 @@
 <!doctype html>
-<html class="light" data-theme="light" lang="en">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -23,161 +23,6 @@
       .material-symbols-outlined {
         font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
       }
-
-      /* Sidebar and Mobile Drawer CSS */
-      @media (min-width: 768px) {
-        .sidebar {
-          display: block !important;
-          width: 220px;
-          flex-shrink: 0;
-        }
-
-        .app-layout {
-          display: flex;
-          flex-direction: row;
-          gap: 40px;
-        }
-
-        .main-content {
-          flex: 1;
-          min-width: 0;
-        }
-      }
-
-      .sidebar-nav-item {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        padding: 10px 12px;
-        border-radius: 6px;
-        font-size: 14px;
-        color: #4B5563;
-        text-decoration: none;
-        cursor: pointer;
-        transition: background 0.15s ease;
-      }
-
-      .sidebar-nav-item:hover {
-        background: #F8F9FA;
-        color: #0D0D0D;
-      }
-
-      .sidebar-nav-item.active {
-        background: #F0FDF9;
-        color: #1D9E75;
-        font-weight: 500;
-      }
-
-      .hamburger-btn {
-        display: none;
-        flex-direction: column;
-        gap: 5px;
-        background: none;
-        border: none;
-        cursor: pointer;
-        padding: 8px;
-      }
-
-      .hamburger-btn span {
-        display: block;
-        width: 22px;
-        height: 2px;
-        background: #0D0D0D;
-        border-radius: 2px;
-        transition: all 0.2s ease;
-      }
-
-      @media (max-width: 767px) {
-        .hamburger-btn { display: flex; }
-        .desktop-nav { display: none; }
-      }
-
-      .mobile-drawer {
-        position: fixed;
-        top: 0;
-        right: 0;
-        width: 280px;
-        height: 100vh;
-        background: #ffffff;
-        box-shadow: -4px 0 24px rgba(0,0,0,0.12);
-        z-index: 1000;
-        transform: translateX(100%);
-        transition: transform 0.25s ease;
-        display: flex;
-        flex-direction: column;
-        overflow-y: auto;
-      }
-
-      .mobile-drawer.open {
-        transform: translateX(0);
-      }
-
-      .drawer-overlay {
-        position: fixed;
-        inset: 0;
-        background: rgba(0,0,0,0.4);
-        z-index: 999;
-        opacity: 0;
-        pointer-events: none;
-        transition: opacity 0.25s ease;
-      }
-
-      .drawer-overlay.visible {
-        opacity: 1;
-        pointer-events: all;
-      }
-
-      .drawer-header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 20px 24px;
-        border-bottom: 1px solid #E5E7EB;
-      }
-
-      .drawer-logo {
-        font-size: 16px;
-        font-weight: 600;
-        color: #1D9E75;
-      }
-
-      .drawer-close {
-        background: none;
-        border: none;
-        font-size: 24px;
-        color: #9CA3AF;
-        cursor: pointer;
-        line-height: 1;
-      }
-
-      .drawer-nav {
-        padding: 16px 12px;
-        flex: 1;
-      }
-
-      .drawer-nav-item {
-        display: block;
-        padding: 12px 12px;
-        font-size: 15px;
-        color: #0D0D0D;
-        text-decoration: none;
-        border-radius: 8px;
-      }
-
-      .drawer-nav-item:hover {
-        background: #F8F9FA;
-        color: #1D9E75;
-      }
-
-      .drawer-footer {
-        padding: 20px 24px;
-        border-top: 1px solid #E5E7EB;
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-      }
-
-      .drawer-btn { width: 100%; text-align: center; }
     </style>
 
     <script id="tailwind-config">
@@ -281,36 +126,29 @@
       }
     </script>
     <script>
-      (function() {
-      try {
-        var root = document.documentElement;
-        var theme = "light";
-        root.dataset.theme = theme;
-        if (theme === "dark") {
-          root.classList.add("dark");
-          root.style.colorScheme = "dark";
-        } else {
-          root.classList.remove("dark");
-          root.style.colorScheme = "light";
+      (function () {
+        try {
+          const savedTheme = localStorage.getItem("ig_theme");
+          const theme = savedTheme === "dark" || savedTheme === "light" ? savedTheme : "light";
+          const root = document.documentElement;
+          root.dataset.theme = theme;
+          root.classList.toggle("dark", theme === "dark");
+          root.style.colorScheme = theme === "dark" ? "dark" : "light";
+          const meta = document.querySelector('meta[name="theme-color"]');
+          if (meta) {
+            meta.setAttribute("content", theme === "dark" ? "#111c2d" : "#f8f9ff");
+          }
+        } catch (error) {
         }
-        var meta = document.querySelector('meta[name="theme-color"]');
-        if (meta) {
-          meta.setAttribute("content", theme === "dark" ? "#111c2d" : "#f8f9ff");
-        }
-      } catch (error) {
-      }
-    })();
+      })();
     </script>
-    <link rel="stylesheet" href="/static/css/cookie-consent.css?v=20260614-force-light-1" />
+    <link rel="stylesheet" href="/static/css/cookie-consent.css?v=20260410-cookie-consent-1" />
   </head>
   <body class="bg-background dark:bg-on-secondary-fixed text-on-surface dark:text-secondary-fixed font-body-md antialiased min-h-screen flex flex-col">
     <!-- TopNavBar -->
     <nav class="bg-surface dark:bg-on-secondary-fixed docked full-width top-0 border-b border-outline-variant dark:border-outline flat no shadows z-50 sticky">
       <div class="flex justify-between items-center w-full px-margin-mobile md:px-margin-desktop max-w-[1440px] mx-auto h-16">
         <div class="flex items-center gap-lg">
-          <button id="mobile-hamburger" type="button" class="lg:hidden text-on-surface dark:text-secondary-fixed hover:text-primary transition-colors p-1" aria-label="Open menu">
-            <span class="material-symbols-outlined text-2xl">menu</span>
-          </button>
           <a class="text-headline-sm font-headline-sm font-bold text-primary dark:text-primary-fixed flex items-center gap-xs" href="/">
             <span class="material-symbols-outlined" data-weight="fill" style="font-variation-settings: 'FILL' 1;">security</span>
             InboxGuard
@@ -318,19 +156,19 @@
         </div>
         <div class="flex items-center gap-md">
           <button id="theme-toggle" type="button" class="text-secondary dark:text-secondary-fixed-dim hover:text-primary dark:hover:text-primary-fixed-dim transition-colors font-body-md text-body-md" data-theme-toggle aria-pressed="false">🌙 Dark</button>
-          <button id="get-access-btn" type="button" class="bg-primary text-on-primary px-4 py-2 rounded-lg font-label-md text-label-md hover:opacity-90 transition-opacity">Get Access</button>
+          <button id="get-access-btn" type="button" class="bg-primary text-on-primary px-4 py-2 rounded-lg font-label-md text-label-md hover:opacity-90 transition-opacity" onclick="openPricingModal()">Get Access</button>
         </div>
       </div>
     </nav>
 
-    <div class="flex-grow flex w-full max-w-[1440px] mx-auto app-layout">
+    <div class="flex-grow flex w-full max-w-[1440px] mx-auto">
       <!-- SideNavBar Desktop -->
-      <aside class="sidebar hidden lg:flex flex-col p-md gap-base bg-surface-container-low dark:bg-on-secondary-fixed border-r border-outline-variant dark:border-outline flat no shadows w-[280px] flex-shrink-0 h-[calc(100vh-64px)] sticky top-16 overflow-y-auto">
+      <aside class="hidden lg:flex flex-col p-md gap-base bg-surface-container-low dark:bg-on-secondary-fixed border-r border-outline-variant dark:border-outline flat no shadows w-[280px] flex-shrink-0 h-[calc(100vh-64px)] sticky top-16 overflow-y-auto">
         {% include 'components/sidebar.html' %}
       </aside>
 
       <!-- Main Content -->
-      <main class="main-content flex-grow p-margin-mobile md:p-margin-desktop bg-surface dark:bg-on-secondary-fixed">
+      <main class="flex-grow p-margin-mobile md:p-margin-desktop bg-surface dark:bg-on-secondary-fixed">
         {% block content %}{% endblock %}
       </main>
     </div>
@@ -343,186 +181,9 @@
       </div>
     </div>
 
-    <!-- Mobile Sidebar Drawer -->
-    <div id="mobile-sidebar" class="fixed inset-0 z-50 hidden lg:hidden" role="dialog" aria-modal="true">
-      <!-- Backdrop -->
-      <div class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm"></div>
-      <!-- Drawer Menu Content -->
-      <aside class="fixed top-0 left-0 bottom-0 w-[280px] bg-surface-container-low border-r border-outline-variant p-md flex flex-col gap-base overflow-y-auto">
-        {% include 'components/sidebar.html' %}
-      </aside>
-    </div>
-
-    <script>
-      function toggleMobileSidebar() {
-        var sidebar = document.getElementById("mobile-sidebar");
-        if (sidebar) {
-          sidebar.classList.toggle("hidden");
-        }
-      }
-      window.toggleMobileSidebar = toggleMobileSidebar;
-    </script>
-
-    <!-- Lead Capture Modal -->
-    <div id="lead-capture-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="lead-capture-title">
-      <div class="modal-card bg-surface-container-lowest dark:bg-on-secondary-fixed border border-outline-variant dark:border-outline rounded-2xl p-lg max-w-sm w-full text-center shadow-2xl relative">
-        <h3 id="lead-capture-title" class="font-headline-sm text-headline-sm text-on-surface dark:text-secondary-fixed mb-sm">Unlock Next Scan</h3>
-        <p class="text-xs text-on-surface-variant dark:text-secondary-fixed-dim mb-lg">To preserve scans and fix history, please provide your primary email address.</p>
-        <div class="space-y-sm">
-          <input id="lead-capture-email" class="w-full rounded-xl border border-outline-variant dark:border-outline bg-surface-container-lowest dark:bg-on-secondary-fixed text-on-surface dark:text-secondary-fixed px-3 py-2.5 text-sm focus:border-primary focus:ring-1 focus:ring-primary" type="email" placeholder="you@company.com" />
-          <button id="lead-capture-continue" type="button" class="w-full bg-primary hover:bg-surface-tint text-on-primary font-label-md text-label-md py-3 rounded-xl transition-all shadow-md">Continue &amp; Save Draft</button>
-        </div>
-        <button id="lead-capture-close" type="button" class="text-xs text-on-surface-variant hover:text-primary mt-4 underline bg-transparent border-none">Skip for now</button>
-      </div>
-    </div>
-
-    <!-- Auth Modal -->
-    <div id="auth-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="auth-modal-title">
-      <div class="modal-card bg-surface-container-lowest dark:bg-on-secondary-fixed border border-outline-variant dark:border-outline rounded-2xl p-lg max-w-sm w-full text-center shadow-2xl relative">
-        <h3 id="auth-modal-title" class="font-headline-sm text-headline-sm text-on-surface dark:text-secondary-fixed mb-sm">Continue check limits</h3>
-        <p class="text-xs text-on-surface-variant dark:text-secondary-fixed-dim mb-lg">You have run out of free checks. Authenticate to sync your dashboard.</p>
-        <div class="space-y-sm">
-          <button id="auth-signin" type="button" class="w-full bg-primary hover:bg-surface-tint text-on-primary font-label-md text-label-md py-3 rounded-xl transition-all shadow-md flex items-center justify-center gap-xs">
-            <span>Continue with Google</span>
-          </button>
-          <div class="relative flex py-2 items-center">
-            <div class="flex-grow border-t border-outline-variant dark:border-outline"></div>
-            <span class="flex-shrink mx-4 text-xs text-on-surface-variant dark:text-secondary-fixed-dim uppercase tracking-wider font-semibold">or email</span>
-            <div class="flex-grow border-t border-outline-variant dark:border-outline"></div>
-          </div>
-          <input id="auth-email" class="w-full rounded-xl border border-outline-variant dark:border-outline bg-surface-container-lowest dark:bg-on-secondary-fixed text-on-surface dark:text-secondary-fixed px-3 py-2.5 text-sm focus:border-primary focus:ring-1 focus:ring-primary" type="email" placeholder="you@company.com" />
-          <button id="auth-create" type="button" class="w-full border border-outline hover:bg-surface-container-low text-on-surface dark:text-secondary-fixed font-label-md text-label-md py-3 rounded-xl transition-all">Send Magic Link</button>
-        </div>
-        <button id="auth-close" type="button" class="text-xs text-on-surface-variant hover:text-primary mt-4 underline bg-transparent border-none">Close</button>
-      </div>
-    </div>
-
-    <!-- Backdrop -->
-    <div id="toolWorkspaceBackdrop" class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm z-20 hidden" aria-hidden="true"></div>
-
-    <!-- Pricing Modal Popup -->
-    <div id="pricing-modal" class="hidden fixed inset-0 bg-gray-950/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-      <div class="bg-surface-container-lowest border border-outline-variant rounded-3xl shadow-2xl max-w-4xl w-full p-lg md:p-xl relative max-h-[90vh] overflow-y-auto">
-        <button class="absolute top-4 right-6 text-on-surface-variant hover:text-on-surface text-3xl font-bold bg-transparent border-none">&times;</button>
-        <h2 class="font-headline-lg text-headline-lg text-center text-primary mb-md">Choose your InboxGuard plan</h2>
-        
-        <!-- Upgrade Info Box -->
-        <div class="bg-primary/5 rounded-2xl p-md mb-lg border border-primary/10 text-center max-w-2xl mx-auto">
-          <p class="text-sm font-semibold text-primary mb-sm">🔋 Upgrade to unlock the full Deliverability Suite.</p>
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-sm text-left text-xs text-on-surface-variant max-w-xl mx-auto">
-            <div class="flex items-center gap-xs">
-              <span class="material-symbols-outlined text-primary text-[16px]">check_circle</span>
-              <span><strong>Free Scan:</strong> Basic spam placement warning only</span>
-            </div>
-            <div class="flex items-center gap-xs">
-              <span class="material-symbols-outlined text-primary text-[16px]">bolt</span>
-              <span><strong>Unlimited Scans:</strong> AI rewrites & debuggers</span>
-            </div>
-            <div class="flex items-center gap-xs">
-              <span class="material-symbols-outlined text-primary text-[16px]">bolt</span>
-              <span><strong>Domain Health:</strong> Real-time blacklist alerts</span>
-            </div>
-            <div class="flex items-center gap-xs">
-              <span class="material-symbols-outlined text-primary text-[16px]">bolt</span>
-              <span><strong>Seed Testing:</strong> Inbox/Spam placement check</span>
-            </div>
-          </div>
-        </div>
-        
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-lg">
-          <!-- STARTER -->
-          <div class="bg-surface-container-lowest dark:bg-on-secondary-fixed border border-outline-variant dark:border-outline rounded-2xl p-lg flex flex-col justify-between shadow-sm">
-            <div>
-              <h3 class="font-headline-sm text-headline-sm text-on-surface dark:text-secondary-fixed mb-sm">Starter</h3>
-              <div class="pricing-price text-3xl font-bold text-primary dark:text-primary-fixed mb-xs">$9</div>
-              <div class="interval text-xs text-on-surface-variant dark:text-secondary-fixed-dim mb-lg">/ month</div>
-              <ul class="space-y-sm text-xs text-on-surface-variant dark:text-secondary-fixed-dim mb-xl">
-                <li class="flex items-center gap-xs"><span class="material-symbols-outlined text-primary text-[16px]">check</span><span>10 scans / month</span></li>
-                <li class="flex items-center gap-xs"><span class="material-symbols-outlined text-primary text-[16px]">check</span><span>Email support</span></li>
-              </ul>
-            </div>
-            <button class="w-full bg-primary hover:bg-surface-tint text-on-primary font-label-md text-label-md py-2.5 rounded-xl transition-all shadow-sm">Get Starter</button>
-          </div>
-          <!-- PRO -->
-          <div class="bg-surface-container-lowest dark:bg-on-secondary-fixed border-2 border-primary rounded-2xl p-lg flex flex-col justify-between shadow-md relative">
-            <div class="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-primary text-on-primary font-label-sm text-label-sm px-3 py-0.5 rounded-full uppercase tracking-wider">Most Popular</div>
-            <div>
-              <h3 class="font-headline-sm text-headline-sm text-on-surface dark:text-secondary-fixed mb-sm mt-1">Pro</h3>
-              <div class="pricing-price text-3xl font-bold text-primary dark:text-primary-fixed mb-xs">$29</div>
-              <div class="interval text-xs text-on-surface-variant dark:text-secondary-fixed-dim mb-lg">/ month</div>
-              <ul class="space-y-sm text-xs text-on-surface-variant dark:text-secondary-fixed-dim mb-xl">
-                <li class="flex items-center gap-xs"><span class="material-symbols-outlined text-primary text-[16px]">check</span><span>Unlimited scans</span></li>
-                <li class="flex items-center gap-xs"><span class="material-symbols-outlined text-primary text-[16px]">check</span><span>Batch testing</span></li>
-                <li class="flex items-center gap-xs"><span class="material-symbols-outlined text-primary text-[16px]">check</span><span>Priority support</span></li>
-              </ul>
-            </div>
-            <button class="w-full bg-primary hover:bg-surface-tint text-on-primary font-label-md text-label-md py-2.5 rounded-xl transition-all shadow-md">Get Pro</button>
-          </div>
-          <!-- GROWTH -->
-          <div class="bg-surface-container-lowest dark:bg-on-secondary-fixed border border-outline-variant dark:border-outline rounded-2xl p-lg flex flex-col justify-between shadow-sm">
-            <div>
-              <h3 class="font-headline-sm text-headline-sm text-on-surface dark:text-secondary-fixed mb-sm">Growth</h3>
-              <div class="pricing-price text-3xl font-bold text-primary dark:text-primary-fixed mb-xs">$99</div>
-              <div class="interval text-xs text-on-surface-variant dark:text-secondary-fixed-dim mb-lg">/ year</div>
-              <ul class="space-y-sm text-xs text-on-surface-variant dark:text-secondary-fixed-dim mb-xl">
-                <li class="flex items-center gap-xs"><span class="material-symbols-outlined text-primary text-[16px]">check</span><span>Unlimited scans</span></li>
-                <li class="flex items-center gap-xs"><span class="material-symbols-outlined text-primary text-[16px]">check</span><span>Team access</span></li>
-                <li class="flex items-center gap-xs"><span class="material-symbols-outlined text-primary text-[16px]">check</span><span>Annual billing</span></li>
-              </ul>
-            </div>
-            <button class="w-full bg-primary hover:bg-surface-tint text-on-primary font-label-md text-label-md py-2.5 rounded-xl transition-all shadow-sm">Get Growth</button>
-          </div>
-        </div>
-        
-        <p class="text-xs text-on-surface-variant dark:text-secondary-fixed-dim text-center mt-lg">
-          Need custom deliverability tracking? 
-          <a href="mailto:you@company.com" class="text-primary hover:underline font-semibold ml-1">Contact Outbound Ops</a>
-        </p>
-      </div>
-    </div>
-
-    <!-- Paywall Modal Popup -->
-    <div id="paywall-modal" class="modal-overlay hidden" style="display:none;">
-      <div class="modal-card">
-        <button class="modal-close">×</button>
-
-        <div class="modal-icon">⚡</div>
-
-        <h2 class="modal-title">You've used all your free scans</h2>
-        <p class="modal-sub">
-          Your scans reset on <span id="reset-date"></span> —
-          or upgrade now for unlimited scanning.
-        </p>
-
-        <div class="modal-plan-highlight">
-          <div class="plan-left text-left">
-            <div class="plan-name">Pro · $12/month</div>
-            <ul class="plan-features">
-              <li>✓ Unlimited scans</li>
-              <li>✓ Full scan history</li>
-              <li>✓ Domain health checker</li>
-              <li>✓ Priority support</li>
-            </ul>
-          </div>
-          <button class="bg-primary hover:bg-surface-tint text-on-primary font-label-md text-label-md px-4 py-2 rounded-xl transition-all shadow-sm shrink-0">
-            Start Free Trial →
-          </button>
-        </div>
-
-        <div class="modal-alternatives">
-          <a href="/pricing#usage" class="modal-alt-link">
-            Or pay per scan: $0.02/scan →
-          </a>
-          <p class="modal-reset-text">
-            Or wait until <span id="reset-date-2"></span> for free scans to reset.
-          </p>
-        </div>
-      </div>
-    </div>
-
     <script src="/static/js/cookie-consent.js?v=20260410-cookie-consent-1"></script>
-    <script src="/static/js/flow.js?v=20260614-force-light-1"></script>
-    <script src="/static/js/app.js?v=20260614-force-light-1"></script>
+    <script src="/static/js/flow.js?v=20260407-flow-controller-1"></script>
+    <script src="/static/js/app.js?v=20260411-live-rewrite-2"></script>
     
     <!-- Footer -->
     <footer class="bg-surface-container-lowest dark:bg-on-secondary-fixed border-t border-outline-variant dark:border-outline full-width flat no shadows mt-auto">
@@ -530,16 +191,5 @@
         Built by M.Tharun Kumar • Used by 100+ users across multiple countries
       </div>
     </footer>
-    <!-- Mobile Hamburger Drawer -->
-    <div id="mobile-drawer" class="mobile-drawer" aria-hidden="true">
-      <div class="drawer-header">
-        <span class="drawer-logo">InboxGuard</span>
-        <button id="close-drawer-btn" class="drawer-close" aria-label="Close menu">&times;</button>
-      </div>
-      <nav class="drawer-nav">
-        {% include 'components/sidebar.html' %}
-      </nav>
-    </div>
-    <div id="drawer-overlay" class="drawer-overlay"></div>
   </body>
 </html>

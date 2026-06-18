@@ -1,27 +1,6 @@
-// STATIC STUBS — replace with real API calls in behavior phase
-const STUB_DATA = {
-  stats: {
-    scans_this_month: 7,
-    average_score: 34,
-    issues_fixed: 12,
-    domain_health: 'healthy'
-  },
-  recent_scans: [
-    { date: 'Jun 13, 2026', subject: 'Quick question about your pricing', score: 23, issues: 1, risk: 'High' },
-    { date: 'Jun 12, 2026', subject: 'Following up on my last email', score: 67, issues: 3, risk: 'Medium' },
-    { date: 'Jun 11, 2026', subject: 'Introduction — [First Name]', score: 12, issues: 0, risk: 'Clean' }
-  ],
-  extended_history: [
-    { date: 'Jun 13, 2026', subject: 'Quick question about your pricing', score: 23, issues: 1, risk: 'High' },
-    { date: 'Jun 12, 2026', subject: 'Following up on my last email', score: 67, issues: 3, risk: 'Medium' },
-    { date: 'Jun 11, 2026', subject: 'Introduction — [First Name]', score: 12, issues: 0, risk: 'Clean' },
-    { date: 'Jun 10, 2026', subject: 'Urgent: update payment details', score: 45, issues: 2, risk: 'Low' },
-    { date: 'Jun 09, 2026', subject: 'Welcome to InboxGuard!', score: 95, issues: 0, risk: 'Clean' }
-  ],
-  domain: { name: 'mycompany.com', spf: 'pass', dkim: 'fail', dmarc: 'warning', score: 67 },
-  profile: { name: 'M. Tharun Kumar', email: 'tharun@mycompany.com', domain: 'mycompany.com' },
-  billing: { plan: 'Free', scans_used: 3, scans_limit: 3, resets_in_days: 14 }
-};
+// --- Modal Popup Logic ---
+// Only use openPricingModal and closeModal for pricing modal
+// --- Static Pricing Modal Logic ---
 
 // Razorpay Plan Mapping
 const RAZORPAY_PLANS = {
@@ -33,13 +12,50 @@ const RAZORPAY_PLANS = {
 
 // Razorpay Checkout Handler
 async function purchasePlan(planKey) {
-    // STUB: Razorpay checkout removed — to be re-implemented
-    console.log('[InboxGuard] purchasePlan() called with key:', planKey);
+    const plan = RAZORPAY_PLANS[planKey];
+    if (!plan) {
+        alert('Invalid plan selected.');
+        return;
+    }
+    // 1. Create subscription on backend
+    const response = await fetch('/create-subscription', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan: planKey })
+    });
+    const data = await response.json();
+    if (!data.success || !data.subscription_id) {
+        alert('Could not start subscription: ' + (data.detail || 'Unknown error'));
+        return;
+    }
+    // 2. Open Razorpay Checkout
+    const options = {
+        key: data.key,
+        subscription_id: data.subscription_id,
+        name: 'InboxGuard',
+        description: `Upgrade to ${plan.name} Plan`,
+        image: 'https://inboxguard.me/static/branding/logo.png',
+        handler: function (response) {
+            alert('Payment Successful! Subscription ID: ' + response.razorpay_subscription_id);
+            // TODO: Send response.razorpay_subscription_id to backend for verification
+        },
+        prefill: {
+            // Optionally fill with user info if available
+        },
+        theme: { color: '#2563EB' }
+    };
+    const rzp = new Razorpay(options);
+    rzp.open();
 }
 
 function submitContactRequest() {
-    // STUB: contact form logic removed — to be re-implemented
-    console.log('[InboxGuard] submitContactRequest() called');
+    const email = document.getElementById('contact-email')?.value || '';
+    if (!email || !email.includes('@')) {
+        alert('Please enter a valid email address.');
+        return;
+    }
+    // TODO: Send contact request to backend
+    alert(`Contact request sent! We'll reach out to: ${email}`);
 }
 const form = document.getElementById("risk-form");
 const nativeFetch = window.fetch.bind(window);
@@ -56,7 +72,10 @@ window.fetch = (input, init = {}) => {
 const THEME_STORAGE_KEY = "ig_theme";
 
 function getSystemTheme() {
-    return "light";
+    if (typeof window.matchMedia !== "function") {
+        return "light";
+    }
+    return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 }
 
 function getStoredTheme() {
@@ -969,13 +988,44 @@ async function refreshHomeLiveStats() {
     if (!liveStatsSummaryNode || !liveStatsBreakdownNode || !liveStatsStatusNode) {
         return;
     }
-    const averageScore = STUB_DATA.stats.average_score;
-    const scansCount = STUB_DATA.stats.scans_this_month;
-    const issuesFixed = STUB_DATA.stats.issues_fixed;
 
-    liveStatsSummaryNode.textContent = `Tracked outcomes: ${scansCount} | Average Score: ${averageScore}%`;
-    liveStatsBreakdownNode.textContent = `Issues fixed: ${issuesFixed} • Domain health status: ${STUB_DATA.stats.domain_health.toUpperCase()}`;
-    liveStatsStatusNode.textContent = "Updates in real time as new feedback is recorded.";
+    liveStatsSummaryNode.textContent = "Loading live performance metrics...";
+    liveStatsBreakdownNode.textContent = "Fetching current outcome signals.";
+    liveStatsStatusNode.textContent = "";
+
+    try {
+        const response = await fetch("/outcome-stats", { method: "GET" });
+        if (!response.ok) {
+            const fallback = await response.json().catch(() => ({}));
+            const detail = String(fallback.detail || "").trim();
+            if (detail === "AUTH_REQUIRED") {
+                liveStatsSummaryNode.textContent = "Live metrics available after sign in.";
+                liveStatsBreakdownNode.textContent = "Sign in to load real inbox-rate and benchmark stats from tracked outcomes.";
+                liveStatsStatusNode.textContent = "No fake counters shown.";
+                return;
+            }
+            throw new Error(detail || "Could not load live stats.");
+        }
+
+        const data = await response.json();
+        const samples = Number(data.samples || 0);
+        const inboxRate = Number(data.inbox_rate || 0).toFixed(1);
+        const benchmarkValue = data.benchmark_top_10_score;
+        const benchmarkSamples = Number(data.benchmark_inbox_samples || 0);
+        const bands = Array.isArray(data.score_bands) ? data.score_bands : [];
+
+        liveStatsSummaryNode.textContent = `Tracked outcomes: ${samples} | Inbox rate: ${inboxRate}%`;
+        if (benchmarkValue === null || benchmarkValue === undefined) {
+            liveStatsBreakdownNode.textContent = `No inbox benchmark yet. Record at least 10 inbox outcomes to build a real baseline. Band rows loaded: ${bands.length}.`;
+        } else {
+            liveStatsBreakdownNode.textContent = `Current inbox benchmark: ${Number(benchmarkValue)}+ based on ${benchmarkSamples} inbox outcomes. Band rows loaded: ${bands.length}.`;
+        }
+        liveStatsStatusNode.textContent = "Updates in real time as new feedback is recorded.";
+    } catch (error) {
+        liveStatsSummaryNode.textContent = "Live performance metrics are temporarily unavailable.";
+        liveStatsBreakdownNode.textContent = "Outcome data endpoint did not respond. Try again in a moment.";
+        liveStatsStatusNode.textContent = "No synthetic values are shown.";
+    }
 }
 
 function revealText(el, text) {
@@ -1218,13 +1268,17 @@ function hideLeadCaptureModal() {
 }
 
 function needsAuthGate(action) {
-    // STUB: auth gate removed — to be re-implemented
-    return false;
+    if (isAuthenticated) {
+        return action === "analyze" && userScansUsed >= userScansLimit;
+    }
+    return action === "analyze" && anonymousScansUsed >= anonymousScansLimit;
 }
 
 function needsLeadCaptureGate(action) {
-    // STUB: lead capture gate removed — to be re-implemented
-    return false;
+    if (isAuthenticated) {
+        return false;
+    }
+    return action === "analyze" && anonymousScansUsed >= 1 && !leadCaptureSaved;
 }
 
 function updateProfileNav() {
@@ -1262,38 +1316,60 @@ function updateProfileNav() {
 }
 
 async function refreshAuthStatus() {
-    // STUB: auth status check removed — to be re-implemented
-    isAuthenticated = true;
-    currentUserName = STUB_DATA.profile.name;
-    currentUserEmail = STUB_DATA.profile.email;
-    currentUserAvatar = "";
-    anonymousScansUsed = STUB_DATA.billing.scans_used;
-    anonymousScansLimit = STUB_DATA.billing.scans_limit;
-    userScansUsed = STUB_DATA.billing.scans_used;
-    userScansLimit = STUB_DATA.billing.scans_limit;
-    currentUserStatus = "active";
-    currentUserPlan = normalizePlanChoice(STUB_DATA.billing.plan);
-    currentUserIsAdmin = false;
-    window.appState.isAdmin = false;
-    leadCaptureSaved = true;
-    leadCaptureEmail = STUB_DATA.profile.email;
+    try {
+        const response = await fetch("/auth/status", { method: "GET" });
+        if (!response.ok) {
+            return;
+        }
+        const data = await response.json();
+        isAuthenticated = Boolean(data && data.authenticated);
+        currentUserName = String(data && data.name ? data.name : "");
+        currentUserEmail = String(data && data.email ? data.email : "");
+        currentUserAvatar = String(data && data.avatar_url ? data.avatar_url : "");
+        anonymousScansUsed = Number(data && data.anonymous_scans_used ? data.anonymous_scans_used : 0);
+        anonymousScansLimit = Number(data && data.anonymous_scans_limit ? data.anonymous_scans_limit : 3);
+        userScansUsed = Number(data && data.user_scans_used ? data.user_scans_used : 0);
+        userScansLimit = Number(data && data.user_scans_limit ? data.user_scans_limit : 50);
+        currentUserStatus = String(data && data.status ? data.status : "inactive").toLowerCase();
+        currentUserPlan = normalizePlanChoice(String(data && data.plan ? data.plan : (data && data.pro ? "monthly" : "free")));
+        const isAdmin = Boolean(data && data.is_admin);
+        currentUserIsAdmin = isAdmin;
+        window.appState.isAdmin = isAdmin;
+        leadCaptureSaved = Boolean(data && data.lead_email_captured);
+        leadCaptureEmail = String(data && data.lead_email ? data.lead_email : leadCaptureEmail);
 
-    window.currentUser = isAuthenticated;
-    window.userIsPro = false;
-    window.userStatus = currentUserStatus;
-    window.userPlan = currentUserPlan;
-    window.userIsAdmin = false;
-    window.currentUserEmail = currentUserEmail;
-    window.currentUserName = currentUserName;
-    window.appState.isAdmin = false;
+        // Set window-level user state for Razorpay
+        window.currentUser = isAuthenticated;
+        window.userIsPro = Boolean(data && data.pro);
+        window.userStatus = currentUserStatus;
+        window.userPlan = currentUserPlan;
+        window.userIsAdmin = isAdmin;
+        window.currentUserEmail = currentUserEmail;
+        window.currentUserName = currentUserName;
+        window.appState.isAdmin = isAdmin;
 
-    if (adminDashboardButton) {
-        adminDashboardButton.classList.add("hidden");
+        if (adminDashboardButton) {
+            adminDashboardButton.classList.toggle("hidden", !isAuthenticated || !isAdmin);
+            adminDashboardButton.onclick = isAuthenticated && isAdmin ? () => window.location.href = "/admin" : null;
+        }
+
+        localStorage.setItem("ig_anon_scans_used", String(anonymousScansUsed));
+        localStorage.setItem("ig_anon_scans_limit", String(anonymousScansLimit));
+        localStorage.setItem("ig_lead_capture_saved", leadCaptureSaved ? "1" : "0");
+        if (leadCaptureEmail) {
+            localStorage.setItem("ig_lead_capture_email", leadCaptureEmail);
+        }
+        window.appState.isAuthenticated = Boolean(isAuthenticated);
+        updateProfileNav();
+        syncFlowUserState();
+
+    } catch (error) {
+        // Keep UI operational even if auth status endpoint is temporarily unavailable.
     }
-
-    window.appState.isAuthenticated = Boolean(isAuthenticated);
-    updateProfileNav();
-    syncFlowUserState();
+    // Load user tokens if authenticated
+    if (isAuthenticated) {
+        setTimeout(() => loadUserTokens(), 100);
+    }
 }
 
 function runPendingAction() {
@@ -1345,51 +1421,193 @@ function clearPendingContext() {
 }
 
 function resumePendingAfterAuthIfNeeded() {
-    // STUB: auth redirect logic removed — to be re-implemented
+    const shouldResume = localStorage.getItem("ig_resume_after_auth") === "1";
+    if (!shouldResume || !isAuthenticated) {
+        return;
+    }
+
+    restorePendingContext();
+    const action = localStorage.getItem("ig_pending_action");
+    if (action) {
+        pendingAction = action;
+        runPendingAction();
+    }
+    clearPendingContext();
+    localStorage.removeItem("ig_resume_after_auth");
 }
 
 function openAuthModalFromQueryIfNeeded() {
-    // STUB: auth query check removed — to be re-implemented
+    const params = new URLSearchParams(window.location.search);
+    const shouldOpen = params.get("auth") === "1";
+    const oauthError = params.get("oauth_error") === "1";
+    if (!shouldOpen) {
+        return;
+    }
+
+    showAuthModal();
+    if (oauthError) {
+        showError("Google sign-in failed. Please try again.");
+    }
+    const cleanUrl = window.location.pathname + window.location.hash;
+    window.history.replaceState({}, document.title, cleanUrl);
 }
 
 function openEntryFromQueryIfNeeded() {
-    // STUB: query check removed — to be re-implemented
-}
-
-function openPendingScanFromStorage() {
-    // STUB: pending scan check removed — to be re-implemented
-}
-
-function onAuthSuccess(source) {
-    // STUB: auth success logic removed — to be re-implemented
-}
-
-async function continueWithEmail() {
-    // STUB: email auth removed — to be re-implemented
-}
-
-async function continueWithLeadCapture() {
-    // STUB: lead capture removed — to be re-implemented
-}
-
-async function continueWithGoogle() {
-    // STUB: Google OAuth redirect removed — to be re-implemented
-}
-
-function handleAuthAction(action) {
-    // STUB: auth action routing removed — to be re-implemented
-    if (action === "close") {
-        hideAuthModal();
+    const params = new URLSearchParams(window.location.search);
+    const tab = String(params.get("tab") || "").toLowerCase();
+    if (tab === "threat-scan" || tab === "scan") {
+        activateTab("threat-scan");
+        if (rawEmailInput) {
+            setTimeout(() => rawEmailInput.focus(), 120);
+        }
+        params.delete("tab");
+        const query = params.toString();
+        const cleanUrl = `${window.location.pathname}${query ? `?${query}` : ""}${window.location.hash}`;
+        window.history.replaceState({}, document.title, cleanUrl);
     }
 }
 
+function openPendingScanFromStorage() {
+    const savedEmail = String(localStorage.getItem("pending_scan_email") || "").trim();
+    if (!savedEmail || !rawEmailInput) {
+        return;
+    }
+
+    rawEmailInput.value = savedEmail;
+    localStorage.removeItem("pending_scan_email");
+    activateTab("threat-scan");
+    setTimeout(() => rawEmailInput.focus(), 120);
+}
+
+function onAuthSuccess(source) {
+    isAuthenticated = true;
+    hideAuthModal();
+    updateProfileNav();
+
+    const payload = new FormData();
+    payload.set("event", "access_request");
+    payload.set("target", source || "auth_modal");
+    payload.set("mode", "resume_pending_action");
+    fetch("/track", { method: "POST", body: payload }).catch(() => null);
+
+    if (!pendingAction && pendingAuthRedirectPath) {
+        const destination = pendingAuthRedirectPath;
+        pendingAuthRedirectPath = "";
+        window.location.href = destination;
+        return;
+    }
+
+    runPendingAction();
+}
+
+async function continueWithEmail() {
+    const email = authEmailInput ? String(authEmailInput.value || "").trim().toLowerCase() : "";
+    if (!email || !email.includes("@")) {
+        showError("Enter a valid email to continue.");
+        return;
+    }
+
+    const payload = new FormData();
+    payload.set("email", email);
+
+    const response = await fetch("/auth/email/continue", {
+        method: "POST",
+        body: payload,
+    });
+
+    if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.detail || "Could not continue with email.");
+    }
+
+    await refreshAuthStatus();
+    onAuthSuccess("email_continue");
+}
+
+async function continueWithLeadCapture() {
+    const email = leadCaptureEmailInput ? String(leadCaptureEmailInput.value || "").trim().toLowerCase() : "";
+    if (!email || !email.includes("@")) {
+        showError("Enter a valid email to continue.");
+        return;
+    }
+
+    const payload = new FormData();
+    payload.set("email", email);
+    payload.set("source", "scan_gate");
+
+    const response = await fetch("/lead-capture", {
+        method: "POST",
+        body: payload,
+    });
+
+    if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.detail || "Could not save your email.");
+    }
+
+    leadCaptureSaved = true;
+    leadCaptureEmail = email;
+    localStorage.setItem("ig_lead_capture_saved", "1");
+    localStorage.setItem("ig_lead_capture_email", email);
+    hideLeadCaptureModal();
+    runPendingAction();
+}
+
+async function continueWithGoogle() {
+    stashPendingContext(pendingAction || "analyze");
+    localStorage.setItem("ig_resume_after_auth", "1");
+    const next = encodeURIComponent("/app");
+    window.location.href = `/auth/google/login?next=${next}`;
+}
+
+function handleAuthAction(action) {
+    if (action === "signin") {
+        continueWithGoogle();
+        return;
+    }
+    if (action === "create") {
+        continueWithEmail().catch((error) => {
+            showError(error && error.message ? error.message : "Could not continue with email.");
+        });
+        return;
+    }
+    hideAuthModal();
+}
+
 async function saveCurrentFix() {
-    // STUB: save fix removed — to be re-implemented
-    console.log('[InboxGuard] saveCurrentFix() called');
+    if (!latestRewriteContext) {
+        showError("Generate a fix first so we have something to save.");
+        return;
+    }
+    if (!isAuthenticated) {
+        showAuthModal();
+        return;
+    }
+
+    const payload = new FormData();
+    payload.set("original_subject", String(latestRewriteContext.original_subject || ""));
+    payload.set("original_body", String(latestRewriteContext.original_body || latestRewriteContext.original_text || ""));
+    payload.set("rewritten_subject", String(latestRewriteContext.rewritten_subject || ""));
+    payload.set("rewritten_body", String(latestRewriteContext.rewritten_body || latestRewriteContext.rewritten_text || ""));
+    payload.set("score_delta", String(latestRewriteContext.score_delta || 0));
+    payload.set("from_risk_band", String(latestRewriteContext.from_risk_band || ""));
+    payload.set("to_risk_band", String(latestRewriteContext.to_risk_band || ""));
+    payload.set("rewrite_style", String(latestRewriteContext.rewrite_style || "balanced"));
+
+    const response = await fetch("/save-fix", {
+        method: "POST",
+        body: payload,
+    });
+    if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.detail || "Could not save this fix.");
+    }
+
     if (saveFixButton) {
         saveFixButton.textContent = "Saved";
         saveFixButton.disabled = true;
     }
+    showError("Fix saved to your account.");
 }
 
 // Inline fallback hooks for resilient modal behavior.
@@ -2373,22 +2591,72 @@ function highlightIssueSpans(text, spans = []) {
 }
 
 async function generateRewrite(mode = "safe") {
-    // STUB: generate rewrite removed — to be re-implemented
-    console.log('[InboxGuard] generateRewrite() called with mode:', mode);
+    if (!rawEmailInput || !afterEmailNode || !beforeEmailNode) {
+        return;
+    }
     const original = String(rawEmailInput.value || "").trim();
-    const rewritten = `Subject: Quick outreach (No spam words)\n\nHi John,\n\nI noticed your recent newsletter. Let me know if you are open for a quick conversation.\n\nBest,\nSender`;
-    
+    if (original.length < 20) {
+        showError("Paste the full email draft before generating rewrite.");
+        return;
+    }
+
+    const payload = new FormData();
+    payload.set("raw_email", original);
+    payload.set("analysis_mode", analysisModeInput ? analysisModeInput.value : "content");
+    payload.set("rewrite_mode", mode);
+    payload.set("rewrite_style", mode);
+    if (domainInput && String(domainInput.value || "").trim()) {
+        payload.set("domain", String(domainInput.value || "").trim());
+    }
+
+    const response = await fetch("/rewrite", { method: "POST", body: payload });
+    if (!response.ok) {
+        throw new Error("Rewrite failed. Try again.");
+    }
+    const data = await response.json();
+    const selectedMode = mode === "high-converting" ? "high_converting" : mode;
+    const rewrittenFromModes = data && data.rewrites && data.rewrites[selectedMode];
+    const rewritten = String(
+        rewrittenFromModes
+        || data.rewritten
+        || data.rewritten_text
+        || data.improved
+        || data.fix
+        || original
+    );
+
     renderRewrite({
         original,
         rewritten,
-        improved: true,
-        fix: "Removed spam words and simplified the subject line",
-        issue_highlights: []
+        improved: data.improved,
+        fix: data.fix,
+        issue_highlights: data.issue_highlights,
     });
-    
+
     if (fixPreviewTextNode) {
-        fixPreviewTextNode.textContent = "Removed spam words and simplified the subject line";
+        fixPreviewTextNode.textContent = String(data.primary_fix || "Rewrite generated to fix the top issue.");
     }
+
+    if (diffSummaryNode) {
+        diffSummaryNode.innerHTML = "";
+        const rows = Array.isArray(data.diff) ? data.diff : [];
+        rows.slice(0, 5).forEach((row) => {
+            const line = document.createElement("div");
+            line.className = "diff-line";
+            line.textContent = `${String(row.before || "") || "(added)"} -> ${String(row.after || "") || "(removed)"}`;
+            diffSummaryNode.appendChild(line);
+        });
+    }
+
+    latestRewriteContext = {
+        original_text: original,
+        rewritten_text: rewritten,
+        rewrite_style: String(data.rewrite_style || mode || "balanced"),
+        rewrite_mode: String(data.rewrite_mode || selectedMode || "engaging"),
+        from_risk_band: String(data.from_risk_band || "Needs Review"),
+        to_risk_band: String(data.to_risk_band || "Needs Review"),
+        score_delta: Number(data.score_delta || 0),
+    };
 }
 
 function renderRewrite(data) {
@@ -2497,114 +2765,417 @@ function renderSubjectIntel(data) {
 }
 
 async function generateSubjectLines() {
-    // STUB: generate subject lines removed — to be re-implemented
-    console.log('[InboxGuard] generateSubjectLines() called');
-    const data = {
-        ok: true,
-        top_picks: [
-            { subject: "Quick question about your pricing", score: 9.5, tags: ["Curiosity", "Short"], alignment: "high", notes: { spam_risk: "low" } },
-            { subject: "Following up on my last email", score: 8.7, tags: ["Follow-up"], alignment: "moderate", notes: { spam_risk: "low" } }
-        ],
-        strategies: [
-            { strategy: "Curiosity", subject: "Quick question about your pricing", score: 9.5, alignment: "high" },
-            { strategy: "Follow-up", subject: "Following up on my last email", score: 8.7, alignment: "moderate" }
-        ],
-        warnings: ["Avoid all caps in subject lines to prevent inbox filter triggers."]
+    if (!generateSubjectsButton) {
+        return;
+    }
+
+    const payload = {
+        product_name: String(subjectProductNameInput && subjectProductNameInput.value ? subjectProductNameInput.value : "InboxGuard").trim() || "InboxGuard",
+        target_role: String(subjectTargetRoleInput && subjectTargetRoleInput.value ? subjectTargetRoleInput.value : "").trim(),
+        industry: String(subjectIndustryInput && subjectIndustryInput.value ? subjectIndustryInput.value : "").trim(),
+        goal: String(subjectGoalInput && subjectGoalInput.value ? subjectGoalInput.value : "").trim(),
+        email_type: String(subjectEmailTypeInput && subjectEmailTypeInput.value ? subjectEmailTypeInput.value : "cold").trim(),
+        tone: String(subjectToneInput && subjectToneInput.value ? subjectToneInput.value : "internal").trim(),
+        context: String(subjectContextInput && subjectContextInput.value ? subjectContextInput.value : "").trim(),
+        body: String(subjectBodyInput && subjectBodyInput.value ? subjectBodyInput.value : "").trim() || String(rawEmailInput && rawEmailInput.value ? rawEmailInput.value : "").trim(),
     };
-    renderSubjectIntel(data);
+
+    generateSubjectsButton.disabled = true;
+    const previousLabel = generateSubjectsButton.textContent;
+    generateSubjectsButton.textContent = "Generating...";
+    try {
+        const response = await fetch("/subject-lines", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok || !data.ok) {
+            throw new Error(String(data.detail || data.error || "Could not generate subject lines."));
+        }
+        renderSubjectIntel(data);
+        trackEvent("subject_lines_generated", {
+            product: payload.product_name,
+            role: payload.target_role,
+            industry: payload.industry,
+        });
+    } catch (error) {
+        showError(error && error.message ? error.message : "Could not generate subject lines.");
+    } finally {
+        generateSubjectsButton.disabled = false;
+        generateSubjectsButton.textContent = previousLabel;
+    }
 }
 
 async function runSeedAuto() {
-    // STUB: automated seed testing removed — to be re-implemented
-    console.log('[InboxGuard] runSeedAuto() called');
     const previousLabel = runSeedAutoButton ? runSeedAutoButton.textContent : "Run Automated Seed Test";
     setActionButtonState(runSeedAutoButton, "loading", "Running...");
-    await sleep(800);
-    setActionButtonState(runSeedAutoButton, "success", "Completed");
-    showError("Automated seed test completed (mock).");
-    setTimeout(() => {
-        setActionButtonState(runSeedAutoButton, "idle", previousLabel);
-    }, 1000);
+    const campaign = seedCampaignInput ? String(seedCampaignInput.value || "").trim() : "";
+    const subjectToken = `IG-${Date.now().toString(36)}`;
+    const payload = new FormData();
+    payload.set("campaign_name", campaign || "Automated Seed Run");
+    payload.set("subject_token", subjectToken);
+    payload.set("body_text", String(rawEmailInput && rawEmailInput.value ? rawEmailInput.value : "InboxGuard seed probe"));
+    try {
+        const response = await fetch("/seed-run-async", { method: "POST", body: payload });
+        if (!response.ok) {
+            throw new Error("Could not start automated seed test.");
+        }
+        const data = await response.json();
+        showError("Automated seed test queued. Polling result...");
+        for (let i = 0; i < 20; i += 1) {
+            await sleep(1200);
+            const poll = await fetch(`/analyze-jobs/${String(data.job_id || "")}`, { method: "GET" });
+            if (!poll.ok) {
+                continue;
+            }
+            const job = await poll.json();
+            if (job.status === "completed") {
+                setActionButtonState(runSeedAutoButton, "success", "Completed");
+                showError("Automated seed test completed.");
+                await refreshSeedTests();
+                return;
+            }
+            if (job.status === "failed") {
+                throw new Error(String(job.error || "Seed test failed."));
+            }
+        }
+        throw new Error("Seed test is still running. Check jobs and try again.");
+    } catch (error) {
+        setActionButtonState(runSeedAutoButton, "error", "Error");
+        throw error;
+    } finally {
+        setTimeout(() => {
+            setActionButtonState(runSeedAutoButton, "idle", previousLabel);
+        }, 1000);
+    }
 }
 
 async function runSeedSync() {
-    // STUB: instant seed probe removed — to be re-implemented
-    console.log('[InboxGuard] runSeedSync() called');
     const previousLabel = runSeedSyncButton ? runSeedSyncButton.textContent : "Run Instant Seed Probe";
     setActionButtonState(runSeedSyncButton, "loading", "Running...");
-    await sleep(800);
-    if (seedTestListNode) {
-        seedTestListNode.innerHTML = "";
-        const summaryLine = document.createElement("li");
-        summaryLine.textContent = `Summary | Inbox 17 | Spam 2 | Promotions 1 | Unknown 0`;
-        seedTestListNode.appendChild(summaryLine);
-        const li1 = document.createElement("li");
-        li1.textContent = "Instant probe | Google Workspace: Inbox";
-        seedTestListNode.appendChild(li1);
-        const li2 = document.createElement("li");
-        li2.textContent = "Instant probe | Microsoft 365: Spam";
-        seedTestListNode.appendChild(li2);
+    const campaign = seedCampaignInput ? String(seedCampaignInput.value || "").trim() : "";
+    const subject = campaign || "InboxGuard Seed Test";
+    const body = String(rawEmailInput && rawEmailInput.value ? rawEmailInput.value : "InboxGuard seed probe");
+    try {
+        const response = await fetch("/seed-test", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                subject,
+                body,
+                campaign_name: campaign || "Instant Seed Run",
+                wait_seconds: 6,
+            }),
+        });
+        if (!response.ok) {
+            const errorBody = await response.json().catch(() => ({}));
+            throw new Error(String(errorBody.detail || "Could not run instant seed probe."));
+        }
+        const data = await response.json();
+        const placements = Array.isArray(data.placements) ? data.placements : [];
+        const summary = data.summary && typeof data.summary === "object" ? data.summary : {};
+        if (seedTestListNode) {
+            seedTestListNode.innerHTML = "";
+            const summaryLine = document.createElement("li");
+            summaryLine.textContent = `Summary | Inbox ${Number(summary.inbox || 0)} | Spam ${Number(summary.spam || 0)} | Promotions ${Number(summary.promotions || 0)} | Unknown ${Number(summary.unknown || 0)}`;
+            seedTestListNode.appendChild(summaryLine);
+            if (!placements.length) {
+                const li = document.createElement("li");
+                li.textContent = "Seed probe completed, but no provider placements were returned.";
+                seedTestListNode.appendChild(li);
+            } else {
+                placements.forEach((row) => {
+                    const li = document.createElement("li");
+                    li.textContent = `Instant probe | ${String(row.provider || "provider")}: ${String(row.placement || "unknown")}`;
+                    seedTestListNode.appendChild(li);
+                });
+            }
+        }
+        setActionButtonState(runSeedSyncButton, "success", "Completed");
+        showError(`Instant seed probe completed (${String(data.test_id || "test")}).`);
+    } catch (error) {
+        setActionButtonState(runSeedSyncButton, "error", "Error");
+        throw error;
+    } finally {
+        setTimeout(() => {
+            setActionButtonState(runSeedSyncButton, "idle", previousLabel);
+        }, 1000);
     }
-    setActionButtonState(runSeedSyncButton, "success", "Completed");
-    showError("Instant seed probe completed (mock).");
-    setTimeout(() => {
-        setActionButtonState(runSeedSyncButton, "idle", previousLabel);
-    }, 1000);
 }
 
 async function refreshPlans() {
-    // STUB: plans refresh removed — to be re-implemented
-    console.log('[InboxGuard] refreshPlans() called');
+    const response = await fetch("/plans", { method: "GET" });
+    if (!response.ok) {
+        throw new Error("Could not load plan details.");
+    }
+    const data = await response.json();
+    const plans = data.plans && typeof data.plans === "object" ? data.plans : {};
+    if (!plansOutputNode) {
+        return;
+    }
+    plansOutputNode.innerHTML = "";
+    const displayOrder = ["free", "starter", "monthly", "annual", "usage"];
+    const keys = displayOrder.filter((key) => Object.prototype.hasOwnProperty.call(plans, key));
+    if (!keys.length) {
+        const li = document.createElement("li");
+        li.textContent = "No plans returned by server.";
+        plansOutputNode.appendChild(li);
+        return;
+    }
+    keys.forEach((key) => {
+        const item = plans[key] || {};
+        const li = document.createElement("li");
+        const planKey = String(key || "").toLowerCase();
+        const displayName = planDisplayName(planKey);
+        li.textContent = `${displayName}: ${String(item.display_price || item.price || "n/a")}`;
+        plansOutputNode.appendChild(li);
+    });
 }
 
 async function requestAccess() {
-    // STUB: request access removed — to be re-implemented
-    console.log('[InboxGuard] requestAccess() called');
+    const email = String(accessRequestEmailInput && accessRequestEmailInput.value ? accessRequestEmailInput.value : "").trim();
+    if (!email) {
+        showError("Enter your email to request access.");
+        return;
+    }
+    const payload = new FormData();
+    payload.set("email", email);
+    const response = await fetch("/request-access", { method: "POST", body: payload });
+    if (!response.ok) {
+        throw new Error("Could not submit access request.");
+    }
+    showError("Access request submitted.");
 }
 
 async function runBulkScan() {
-    // STUB: bulk scan removed — to be re-implemented
-    console.log('[InboxGuard] runBulkScan() called');
+    if (!bulkFileInput || !bulkFileInput.files || !bulkFileInput.files.length) {
+        showError("Select a CSV file first.");
+        return;
+    }
+    setListMessage(bulkResultsNode, "Running bulk scan...");
+    const payload = new FormData();
+    payload.set("file", bulkFileInput.files[0]);
+    payload.set("analysis_mode", analysisModeInput ? analysisModeInput.value : "content");
+    const response = await fetch("/bulk-analyze", { method: "POST", body: payload });
+    if (!response.ok) {
+        const message = await parseApiError(response, "Bulk scan failed. Verify CSV format and try again.");
+        setListMessage(bulkResultsNode, message);
+        throw new Error(message);
+    }
+    const data = await response.json();
+    if (!bulkResultsNode) {
+        return;
+    }
+    bulkResultsNode.innerHTML = "";
+    const items = Array.isArray(data.items) ? data.items : [];
+    items.slice(0, 8).forEach((item) => {
+        const li = document.createElement("li");
+        if (item.error) {
+            li.textContent = `Row ${item.row}: ${item.error}`;
+        } else {
+            li.textContent = `Row ${item.row}: Score ${item.score} | ${item.risk_band}`;
+        }
+        bulkResultsNode.appendChild(li);
+    });
 }
 
 async function createApiKey() {
-    // STUB: API key creation removed — to be re-implemented
-    console.log('[InboxGuard] createApiKey() called');
+    const payload = new FormData();
+    payload.set("name", apiKeyNameInput ? String(apiKeyNameInput.value || "Primary key") : "Primary key");
+    setListMessage(opsOutputNode, "Creating API key...");
+    const response = await fetch("/api-keys", { method: "POST", body: payload });
+    if (!response.ok) {
+        const message = await parseApiError(response, "Could not create API key.");
+        setListMessage(opsOutputNode, message);
+        throw new Error(message);
+    }
+    const data = await response.json();
+    if (opsOutputNode) {
+        opsOutputNode.innerHTML = "";
+        const li = document.createElement("li");
+        li.textContent = `API key created: ${String(data.api_key || "")}`;
+        opsOutputNode.appendChild(li);
+    }
 }
 
 async function listApiKeys() {
-    // STUB: list API keys removed — to be re-implemented
-    console.log('[InboxGuard] listApiKeys() called');
+    setListMessage(apiKeyListNode, "Loading API keys...");
+    const response = await fetch("/api-keys", { method: "GET" });
+    if (!response.ok) {
+        const message = await parseApiError(response, "Could not load API keys.");
+        setListMessage(apiKeyListNode, message);
+        throw new Error(message);
+    }
+    const data = await response.json();
+    const items = Array.isArray(data.items) ? data.items : [];
+    if (!apiKeyListNode) {
+        return;
+    }
+    apiKeyListNode.innerHTML = "";
+    if (!items.length) {
+        const li = document.createElement("li");
+        li.textContent = "No API keys found.";
+        apiKeyListNode.appendChild(li);
+        return;
+    }
+    items.slice(0, 10).forEach((item) => {
+        const li = document.createElement("li");
+        const id = Number(item.id || 0);
+        const name = String(item.name || "API key");
+        const prefix = String(item.key_prefix || "");
+        const created = String(item.created_at || "").slice(0, 10);
+        const revoked = item.revoked_at ? "revoked" : "active";
+        li.textContent = `#${id} ${name} (${prefix}...) | ${revoked} | created ${created}`;
+        apiKeyListNode.appendChild(li);
+    });
 }
 
 async function revokeApiKey() {
-    // STUB: revoke API key removed — to be re-implemented
-    console.log('[InboxGuard] revokeApiKey() called');
+    const keyId = Number(revokeKeyIdInput && revokeKeyIdInput.value ? revokeKeyIdInput.value : 0);
+    if (!keyId) {
+        showError("Enter a valid API key ID to revoke.");
+        return;
+    }
+    setListMessage(opsOutputNode, `Revoking API key #${keyId}...`);
+    const payload = new FormData();
+    payload.set("key_id", String(keyId));
+    const response = await fetch("/api-keys/revoke", { method: "POST", body: payload });
+    if (!response.ok) {
+        const message = await parseApiError(response, "Could not revoke API key.");
+        setListMessage(opsOutputNode, message);
+        throw new Error(message);
+    }
+    showError(`API key #${keyId} revoked.`);
+    await listApiKeys();
 }
 
 async function createTeam() {
-    // STUB: team creation removed — to be re-implemented
-    console.log('[InboxGuard] createTeam() called');
+    const payload = new FormData();
+    payload.set("name", teamNameInput ? String(teamNameInput.value || "My Team") : "My Team");
+    setListMessage(opsOutputNode, "Creating team...");
+    const response = await fetch("/teams", { method: "POST", body: payload });
+    if (!response.ok) {
+        const message = await parseApiError(response, "Could not create team.");
+        setListMessage(opsOutputNode, message);
+        throw new Error(message);
+    }
+    const data = await response.json();
+    if (opsOutputNode) {
+        const li = document.createElement("li");
+        li.textContent = `Team created with id: ${String(data.team_id || "")}`;
+        opsOutputNode.appendChild(li);
+    }
 }
 
 async function listTeams() {
-    // STUB: list teams removed — to be re-implemented
-    console.log('[InboxGuard] listTeams() called');
+    setListMessage(teamListNode, "Loading teams...");
+    const response = await fetch("/teams", { method: "GET" });
+    if (!response.ok) {
+        const message = await parseApiError(response, "Could not load teams.");
+        setListMessage(teamListNode, message);
+        throw new Error(message);
+    }
+    const data = await response.json();
+    const items = Array.isArray(data.items) ? data.items : [];
+    if (!teamListNode) {
+        return;
+    }
+    teamListNode.innerHTML = "";
+    if (!items.length) {
+        const li = document.createElement("li");
+        li.textContent = "No teams found.";
+        teamListNode.appendChild(li);
+        return;
+    }
+    items.slice(0, 10).forEach((item) => {
+        const li = document.createElement("li");
+        const id = Number(item.id || 0);
+        const name = String(item.name || "Team");
+        const role = String(item.role || "member");
+        li.textContent = `#${id} ${name} | your role: ${role}`;
+        teamListNode.appendChild(li);
+    });
 }
 
 async function addTeamMember() {
-    // STUB: add team member removed — to be re-implemented
-    console.log('[InboxGuard] addTeamMember() called');
+    const teamId = Number(teamMemberTeamIdInput && teamMemberTeamIdInput.value ? teamMemberTeamIdInput.value : 0);
+    const email = String(teamMemberEmailInput && teamMemberEmailInput.value ? teamMemberEmailInput.value : "").trim();
+    const role = String(teamMemberRoleInput && teamMemberRoleInput.value ? teamMemberRoleInput.value : "member");
+    if (!teamId || !email) {
+        showError("Enter team ID and member email.");
+        return;
+    }
+    setListMessage(opsOutputNode, `Adding ${email} to team #${teamId}...`);
+    const payload = new FormData();
+    payload.set("team_id", String(teamId));
+    payload.set("email", email);
+    payload.set("role", role);
+    const response = await fetch("/teams/member", { method: "POST", body: payload });
+    if (!response.ok) {
+        const message = await parseApiError(response, "Could not add team member.");
+        setListMessage(opsOutputNode, message);
+        throw new Error(message);
+    }
+    showError(`Added ${email} to team #${teamId} as ${role}.`);
+    await listTeams();
 }
 
 async function refreshOutcomeStats() {
-    // STUB: outcome stats refresh removed — to be re-implemented
-    console.log('[InboxGuard] refreshOutcomeStats() called');
+    setListMessage(outcomeStatsListNode, "Loading outcome stats...");
+    const response = await fetch("/outcome-stats", { method: "GET" });
+    if (!response.ok) {
+        const message = await parseApiError(response, "Could not load outcome stats.");
+        setListMessage(outcomeStatsListNode, message);
+        throw new Error(message);
+    }
+    const data = await response.json();
+    if (!outcomeStatsListNode) {
+        return;
+    }
+    const bands = Array.isArray(data.score_bands) ? data.score_bands : [];
+    outcomeStatsListNode.innerHTML = "";
+    const summary = document.createElement("li");
+    summary.textContent = `Samples: ${Number(data.samples || 0)} | Inbox rate: ${Number(data.inbox_rate || 0).toFixed(1)}% | Top benchmark: ${Number(data.benchmark_top_10_score || 85)}+`;
+    outcomeStatsListNode.appendChild(summary);
+    bands.slice(0, 4).forEach((row) => {
+        const li = document.createElement("li");
+        li.textContent = `Band ${String(row.band || "-")}: ${Number(row.inbox_rate || 0).toFixed(1)}% inbox (${Number(row.samples || 0)} samples)`;
+        outcomeStatsListNode.appendChild(li);
+    });
 }
 
 async function refreshJobs() {
-    // STUB: jobs refresh removed — to be re-implemented
-    console.log('[InboxGuard] refreshJobs() called');
+    setListMessage(jobListNode, "Loading async jobs...");
+    const response = await fetch("/jobs?limit=12", { method: "GET" });
+    if (!response.ok) {
+        const message = await parseApiError(response, "Could not load async jobs.");
+        setListMessage(jobListNode, message);
+        throw new Error(message);
+    }
+    const data = await response.json();
+    const items = Array.isArray(data.items) ? data.items : [];
+    if (!jobListNode) {
+        return;
+    }
+    jobListNode.innerHTML = "";
+    if (!items.length) {
+        const li = document.createElement("li");
+        li.textContent = "No async jobs found.";
+        jobListNode.appendChild(li);
+        return;
+    }
+    items.slice(0, 10).forEach((item) => {
+        const li = document.createElement("li");
+        const id = String(item.id || "").slice(0, 8);
+        const status = String(item.status || "unknown");
+        const queue = String(item.queue_name || "analysis");
+        const updated = String(item.updated_at || "").replace("T", " ").slice(0, 19);
+        li.textContent = `${id} | ${queue} | ${status} | ${updated}`;
+        jobListNode.appendChild(li);
+    });
 }
 
 function renderDecisionEngine(summary, signals, findings, prediction) {
@@ -2934,80 +3505,207 @@ async function showFixTransformation() {
 }
 
 async function runAnalyze() {
-    const runCheckBtn = document.getElementById("run-check");
-    const runCheckAsyncBtn = document.getElementById("run-check-async");
-    const resultLoading = document.getElementById("result-loading");
-    
-    if (resultLoading) {
-        resultLoading.classList.remove("hidden");
+    const hasAccess = await ensureScanAccess();
+    if (!hasAccess) {
+        return;
     }
-    if (runCheckBtn) runCheckBtn.disabled = true;
-    if (runCheckAsyncBtn) runCheckAsyncBtn.disabled = true;
 
-    const progressBar = document.getElementById("progressBar");
-    const loadingStep = document.getElementById("loading-step");
-    let progress = 0;
-    const steps = [
-        "Evaluating content syntax...",
-        "Identifying spam urgency tags...",
-        "Matching provider filters...",
-        "Scoring final risk values..."
-    ];
-    
-    const interval = setInterval(() => {
-        progress += 25;
-        if (progressBar) {
-            progressBar.style.width = `${progress}%`;
+    const rawText = rawEmailInput ? rawEmailInput.value.trim() : "";
+    const domainText = domainInput ? domainInput.value.trim() : "";
+    const mode = analysisModeInput ? analysisModeInput.value : "content";
+
+    trackEvent("analyze_clicked", {
+        analysis_mode: mode,
+        has_domain: Boolean(domainText),
+    });
+    trackEvent("clicked_scan", { analysis_mode: mode, auth: isAuthenticated ? "user" : "anon" });
+
+    if (rawText.length < 20) {
+        showError("Paste the full email draft before scanning.");
+        return;
+    }
+
+    // Centralized transition: move from scan screen to result screen state before analysis.
+    navigate("result", { scroll: true });
+
+    // Keep the result shell visible from the start of analysis so UI state is explicit.
+    if (resultSection) {
+        resultSection.classList.remove("hidden");
+    }
+    if (resultScreenNode) {
+        resultScreenNode.classList.remove("hidden");
+    }
+    const statusHeadlineNode = document.getElementById("status-headline");
+    const statusSubNode = document.getElementById("status-sub");
+    if (statusHeadlineNode) {
+        statusHeadlineNode.textContent = "Analyzing...";
+    }
+    if (statusSubNode) {
+        statusSubNode.textContent = "Checking content and deliverability signals.";
+    }
+    resultScreenNode?.scrollIntoView({ behavior: "smooth", block: "start" });
+
+    setLoadingState();
+    const loadingTicker = startRealtimeScanSteps();
+
+    try {
+        trackEvent("started_scan", { analysis_mode: mode, auth: isAuthenticated ? "user" : "anon" });
+        const payload = new FormData();
+        payload.set("raw_email", rawText);
+        if (domainText) {
+            payload.set("domain", domainText);
         }
-        if (loadingStep && steps[progress / 25 - 1]) {
-            loadingStep.textContent = steps[progress / 25 - 1];
-        }
-        
-        if (progress >= 100) {
-            clearInterval(interval);
-            
-            if (resultLoading) {
-                resultLoading.classList.add("hidden");
+        payload.set("analysis_mode", mode);
+
+        const response = await fetch("/analyze", {
+            method: "POST",
+            body: payload,
+        });
+
+        if (!response.ok) {
+            const err = await response.json().catch(() => ({}));
+            const code = String(err.detail || "");
+            if (code === "AUTH_REQUIRED") {
+                renderBlockedScanResult("Sign in required", "Your first scan is blocked until you sign in or continue your scan access.");
+                showAuthModal();
+                throw new Error("Sign in to continue scanning.");
             }
-            if (runCheckBtn) runCheckBtn.disabled = false;
-            if (runCheckAsyncBtn) runCheckAsyncBtn.disabled = false;
+            if (code === "SUBSCRIPTION_REQUIRED") {
+                renderBlockedScanResult("Upgrade required", "This scan is locked until you upgrade your plan.");
+                showPaywall();
+                throw new Error("Active subscription required. Upgrade to continue scanning.");
+            }
+            if (code === "FREE_PLAN_LIMIT_REACHED" || code === "NO_TOKENS" || code === "INSUFFICIENT_TOKENS") {
+                renderBlockedScanResult("Scan limit reached", "You used your available scans. Unlock more scans to continue.");
+                openPricingModal();
+                throw new Error("You reached your monthly free plan scan limit. Upgrade is required for more scans.");
+            }
+            throw new Error("Unable to complete risk scan. Try again.");
+        }
 
-            const MOCK_SCAN_RESULT = {
-                score: 67,
-                risk_score: 67,
-                findings: [
-                    { title: "Subject contains 'Free'" },
-                    { title: "ALL CAPS in subject" },
-                    { title: "3 tracking links" }
-                ],
-                top_fixes: [
-                    { title: "Remove sales trigger words like 'Free'" },
-                    { title: "Use mixed case sentence capitalization" },
-                    { title: "Reduce link density down to 1 or 2 domains" }
-                ],
-                improved_email: "Subject: Quick question about your pricing\n\nHi John,\n\nI noticed your newsletter and wanted to reach out. Are you open for a quick chat next week?\n\nBest,\nTharun",
-                original_email: rawEmailInput ? rawEmailInput.value : "Subject: FREE OUTREACH!!!\n\nHi John,\nI noticed your recent newsletter. Let me know if you are open for a check. http://link1.com http://link2.com http://link3.com",
-                summary: {
-                    score: 67,
-                    final_score: 67,
-                    risk_score: 67,
-                    risk_band: "High Risk"
-                }
-            };
-            
-            renderConversionResult(MOCK_SCAN_RESULT);
-            navigate("result");
-            
-            const emailTypeNode = document.getElementById("email-type");
-            if (emailTypeNode) {
-                emailTypeNode.textContent = "Outreach";
+        const data = await response.json();
+        trackEvent("scan_completed", { analysis_mode: mode, auth: isAuthenticated ? "user" : "anon" });
+        if (loadingTicker && typeof loadingTicker.stop === "function") {
+            loadingTicker.stop();
+        }
+        const summary = data.summary || {};
+        const signals = data.signals || {};
+        const findings = data.partial_findings || summary.findings || [];
+        latestLearningProfile = data.learning_profile || latestLearningProfile;
+        hasScanResult = true;
+
+        latestSummary = summary;
+        latestFindings = findings;
+        window.appState.hasScanned = true;
+        syncProgressState();
+        applyProgressiveExposure();
+        if (window.InboxGuardFlow && typeof window.InboxGuardFlow.markFlowScanCompleted === "function") {
+            window.InboxGuardFlow.markFlowScanCompleted();
+        }
+
+        trackEvent("result_viewed", {
+            risk: String(summary.risk_band || "unknown"),
+            analysis_mode: mode,
+        });
+
+        renderConversionResult(data, summary, findings);
+
+        if (rewriteStyleInput) {
+            rewriteStyleInput.value = getRecommendedRewriteStyle();
+        }
+
+        if (workflowStateNode) {
+            workflowStateNode.textContent = "Step 1: Scan complete";
+        }
+        if (workflowTitleNode) {
+            workflowTitleNode.textContent = "Step 2: Make this safe to send";
+        }
+        if (fixOutput) {
+            fixOutput.classList.add("hidden");
+        }
+        if (saveFixButton) {
+            saveFixButton.disabled = false;
+            saveFixButton.textContent = "Save Fix";
+        }
+
+        setResultState();
+        if (resultSection) {
+            resultSection.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+        activateTab("threat-scan");
+
+        if (data.usage && !data.usage.authenticated) {
+            anonymousScansUsed = Number(data.usage.anonymous_scans_used || anonymousScansUsed + 1);
+            anonymousScansLimit = Number(data.usage.anonymous_scans_limit || anonymousScansLimit);
+            localStorage.setItem("ig_anon_scans_used", String(anonymousScansUsed));
+            localStorage.setItem("ig_anon_scans_limit", String(anonymousScansLimit));
+            if (anonymousScansUsed >= 2) {
+                showUpgradeBlock();
             }
         }
-    }, 300);
-}
+        if (data.usage && data.usage.authenticated) {
+            userScansUsed = Number(data.usage.user_scans_used || userScansUsed + 1);
+            userScansLimit = Number(data.usage.user_scans_limit || userScansLimit);
+        }
 
-async function runScan() {
-    return runAnalyze();
+        await loadUserTokens();
+        const tokenCountNode = document.getElementById("token-count");
+        if (tokenAfterHintNode && tokenCountNode) {
+            tokenAfterHintNode.textContent = `Credits remaining: ${String(tokenCountNode.textContent || "0")}`;
+            tokenAfterHintNode.classList.remove("hidden");
+        }
+    } catch (error) {
+        if (loadingTicker && typeof loadingTicker.stop === "function") {
+            loadingTicker.stop();
+        }
+        const errorMessage = String(error && error.message ? error.message : "Scan failed.");
+        showError(errorMessage);
+        const blockedScan = /continue scanning|subscription required|scan limit/i.test(errorMessage);
+        if (blockedScan) {
+            if (loadingPanel) {
+                loadingPanel.classList.add("hidden");
+            }
+            if (resultSection) {
+                resultSection.classList.remove("hidden");
+            }
+            if (resultScreenNode) {
+                resultScreenNode.classList.remove("hidden");
+            }
+            if (submitButton) {
+                submitButton.disabled = false;
+                submitButton.textContent = defaultSubmitLabel;
+            }
+            if (resultSection) {
+                resultSection.classList.remove("hidden");
+            }
+            resultSection?.scrollIntoView({ behavior: "smooth", block: "start" });
+            return;
+        }
+
+        // Preserve visible result context on non-blocking errors instead of resetting to idle.
+        if (loadingPanel) {
+            loadingPanel.classList.add("hidden");
+        }
+        if (resultSection) {
+            resultSection.classList.remove("hidden");
+        }
+        if (resultScreenNode) {
+            resultScreenNode.classList.remove("hidden");
+        }
+        const statusHeadlineNode = document.getElementById("status-headline");
+        const statusSubNode = document.getElementById("status-sub");
+        if (statusHeadlineNode) {
+            statusHeadlineNode.textContent = "Error running analysis";
+        }
+        if (statusSubNode) {
+            statusSubNode.textContent = errorMessage;
+        }
+        if (submitButton) {
+            submitButton.disabled = false;
+            submitButton.textContent = defaultSubmitLabel;
+        }
+        resultScreenNode?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
 }
 
 function useFixedVersion() {
@@ -3168,47 +3866,43 @@ async function runCampaignDiagnosis() {
 }
 
 async function runBlacklistCheck() {
-    const domain = blacklistDomainInput && blacklistDomainInput.value ? String(blacklistDomainInput.value).trim() : "mycompany.com";
+    const domain = blacklistDomainInput ? String(blacklistDomainInput.value || "").trim() : "";
     const runButton = runBlacklistCheckButton;
+    if (!domain) {
+        showError("Enter a domain first.");
+        return;
+    }
     const previousLabel = runButton ? runButton.textContent : "Check Domain Risk";
-
     if (blacklistResultNode) {
         blacklistResultNode.textContent = "Checking domain risk...";
     }
     setActionButtonState(runButton, "loading", "Checking...");
-
-    setTimeout(() => {
-        if (blacklistResultNode) {
-            blacklistResultNode.innerHTML = `
-                <div class="mt-md space-y-sm text-sm">
-                  <div class="flex justify-between border-b border-outline-variant/30 pb-xs">
-                    <span class="font-semibold text-secondary">Domain:</span>
-                    <span class="font-bold text-on-surface dark:text-secondary-fixed">${domain}</span>
-                  </div>
-                  <div class="flex justify-between border-b border-outline-variant/30 pb-xs">
-                    <span class="font-semibold text-secondary">SPF:</span>
-                    <span class="text-green-600 font-bold">✅ Pass</span>
-                  </div>
-                  <div class="flex justify-between border-b border-outline-variant/30 pb-xs">
-                    <span class="font-semibold text-secondary">DKIM:</span>
-                    <span class="text-red-500 font-bold">❌ Fail — Signature invalid</span>
-                  </div>
-                  <div class="flex justify-between border-b border-outline-variant/30 pb-xs">
-                    <span class="font-semibold text-secondary">DMARC:</span>
-                    <span class="text-yellow-600 font-bold">⚠️ Warning — Policy is 'none'</span>
-                  </div>
-                  <div class="flex justify-between border-b border-outline-variant/30 pb-xs">
-                    <span class="font-semibold text-secondary">Score:</span>
-                    <span class="text-red-500 font-bold">67/100</span>
-                  </div>
-                </div>
-            `;
+    const payload = new FormData();
+    payload.set("domain", domain);
+    try {
+        const response = await fetch("/blacklist-check", { method: "POST", body: payload });
+        if (!response.ok) {
+            const message = await parseApiError(response, "Could not run blacklist check.");
+            if (blacklistResultNode) {
+                blacklistResultNode.textContent = message;
+            }
+            throw new Error(message);
         }
-        setActionButtonState(runButton, "success", "✅ Completed");
+        const data = await response.json();
+        if (blacklistResultNode) {
+            blacklistResultNode.textContent = data.listed
+                ? `High risk: ${data.domain} appears in risk list. ${data.details}`
+                : `Low risk: ${data.domain} is not in current risk list. ${data.details}`;
+        }
+        setActionButtonState(runButton, "success", data.listed ? "⚠️ Risk Found" : "✅ Clean");
+    } catch (error) {
+        setActionButtonState(runButton, "error", "Error");
+        throw error;
+    } finally {
         setTimeout(() => {
             setActionButtonState(runButton, "idle", previousLabel);
-        }, 1500);
-    }, 800);
+        }, 1000);
+    }
 }
 
 async function refreshSeedTests() {
@@ -3273,13 +3967,167 @@ async function saveSeedTest() {
 }
 
 async function runAnalyzeAsync() {
-    // STUB: async analysis removed — to be re-implemented
-    console.log('[InboxGuard] runAnalyzeAsync() called');
+    const hasAccess = await ensureScanAccess();
+    if (!hasAccess) {
+        return;
+    }
+
+    const rawText = rawEmailInput ? rawEmailInput.value.trim() : "";
+    if (rawText.length < 20) {
+        showError("Paste the full email draft before scanning.");
+        return;
+    }
+
+    const payload = new FormData();
+    payload.set("raw_email", rawText);
+    if (domainInput && domainInput.value.trim()) {
+        payload.set("domain", domainInput.value.trim());
+    }
+    payload.set("analysis_mode", analysisModeInput ? analysisModeInput.value : "content");
+
+    window.appState.hasOptimized = false;
+    window.appState.hasScaled = false;
+    syncProgressState();
+
+    if (submitAsyncButton) {
+        submitAsyncButton.disabled = true;
+        submitAsyncButton.textContent = "Queued...";
+    }
+
+    const response = await fetch("/analyze-async", { method: "POST", body: payload });
+    if (!response.ok) {
+        if (submitAsyncButton) {
+            submitAsyncButton.disabled = false;
+            submitAsyncButton.textContent = "Analyze In Background";
+        }
+        throw new Error("Could not queue async scan.");
+    }
+
+    const data = await response.json();
+    const jobId = String(data.job_id || "");
+    showError("Background scan started. Results will appear automatically.");
+
+    for (let i = 0; i < 20; i += 1) {
+        await sleep(1200);
+        const poll = await fetch(`/analyze-jobs/${jobId}`, { method: "GET" });
+        if (!poll.ok) {
+            continue;
+        }
+        const job = await poll.json();
+        if (job.status === "completed" && job.result) {
+            const summary = job.result.summary || {};
+            const signals = job.result.signals || {};
+            const findings = job.result.partial_findings || summary.findings || [];
+            latestSummary = summary;
+            latestFindings = findings;
+            hasScanResult = true;
+            window.appState.hasScanned = true;
+            syncProgressState();
+            applyProgressiveExposure();
+            if (window.InboxGuardFlow && typeof window.InboxGuardFlow.markFlowScanCompleted === "function") {
+                window.InboxGuardFlow.markFlowScanCompleted();
+            }
+            renderConversionResult(job.result || {}, summary, findings);
+            setResultState();
+            if (resultSection) {
+                resultSection.scrollIntoView({ behavior: "smooth", block: "start" });
+            }
+            break;
+        }
+        if (job.status === "failed") {
+            showError(String(job.error || "Async scan failed."));
+            break;
+        }
+    }
+
+    if (submitAsyncButton) {
+        submitAsyncButton.disabled = false;
+        submitAsyncButton.textContent = "Analyze In Background";
+    }
 }
 
 async function runRewriteAsync() {
-    // STUB: async rewrite removed — to be re-implemented
-    console.log('[InboxGuard] runRewriteAsync() called');
+    const rawText = rawEmailInput ? rawEmailInput.value.trim() : "";
+    if (rawText.length < 20) {
+        showError("Paste the full email draft before generating rewrite.");
+        return;
+    }
+
+    if (riskFixAsyncButton) {
+        riskFixAsyncButton.disabled = true;
+        riskFixAsyncButton.textContent = "Queued...";
+    }
+
+    try {
+        const payload = new FormData();
+        payload.set("raw_email", rawText);
+        if (domainInput && domainInput.value.trim()) {
+            payload.set("domain", domainInput.value.trim());
+        }
+        payload.set("analysis_mode", analysisModeInput ? analysisModeInput.value : "content");
+        payload.set("rewrite_style", rewriteStyleInput ? rewriteStyleInput.value : "balanced");
+
+        const response = await fetch("/rewrite-async", { method: "POST", body: payload });
+        if (!response.ok) {
+            throw new Error("Could not queue async rewrite.");
+        }
+        const data = await response.json();
+        const jobId = String(data.job_id || "");
+        showError("Background rewrite started. Waiting for result...");
+
+        for (let i = 0; i < 25; i += 1) {
+            await sleep(1200);
+            const poll = await fetch(`/analyze-jobs/${jobId}`, { method: "GET" });
+            if (!poll.ok) {
+                continue;
+            }
+            const job = await poll.json();
+            if (job.status === "completed" && job.result) {
+                const rewritten = String(job.result.rewritten_text || "");
+                if (rewritten && afterEmailNode && beforeEmailNode) {
+                    beforeEmailNode.innerHTML = highlightSpamSignals(rawText);
+                    afterEmailNode.innerHTML = escapeHtml(rewritten);
+                    latestRewriteContext = {
+                        original_subject: String(job.result.original_subject || ""),
+                        original_body: String(job.result.original_body || ""),
+                        rewritten_subject: String(job.result.rewritten_subject || ""),
+                        rewritten_body: String(job.result.rewritten_body || rewritten),
+                        original_text: String(job.result.original_text || rawText),
+                        rewritten_text: rewritten,
+                        from_risk_band: String(job.result.from_risk_band || "Needs Review"),
+                        to_risk_band: String(job.result.to_risk_band || "Needs Review"),
+                        score_delta: Number(job.result.score_delta || 0),
+                        rewrite_style: String(job.result.rewrite_style || "balanced"),
+                    };
+                    if (workflowStateNode) {
+                        workflowStateNode.textContent = "Step 2: Fix complete";
+                    }
+                    if (workflowTitleNode) {
+                        workflowTitleNode.textContent = "Safer version generated";
+                    }
+                    if (improvementEstimateNode) {
+                        const delta = Number(job.result.score_delta || 0);
+                        improvementEstimateNode.textContent = `Spam Risk Reduced | Deliverability Score: ${delta >= 0 ? "+" : ""}${delta} | Higher chance of inbox placement`;
+                    }
+                    if (fixOutput) {
+                        fixOutput.classList.remove("hidden");
+                        fixOutput.scrollIntoView({ behavior: "smooth", block: "start" });
+                    }
+                }
+                showError("Background rewrite completed.");
+                return;
+            }
+            if (job.status === "failed") {
+                throw new Error(String(job.error || "Async rewrite failed."));
+            }
+        }
+        throw new Error("Async rewrite timed out. Try again.");
+    } finally {
+        if (riskFixAsyncButton) {
+            riskFixAsyncButton.disabled = false;
+            riskFixAsyncButton.textContent = "Generate Safe Rewrite In Background";
+        }
+    }
 }
 
 // ===== RAZORPAY PAYMENT INTEGRATION =====
@@ -4357,6 +5205,3 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     });
 });
-
-window.closeModal = closeModal;
-window.startCheckout = purchasePlan;

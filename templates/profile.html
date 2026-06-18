@@ -1,5 +1,5 @@
 <!doctype html>
-<html class="light" data-theme="light" lang="en">
+<html class="light" lang="en">
   <head>
     <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-WXGNG9TEFK"></script>
@@ -14,25 +14,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#f8f9ff" />
     <script>
-      (function() {
-      try {
-        var root = document.documentElement;
-        var theme = "light";
-        root.dataset.theme = theme;
-        if (theme === "dark") {
-          root.classList.add("dark");
-          root.style.colorScheme = "dark";
-        } else {
-          root.classList.remove("dark");
-          root.style.colorScheme = "light";
+      (function () {
+        try {
+          const savedTheme = localStorage.getItem("ig_theme");
+          const theme = savedTheme === "dark" || savedTheme === "light" ? savedTheme : "light";
+          const root = document.documentElement;
+          root.dataset.theme = theme;
+          root.classList.toggle("dark", theme === "dark");
+          root.style.colorScheme = theme === "dark" ? "dark" : "light";
+          const meta = document.querySelector('meta[name="theme-color"]');
+          if (meta) {
+            meta.setAttribute("content", theme === "dark" ? "#111c2d" : "#f8f9ff");
+          }
+        } catch (error) {
         }
-        var meta = document.querySelector('meta[name="theme-color"]');
-        if (meta) {
-          meta.setAttribute("content", theme === "dark" ? "#111c2d" : "#f8f9ff");
-        }
-      } catch (error) {
-      }
-    })();
+      })();
     </script>
     <title>{{ page_title }}</title>
     <meta name="description" content="{{ meta_description }}" />
@@ -158,25 +154,53 @@
       }
     </script>
     <script>
-      (function() {
-      try {
-        var root = document.documentElement;
-        var theme = "light";
+      (function () {
+        const storageKey = "ig_theme";
+        const root = document.documentElement;
+        function getSystemTheme() {
+          if (typeof window.matchMedia !== "function") {
+            return "light";
+          }
+          return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+        }
+
+        function getStoredTheme() {
+          const value = localStorage.getItem(storageKey);
+          return value === "dark" || value === "light" ? value : null;
+        }
+
+        function syncThemeColor(theme) {
+          const themeColorMeta = document.querySelector('meta[name="theme-color"]');
+          if (themeColorMeta) {
+            themeColorMeta.setAttribute("content", theme === "dark" ? "#111c2d" : "#f8f9ff");
+          }
+        }
+
+        function syncThemeButton(theme) {
+          const button = document.querySelector("[data-theme-toggle]");
+          if (button) {
+            button.textContent = theme === "dark" ? "☀ Light" : "🌙 Dark";
+            button.setAttribute("aria-pressed", theme === "dark" ? "true" : "false");
+          }
+        }
+
+        const stored = getStoredTheme();
+        const theme = stored || getSystemTheme();
         root.dataset.theme = theme;
-        if (theme === "dark") {
-          root.classList.add("dark");
-          root.style.colorScheme = "dark";
-        } else {
-          root.classList.remove("dark");
-          root.style.colorScheme = "light";
-        }
-        var meta = document.querySelector('meta[name="theme-color"]');
-        if (meta) {
-          meta.setAttribute("content", theme === "dark" ? "#111c2d" : "#f8f9ff");
-        }
-      } catch (error) {
-      }
-    })();
+        root.classList.toggle("dark", theme === "dark");
+        root.style.colorScheme = theme === "dark" ? "dark" : "light";
+        syncThemeColor(theme);
+        syncThemeButton(theme);
+        window.toggleInboxGuardTheme = function () {
+          const nextTheme = root.classList.contains("dark") ? "light" : "dark";
+          root.dataset.theme = nextTheme;
+          root.classList.toggle("dark", nextTheme === "dark");
+          root.style.colorScheme = nextTheme === "dark" ? "dark" : "light";
+          localStorage.setItem(storageKey, nextTheme);
+          syncThemeColor(nextTheme);
+          syncThemeButton(nextTheme);
+        };
+      })();
     </script>
   </head>
   <body class="bg-background dark:bg-on-secondary-fixed text-on-surface dark:text-secondary-fixed font-body-md antialiased min-h-screen flex flex-col">

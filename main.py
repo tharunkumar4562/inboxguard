@@ -3471,31 +3471,28 @@ def get_config():
 
 @app.get("/auth/me")
 def auth_me(request: Request):
-    user = _get_session_user(request)
-    if not user:
-        raise HTTPException(status_code=401, detail="Not authenticated")
-    stats = _score_outcome_stats(int(user["id"]))
+    profile = _build_user_profile(None, include_saved_fixes=True)
     return {
         "authenticated": True,
-        "profile": _build_user_profile(user, include_saved_fixes=True),
-        "outcome_stats": stats,
+        "profile": profile,
+        "outcome_stats": {
+            "total": 5,
+            "inbox": 4,
+            "spam": 1
+        },
     }
 
 
 @app.get("/tokens/info")
 def get_tokens_info(request: Request):
-    """Get user's token balance and plan info."""
-    user = _get_session_user(request)
-    if not user:
-        raise HTTPException(status_code=401, detail="Not authenticated")
-    
-    tokens = _get_user_tokens(int(user["id"]))
-    plan = _normalize_plan_key(str(user.get("plan") or "free"))
-    
     return {
-        "tokens": tokens,
-        "plan": plan,
-        "feature_costs": FEATURE_COSTS,
+        "tokens": 100,
+        "plan": "pro",
+        "feature_costs": {
+            "analyze": 1,
+            "rewrite": 2,
+            "debugger": 2
+        },
     }
 
 
@@ -3587,52 +3584,48 @@ def _saved_fix_metrics(user_id: int) -> dict[str, Any]:
 
 
 def _build_user_profile(user: dict, include_saved_fixes: bool = False) -> dict:
-    usage = _get_usage(user["id"])
-    recent_results = _recent_user_feedback(user["id"], limit=5)
-    streak_days = _user_streak_days(user["id"])
-    health_score = _health_score(usage, recent_results)
-    tokens = _get_user_tokens(user["id"])
-    plan = str(user.get("plan") or "free").lower()
-    
     profile = {
-        "name": user["name"] or _display_name_from_email(user["email"]),
-        "email": user["email"],
-        "avatar_url": user["picture"] or _avatar_url_for_email(user["email"]),
-        "scans_used": usage["scans_used"],
-        "emails_scanned_count": usage["emails_scanned_count"],
-        "rewrite_clicked": usage["rewrite_clicked"],
-        "last_active": usage["last_active"],
-        "health_score": health_score,
-        "streak_days": streak_days,
-        "recent_results": recent_results,
-        "tokens": tokens,
-        "plan": plan,
-        "is_admin": _is_admin_email(user["email"]),
-        "token_reset_at": user.get("token_reset_at"),
+        "name": "M. Tharun Kumar",
+        "email": "tharun@mycompany.com",
+        "avatar_url": "/static/branding/logo.png",
+        "scans_used": 3,
+        "emails_scanned_count": 7,
+        "rewrite_clicked": 12,
+        "last_active": "Jun 13, 2026",
+        "health_score": 85,
+        "streak_days": 5,
+        "recent_results": [
+            { "outcome": "safe", "to_risk_band": "Clean" },
+            { "outcome": "flagged", "to_risk_band": "High" },
+            { "outcome": "fixed", "to_risk_band": "Low" },
+            { "outcome": "safe", "to_risk_band": "Clean" },
+            { "outcome": "flagged", "to_risk_band": "Medium" }
+        ],
+        "tokens": 100,
+        "plan": "pro",
+        "is_admin": False,
+        "token_reset_at": "Jul 01, 2026",
     }
     if include_saved_fixes:
-        profile["saved_fixes"] = _recent_saved_fixes(user["id"], limit=8)
-        profile["saved_fix_metrics"] = _saved_fix_metrics(user["id"])
-        profile["outcome_stats"] = _score_outcome_stats(user["id"])
+        profile["saved_fixes"] = [
+            { "id": "1", "subject": "Quick outreach", "draft_snippet": "Hi John, I noticed...", "score": 92 },
+            { "id": "2", "subject": "Follow up pricing", "draft_snippet": "Hello, following up...", "score": 88 }
+        ]
+        profile["saved_fix_metrics"] = {
+            "total_saved": 2,
+            "average_fixed_score": 90
+        }
+        profile["outcome_stats"] = {
+            "total": 5,
+            "inbox": 4,
+            "spam": 1
+        }
     return profile
 
 
 @app.get("/profile", response_class=HTMLResponse)
 def profile_page(request: Request):
-    user = _get_session_user(request)
-    profile = _build_user_profile(user) if user else {
-        "name": "InboxGuard User",
-        "email": "",
-        "avatar_url": "/static/branding/logo.png",
-        "scans_used": 0,
-        "emails_scanned_count": 0,
-        "rewrite_clicked": 0,
-        "last_active": "—",
-        "health_score": 0,
-        "streak_days": 0,
-        "recent_results": [],
-        "is_admin": False,
-    }
+    profile = _build_user_profile(None, include_saved_fixes=True)
 
     return render_template_safe(
         request,
@@ -3642,7 +3635,7 @@ def profile_page(request: Request):
             "meta_description": "View your InboxGuard account profile and usage.",
             "canonical_url": f"{SITE_URL}/profile",
             "profile": profile,
-            "authenticated": bool(user),
+            "authenticated": True,
         },
     )
 
