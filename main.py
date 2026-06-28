@@ -133,22 +133,8 @@ PLANS_FILE = BASE_DIR / "plans.json"
 with open(PLANS_FILE, "r", encoding="utf-8") as f:
     PLANS = json.load(f)
 
-# Serve plans at /plans endpoint
-from fastapi.responses import JSONResponse
-@app.get("/plans")
-def get_plans():
-    return JSONResponse(content=PLANS)
-
-
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
-
-# Pricing page route
-from fastapi.responses import HTMLResponse
-from fastapi import Request
-@app.get("/pricing", response_class=HTMLResponse)
-async def pricing(request: Request):
-    return templates.TemplateResponse("pricing.html", {"request": request})
 
 SITE_URL = os.getenv("INBOXGUARD_SITE_URL", "https://inboxguard.me")
 ADMIN_TOKEN = os.getenv("INBOXGUARD_ADMIN_TOKEN", "")

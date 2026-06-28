@@ -1654,10 +1654,29 @@ function openTool(tool) {
         toolPanel.classList.remove("hidden");
     }
     // Hide all tool panes, then show the one for this tool
-    document.querySelectorAll('.tool-pane').forEach((el) => el.classList.add('hidden'));
+    document.querySelectorAll('.tool-pane').forEach((el) => {
+        el.classList.add('hidden');
+        el.classList.remove('active');
+    });
     const pane = document.querySelector(`[data-tool-pane="${key}"]`);
     if (pane) {
         pane.classList.remove('hidden');
+        pane.classList.add('active');
+        const firstInput = pane.querySelector('input,select,textarea,button');
+        if (firstInput && typeof firstInput.focus === 'function') {
+            setTimeout(() => firstInput.focus(), 60);
+        }
+    }
+    document.querySelectorAll('.tool-nav-btn').forEach((btn) => {
+        if (btn.getAttribute('data-tool') === key) {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    });
+    const mainArea = document.querySelector('.main-area');
+    if (mainArea) {
+        mainArea.classList.add('tool-panel-open');
     }
     setTabFeedback("Tool panel active.");
 }
@@ -2637,21 +2656,65 @@ function renderSubjectIntel(data) {
 }
 
 async function generateSubjectLines() {
-    // STUB: generate subject lines removed — to be re-implemented
-    console.log('[InboxGuard] generateSubjectLines() called');
-    const data = {
-        ok: true,
-        top_picks: [
-            { subject: "Quick question about your pricing", score: 9.5, tags: ["Curiosity", "Short"], alignment: "high", notes: { spam_risk: "low" } },
-            { subject: "Following up on my last email", score: 8.7, tags: ["Follow-up"], alignment: "moderate", notes: { spam_risk: "low" } }
-        ],
-        strategies: [
-            { strategy: "Curiosity", subject: "Quick question about your pricing", score: 9.5, alignment: "high" },
-            { strategy: "Follow-up", subject: "Following up on my last email", score: 8.7, alignment: "moderate" }
-        ],
-        warnings: ["Avoid all caps in subject lines to prevent inbox filter triggers."]
+    const product = subjectProductNameInput ? String(subjectProductNameInput.value || "").trim() : "";
+    const role = subjectTargetRoleInput ? String(subjectTargetRoleInput.value || "").trim() : "";
+    const industry = subjectIndustryInput ? String(subjectIndustryInput.value || "").trim() : "";
+    const goal = subjectGoalInput ? String(subjectGoalInput.value || "").trim() : "";
+    const emailType = subjectEmailTypeInput ? String(subjectEmailTypeInput.value || "cold").trim() : "cold";
+    const tone = subjectToneInput ? String(subjectToneInput.value || "internal").trim() : "internal";
+    const context = subjectContextInput ? String(subjectContextInput.value || "").trim() : "";
+    const body = subjectBodyInput ? String(subjectBodyInput.value || "").trim() : "";
+
+    const payload = {
+        product_name: product,
+        target_role: role,
+        industry: industry,
+        goal: goal,
+        email_type: emailType,
+        tone: tone,
+        context: context,
+        body: body
     };
-    renderSubjectIntel(data);
+
+    const previousHtml = generateSubjectsButton ? generateSubjectsButton.innerHTML : "";
+    if (generateSubjectsButton) {
+        setActionButtonState(generateSubjectsButton, "loading", "Generating...");
+    }
+
+    try {
+        const response = await fetch("/subject-lines", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(payload)
+        });
+        if (!response.ok) {
+            throw new Error("Failed to generate subject lines. Server returned status " + response.status);
+        }
+        const data = await response.json();
+        if (data.ok) {
+            renderSubjectIntel(data);
+            if (generateSubjectsButton) {
+                setActionButtonState(generateSubjectsButton, "success", "Generated!");
+                setTimeout(() => {
+                    setActionButtonState(generateSubjectsButton, "idle");
+                    generateSubjectsButton.innerHTML = previousHtml;
+                }, 1500);
+            }
+        } else {
+            throw new Error(data.detail || "Could not generate subject lines.");
+        }
+    } catch (error) {
+        showError(error.message || "An error occurred.");
+        if (generateSubjectsButton) {
+            setActionButtonState(generateSubjectsButton, "error", "Failed");
+            setTimeout(() => {
+                setActionButtonState(generateSubjectsButton, "idle");
+                generateSubjectsButton.innerHTML = previousHtml;
+            }, 1500);
+        }
+    }
 }
 
 async function runSeedAuto() {
@@ -3952,11 +4015,13 @@ async function loadUser() {
             return;
         }
         const user = await response.json();
-        userState.plan = normalizePlanChoice(String(user.plan || (user.pro ? "monthly" : "free")));
+        const profile = user.profile || {};
+        userState.plan = normalizePlanChoice(String(profile.plan || user.plan || (user.pro ? "monthly" : "free")));
         currentUserPlan = userState.plan;
         window.userPlan = currentUserPlan;
-        if (typeof user.tokens === "number") {
-            userState.tokens = Number(user.tokens);
+        const tokensVal = typeof profile.tokens === "number" ? profile.tokens : user.tokens;
+        if (typeof tokensVal === "number") {
+            userState.tokens = Number(tokensVal);
             updateTokenMessaging(userState.tokens);
         }
     } catch (error) {
@@ -3992,6 +4057,7 @@ async function loadUserTokens() {
         const plan = normalizePlanChoice(String(data.plan || userState.plan || "free"));
         currentUserPlan = plan;
         window.userPlan = plan;
+        userState.tokens = tokens;
 
         if (tokenBadge && tokenCount) {
             tokenBadge.classList.remove("hidden");
