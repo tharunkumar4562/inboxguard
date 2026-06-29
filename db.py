@@ -18,9 +18,16 @@ import re
 import threading
 from typing import Any, Iterable, Optional
 
-import psycopg2
-from psycopg2 import pool as pg_pool
-from psycopg2.extras import RealDictCursor
+try:
+    import psycopg2
+    from psycopg2 import pool as pg_pool
+    from psycopg2.extras import RealDictCursor
+    has_psycopg2 = True
+except ImportError:
+    psycopg2 = None
+    pg_pool = None
+    RealDictCursor = None
+    has_psycopg2 = False
 
 
 def _resolve_db_url() -> str:
@@ -62,17 +69,19 @@ def _resolve_db_url() -> str:
 
 _DB_URL = _resolve_db_url()
 
-_POOL: Optional[pg_pool.ThreadedConnectionPool] = None
+_POOL: Optional[Any] = None
 _POOL_LOCK = threading.Lock()
 _TABLE_HAS_ID_CACHE: dict[str, bool] = {}
 _CACHE_LOCK = threading.Lock()
 
 
-def _get_pool() -> pg_pool.ThreadedConnectionPool:
+def _get_pool() -> Any:
     global _POOL
     if _POOL is None:
         with _POOL_LOCK:
             if _POOL is None:
+                if not has_psycopg2 or not pg_pool:
+                    raise RuntimeError("psycopg2 is not installed or available.")
                 if not _DB_URL:
                     raise RuntimeError(
                         "SUPABASE_DB_URL is not configured. "

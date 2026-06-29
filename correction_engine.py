@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 from difflib import SequenceMatcher
 from pathlib import Path
 from typing import Any, Dict, List
+from db import get_conn
 
 BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = Path(os.getenv("INBOXGUARD_DATA_DIR", str(BASE_DIR / "data"))).expanduser()
@@ -110,6 +111,29 @@ def _rebuild_model_from_events(events: List[Dict[str, Any]]) -> Dict[str, Any]:
     return model
 
 
+def _ensure_db_feedback_table() -> None:
+    conn = get_conn()
+    try:
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS global_rewrite_feedback (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                outcome TEXT NOT NULL,
+                from_risk_band TEXT,
+                to_risk_band TEXT,
+                original_text TEXT,
+                rewritten_text TEXT,
+                created_at TEXT NOT NULL
+            )
+            """
+        )
+        conn.commit()
+    except Exception as e:
+        print(f"[Feedback] Database init failed: {e}")
+    finally:
+        conn.close()
+
+
 def _ensure_file(path: Path, payload: Dict) -> None:
     if path.exists():
         return
@@ -137,13 +161,22 @@ def _write_json(path: Path, payload: Dict) -> None:
 
 
 def get_learning_profile() -> Dict:
+    _ensure_db_feedback_table()
     with _LOCK:
-        model = _read_json(MODEL_FILE, _default_model())
+        conn = get_conn()
+        try:
+            cur = conn.cursor()
+            cur.execute("SELECT outcome FROM global_rewrite_feedback LIMIT 2000")
+            rows = cur.fetchall()
+        except Exception:
+            rows = []
+        finally:
+            conn.close()
 
-    total = int(model.get("total_feedback", 0))
-    inbox = int(model.get("inbox", 0))
-    spam = int(model.get("spam", 0))
-    not_sure = int(model.get("not_sure", 0))
+    total = len(rows)
+    inbox = sum(1 for r in rows if r[0] == "inbox")
+    spam = sum(1 for r in rows if r[0] == "spam")
+    not_sure = sum(1 for r in rows if r[0] == "not_sure")
 
     if total <= 0:
         return {
@@ -177,31 +210,60 @@ def get_learning_profile() -> Dict:
 
 
 def record_feedback(event: Dict) -> Dict:
+    _ensure_db_feedback_table()
+
     outcome = str(event.get("outcome", "not_sure")).strip().lower()
     if outcome not in {"inbox", "spam", "not_sure"}:
         outcome = "not_sure"
 
+    from_risk_band = str(event.get("from_risk_band", ""))[:60]
+    to_risk_band = str(event.get("to_risk_band", ""))[:60]
+    original_text = str(event.get("original_text", ""))[:4000]
+    rewritten_text = str(event.get("rewritten_text", ""))[:4000]
+    created_at = datetime.now(timezone.utc).isoformat()
+
     stored = {
-        "time": datetime.now(timezone.utc).isoformat(),
+        "time": created_at,
         "outcome": outcome,
-        "from_risk_band": str(event.get("from_risk_band", ""))[:60],
-        "to_risk_band": str(event.get("to_risk_band", ""))[:60],
-        "original_text": str(event.get("original_text", ""))[:4000],
-        "rewritten_text": str(event.get("rewritten_text", ""))[:4000],
-        "original_len": len(str(event.get("original_text", ""))),
-        "rewritten_len": len(str(event.get("rewritten_text", ""))),
+        "from_risk_band": from_risk_band,
+        "to_risk_band": to_risk_band,
+        "original_text": original_text,
+        "rewritten_text": rewritten_text,
+        "original_len": len(original_text),
+        "rewritten_len": len(rewritten_text),
     }
 
     with _LOCK:
-        feedback_data = _read_json(FEEDBACK_FILE, _default_feedback_payload())
-        events = feedback_data.setdefault("events", [])
-        events.append(stored)
-        if len(events) > 2000:
-            del events[:-2000]
-        _write_json(FEEDBACK_FILE, feedback_data)
+        # Write to database
+        conn = get_conn()
+        try:
+            conn.execute(
+                """
+                INSERT INTO global_rewrite_feedback 
+                (outcome, from_risk_band, to_risk_band, original_text, rewritten_text, created_at)
+                VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                (outcome, from_risk_band, to_risk_band, original_text, rewritten_text, created_at)
+            )
+            conn.commit()
+        except Exception as e:
+            print(f"[Feedback] Database save failed: {e}")
+        finally:
+            conn.close()
 
-        model = _rebuild_model_from_events(events)
-        _write_json(MODEL_FILE, model)
+        # Update local file cache for fallback compat if needed
+        try:
+            feedback_data = _read_json(FEEDBACK_FILE, _default_feedback_payload())
+            events = feedback_data.setdefault("events", [])
+            events.append(stored)
+            if len(events) > 2000:
+                del events[:-2000]
+            _write_json(FEEDBACK_FILE, feedback_data)
+
+            model = _rebuild_model_from_events(events)
+            _write_json(MODEL_FILE, model)
+        except Exception:
+            pass
 
     return {
         "ok": True,

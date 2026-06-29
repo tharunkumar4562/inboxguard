@@ -1,0 +1,28 @@
+{
+  "name": "inboxguard",
+  "version": "1.0.0",
+  "description": "InboxGuard is a pre-send email risk checker designed around one outcome: preventing deliverability loss before a campaign is sent.",
+  "main": "tailwind.config.js",
+  "scripts": {
+    "build:css": "tailwindcss -i static/css/tailwind-source.css -o static/css/compiled-tailwind.css --minify",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tharunkumar4562/inboxguard.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/tharunkumar4562/inboxguard/issues"
+  },
+  "homepage": "https://github.com/tharunkumar4562/inboxguard#readme",
+  "devDependencies": {
+    "@tailwindcss/cli": "^4.3.2",
+    "@tailwindcss/container-queries": "^0.1.1",
+    "@tailwindcss/forms": "^0.5.11",
+    "tailwindcss": "^4.3.2"
+  }
+}

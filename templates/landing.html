@@ -8,7 +8,7 @@
   <meta name="description" content="{{ meta_description or 'InboxGuard predicts whether your email will land in inbox or spam before you send it. Fix issues and protect your domain.' }}"/>
   <link rel="canonical" href="{{ canonical_url or 'https://inboxguard.me/' }}" />
 
-  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <link rel="stylesheet" href="/static/css/compiled-tailwind.css" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
 
@@ -134,8 +134,7 @@
     (function () {
       try {
         const savedTheme = localStorage.getItem("ig_theme");
-        const systemDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
-        const theme = savedTheme === "dark" || savedTheme === "light" ? savedTheme : (systemDark ? "dark" : "light");
+        const theme = savedTheme === "dark" || savedTheme === "light" ? savedTheme : "light";
         const root = document.documentElement;
         root.dataset.theme = theme;
         root.classList.toggle("dark", theme === "dark");

@@ -50,7 +50,7 @@
         }
       })();
     </script>
-    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link rel="stylesheet" href="/static/css/compiled-tailwind.css" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
@@ -314,6 +314,9 @@
         <header class="flex items-center justify-between gap-md mb-lg p-md bg-surface-container-lowest dark:bg-on-secondary-fixed border border-outline-variant dark:border-outline rounded-2xl shadow-sm z-30">
           <!-- Mobile logo view -->
           <div class="lg:hidden flex items-center gap-xs">
+            <button id="mobile-menu-toggle" type="button" class="lg:hidden text-secondary dark:text-secondary-fixed-dim hover:text-primary p-1 bg-transparent border-none focus:outline-none" aria-label="Open navigation menu">
+              <span class="material-symbols-outlined text-[24px]">menu</span>
+            </button>
             <a class="text-headline-sm font-headline-sm font-bold text-primary flex items-center gap-xs no-underline" href="/">
               <span class="material-symbols-outlined fill-icon text-primary">security</span>
               InboxGuard
@@ -1288,5 +1291,104 @@
       <span>Static toast preview message.</span>
       <button type="button" class="ml-sm text-on-error-container/60 hover:text-on-error-container font-bold text-base" onclick="document.getElementById('static-toast-preview').classList.add('hidden')">&times;</button>
     </div>
+
+    <!-- Mobile Drawer Overlay -->
+    <div id="mobile-drawer-backdrop" class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm z-40 hidden lg:hidden"></div>
+    <div id="mobile-drawer" class="fixed inset-y-0 left-0 w-[280px] bg-[#eff4ff] dark:bg-[#111c2d] border-r border-[#bccac1] dark:border-[#6d7a73] shadow-2xl z-50 transform -translate-x-full transition-transform duration-300 lg:hidden flex flex-col p-4 gap-4">
+      <div class="flex items-center justify-between mb-4 px-2">
+        <a href="/" class="text-headline-sm font-headline-sm font-bold text-primary dark:text-primary-fixed flex items-center gap-2 no-underline">
+          <span class="material-symbols-outlined fill-icon" style="font-variation-settings: 'FILL' 1;">security</span>
+          InboxGuard
+        </a>
+        <button id="mobile-drawer-close" type="button" class="text-secondary dark:text-secondary-fixed-dim hover:text-primary transition-colors bg-transparent border-none">
+          <span class="material-symbols-outlined text-[24px]">close</span>
+        </button>
+      </div>
+      <nav class="flex flex-col gap-2 flex-grow overflow-y-auto">
+        <button class="w-full bg-primary text-on-primary rounded-xl py-3 px-4 font-label-md text-label-md flex items-center justify-center gap-2 mb-2 hover:bg-surface-tint transition-all shadow-sm" type="button" onclick="openTool('scan')">
+          <span class="material-symbols-outlined">add</span>
+          New Scan
+        </button>
+
+        <p class="font-label-sm text-label-sm text-secondary uppercase tracking-wider mb-1 px-2">Core</p>
+        <button id="mobile-tab-threat-scan" class="flex items-center gap-2 px-3 py-2 w-full text-left rounded-lg font-label-md text-label-md transition-all text-on-surface-variant dark:text-secondary-fixed-dim hover:bg-surface-container-high dark:hover:bg-secondary-fixed-variant" type="button" onclick="navigate('scan')">
+          <span class="material-symbols-outlined">document_scanner</span>
+          Scan Email
+        </button>
+
+        <p class="font-label-sm text-label-sm text-secondary uppercase tracking-wider my-1 px-2">Create</p>
+        <button class="flex items-center gap-2 px-3 py-2 w-full text-left rounded-lg font-label-md text-label-md text-on-surface-variant dark:text-secondary-fixed-dim hover:bg-surface-container-high dark:hover:bg-secondary-fixed-variant transition-colors" type="button" onclick="window.location.href='/subject-generator'">
+          <span class="material-symbols-outlined">edit_note</span>
+          Subject Generator
+        </button>
+
+        <p class="font-label-sm text-label-sm text-secondary uppercase tracking-wider my-1 px-2">Advanced</p>
+        <div class="flex flex-col gap-1 pl-2">
+          <button class="nav-item mobile-tool-nav-btn flex items-center gap-2 px-3 py-2 w-full text-left rounded-lg font-label-md text-label-md text-on-surface-variant dark:text-secondary-fixed-dim hover:bg-surface-container-high dark:hover:bg-secondary-fixed-variant transition-colors" type="button" onclick="openTool('campaign-debugger')">
+            <span class="material-symbols-outlined">bug_report</span>
+            Campaign Debugger
+          </button>
+          <button class="nav-item mobile-tool-nav-btn flex items-center gap-2 px-3 py-2 w-full text-left rounded-lg font-label-md text-label-md text-on-surface-variant dark:text-secondary-fixed-dim hover:bg-surface-container-high dark:hover:bg-secondary-fixed-variant transition-colors" type="button" onclick="openTool('blacklist')">
+            <span class="material-symbols-outlined">dns</span>
+            Domain Check
+          </button>
+          <button class="nav-item mobile-tool-nav-btn flex items-center gap-2 px-3 py-2 w-full text-left rounded-lg font-label-md text-label-md text-on-surface-variant dark:text-secondary-fixed-dim hover:bg-surface-container-high dark:hover:bg-secondary-fixed-variant transition-colors" type="button" onclick="openTool('seed')">
+            <span class="material-symbols-outlined">science</span>
+            Seed Testing
+          </button>
+          <button class="nav-item mobile-tool-nav-btn flex items-center gap-2 px-3 py-2 w-full text-left rounded-lg font-label-md text-label-md text-on-surface-variant dark:text-secondary-fixed-dim hover:bg-surface-container-high dark:hover:bg-secondary-fixed-variant transition-colors" type="button" onclick="openTool('bulk')">
+            <span class="material-symbols-outlined">mark_as_unread</span>
+            Bulk Scan
+          </button>
+          <button class="nav-item mobile-tool-nav-btn flex items-center gap-2 px-3 py-2 w-full text-left rounded-lg font-label-md text-label-md text-on-surface-variant dark:text-secondary-fixed-dim hover:bg-surface-container-high dark:hover:bg-secondary-fixed-variant transition-colors" type="button" onclick="openTool('ops')">
+            <span class="material-symbols-outlined">group</span>
+            API + Team
+          </button>
+        </div>
+
+        <p class="font-label-sm text-label-sm text-secondary uppercase tracking-wider my-1 px-2">System</p>
+        <button class="flex items-center gap-2 px-3 py-2 w-full text-left rounded-lg font-label-md text-label-md text-on-surface-variant dark:text-secondary-fixed-dim hover:bg-surface-container-high dark:hover:bg-secondary-fixed-variant transition-colors" type="button" onclick="window.location.href='/pricing'">
+          <span class="material-symbols-outlined">payments</span>
+          Pricing
+        </button>
+        <button class="flex items-center gap-2 px-3 py-2 w-full text-left rounded-lg font-label-md text-label-md text-on-surface-variant dark:text-secondary-fixed-dim hover:bg-surface-container-high dark:hover:bg-secondary-fixed-variant transition-colors" type="button" onclick="window.location.href='/profile'">
+          <span class="material-symbols-outlined">person</span>
+          Profile
+        </button>
+      </nav>
+    </div>
+
+    <script>
+      (function() {
+        const toggle = document.getElementById("mobile-menu-toggle");
+        const drawer = document.getElementById("mobile-drawer");
+        const close = document.getElementById("mobile-drawer-close");
+        const backdrop = document.getElementById("mobile-drawer-backdrop");
+
+        function openDrawer() {
+          if (drawer && backdrop) {
+            drawer.classList.remove("-translate-x-full");
+            backdrop.classList.remove("hidden");
+          }
+        }
+
+        function closeDrawer() {
+          if (drawer && backdrop) {
+            drawer.classList.add("-translate-x-full");
+            backdrop.classList.add("hidden");
+          }
+        }
+
+        if (toggle) toggle.addEventListener("click", openDrawer);
+        if (close) close.addEventListener("click", closeDrawer);
+        if (backdrop) backdrop.addEventListener("click", closeDrawer);
+
+        if (drawer) {
+          drawer.querySelectorAll("a, button").forEach(el => {
+            el.addEventListener("click", closeDrawer);
+          });
+        }
+      })();
+    </script>
   </body>
 </html>

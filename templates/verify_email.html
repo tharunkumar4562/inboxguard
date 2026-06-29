@@ -1,0 +1,67 @@
+<!doctype html>
+<html class="light" lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Email Verification | InboxGuard</title>
+    <meta name="description" content="Verify your InboxGuard account email." />
+    <meta name="robots" content="noindex, nofollow" />
+    <link rel="stylesheet" href="/static/css/compiled-tailwind.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+    <script>
+      (function () {
+        try {
+          const savedTheme = localStorage.getItem("ig_theme");
+          const theme = savedTheme === "dark" || savedTheme === "light" ? savedTheme : "light";
+          const root = document.documentElement;
+          root.dataset.theme = theme;
+          root.classList.toggle("dark", theme === "dark");
+        } catch (error) {}
+      })();
+    </script>
+  </head>
+  <body class="bg-[#f8f9ff] dark:bg-[#111c2d] text-[#0b1c30] dark:text-[#d8e3fb] font-sans min-h-screen antialiased flex flex-col justify-between">
+    <!-- Navbar -->
+    <nav class="border-b border-[#bccac1] dark:border-[#6d7a73] py-4 bg-white dark:bg-[#111c2d] sticky top-0 z-50">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center">
+        <a class="text-xl font-bold text-[#00694c] dark:text-[#86f8c9] flex items-center gap-2 no-underline" href="/">
+          <span class="material-symbols-outlined fill-icon" style="font-variation-settings: 'FILL' 1;">security</span>
+          InboxGuard
+        </a>
+      </div>
+    </nav>
+
+    <!-- Main Card -->
+    <main class="flex-grow flex items-center justify-center px-4 py-12">
+      <div class="w-full max-w-md bg-white dark:bg-[#111c2d] rounded-3xl border border-[#bccac1] dark:border-[#6d7a73] p-8 shadow-2xl space-y-6 text-center">
+        {% if ok %}
+        <div class="mx-auto w-12 h-12 rounded-full bg-[#d4f8e6] dark:bg-[#00513a] flex items-center justify-center text-[#00694c] dark:text-[#86f8c9]">
+          <span class="material-symbols-outlined text-[28px]">verified</span>
+        </div>
+        <h1 class="text-2xl font-bold text-[#0b1c30] dark:text-[#d8e3fb]">Email Verified!</h1>
+        <p class="text-sm text-[#3d4943] dark:text-[#bcc7de]">Thank you. Your email address has been successfully verified. You can now access your full deliverability suite.</p>
+        <a href="/login" class="inline-block w-full bg-[#00694c] hover:bg-[#00513a] text-white font-bold py-3 px-4 rounded-xl transition-all shadow-md no-underline">
+          Go to Sign In
+        </a>
+        {% else %}
+        <div class="mx-auto w-12 h-12 rounded-full bg-[#ffdad6] dark:bg-[#93000a] flex items-center justify-center text-[#ba1a1a] dark:text-[#ffdad6]">
+          <span class="material-symbols-outlined text-[28px]">error</span>
+        </div>
+        <h1 class="text-2xl font-bold text-[#0b1c30] dark:text-[#d8e3fb]">Verification Failed</h1>
+        <p class="text-sm text-[#3d4943] dark:text-[#bcc7de]">{{ error or "The verification link is invalid or has expired." }}</p>
+        <a href="/login" class="inline-block w-full border border-[#bccac1] dark:border-[#6d7a73] text-[#545f73] dark:text-[#bcc7de] hover:bg-gray-50 dark:hover:bg-gray-800 font-bold py-3 px-4 rounded-xl transition-all no-underline">
+          Back to Login
+        </a>
+        {% endif %}
+      </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-[#bccac1] dark:border-[#6d7a73] py-4 text-center text-xs text-[#545f73] dark:text-[#bcc7de]">
+      Built by M.Tharun Kumar • InboxGuard Deliverability Suite
+    </footer>
+  </body>
+</html>

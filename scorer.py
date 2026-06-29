@@ -67,15 +67,62 @@ def _severity_for_points(points: int) -> str:
 
 
 def _load_learning_model() -> Dict[str, Any]:
-    if not MODEL_FILE.exists():
-        return {}
+    from db import get_conn
+    conn = get_conn()
     try:
-        payload = json.loads(MODEL_FILE.read_text(encoding="utf-8"))
-        if isinstance(payload, dict):
-            return payload
+        cur = conn.cursor()
+        cur.execute("SELECT outcome, rewritten_text, original_text FROM global_rewrite_feedback LIMIT 2000")
+        rows = cur.fetchall()
     except Exception:
+        rows = []
+    finally:
+        conn.close()
+
+    if not rows:
+        if MODEL_FILE.exists():
+            try:
+                payload = json.loads(MODEL_FILE.read_text(encoding="utf-8"))
+                if isinstance(payload, dict):
+                    return payload
+            except Exception:
+                pass
         return {}
-    return {}
+
+    pattern_stats = {}
+    total = len(rows)
+    inbox = sum(1 for r in rows if r[0] == "inbox")
+    spam = sum(1 for r in rows if r[0] == "spam")
+
+    for row in rows:
+        outcome = row[0]
+        text = str(row[1] or row[2] or "")
+        if not text:
+            continue
+        for pattern in _extract_patterns(text):
+            slot = pattern_stats.setdefault(pattern, {"success": 0, "fail": 0, "weight": 0})
+            if outcome == "inbox":
+                slot["success"] += 1
+            elif outcome == "spam":
+                slot["fail"] += 1
+
+    for pattern, slot in pattern_stats.items():
+        success = slot.get("success", 0)
+        fail = slot.get("fail", 0)
+        diff = success - fail
+        if diff > 2:
+            slot["weight"] = 10
+        elif diff < -2:
+            slot["weight"] = -15
+        else:
+            slot["weight"] = 0
+
+    return {
+        "total_feedback": total,
+        "sample_size": total,
+        "inbox": inbox,
+        "spam": spam,
+        "patterns": pattern_stats
+    }
 
 
 def _extract_patterns(text: str) -> List[str]:

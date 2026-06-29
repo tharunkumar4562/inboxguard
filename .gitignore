@@ -25,3 +25,5 @@ data/
 .vercel
 .gemini/
 design-reference/
+node_modules/
+package-lock.json

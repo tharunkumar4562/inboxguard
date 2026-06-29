@@ -763,6 +763,30 @@ function showError(message) {
     setTimeout(() => errorBanner.classList.add("hidden"), 3800);
 }
 
+function showSuccess(message) {
+    let successBanner = document.getElementById("success-banner");
+    if (!successBanner) {
+        successBanner = document.createElement("div");
+        successBanner.id = "success-banner";
+        successBanner.style.position = "fixed";
+        successBanner.style.top = "14px";
+        successBanner.style.left = "50%";
+        successBanner.style.transform = "translateX(-50%)";
+        successBanner.style.zIndex = "120";
+        successBanner.style.background = "#00694c";
+        successBanner.style.color = "#fff";
+        successBanner.style.border = "1px solid #bccac1";
+        successBanner.style.borderRadius = "10px";
+        successBanner.style.padding = "10px 14px";
+        successBanner.style.fontSize = "0.88rem";
+        successBanner.classList.add("hidden");
+        document.body.appendChild(successBanner);
+    }
+    successBanner.textContent = message;
+    successBanner.classList.remove("hidden");
+    setTimeout(() => successBanner.classList.add("hidden"), 3800);
+}
+
 function setListMessage(node, message) {
     if (!node) {
         return;
@@ -1648,6 +1672,10 @@ function showHome() {
 
 function openTool(tool) {
     const key = String(tool || "").toLowerCase();
+    if (key === "scan" || key === "threat-scan") {
+        navigate("scan", { focusInput: true, scroll: true });
+        return;
+    }
     hideAllViews();
     homeSections.forEach((node) => node.classList.add("hidden"));
     if (toolPanel) {
@@ -1938,67 +1966,35 @@ function classifyIssueScope(summary, signals, findings) {
     return "CONTENT";
 }
 
-function renderStatus(summary, signals, findings) {
-    if (!statusRiskBandNode || !statusPrimaryIssueNode || !statusConfidenceNode) {
-        return;
+function renderDetectedSignals(signals) {
+    if (!signals) return;
+    const container = document.getElementById("deliverability-summary");
+    if (!container) return;
+    
+    const spf = String(signals.spf_status || "unknown").toUpperCase();
+    const dkim = String(signals.dkim_status || "unknown").toUpperCase();
+    const dmarc = String(signals.dmarc_status || "unknown").toUpperCase();
+    
+    const lines = [];
+    lines.push(`SPF: ${spf}`);
+    lines.push(`DKIM: ${dkim}`);
+    lines.push(`DMARC: ${dmarc}`);
+    if (signals.link_count !== undefined) {
+        lines.push(`Links: ${signals.link_count}`);
     }
-
-    const band = String(summary.risk_band || "Needs Review");
-    let label = "At Risk";
-    let cls = "warning";
-
-    if (band === "High Spam-Risk Signals" || band === "High Risk") {
-        label = "Likely Filtered";
-        cls = "critical";
-    } else if (band === "Content Safe") {
-        label = "Safe";
-        cls = "safe";
+    if (signals.image_count !== undefined) {
+        lines.push(`Images: ${signals.image_count}`);
     }
-
-    const confidence = String(summary.deliverability_confidence || "medium");
-    const confidenceValue = confidenceScoreValue(confidence);
-    const mode = String(summary.analysis_mode || "content");
-    const scope = classifyIssueScope(summary, signals, findings);
-
-    if (band === "Content Safe" && confidence === "low") {
-        label = "Low Risk (Incomplete Check)";
-        cls = "warning";
+    
+    const prev = container.querySelector(".detected-signals-block");
+    if (prev) {
+        prev.remove();
     }
-
-    statusRiskBandNode.textContent = label;
-    statusRiskBandNode.className = `status-value ${cls}`;
-
-    if (statusRiskCardNode) {
-        statusRiskCardNode.classList.remove("critical-bg", "warning-bg", "safe-bg");
-        if (cls === "critical") {
-            statusRiskCardNode.classList.add("critical-bg");
-        } else if (cls === "warning") {
-            statusRiskCardNode.classList.add("warning-bg");
-        } else {
-            statusRiskCardNode.classList.add("safe-bg");
-        }
-    }
-
-    statusPrimaryIssueNode.textContent = `${scope}: ${primaryIssue(summary, findings)}`;
-
-    const confidenceBasis = String(summary.analysis_mode || "content") === "full"
-        ? "content + technical signals"
-        : "content-only signals";
-    const confidenceLabel = confidence.charAt(0).toUpperCase() + confidence.slice(1);
-    statusConfidenceNode.textContent = `${confidenceLabel} (${scope === "INFRA" ? "infra-heavy" : scope === "MIXED" ? "mixed" : "content-led"})`;
-
-    if (confidenceMeterFillNode) {
-        confidenceMeterFillNode.style.width = `${confidenceValue}%`;
-        confidenceMeterFillNode.style.background = confidenceValue >= 80
-            ? "linear-gradient(90deg, #ef4444 0%, #f97316 100%)"
-            : confidenceValue >= 50
-                ? "linear-gradient(90deg, #f59e0b 0%, #facc15 100%)"
-                : "linear-gradient(90deg, #f97316 0%, #f59e0b 100%)";
-    }
-
-    if (confidenceMeterDetailNode) {
-        confidenceMeterDetailNode.textContent = `Confidence is ${confidenceLabel.toLowerCase()} because ${confidenceBasis}.`;
-    }
+    
+    const div = document.createElement("div");
+    div.className = "detected-signals-block mt-md pt-2 border-t border-outline-variant text-xs text-on-surface-variant dark:text-secondary-fixed-dim flex gap-md flex-wrap";
+    div.innerHTML = lines.map(line => `<span>${line}</span>`).join("");
+    container.appendChild(div);
 }
 
 function renderBiggestRisk(summary, findings) {
@@ -2191,37 +2187,7 @@ function renderBreakdown(summary) {
     });
 }
 
-function renderPrediction(summary, prediction) {
-    if (!predictionHeadlineNode || !predictionDetailNode || !predictionBandsNode) {
-        return;
-    }
-    const score = Number(summary && (summary.final_score || summary.score || 0));
-    const prob = Number(prediction && prediction.inbox_probability ? prediction.inbox_probability : 0);
-    const likely = String(prediction && prediction.likely_outcome ? prediction.likely_outcome : "unknown");
-    const benchmark = prediction && prediction.benchmark ? prediction.benchmark : null;
-    const benchmarkAvailable = Boolean(benchmark && benchmark.available);
-    const benchmarkScore = benchmarkAvailable ? Number(benchmark.top_10_score || 0) : 0;
-    const benchmarkInboxSamples = benchmarkAvailable ? Number(benchmark.inbox_samples || 0) : 0;
-    const samples = Number(prediction && prediction.samples ? prediction.samples : 0);
-
-    predictionHeadlineNode.textContent = `Will likely land: ${likely.toUpperCase()} (${prob.toFixed(1)}% inbox probability)`;
-    if (benchmarkAvailable) {
-        predictionDetailNode.textContent = `Your score: ${score} | Your inbox benchmark is ${benchmarkScore}+ based on ${benchmarkInboxSamples} inbox outcomes | Learned samples: ${samples}`;
-    } else {
-        predictionDetailNode.textContent = `Your score: ${score} | No inbox benchmark yet - record at least 10 inbox outcomes to build a real baseline | Learned samples: ${samples}`;
-    }
-    predictionBandsNode.innerHTML = "";
-    const rows = [
-        `Score 85+ usually maps to strongest inbox probability.`,
-        `Score 70-84 is often test-batch safe with monitoring.`,
-        `Score below 70 usually needs fixes before scaling.`,
-    ];
-    rows.forEach((line) => {
-        const li = document.createElement("li");
-        li.textContent = line;
-        predictionBandsNode.appendChild(li);
-    });
-}
+// renderPrediction is deprecated. The outcomes are rendered inline via renderConversionResult.
 
 function buildBiggestRiskPayload(summary = {}, findings = [], payload = null) {
     if (payload && typeof payload === "object") {
@@ -2472,10 +2438,17 @@ function renderConversionResult(data) {
         runTestBtnNode.onclick = () => {
             window.appState.hasScaled = true;
             updateSteps();
-            alert("Upgrade / pricing flow here");
+            if (typeof window.openPricingModal === "function") {
+                window.openPricingModal();
+            } else {
+                openPricingModal();
+            }
         };
     }
 
+    if (data && data.signals) {
+        renderDetectedSignals(data.signals);
+    }
     window.appState.hasScanned = true;
     window.appState.hasOptimized = true;
     syncProgressState();
@@ -3188,135 +3161,8 @@ async function refreshJobs() {
     }
 }
 
-function renderDecisionEngine(summary, signals, findings, prediction) {
-    if (!decisionProblemNode || !decisionSignalNode || !decisionScopeNode || !decisionWhyNode || !decisionFixFirstNode || !decisionConsequenceNode || !riskStripNode || !riskStripTitleNode || !riskStripBodyNode || !scaleWarningListNode) {
-        return;
-    }
+// renderDecisionEngine is deprecated. Results and recommendations are rendered directly.
 
-    const band = String(summary.risk_band || "Needs Review");
-    const predictionDecision = String(prediction && prediction.decision ? prediction.decision : "").toUpperCase();
-    const spf = String(signals.spf_status || "unknown");
-    const dkim = String(signals.dkim_status || "unknown");
-    const dmarc = String(signals.dmarc_status || "unknown");
-    const infraWeak = !(spf === "found" && dkim === "found" && dmarc === "found");
-    const scope = classifyIssueScope(summary, signals, findings);
-
-    let problem = "TEST FIRST - Risk unclear at scale";
-    let signalLine = "Use this verdict before your batch send to avoid preventable filtering.";
-    let stripTitle = "TEST FIRST";
-    let stripBody = "Risk is mixed. Run a real inbox test before scaling.";
-    let stripClass = "risk-strip risk-strip-medium";
-    if (predictionDecision === "DO NOT SEND" || band === "High Spam-Risk Signals" || band === "High Risk") {
-        problem = "DO NOT SEND - This will likely hit spam";
-        signalLine = "High-confidence spam pattern detected.";
-        stripTitle = "DO NOT SEND";
-        stripBody = "This email will likely land in spam if sent now.";
-        stripClass = "risk-strip risk-strip-high";
-    } else if (predictionDecision === "SAFE TO SEND" || band === "Content Safe") {
-        problem = "SAFE TO SEND - Low spam risk";
-        signalLine = "Low immediate risk. Start with a controlled test batch.";
-        stripTitle = "SAFE TO SEND";
-        stripBody = "This is acceptable for a small test batch.";
-        stripClass = "risk-strip risk-strip-low";
-    }
-
-    if (infraWeak && (band === "High Spam-Risk Signals" || band === "High Risk")) {
-        stripBody = "This email is likely to be filtered and technical trust signals are weak.";
-    }
-
-    decisionProblemNode.textContent = problem;
-    decisionProblemNode.classList.remove("decision-pop", "pulse-red");
-    void decisionProblemNode.offsetWidth;
-    decisionProblemNode.classList.add("decision-pop");
-    if (predictionDecision === "DO NOT SEND" || band === "High Spam-Risk Signals" || band === "High Risk") {
-        decisionProblemNode.classList.add("pulse-red");
-        transitionColor(decisionProblemNode, "#fca5a5", "#ef4444");
-    } else {
-        transitionColor(decisionProblemNode, "#93c5fd", "#22c55e");
-    }
-    animateDecision(decisionProblemNode);
-    showOverlaySpring(stripTitle);
-    revealText(decisionSignalNode, signalLine);
-    decisionScopeNode.textContent = `Primary issue: ${scope}${scope === "INFRA" ? " - technical trust signals" : scope === "MIXED" ? " - content and infrastructure" : " - content signals"}`;
-    riskStripNode.className = stripClass;
-    riskStripTitleNode.textContent = stripTitle;
-    riskStripBodyNode.textContent = stripBody;
-    if (realityStripTitleNode) {
-        realityStripTitleNode.textContent = "Reality Check";
-    }
-    if (realityStripBodyNode) {
-        const benchmark = prediction && prediction.benchmark ? prediction.benchmark : null;
-        if (benchmark && benchmark.available) {
-            const topScore = Number(benchmark.top_10_score || 0);
-            const inboxSamples = Number(benchmark.inbox_samples || 0);
-            realityStripBodyNode.textContent = `${inboxSamples} inbox outcomes recorded. Your top inbox campaigns in this dataset usually score ${topScore}+.`;
-        } else {
-            realityStripBodyNode.textContent = "No inbox benchmark yet. Keep scanning and recording inbox outcomes until a real baseline is built.";
-        }
-    }
-
-    const nonMeta = (findings || []).filter((f) => !String(f.title || "").toLowerCase().includes("analysis mode"));
-    decisionWhyNode.innerHTML = "";
-    (nonMeta.slice(0, 3).length ? nonMeta.slice(0, 3) : [{ title: "Signals detected", issue: "Multiple risk patterns are present." }]).forEach((item) => {
-        const li = document.createElement("li");
-        const title = String(item.title || "risk signal").toLowerCase();
-        if (title.includes("broadcast") || title.includes("promo") || title.includes("mass")) {
-            li.textContent = "Detected broadcast-style phrasing (common spam signal).";
-        } else if (title.includes("personal")) {
-            li.textContent = "No recipient-specific personalization found.";
-        } else if (title.includes("urgency") || title.includes("pressure")) {
-            li.textContent = "Urgency language detected (reduces trust signals).";
-        } else if (title.includes("spf") || title.includes("dkim") || title.includes("dmarc")) {
-            li.textContent = "Authentication trust signals are incomplete for this send context.";
-        } else {
-            const issue = String(item.issue || item.impact || "This pattern increases filtering risk.");
-            li.textContent = `Detected ${String(item.title || "risk signal")}: ${issue}`;
-        }
-        decisionWhyNode.appendChild(li);
-    });
-
-    const fixes = Array.isArray(summary.top_fixes) ? summary.top_fixes : [];
-    decisionFixFirstNode.innerHTML = "";
-    (fixes.slice(0, 3).length ? fixes.slice(0, 3) : [{ title: "Review technical auth" }, { title: "Lower CTA pressure" }, { title: "Simplify message structure" }]).forEach((fix, idx) => {
-        const li = document.createElement("li");
-        li.textContent = `${idx + 1}. ${commandFix(fix.title || fix.type || "Fix issue", fix.action)}`;
-        decisionFixFirstNode.appendChild(li);
-    });
-
-    decisionConsequenceNode.innerHTML = "";
-    const consequences = (band === "High Spam-Risk Signals" || band === "High Risk")
-        ? [
-            "This looks like bulk promotional email, so Gmail is likely to filter it.",
-            "Repeated sends like this can damage domain reputation.",
-        ]
-        : [
-            "This is likely safe for a small test batch, but scale risk can rise fast.",
-            "If volume increases, keep watching inbox placement and replies.",
-        ];
-    consequences.forEach((line) => {
-        const li = document.createElement("li");
-        li.textContent = line;
-        decisionConsequenceNode.appendChild(li);
-    });
-
-    scaleWarningListNode.innerHTML = "";
-    const scaleLines = (band === "High Spam-Risk Signals" || band === "High Risk")
-        ? [
-            "If you send this to 500+ people, high risk of spam placement.",
-            "Domain reputation risk increases after the first batch.",
-            "Performance will degrade as volume rises.",
-        ]
-        : [
-            "Safe for an initial 20-50 email test batch.",
-            "Re-check before scaling to 500+ sends.",
-            "Monitor inbox placement after the first batch.",
-        ];
-    scaleLines.forEach((line) => {
-        const li = document.createElement("li");
-        li.textContent = line;
-        scaleWarningListNode.appendChild(li);
-    });
-}
 
 function getRecommendedRewriteStyle() {
     const band = String(latestSummary && latestSummary.risk_band ? latestSummary.risk_band : "");
@@ -4158,7 +4004,7 @@ async function handleRequestAccess() {
         accessRequestEmailInput.value = "";
     }
 
-    alert("Access requested. We'll reach out.");
+    showSuccess("Access requested. We will reach out to you shortly.");
 }
 
 function openPricingModal() {
@@ -4300,7 +4146,7 @@ function openToolPane(toolKey) {
 }
 
 function showScanCost() {
-    alert(`This will cost 1 credit. You have ${Math.max(0, Number(userState.tokens || 0))}`);
+    showSuccess(`This will cost 1 credit. You have ${Math.max(0, Number(userState.tokens || 0))} remaining.`);
 }
 
 function canUserScan() {

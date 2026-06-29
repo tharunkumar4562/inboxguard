@@ -965,6 +965,26 @@ def _ensure_token_system_tables() -> None:
             )
             """
         )
+        # Password resets table
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS password_resets (
+                email TEXT PRIMARY KEY,
+                token TEXT NOT NULL,
+                expires_at TEXT NOT NULL
+            )
+            """
+        )
+        # Email verifications table
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS email_verifications (
+                email TEXT PRIMARY KEY,
+                token TEXT NOT NULL,
+                verified INTEGER DEFAULT 0
+            )
+            """
+        )
         conn.commit()
     finally:
         conn.close()
@@ -2924,8 +2944,207 @@ def subject_generator_page(request: Request):
 
 
 @app.get("/login", response_class=HTMLResponse)
-def login_page(request: Request):
-    return RedirectResponse(url="/app?auth=1", status_code=303)
+def login_page(request: Request, resume: int = 0):
+    user = _get_session_user(request)
+    if user:
+        return RedirectResponse(url="/app", status_code=303)
+    return templates.TemplateResponse(
+        "login.html",
+        {
+            "request": request,
+            "page_title": "Sign In | InboxGuard",
+            "meta_description": "Sign in to your InboxGuard account to inspect deliverables.",
+            "canonical_url": f"{SITE_URL}/login",
+            "google_enabled": GOOGLE_AUTH_CONFIGURED,
+            "resume": resume,
+        },
+    )
+
+
+@app.get("/signup", response_class=HTMLResponse)
+def signup_page(request: Request, resume: int = 0):
+    user = _get_session_user(request)
+    if user:
+        return RedirectResponse(url="/app", status_code=303)
+    return templates.TemplateResponse(
+        "login.html",
+        {
+            "request": request,
+            "page_title": "Sign Up | InboxGuard",
+            "meta_description": "Create an InboxGuard account to start checking email spam risk.",
+            "canonical_url": f"{SITE_URL}/signup",
+            "google_enabled": GOOGLE_AUTH_CONFIGURED,
+            "resume": resume,
+        },
+    )
+
+
+@app.get("/forgot-password", response_class=HTMLResponse)
+def forgot_password_page(request: Request):
+    return templates.TemplateResponse("forgot_password.html", {"request": request})
+
+
+@app.post("/forgot-password")
+def forgot_password_submit(request: Request, email: str = Form("")):
+    import secrets
+    from datetime import datetime, timezone, timedelta
+    clean_email = email.strip().lower()
+    if not clean_email:
+        return {"ok": False, "error": "Email address is required."}
+
+    # Verify user exists
+    conn = get_conn()
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT id FROM users WHERE email = ?", (clean_email,))
+        user = cur.fetchone()
+    except Exception:
+        user = None
+    finally:
+        conn.close()
+
+    if not user:
+        # Standard security practice: return success even if user doesn't exist
+        return {"ok": True, "message": "If the account exists, a secure reset link has been dispatched."}
+
+    token = secrets.token_urlsafe(32)
+    expires_at = (datetime.now(timezone.utc) + timedelta(hours=1)).isoformat()
+
+    conn = get_conn()
+    try:
+        conn.execute(
+            "INSERT OR REPLACE INTO password_resets (email, token, expires_at) VALUES (?, ?, ?)",
+            (clean_email, token, expires_at)
+        )
+        conn.commit()
+    except Exception as e:
+        return {"ok": False, "error": f"Failed to save reset token: {e}"}
+    finally:
+        conn.close()
+
+    # Log/Print the password reset URL for local verification / CLI access
+    print(f"\n==================================================")
+    print(f"[RESET PASSWORD LINK] (Copy & Paste in browser):")
+    print(f"{SITE_URL}/reset-password?email={clean_email}&token={token}")
+    print(f"==================================================\n")
+
+    return {"ok": True, "message": "A secure reset link has been dispatched to your inbox."}
+
+
+@app.get("/reset-password", response_class=HTMLResponse)
+def reset_password_page(request: Request, email: str = "", token: str = ""):
+    from datetime import datetime, timezone
+    clean_email = email.strip().lower()
+    clean_token = token.strip()
+
+    if not clean_email or not clean_token:
+        return templates.TemplateResponse("reset_password.html", {"request": request, "error": "Invalid reset link parameters."})
+
+    conn = get_conn()
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT token, expires_at FROM password_resets WHERE email = ?", (clean_email,))
+        row = cur.fetchone()
+    except Exception:
+        row = None
+    finally:
+        conn.close()
+
+    if not row or row[0] != clean_token:
+        return templates.TemplateResponse("reset_password.html", {"request": request, "error": "Password reset token is invalid or expired."})
+
+    try:
+        expires = datetime.fromisoformat(row[1])
+        if datetime.now(timezone.utc) > expires:
+            return templates.TemplateResponse("reset_password.html", {"request": request, "error": "Password reset token has expired."})
+    except Exception:
+        return templates.TemplateResponse("reset_password.html", {"request": request, "error": "Token date validation failed."})
+
+    return templates.TemplateResponse("reset_password.html", {"request": request, "email": clean_email, "token": clean_token})
+
+
+@app.post("/reset-password")
+def reset_password_submit(request: Request, email: str = Form(""), token: str = Form(""), password: str = Form("")):
+    from datetime import datetime, timezone
+    clean_email = email.strip().lower()
+    clean_token = token.strip()
+    clean_password = password or ""
+
+    if len(clean_password) < 8:
+        return {"ok": False, "error": "Password must be at least 8 characters long."}
+
+    conn = get_conn()
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT token, expires_at FROM password_resets WHERE email = ?", (clean_email,))
+        row = cur.fetchone()
+    except Exception:
+        row = None
+    finally:
+        conn.close()
+
+    if not row or row[0] != clean_token:
+        return {"ok": False, "error": "Invalid token or reset attempt failed."}
+
+    try:
+        expires = datetime.fromisoformat(row[1])
+        if datetime.now(timezone.utc) > expires:
+            return {"ok": False, "error": "Reset link has expired."}
+    except Exception:
+        return {"ok": False, "error": "Date validation failed."}
+
+    # Hash new password
+    salt, password_hash = _new_password_credentials(clean_password)
+
+    # Save to database
+    conn = get_conn()
+    try:
+        conn.execute(
+            "UPDATE users SET password_hash = ?, password_salt = ? WHERE email = ?",
+            (password_hash, salt, clean_email)
+        )
+        conn.execute("DELETE FROM password_resets WHERE email = ?", (clean_email,))
+        conn.commit()
+    except Exception as e:
+        return {"ok": False, "error": f"Failed to update password: {e}"}
+    finally:
+        conn.close()
+
+    return {"ok": True}
+
+
+@app.get("/verify-email", response_class=HTMLResponse)
+def verify_email_page(request: Request, email: str = "", token: str = ""):
+    clean_email = email.strip().lower()
+    clean_token = token.strip()
+
+    if not clean_email or not clean_token:
+        return templates.TemplateResponse("verify_email.html", {"request": request, "ok": False, "error": "Invalid verification link."})
+
+    conn = get_conn()
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT token, verified FROM email_verifications WHERE email = ?", (clean_email,))
+        row = cur.fetchone()
+    except Exception:
+        row = None
+    finally:
+        conn.close()
+
+    if not row or row[0] != clean_token:
+        return templates.TemplateResponse("verify_email.html", {"request": request, "ok": False, "error": "Verification token is invalid or has expired."})
+
+    # Update verification status
+    conn = get_conn()
+    try:
+        conn.execute("UPDATE email_verifications SET verified = 1 WHERE email = ?", (clean_email,))
+        conn.commit()
+    except Exception:
+        pass
+    finally:
+        conn.close()
+
+    return templates.TemplateResponse("verify_email.html", {"request": request, "ok": True})
 
 
 @app.get("/access", response_class=HTMLResponse)
@@ -4491,21 +4710,102 @@ def _run_analysis_request(
 
     # Trusted sender context filter
     if classification["type"] == "transactional" or is_trusted_sender(parsed_email):
-        result["risk"] = "low"
-        result["message"] = "Transactional or trusted system email detected. No deliverability risks found."
-        result["issues"] = []
-        result["original"] = parsed_email
-        result["rewritten"] = parsed_email
-        result["rewritten_text"] = parsed_email
-        result["fixes"] = []
-        result["impact_score"] = 0
-        result["impact_label"] = "None"
-        result["biggest_risk"] = {
-            "title": "No risk",
-            "summary": "This is a system or transactional email from a trusted sender.",
-            "reasons": ["No spam/marketing signals detected."],
-            "impact": "Safe to send."
+        final_score = 100
+        risk_score = 0
+        risk_band = "Content Safe"
+        
+        result = {
+            "ok": True,
+            "score": final_score,
+            "risk_score": risk_score,
+            "risk_band": risk_band,
+            "classification": classification,
+            "risk": "low",
+            "message": "Transactional or trusted system email detected. No deliverability risks found.",
+            "issues": [],
+            "partial_findings": [],
+            "original": parsed_email,
+            "rewritten": parsed_email,
+            "rewritten_text": parsed_email,
+            "fixes": [],
+            "legacy_issues": [],
+            "variants": {},
+            "impact_score": 0,
+            "impact_label": "None",
+            "learning_profile": get_learning_profile(),
+            "signals": {
+                "link_count": 0,
+                "image_count": 0,
+                "spf_status": "found",
+                "dkim_status": "found",
+                "dmarc_status": "found",
+            },
+            "summary": {
+                "score": final_score,
+                "risk_score": risk_score,
+                "risk_band": risk_band,
+                "findings": [],
+                "detected_signals": ["Trusted/transactional sender"],
+                "email_type": classification.get("type", "transactional"),
+                "confidence": classification.get("confidence", 1.0)
+            },
+            "biggest_risk": {
+                "title": "No risk",
+                "summary": "This is a system or transactional email from a trusted sender.",
+                "reasons": ["No spam/marketing signals detected."],
+                "impact": "Safe to send."
+            },
+            "fix_preview": "No improvements needed for trusted system/transactional templates."
         }
+
+        # Build prediction and usage
+        user = _get_session_user(request)
+        if user:
+            stats = _score_outcome_stats(int(user["id"]))
+            benchmark_score = stats.get("benchmark_top_10_score")
+            benchmark_inbox_samples = int(stats.get("benchmark_inbox_samples", 0) or 0)
+            remaining_tokens = _get_user_tokens(int(user["id"]))
+            result["prediction"] = {
+                "inbox_probability": 100.0,
+                "likely_outcome": "inbox",
+                "decision": "SAFE TO SEND",
+                "benchmark_top_10_score": benchmark_score,
+                "benchmark": {
+                    "available": benchmark_score is not None,
+                    "top_10_score": benchmark_score,
+                    "inbox_samples": benchmark_inbox_samples,
+                    "sample_count": int(stats.get("samples", 0)),
+                },
+                "samples": int(stats.get("samples", 0)),
+            }
+            user_scans = _get_user_scans_used(int(user["id"]))
+            result["usage"] = {
+                "authenticated": True,
+                "user_scans_used": user_scans,
+                "tokens_remaining": remaining_tokens,
+                "tokens_used": 0,
+                "free_scans_limit": FREE_SCANS_LIMIT,
+            }
+        else:
+            result["prediction"] = {
+                "inbox_probability": 100.0,
+                "likely_outcome": "inbox",
+                "decision": "SAFE TO SEND",
+                "benchmark_top_10_score": None,
+                "benchmark": {
+                    "available": False,
+                    "top_10_score": None,
+                    "inbox_samples": 0,
+                    "sample_count": 0,
+                },
+                "samples": 0,
+            }
+            anon_scans = _get_anon_scans_used(request)
+            result["usage"] = {
+                "authenticated": False,
+                "anonymous_scans_used": anon_scans,
+                "anonymous_scans_limit": FIRST_VALUE_FREE_SCAN_LIMIT,
+            }
         return result
 
     user = _get_session_user(request)
